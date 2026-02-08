@@ -1,0 +1,30 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Cache do Pyrthon
+__pycache__/
+*.pyc
+*pyo
+*pyd
+
+# Banco SQLite
+*.db
+*.sqlite3
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Arquivos do alembic
+alembic/versions/*.pyc
+
+# Arquivos temporarios 
+*.swp
