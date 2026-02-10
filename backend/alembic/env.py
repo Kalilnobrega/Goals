@@ -10,6 +10,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from app.database import Base
+from app.models import User, Goal, Task
 
 
 # this is the Alembic Config object, which provides
@@ -23,7 +25,6 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from backend.app.models import Base
 
 target_metadata = Base.metadata
 
