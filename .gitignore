@@ -28,3 +28,6 @@ alembic/versions/*.pyc
 
 # Arquivos temporarios 
 *.swp
+
+# Variáveis de ambiente
+.env
