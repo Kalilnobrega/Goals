@@ -40,4 +40,3 @@ class Task(Base):
     title = Column('title', String(50), nullable=False)
     status = Column('status', Boolean, default=False)
     goal = relationship("Goal", back_populates="tasks")
-
