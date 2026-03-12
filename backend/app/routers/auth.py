@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.models import User
 from app.database import get_db
-from app.main import bcrypt_context, ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
+from app.main import bcrypt_context, oauth2_scheme, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, ALGORITHM, SECRET_KEY
 from app.schemas import UserSchema, LoginSchema
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -9,11 +9,26 @@ from datetime import datetime, timedelta, timezone
 
 auth_router = APIRouter(prefix='/auth', tags=['auth'])
 
-def create_token(id_user):
-    expiration_date = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  
-    dic_info = {'sub': id_user, 'exp': expiration_date}
+def create_token(id_user, expire = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), token_type = 'access'):
+    expiration_date = datetime.now(timezone.utc) + expire  
+    dic_info = {'sub': str(id_user), 'exp': expiration_date, 'type': token_type}
     jwt_encoded = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
     return jwt_encoded
+
+def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401)
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401)
+        user = session.query(User).filter(User.id == user_id).first()
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401)
+
 
 def auth_user(email, password, session):
     user = session.query(User).filter(User.email == email).first()
@@ -41,10 +56,29 @@ async def login(login_schema: LoginSchema, session: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=400, detail='e-mail ou senha incorretos')
     else:
-        access_token = create_token(user.id)
+        access_token = create_token(user.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), 'access')
+        refresh_token = create_token(user.id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), 'refresh')
         return {
             'access_token': access_token,
+            'refresh_token': refresh_token,
             'token_type': 'Bearer'
         }
         
+@auth_router.post('/refresh')
+async def refresh(refresh_token: str):
     
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Token inválido")
+        user_id = payload.get('sub')
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        new_access_token = create_token(user_id)
+        new_refresh_token = create_token(user_id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), 'refresh')
+        return {
+            'access_token': new_access_token,
+            'refresh_token': new_refresh_token
+        }
+    except JWTError:
+         raise HTTPException(status_code=401, detail="Refresh token inválido")
