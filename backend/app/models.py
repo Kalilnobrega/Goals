@@ -40,3 +40,13 @@ class Task(Base):
     title = Column('title', String(50), nullable=False)
     status = Column('status', Boolean, default=False)
     goal = relationship("Goal", back_populates="tasks")
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    revoked = Column(Boolean, default=False)
+    expires_at = Column(DateTime)
+    user = relationship("User")

@@ -14,3 +14,9 @@ class LoginSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TokenSchema(BaseModel):
+    refresh_token: str
+
+    class Config:
+        from_attributes = True
