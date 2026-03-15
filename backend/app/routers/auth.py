@@ -6,9 +6,11 @@ from app.schemas import UserSchema, LoginSchema, TokenSchema
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
+from sqlalchemy import or_
 
 
 auth_router = APIRouter(prefix='/auth', tags=['auth'])
+
 
 def create_token(id_user, expire=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), token_type='access'):
     expiration_date = datetime.now(timezone.utc) + expire  
@@ -28,6 +30,13 @@ def create_refresh_token_in_db(new_refresh_token: str, user_id: str, session: Se
     session.commit()
     
     return {'message': 'refresh token cadastrado no banco de dados'}
+
+
+def cleanup_invalid_tokens(session: Session):
+    now = datetime.now(timezone.utc)
+    
+    session.query(RefreshToken).filter(or_(RefreshToken.revoked == True, RefreshToken.expires_at < now.replace(tzinfo=None))).delete()
+    session.commit()
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
@@ -82,7 +91,9 @@ async def login(login_schema: LoginSchema, session: Session = Depends(get_db)):
     new_access_token = create_token(user.id)
     new_refresh_token = create_token(user.id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), 'refresh')
 
-    create_refresh_token_in_db(new_access_token, user.id, session)
+    create_refresh_token_in_db(new_refresh_token, user.id, session)
+
+    cleanup_invalid_tokens(session)
 
     return {
         'access_token': new_access_token,
