@@ -14,10 +14,12 @@ class User(Base):
     password = Column('password', String)
     goals = relationship("Goal", back_populates="owner")
 
+
 class GoalStatus(str, enum.Enum):
     OPEN = 'open'
     COMPLETED = 'completed'
     PAUSED = 'paused'
+
 
 class Goal(Base):
     __tablename__ = 'goals'
@@ -32,6 +34,7 @@ class Goal(Base):
     owner = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
   
+
 class Task(Base):
     __tablename__ = 'tasks'
 
@@ -40,6 +43,7 @@ class Task(Base):
     title = Column('title', String(50), nullable=False)
     status = Column('status', Boolean, default=False)
     goal = relationship("Goal", back_populates="tasks")
+
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
