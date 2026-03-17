@@ -137,7 +137,8 @@ async def refresh(token_schema: TokenSchema, session: Session = Depends(get_db))
 
         return {
             'access_token': new_access_token,
-            'refresh_token': new_refresh_token
+            'refresh_token': new_refresh_token,
+            'token_type': 'Bearer'
         }
     except JWTError:
         raise HTTPException(status_code=401, detail="Refresh token inválido")
