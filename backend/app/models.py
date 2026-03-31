@@ -42,6 +42,11 @@ class Task(Base):
     goals_id = Column('goals_id', ForeignKey('goals.id'))
     title = Column('title', String(50), nullable=False)
     status = Column('status', Boolean, default=False)
+    is_recurring = Column(Boolean, default=False)
+    recurrence_interval_days = Column(Integer, nullable=True) 
+    max_recurrences = Column(Integer, nullable=True) 
+    recurrence_count = Column(Integer, default=0) 
+    last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
     goal = relationship("Goal", back_populates="tasks")
 
 
