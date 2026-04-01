@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from app.models import User, RefreshToken
 from app.database import get_db
 from app.main import bcrypt_context, oauth2_scheme, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, ALGORITHM, SECRET_KEY
@@ -83,8 +84,8 @@ async def register(user_schema: UserSchema, session: Session = Depends(get_db)):
     
 
 @auth_router.post('/login')
-async def login(login_schema: LoginSchema, session: Session = Depends(get_db)):
-    user = auth_user(login_schema.email, login_schema.password, session)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db)):
+    user = auth_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(status_code=400, detail='e-mail ou senha incorretos')
     

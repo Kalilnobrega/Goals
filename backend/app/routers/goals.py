@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.schemas import GoalsSchema, EditGoalSchema
 from app.database import get_db
 from app.models import Goal, User
+from .tasks import check_and_reset_recurring_tasks
 from .auth import get_current_user
 
 
@@ -21,6 +22,8 @@ async def create_goal(goals_schema: GoalsSchema, current_user: User = Depends(ge
 
 @goals_router.get('/')
 async def list_goals(current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
+    check_and_reset_recurring_tasks(current_user.id, session)
+
     my_goals = session.query(Goal).filter(Goal.user_id == current_user.id).all()
 
     return my_goals

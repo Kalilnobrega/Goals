@@ -44,3 +44,24 @@ class EditGoalSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TaskSchema(BaseModel):
+    title: str
+    is_recurring: bool = False
+    recurrence_interval_days: int | None = None
+    max_recurrences: int | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class EditTaskschema(BaseModel):
+    title: str | None = None
+    status: bool | None = None
+    is_recurring: bool | None = None
+    recurrence_interval_days: int | None = None
+    max_recurrences: int | None = None
+
+    class Config:
+        from_attributes = True
