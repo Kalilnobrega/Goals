@@ -23,9 +23,12 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
 
             if past_days >= task.recurrence_interval_days:
                 if task.max_recurrences is None or task.recurrence_count < task.max_recurrences:
+                    if task.status == True:
+                        task.recurrence_count += 1
+                        
                     task.status = False
                     task.last_reset_date = now
-                    task.recurrence_count += 1
+                    
                 elif task.recurrence_count >= task.max_recurrences:
                     task.is_recurring = False
 
