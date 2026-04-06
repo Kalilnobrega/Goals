@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import GoalsSchema, EditGoalSchema, GoalResponseSchema
 from app.database import get_db
-from app.models import Goal, User
+from app.models import Goal, User, GoalStatus
 from .tasks import check_and_reset_recurring_tasks
 from .auth import get_current_user
+from typing import Optional, List
 
 
 goals_router = APIRouter(prefix='/goals', tags=['goals'])
@@ -20,11 +21,16 @@ async def create_goal(goals_schema: GoalsSchema, current_user: User = Depends(ge
     return new_goal
 
 
-@goals_router.get('/', response_model=list[GoalResponseSchema])
-async def list_goals(current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
+@goals_router.get('/', response_model=List[GoalResponseSchema])
+async def list_goals(status: Optional[GoalStatus] = None, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    my_goals = session.query(Goal).filter(Goal.user_id == current_user.id).all()
+    query = session.query(Goal).filter(Goal.user_id == current_user.id)
+
+    if status is not None:
+        query = query.filter(Goal.status == status)
+
+    my_goals = query.all()
 
     return my_goals
 
