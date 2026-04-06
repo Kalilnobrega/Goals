@@ -33,7 +33,36 @@ class Goal(Base):
     deadline = Column(DateTime(timezone=True), nullable=True)
     owner = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
-  
+    
+    @property
+    def progress(self) -> float:
+        if not self.tasks:
+            return 0.0
+
+        total_points = 0
+        completed_points = 0
+
+        for task in self.tasks:
+            if task.is_recurring and task.max_recurrences is not None:
+                total_points += task.max_recurrences
+                completed_points += task.recurrence_count
+                
+                if task.status == True and task.recurrence_count < task.max_recurrences:
+                    completed_points += 1
+            elif task.is_recurring and task.max_recurrences is None:
+                total_points += 1
+                if task.status == True:
+                    completed_points += 1
+            else:
+                total_points += 1
+                if task.status == True:
+                    completed_points += 1
+        if total_points == 0:
+            return 0.0
+
+        percentage = (completed_points / total_points) * 100
+        return min(round(percentage, 1), 100.0)
+
 
 class Task(Base):
     __tablename__ = 'tasks'
