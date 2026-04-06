@@ -63,7 +63,7 @@ async def list_tasks_by_goal(goal_id: int,current_user: User = Depends(get_curre
     if not goal:
         raise HTTPException(status_code=404, detail='Meta não encontrada ou acesso negado')
 
-    tasks = session.query(Task).filter(Task.goal_id == goal_id).all()
+    tasks = session.query(Task).filter(Task.goals_id == goal_id).all()
     
     return tasks
 
