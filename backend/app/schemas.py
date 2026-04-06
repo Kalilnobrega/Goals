@@ -46,6 +46,18 @@ class EditGoalSchema(BaseModel):
         from_attributes = True
 
 
+class GoalResponseSchema(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    deadline: datetime | None = None
+    status: GoalStatus | None = None
+    progress: float
+
+    class Config:
+        from_attributes = True
+
+
+
 class TaskSchema(BaseModel):
     title: str
     is_recurring: bool = False
