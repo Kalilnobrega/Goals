@@ -34,6 +34,15 @@ async def list_goals(status: Optional[GoalStatus] = None, current_user: User = D
 
     return my_goals
 
+@goals_router.get("/{goal_id}", response_model=GoalResponseSchema)
+async def get_single_goal(goal_id: int, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
+    goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+        
+    return goal
+
 @goals_router.put('/{goal_id}')
 async def edit_goal(goal_id: int, edit_goal_schema: EditGoalSchema, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
     goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
