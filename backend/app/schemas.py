@@ -47,11 +47,13 @@ class EditGoalSchema(BaseModel):
 
 
 class GoalResponseSchema(BaseModel):
+    id: int
     title: str | None = None
     description: str | None = None
     deadline: datetime | None = None
     status: GoalStatus | None = None
     progress: float
+    total_tasks: int
 
     class Config:
         from_attributes = True
