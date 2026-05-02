@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
@@ -15,6 +16,14 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv('REFRESH_TOKEN_EXPIRE_DAYS'))
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], 
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"]
+)
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
