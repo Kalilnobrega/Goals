@@ -12,9 +12,10 @@ class UserSchema(BaseModel):
         from_attributes = True
 
 
-class LoginSchema(BaseModel):
+class UserResponseSchema(BaseModel):
+    id: int
     email: EmailStr
-    password: str
+    name: str
 
     class Config:
         from_attributes = True

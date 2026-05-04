@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.models import User, RefreshToken
 from app.database import get_db
 from app.main import bcrypt_context, oauth2_scheme, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, ALGORITHM, SECRET_KEY
-from app.schemas import UserSchema, LoginSchema, TokenSchema
+from app.schemas import UserSchema, UserResponseSchema, TokenSchema
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
@@ -67,6 +67,11 @@ def auth_user(email, password, session):
         return False
     
     return user
+
+
+@auth_router.get("/me", response_model=UserResponseSchema)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 @auth_router.post('/register')
