@@ -33,7 +33,7 @@ async def list_goals(status: Optional[GoalStatus] = None, current_user: User = D
 
     my_goals = goal.all()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     late = False
 
     for goals in goal:

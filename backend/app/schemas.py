@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from datetime import datetime, date
 from app.models import GoalStatus
 
 
@@ -66,6 +66,7 @@ class TaskSchema(BaseModel):
     is_recurring: bool = False
     recurrence_interval_days: int | None = None
     max_recurrences: int | None = None
+    end_of_goal: bool = False
 
     class Config:
         from_attributes = True
@@ -77,6 +78,7 @@ class EditTaskschema(BaseModel):
     is_recurring: bool | None = None
     recurrence_interval_days: int | None = None
     max_recurrences: int | None = None
+    end_of_goal: bool = False
 
     class Config:
         from_attributes = True

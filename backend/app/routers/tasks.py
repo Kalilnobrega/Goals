@@ -4,7 +4,7 @@ from app.schemas import TaskSchema, EditTaskschema
 from app.database import get_db
 from app.models import Goal, Task, User
 from .auth import get_current_user
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 
 
@@ -40,11 +40,21 @@ async def create_task(goal_id: int, task_schema: TaskSchema, current_user: User 
     goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
     if not goal:
         raise HTTPException(status_code=404, detail='Meta não encontrada')
+    
+    if task_schema.end_of_goal:
+        if not goal.deadline:
+            raise HTTPException(status_code=400, detail="A meta precisa ter uma data final para usar essa opção.")
+            
+        days_remaining = (goal.deadline.date() - date.today).days
+        
+        if days_remaining < 0:
+            raise HTTPException(status_code=400, detail="A meta já venceu.")
+        
+        task_schema.max_recurrences = days_remaining // task_schema.recurrence_interval_days
 
     new_task = Task(
         title=task_schema.title,
         goals_id=goal.id,
-        
         is_recurring=task_schema.is_recurring,
         recurrence_interval_days=task_schema.recurrence_interval_days,
         max_recurrences=task_schema.max_recurrences,

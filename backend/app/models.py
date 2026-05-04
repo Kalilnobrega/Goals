@@ -76,6 +76,7 @@ class Task(Base):
     goals_id = Column('goals_id', ForeignKey('goals.id'))
     title = Column('title', String(50), nullable=False)
     status = Column('status', Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
     is_recurring = Column(Boolean, default=False)
     recurrence_interval_days = Column(Integer, nullable=True) 
     max_recurrences = Column(Integer, nullable=True) 
