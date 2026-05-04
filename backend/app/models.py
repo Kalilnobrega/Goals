@@ -19,6 +19,7 @@ class GoalStatus(str, enum.Enum):
     OPEN = 'open'
     COMPLETED = 'completed'
     PAUSED = 'paused'
+    LATE = 'late'
 
 
 class Goal(Base):

@@ -6,6 +6,7 @@ from app.models import Goal, User, GoalStatus
 from .tasks import check_and_reset_recurring_tasks
 from .auth import get_current_user
 from typing import Optional, List
+from datetime import datetime, timezone
 
 
 goals_router = APIRouter(prefix='/goals', tags=['goals'])
@@ -25,12 +26,23 @@ async def create_goal(goals_schema: GoalsSchema, current_user: User = Depends(ge
 async def list_goals(status: Optional[GoalStatus] = None, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    query = session.query(Goal).filter(Goal.user_id == current_user.id)
+    goal = session.query(Goal).filter(Goal.user_id == current_user.id)
 
     if status is not None:
-        query = query.filter(Goal.status == status)
+        goal = goal.filter(Goal.status == status)
 
-    my_goals = query.all()
+    my_goals = goal.all()
+
+    now = datetime.now(timezone.utc)
+    late = False
+
+    for goals in goal:
+        if goals.status == GoalStatus.OPEN and goals.deadline and goals.deadline < now:
+            goals.status = GoalStatus.LATE 
+            late = True
+            
+    if late:
+        goal.commit()
 
     return my_goals
 
