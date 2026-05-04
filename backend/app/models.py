@@ -33,6 +33,10 @@ class Goal(Base):
     deadline = Column(DateTime(timezone=True), nullable=True)
     owner = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
+
+    @property
+    def total_tasks(self) -> int:
+        return len(self.tasks)
     
     @property
     def progress(self) -> float:
