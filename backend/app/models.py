@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Boolean, DateT
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+from datetime import date
 
 
 class User(Base):
@@ -39,6 +40,13 @@ class Goal(Base):
     def total_tasks(self) -> int:
         return len(self.tasks)
     
+    @property
+    def days_remaining(self) -> int:
+        if not self.deadline:
+            return None
+
+        return (self.deadline.date() - date.today()).days
+
     @property
     def progress(self) -> float:
         if not self.tasks:

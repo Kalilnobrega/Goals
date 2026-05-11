@@ -45,7 +45,7 @@ async def create_task(goal_id: int, task_schema: TaskSchema, current_user: User 
         if not goal.deadline:
             raise HTTPException(status_code=400, detail="A meta precisa ter uma data final para usar essa opção.")
             
-        days_remaining = (goal.deadline.date() - date.today).days
+        days_remaining = (goal.deadline.date() - date.today()).days
         
         if days_remaining < 0:
             raise HTTPException(status_code=400, detail="A meta já venceu.")
