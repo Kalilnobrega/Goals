@@ -60,7 +60,6 @@ class GoalResponseSchema(BaseModel):
         from_attributes = True
 
 
-
 class TaskSchema(BaseModel):
     title: str
     is_recurring: bool = False

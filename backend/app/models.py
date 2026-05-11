@@ -7,27 +7,27 @@ from datetime import date
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
-    id = Column('id', Integer, primary_key=True, autoincrement=True, index=True)
-    name = Column('name', String)
-    email = Column('email', String, unique=True, index=True, nullable=False)
-    password = Column('password', String)
+    id = Column("id", Integer, primary_key=True, autoincrement=True, index=True)
+    name = Column("name", String)
+    email = Column("email", String, unique=True, index=True, nullable=False)
+    password = Column("password", String)
     goals = relationship("Goal", back_populates="owner")
 
 
 class GoalStatus(str, enum.Enum):
-    OPEN = 'open'
-    COMPLETED = 'completed'
-    PAUSED = 'paused'
-    LATE = 'late'
+    OPEN = "open"
+    COMPLETED = "completed"
+    PAUSED = "paused"
+    LATE = "late"
 
 
 class Goal(Base):
-    __tablename__ = 'goals'
+    __tablename__ = "goals"
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(ForeignKey('users.id'))
+    user_id = Column(ForeignKey("users.id"))
     title = Column(String(100), nullable=False)
     description = Column(String, nullable=True)
     status = Column(Enum(GoalStatus), default=GoalStatus.OPEN)
@@ -39,7 +39,7 @@ class Goal(Base):
     @property
     def total_tasks(self) -> int:
         return len(self.tasks)
-    
+
     @property
     def days_remaining(self) -> int:
         if not self.deadline:
@@ -59,7 +59,7 @@ class Goal(Base):
             if task.is_recurring and task.max_recurrences is not None:
                 total_points += task.max_recurrences
                 completed_points += task.recurrence_count
-                
+
                 if task.status == True and task.recurrence_count < task.max_recurrences:
                     completed_points += 1
             elif task.is_recurring and task.max_recurrences is None:
@@ -78,17 +78,17 @@ class Goal(Base):
 
 
 class Task(Base):
-    __tablename__ = 'tasks'
+    __tablename__ = "tasks"
 
-    id = Column('id', Integer, primary_key=True, autoincrement=True)
-    goals_id = Column('goals_id', ForeignKey('goals.id'))
-    title = Column('title', String(50), nullable=False)
-    status = Column('status', Boolean, default=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=True)
+    goals_id = Column("goals_id", ForeignKey("goals.id"))
+    title = Column("title", String(50), nullable=False)
+    status = Column("status", Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     is_recurring = Column(Boolean, default=False)
-    recurrence_interval_days = Column(Integer, nullable=True) 
-    max_recurrences = Column(Integer, nullable=True) 
-    recurrence_count = Column(Integer, default=0) 
+    recurrence_interval_days = Column(Integer, nullable=True)
+    max_recurrences = Column(Integer, nullable=True)
+    recurrence_count = Column(Integer, default=0)
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
     goal = relationship("Goal", back_populates="tasks")
 

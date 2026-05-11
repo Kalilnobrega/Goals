@@ -8,13 +8,21 @@ from .auth import get_current_user
 from typing import Optional, List
 from datetime import datetime, timezone
 
+goals_router = APIRouter(prefix="/goals", tags=["goals"])
 
-goals_router = APIRouter(prefix='/goals', tags=['goals'])
 
-
-@goals_router.post('/')
-async def create_goal(goals_schema: GoalsSchema, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
-    new_goal = Goal(title=goals_schema.title, description=goals_schema.description, deadline=goals_schema.deadline, user_id=current_user.id)
+@goals_router.post("/")
+async def create_goal(
+    goals_schema: GoalsSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    new_goal = Goal(
+        title=goals_schema.title,
+        description=goals_schema.description,
+        deadline=goals_schema.deadline,
+        user_id=current_user.id,
+    )
     session.add(new_goal)
     session.commit()
     session.refresh(new_goal)
@@ -22,8 +30,12 @@ async def create_goal(goals_schema: GoalsSchema, current_user: User = Depends(ge
     return new_goal
 
 
-@goals_router.get('/', response_model=List[GoalResponseSchema])
-async def list_goals(status: Optional[GoalStatus] = None, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
+@goals_router.get("/", response_model=List[GoalResponseSchema])
+async def list_goals(
+    status: Optional[GoalStatus] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
     check_and_reset_recurring_tasks(current_user.id, session)
 
     goal = session.query(Goal).filter(Goal.user_id == current_user.id)
@@ -38,29 +50,51 @@ async def list_goals(status: Optional[GoalStatus] = None, current_user: User = D
 
     for goals in goal:
         if goals.status == GoalStatus.OPEN and goals.deadline and goals.deadline < now:
-            goals.status = GoalStatus.LATE 
+            goals.status = GoalStatus.LATE
             late = True
-            
+
     if late:
         goal.commit()
 
     return my_goals
 
+
 @goals_router.get("/{goal_id}", response_model=GoalResponseSchema)
-async def get_single_goal(goal_id: int, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
-    goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
-    
+async def get_single_goal(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = (
+        session.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .first()
+    )
+
     if not goal:
         raise HTTPException(status_code=404, detail="Meta não encontrada")
-        
+
     return goal
 
-@goals_router.put('/{goal_id}')
-async def edit_goal(goal_id: int, edit_goal_schema: EditGoalSchema, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
-    goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
+
+@goals_router.put("/{goal_id}")
+async def edit_goal(
+    goal_id: int,
+    edit_goal_schema: EditGoalSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = (
+        session.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .first()
+    )
 
     if not goal:
-        raise HTTPException(status_code=404, detail='Meta não encontrada ou não tem permissão para a alterar')
+        raise HTTPException(
+            status_code=404,
+            detail="Meta não encontrada ou não tem permissão para a alterar",
+        )
 
     if edit_goal_schema.title is not None:
         goal.title = edit_goal_schema.title
@@ -76,14 +110,26 @@ async def edit_goal(goal_id: int, edit_goal_schema: EditGoalSchema, current_user
 
     return goal
 
-@goals_router.delete('/{goal_id}')
-async def delete_goal(goal_id: int, current_user: User = Depends(get_current_user), session: Session = Depends(get_db)):
-    goal = session.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
+
+@goals_router.delete("/{goal_id}")
+async def delete_goal(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = (
+        session.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .first()
+    )
 
     if not goal:
-        raise HTTPException(status_code=404, detail='Meta não encontrada ou não tem permissão para apagar')
+        raise HTTPException(
+            status_code=404,
+            detail="Meta não encontrada ou não tem permissão para apagar",
+        )
 
     session.delete(goal)
     session.commit()
-    
+
     return {"message": "Meta apagada com sucesso"}
