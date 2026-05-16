@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from app.schemas import GoalsSchema, EditGoalSchema, GoalResponseSchema
 from app.database import get_db
 from app.models import Goal, User, GoalStatus
-from .tasks import check_and_reset_recurring_tasks
 from .auth import get_current_user
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -36,23 +35,23 @@ async def list_goals(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = session.query(Goal).filter(Goal.user_id == current_user.id)
+    query = session.query(Goal).filter(Goal.user_id == current_user.id)
 
     if status is not None:
-        goal = goal.filter(Goal.status == status)
+        query = query.filter(Goal.status == status)
 
-    my_goals = goal.all()
+    my_goals = query.all()
 
     now = datetime.now()
     late = False
 
-    for goals in goal:
+    for goals in my_goals:
         if goals.status == GoalStatus.OPEN and goals.deadline and goals.deadline < now:
             goals.status = GoalStatus.LATE
             late = True
 
     if late:
-        goal.commit()
+        session.commit()
 
     return my_goals
 
