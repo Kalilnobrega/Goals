@@ -36,8 +36,6 @@ async def list_goals(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    check_and_reset_recurring_tasks(current_user.id, session)
-
     goal = session.query(Goal).filter(Goal.user_id == current_user.id)
 
     if status is not None:

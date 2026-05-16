@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.schemas import TaskSchema, EditTaskschema
+from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
-from app.models import Goal, Task, User
+from app.models import Goal, Task, User, GoalStatus
 from .auth import get_current_user
 from datetime import datetime, timezone, date
+from typing import List
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -88,6 +89,43 @@ async def create_task(
     return new_task
 
 
+@tasks_router.get("/today", response_model=List[TaskResponseSchema])
+async def list_today_tasks(
+    current_user: User = Depends(get_current_user), session: Session = Depends(get_db)
+):
+    check_and_reset_recurring_tasks(current_user.id, session)
+
+    tasks = (
+        session.query(Task)
+        .join(Goal)
+        .filter(
+            Goal.user_id == current_user.id,
+            Goal.status.in_([GoalStatus.OPEN, GoalStatus.LATE]),
+            Task.status == False,
+        )
+        .all()
+    )
+
+    task_response = []
+    for task in tasks:
+        task_data = TaskResponseSchema(
+            id=task.id,
+            goals_id=task.goals_id,
+            title=task.title,
+            goal_title=task.goal.title,
+            status=task.status,
+            created_at=task.created_at,
+            is_recurring=task.is_recurring,
+            recurrence_interval_days=task.recurrence_interval_days,
+            max_recurrences=task.max_recurrences,
+            recurrence_count=task.recurrence_count,
+            last_reset_date=task.last_reset_date,
+        )
+        task_response.append(task_data)
+
+    return task_response
+
+
 @tasks_router.get("/goal/{goal_id}")
 async def list_tasks_by_goal(
     goal_id: int,
@@ -110,10 +148,33 @@ async def list_tasks_by_goal(
     return tasks
 
 
+@tasks_router.patch("/{task_id}/toggle")
+async def toggle_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    task = (
+        session.query(Task)
+        .join(Goal)
+        .filter(Task.id == task_id, Goal.user_id == current_user.id)
+        .first()
+    )
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+
+    task.status = not task.status
+    session.commit()
+    session.refresh(task)
+
+    return task
+
+
 @tasks_router.put("/{task_id}")
 async def edit_task(
     task_id: int,
-    task_schema: EditTaskschema,
+    task_schema: EditTaskSchema,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
