@@ -63,13 +63,40 @@ class Goal(Base):
                 if task.status == True and task.recurrence_count < task.max_recurrences:
                     completed_points += 1
             elif task.is_recurring and task.max_recurrences is None:
-                total_points += 1
-                if task.status == True:
+                total_points = 1
+                if self.deadline and task.created_at:
+                    end = (
+                        self.deadline.date()
+                        if hasattr(self.deadline, "date")
+                        else self.deadline
+                    )
+                    start = (
+                        task.created_at.date()
+                        if hasattr(task.created_at, "date")
+                        else task.created_at
+                    )
+
+                    total_days = (end - start).days
+                    if total_days < 0:
+                        total_days = 0
+
+                    interval = task.recurrence_interval_days or 1
+                    task_total = (total_days // interval) + 1
+
+                else:
+                    task_total = task.recurrence_count + 1
+
+                total_points += task_total
+                completed_points += task.recurrence_count
+
+                if task.status == True and completed_points < total_points:
                     completed_points += 1
+
             else:
                 total_points += 1
                 if task.status == True:
                     completed_points += 1
+
         if total_points == 0:
             return 0.0
 

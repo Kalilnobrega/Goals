@@ -89,7 +89,7 @@ class TaskResponseSchema(BaseModel):
     title: str
     goal_title: str
     status: bool
-    created_at: datetime
+    created_at: datetime | None = None
     is_recurring: bool
     recurrence_interval_days: int | None = None
     max_recurrences: int | None = None
