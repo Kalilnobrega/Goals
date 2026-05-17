@@ -168,6 +168,22 @@ async def toggle_task(
     session.commit()
     session.refresh(task)
 
+    goal = task.goal
+
+    if goal.progress >= 100.0:
+        goal.status = GoalStatus.COMPLETED
+
+    elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
+        now = datetime.now()
+
+        if goal.deadline and goal.deadline < now:
+            goal.status = GoalStatus.LATE
+        else:
+            goal.status = GoalStatus.OPEN
+
+    session.commit()
+    session.refresh(task)
+
     return task
 
 
