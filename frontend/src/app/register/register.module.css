@@ -1,0 +1,106 @@
+.wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--b600);
+    text-decoration: none;
+    padding: 6px 2px;
+    transition: gap .2s;
+    width: fit-content;
+  }
+  .backLink:hover { gap: 10px; }
+  
+  .card {
+    border-radius: 28px;
+    padding: 36px 34px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  
+  /* reuse glass-strong from globals via the class on the element */
+  :global(.glass-strong) {
+    background: var(--glass-strong);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .logoRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  
+  .logo {
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    box-shadow: 0 4px 14px rgba(37,99,235,.3);
+  }
+  
+  .logoName {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--b600), var(--b900));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* ── Password strength ────────────────────────── */
+  .strengthWrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  
+  .strengthBar {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+  }
+  
+  .strengthSeg {
+    flex: 1;
+    height: 4px;
+    border-radius: 99px;
+    transition: background .3s;
+  }
+  
+  .strengthLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 52px;
+    text-align: right;
+    transition: color .3s;
+  }
+  
+  /* ── Input error state ────────────────────────── */
+  .inputError {
+    border-color: rgba(239,68,68,.45) !important;
+    box-shadow: 0 0 0 4px rgba(239,68,68,.08) !important;
+  }
+  
+  @media (max-width: 500px) {
+    .card { padding: 28px 20px; }
+  }

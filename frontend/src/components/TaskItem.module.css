@@ -1,0 +1,92 @@
+.item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.7);
+    transition: background 0.2s;
+    list-style: none;
+  }
+  
+  .item:hover { background: rgba(255,255,255,0.75); }
+  
+  .done .label {
+    text-decoration: line-through;
+    color: #94a3b8;
+  }
+  
+  .check {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 2px solid rgba(59, 130, 246, 0.35);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  
+  .check:hover { border-color: var(--blue-500); background: rgba(59,130,246,0.1); }
+  
+  .checked {
+    background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+  }
+  
+  .labelWrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  
+  .label {
+    font-size: 0.9rem;
+    color: #334155;
+    transition: color 0.2s;
+  }
+  
+  .habit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: #8b5cf6;
+    font-weight: 500;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  
+  .visible { opacity: 1; }
+  
+  .iconBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(59,130,246,0.08);
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  
+  .iconBtn:hover { background: rgba(59,130,246,0.15); color: var(--blue-600); }
+  
+  .danger { color: #ef4444; background: rgba(239,68,68,0.07); }
+  .danger:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
