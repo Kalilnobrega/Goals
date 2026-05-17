@@ -52,18 +52,26 @@ class Goal(Base):
         if not self.tasks:
             return 0.0
 
-        total_points = 0
-        completed_points = 0
+        total_base_tasks = len(self.tasks)
+        weight_per_task = 100.0 / total_base_tasks
+        percentage = 0.0
 
         for task in self.tasks:
-            if task.is_recurring and task.max_recurrences is not None:
-                total_points += task.max_recurrences
-                completed_points += task.recurrence_count
+            task_pct = 0.0
 
-                if task.status == True and task.recurrence_count < task.max_recurrences:
-                    completed_points += 1
+            if task.is_recurring and task.max_recurrences is not None:
+                total_steps = task.max_recurrences
+                completed = task.recurrence_count or 0  # Blindagem adicionada
+
+                if task.status == True and completed < total_steps:
+                    completed += 1
+
+                if total_steps > 0:
+                    task_pct = completed / total_steps
+
             elif task.is_recurring and task.max_recurrences is None:
-                total_points = 1
+                task_total = 1
+
                 if self.deadline and task.created_at:
                     end = (
                         self.deadline.date()
@@ -84,23 +92,22 @@ class Goal(Base):
                     task_total = (total_days // interval) + 1
 
                 else:
-                    task_total = task.recurrence_count + 1
+                    task_total = (task.recurrence_count or 0) + 1
 
-                total_points += task_total
-                completed_points += task.recurrence_count
+                completed = task.recurrence_count or 0
 
-                if task.status == True and completed_points < total_points:
-                    completed_points += 1
+                if task.status == True and completed < task_total:
+                    completed += 1
+
+                if task_total > 0:
+                    task_pct = completed / task_total
 
             else:
-                total_points += 1
                 if task.status == True:
-                    completed_points += 1
+                    task_pct = 1.0
 
-        if total_points == 0:
-            return 0.0
+            percentage += task_pct * weight_per_task
 
-        percentage = (completed_points / total_points) * 100
         return min(round(percentage, 1), 100.0)
 
 
