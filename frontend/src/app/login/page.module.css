@@ -362,6 +362,53 @@
 
 .submitBtn:disabled { opacity: .6; cursor: not-allowed; }
 
+/* ── Divider ──────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #545a61;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+ 
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(59, 130, 246, 0.12);
+}
+ 
+/* ── Google button ────────────────────────────── */
+.googleBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(59, 130, 246, 0.18);
+  background: rgba(255, 255, 255, 0.75);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+ 
+.googleBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+}
+ 
+.googleBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ── Spinner ──────────────────────────────────── */
 .spinner {
   width: 20px; height: 20px;

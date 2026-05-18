@@ -31,6 +31,8 @@ api.interceptors.response.use(
 // ── Auth ───────────────────────────────────────────────
 // Retorna { id, email, name } (UserResponseSchema)
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
+export const googleAuth = (token) =>
+  api.post("/auth/google", { token }).then((r) => r.data);
 
 // ── Goals ──────────────────────────────────────────────
 export const getGoals = (status) =>

@@ -198,8 +198,8 @@ export default function DashboardPage() {
                   </button>
                   <div className={styles.todayInfo}>
                     <span className={styles.todayTitle}>{item.title}</span>
-                    <Link href={`/goals/${item.goalId}`} className={styles.todayGoal}>
-                      {item.goalTitle}
+                    <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
+                      {item.goal_title}
                     </Link>
                   </div>
                   {item.is_recurring && (
@@ -231,8 +231,8 @@ export default function DashboardPage() {
                   </button>
                   <div className={styles.todayInfo}>
                     <span className={styles.todayTitle}>{item.title}</span>
-                    <Link href={`/goals/${item.goalId}`} className={styles.todayGoal}>
-                      {item.goalTitle}
+                    <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
+                      {item.goal_title}
                     </Link>
                   </div>
                 </div>
