@@ -110,7 +110,7 @@ async def list_today_tasks(
     for task in tasks:
         task_data = TaskResponseSchema(
             id=task.id,
-            goals_id=task.goals_id,
+            goal_id=task.goals_id,
             title=task.title,
             goal_title=task.goal.title,
             status=task.status,

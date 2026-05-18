@@ -9,12 +9,16 @@ from app.main import (
     REFRESH_TOKEN_EXPIRE_DAYS,
     ALGORITHM,
     SECRET_KEY,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
 )
-from app.schemas import UserSchema, UserResponseSchema, TokenSchema
+from app.schemas import UserSchema, UserResponseSchema, TokenSchema, GoogleTokenSchema
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import or_
+from google.auth.transport import requests
+import requests
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -128,6 +132,55 @@ async def login(
         "refresh_token": new_refresh_token,
         "token_type": "Bearer",
     }
+
+
+@auth_router.post("/google")
+def google_auth(
+    google_token_schema: GoogleTokenSchema, session: Session = Depends(get_db)
+):
+    token = google_token_schema.token
+    try:
+        google_response = requests.get(
+            f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+        )
+
+        if google_response.status_code != 200:
+            raise ValueError("Token inválido")
+
+        idinfo = google_response.json()
+        user_email = idinfo["email"]
+        user_name = idinfo.get("name", "Usuário")
+
+        user = session.query(User).filter(User.email == user_email).first()
+
+        if not user:
+            user = User(
+                email=user_email,
+                name=user_name,
+                password="google_oauth_account",
+            )
+
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+        new_access_token = create_token(user.id)
+        new_refresh_token = create_token(
+            user.id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), "refresh"
+        )
+
+        create_refresh_token_in_db(new_refresh_token, user.id, session)
+
+        cleanup_invalid_tokens(session)
+
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "Bearer",
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Token do Google inválido")
 
 
 @auth_router.post("/logout")

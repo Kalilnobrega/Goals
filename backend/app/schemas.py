@@ -85,7 +85,7 @@ class EditTaskSchema(BaseModel):
 
 class TaskResponseSchema(BaseModel):
     id: int
-    goals_id: int
+    goal_id: int
     title: str
     goal_title: str
     status: bool
@@ -98,3 +98,7 @@ class TaskResponseSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GoogleTokenSchema(BaseModel):
+    token: str
