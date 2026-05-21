@@ -4,6 +4,7 @@ from app.schemas import GoalsSchema, EditGoalSchema, GoalResponseSchema
 from app.database import get_db
 from app.models import Goal, User, GoalStatus
 from .auth import get_current_user
+from .tasks import update_streak
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -101,6 +102,8 @@ async def edit_goal(
         goal.deadline = edit_goal_schema.deadline
     if edit_goal_schema.status is not None:
         goal.status = edit_goal_schema.status
+        if edit_goal_schema.status == GoalStatus.COMPLETED:
+            update_streak(current_user.id, session)
 
     session.commit()
     session.refresh(goal)

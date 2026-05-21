@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
-from app.models import Goal, Task, User, GoalStatus
+from app.models import Goal, Task, User, GoalStatus, Streak
 from .auth import get_current_user
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from typing import List
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -39,6 +39,46 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
                 elif task.recurrence_count >= task.max_recurrences:
                     task.is_recurring = False
 
+    session.commit()
+
+
+def update_streak(user_id: int, session: Session):
+    today = date.today()
+
+    has_activity = (
+        session.query(Task)
+        .join(Goal)
+        .filter(
+            Goal.user_id == user_id,
+            Task.status == True,
+            Task.completed_at == today,
+        )
+        .first()
+    )
+
+    if not has_activity:
+        return
+
+    streak_db = session.query(Streak).filter(Streak.user_id == user_id).first()
+
+    if not streak_db:
+        streak_db = Streak(
+            user_id=user_id, current_streak=1, longest_streak=1, last_activity=today
+        )
+        session.add(streak_db)
+        session.commit()
+        return
+
+    if streak_db.last_activity == today:
+        return
+
+    if streak_db.last_activity == today - timedelta(days=1):
+        streak_db.current_streak += 1
+    else:
+        streak_db.current_streak = 1
+
+    streak_db.longest_streak = max(streak_db.longest_streak, streak_db.current_streak)
+    streak_db.last_activity = today
     session.commit()
 
 
@@ -165,8 +205,53 @@ async def toggle_task(
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
     task.status = not task.status
+    task.completed_at = date.today() if task.status else None
+
     session.commit()
     session.refresh(task)
+
+    if task.status:
+        update_streak(current_user.id, session)
+    else:
+        still_has_activity = (
+            session.query(Task)
+            .join(Goal)
+            .filter(
+                Goal.user_id == current_user.id,
+                Task.status == True,
+                Task.completed_at == date.today(),
+            )
+            .first()
+        )
+
+        if not still_has_activity:
+            streak_db = (
+                session.query(Streak).filter(Streak.user_id == current_user.id).first()
+            )
+
+            if streak_db and streak_db.last_activity == date.today():
+                yesterday = date.today() - timedelta(days=1)
+
+                had_yesterday = (
+                    session.query(Task)
+                    .join(Goal)
+                    .filter(
+                        Goal.user_id == current_user.id,
+                        Task.status == True,
+                        Task.completed_at == yesterday,
+                    )
+                    .first()
+                )
+
+                if had_yesterday:
+                    streak_db.current_streak = max(1, streak_db.current_streak - 1)
+                    streak_db.last_activity = yesterday
+                else:
+
+                    streak_db.current_streak = 0
+                    streak_db.last_activity = None
+
+                session.commit()
 
     goal = task.goal
 
