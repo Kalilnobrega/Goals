@@ -33,6 +33,7 @@ api.interceptors.response.use(
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
 export const googleAuth = (token) =>
   api.post("/auth/google", { token }).then((r) => r.data);
+export const getStreak = () => api.get("/auth/me/streak").then((r) => r.data);
 
 // ── Goals ──────────────────────────────────────────────
 export const getGoals = (status) =>

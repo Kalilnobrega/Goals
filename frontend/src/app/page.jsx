@@ -6,7 +6,7 @@ import {
   Target, CheckCircle2, Clock, Pause, TrendingUp,
   ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle
 } from 'lucide-react';
-import { getGoals, getTodayTasks, toggleTask } from '../lib/api';
+import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './page.module.css';
@@ -17,13 +17,14 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [todayTasks, setTodayTasks] = useState([]);
   const [toggling,   setToggling]   = useState({});
-  const { setLateCount } = useLateGoals();
+  const { setLateCount, setStreak } = useLateGoals();
 
   const loadAll = async () => {
-    const [gs, today] = await Promise.all([getGoals(), getTodayTasks()]);
+    const [gs, today, streakData] = await Promise.all([getGoals(), getTodayTasks(),  getStreak().catch(() => ({ current_streak: 0}))]);
     setGoals(gs);
     setTodayTasks(today);
     setLateCount(gs.filter(g => g.status === 'late').length);
+    setStreak(streakData.current_streak ?? 0);
   };
  
   useEffect(() => {
@@ -39,6 +40,10 @@ export default function DashboardPage() {
       setTodayTasks(prev =>
         prev.map(t => t.id === item.id ? { ...t, status: !t.status } : t)
       );
+
+      getStreak()
+        .then(s => setStreak(s.current_streak ?? 0))
+        .catch(() => {});
     } catch {}
     finally { setToggling(prev => ({ ...prev, [item.id]: false })); }
   };

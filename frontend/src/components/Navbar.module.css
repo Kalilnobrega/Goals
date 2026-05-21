@@ -122,6 +122,53 @@
   50%       { box-shadow: 0 0 14px rgba(239,68,68,0.9); }
 }
 
+.streakChip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(148,163,184,0.08);
+  border: 1px solid rgba(148,163,184,0.18);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2a2f36;
+  transition: all 0.3s;
+}
+ 
+.streakChipActive {
+  background: rgba(251,146,60,0.10);
+  border-color: rgba(251,146,60,0.25);
+  color: #ea580c;
+}
+ 
+/* ── Fogo ─────────────────────────────────── */
+.streakFire {
+  width: 20px;
+  height: 24px;
+  flex-shrink: 0;
+  transform-origin: bottom center;
+}
+ 
+.streakFireOff {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+ 
+.streakFireActive {
+  animation: fireWiggle 2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 1px 4px rgba(249,115,22,0.6));
+}
+ 
+@keyframes fireWiggle {
+  0%   { transform: scaleX(1)    scaleY(1)    rotate(-4deg) translateY(0px);   }
+  20%  { transform: scaleX(1.08) scaleY(0.96) rotate(2deg)  translateY(-1px);  }
+  40%  { transform: scaleX(0.93) scaleY(1.07) rotate(-3deg) translateY(-2px);  }
+  60%  { transform: scaleX(1.06) scaleY(0.94) rotate(3deg)  translateY(-1px);  }
+  80%  { transform: scaleX(0.96) scaleY(1.04) rotate(-2deg) translateY(-1.5px);}
+  100% { transform: scaleX(1.04) scaleY(0.97) rotate(4deg)  translateY(0px);   }
+}
+
 .right {
   display: flex;
   align-items: center;
