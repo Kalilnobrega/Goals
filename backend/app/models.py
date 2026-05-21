@@ -1,5 +1,14 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Boolean, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Enum,
+    Boolean,
+    DateTime,
+    Date,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -14,6 +23,7 @@ class User(Base):
     email = Column("email", String, unique=True, index=True, nullable=False)
     password = Column("password", String)
     goals = relationship("Goal", back_populates="owner")
+    streak = relationship("Streak", back_populates="user", uselist=False)
 
 
 class GoalStatus(str, enum.Enum):
@@ -124,6 +134,7 @@ class Task(Base):
     max_recurrences = Column(Integer, nullable=True)
     recurrence_count = Column(Integer, default=0)
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(Date, nullable=True)
     goal = relationship("Goal", back_populates="tasks")
 
 
@@ -136,3 +147,18 @@ class RefreshToken(Base):
     revoked = Column(Boolean, default=False)
     expires_at = Column(DateTime)
     user = relationship("User")
+
+
+class Streak(Base):
+    __tablename__ = "streaks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id"), unique=True)
+    current_streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    last_activity = Column(Date, nullable=True)
+    user = relationship("User", back_populates="streak")
+
+
+# Em User adicionar:
+streak = relationship("Streak", back_populates="user", uselist=False)
