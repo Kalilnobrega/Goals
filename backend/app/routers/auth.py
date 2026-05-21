@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models import User, RefreshToken
+from app.models import User, RefreshToken, Streak
 from app.database import get_db
 from app.main import (
     bcrypt_context,
@@ -9,8 +9,6 @@ from app.main import (
     REFRESH_TOKEN_EXPIRE_DAYS,
     ALGORITHM,
     SECRET_KEY,
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
 )
 from app.schemas import UserSchema, UserResponseSchema, TokenSchema, GoogleTokenSchema
 from sqlalchemy.orm import Session
@@ -92,6 +90,20 @@ def auth_user(email, password, session):
 @auth_router.get("/me", response_model=UserResponseSchema)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@auth_router.get("/me/streak")
+def get_streak(
+    current_user: User = Depends(get_current_user), session: Session = Depends(get_db)
+):
+    streak = session.query(Streak).filter(Streak.user_id == current_user.id).first()
+    if not streak:
+        return {"current_streak": 0, "longest_streak": 0, "last_activity": None}
+    return {
+        "current_streak": streak.current_streak,
+        "longest_streak": streak.longest_streak,
+        "last_activity": str(streak.last_activity) if streak.last_activity else None,
+    }
 
 
 @auth_router.post("/register")
