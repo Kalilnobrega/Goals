@@ -31,17 +31,6 @@
     pointer-events: none;
   }
   
-  .heroOrb {
-    position: absolute;
-    top: -80px;
-    right: -80px;
-    width: 320px;
-    height: 320px;
-    background: radial-gradient(circle, rgba(147,197,253,0.22) 0%, transparent 65%);
-    border-radius: 50%;
-    animation: drift1 10s ease-in-out infinite alternate;
-  }
-  
   .heroContent { position: relative; z-index: 1; max-width: 520px; }
   
   .heroBadge {

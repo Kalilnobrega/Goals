@@ -101,10 +101,7 @@ export default function DashboardPage() {
           <div className={styles.heroCalendar}>
             <HeroCalendar goals={goals} />
           </div>
-          
-          <div className={styles.heroOrb} />
-
-         
+                
         </section>
 
         {/* Stats */}
