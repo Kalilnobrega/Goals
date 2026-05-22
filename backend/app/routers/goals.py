@@ -72,6 +72,11 @@ async def get_single_goal(
     if not goal:
         raise HTTPException(status_code=404, detail="Meta não encontrada")
 
+    now = datetime.now()
+    if goal.status == GoalStatus.OPEN and goal.deadline and goal.deadline < now:
+        goal.status = GoalStatus.LATE
+        session.commit()
+
     return goal
 
 
