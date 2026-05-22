@@ -38,7 +38,10 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html { 
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable; 
+}
 
 body {
   font-family: var(--font-body);
@@ -48,6 +51,7 @@ body {
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 /* Animated background orbs */

@@ -59,6 +59,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  height: 32px;
   padding: 8px 16px;
   border-radius: 12px;
   text-decoration: none;
@@ -126,6 +127,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  height: 32px;
   padding: 6px 12px;
   border-radius: 10px;
   background: rgba(148,163,184,0.08);
@@ -179,6 +181,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 32px;
   padding: 6px 12px;
   border-radius: 10px;
   background: rgba(59,130,246,.08);
