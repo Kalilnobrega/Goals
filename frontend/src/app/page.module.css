@@ -17,6 +17,10 @@
     overflow: hidden;
     background: linear-gradient(135deg, rgba(37,99,235,0.92) 0%, rgba(29,78,216,0.96) 60%, rgba(30,58,138,1) 100%);
     box-shadow: 0 20px 60px rgba(37,99,235,0.35);
+    display: flex;
+    align-items: center;            
+    justify-content: space-between;
+    gap: 40px;
   }
   
   .hero::before {

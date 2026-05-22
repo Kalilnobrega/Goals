@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
+import HeroCalendar from '../components/HeroCalendar';
 import {
   Target, CheckCircle2, Clock, TrendingUp,
   ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle
@@ -95,7 +96,15 @@ export default function DashboardPage() {
               Ver todas as metas <ArrowRight size={16} />
             </Link>
           </div>
+         
+          {/* Calendário */}
+          <div className={styles.heroCalendar}>
+            <HeroCalendar goals={goals} />
+          </div>
+          
           <div className={styles.heroOrb} />
+
+         
         </section>
 
         {/* Stats */}
