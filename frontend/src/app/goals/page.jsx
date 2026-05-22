@@ -10,9 +10,8 @@ import styles from './page.module.css';
 
 const STATUS_FILTERS = [
   { value: 'all',       label: 'Todas'      },
-  { value: 'open',      label: 'Em aberto'  },
   { value: 'completed', label: 'Concluídas' },
-  { value: 'paused',    label: 'Pausadas'   },
+  { value: 'open',      label: 'Em aberto'  },
   { value: 'late',      label: 'Atrasadas'  },
 ];
 
@@ -113,7 +112,7 @@ export default function GoalsPage() {
                 className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`}
                 onClick={() => setFilter(f.value)}
               >
-                <span className={styles.filterDot} style={{ '--dot': f.value === 'all' ? '#94a3b8' : f.value === 'open' ? '#3b82f6' : f.value === 'completed' ? '#10b981' : f.value === 'late' ? '#ef4444' : '#f59e0b' }} />
+                <span className={styles.filterDot} style={{ '--dot': f.value === 'all' ? '#3b82f6' : f.value === 'completed' ? '#10b981' : f.value === 'open' ? '#f59e0b' : '#ef4444' }} />
                 {f.label}
               </button>
             ))}

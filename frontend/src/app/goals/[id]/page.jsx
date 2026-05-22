@@ -7,8 +7,9 @@ import GoalForm from '../../../components/GoalForm';
 import TaskItem from '../../../components/TaskItem';
 import {
   getGoal, updateGoal, deleteGoal,
-  getTasks, createTask, updateTask, deleteTask, toggleTask
+  getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak
 } from '../../../lib/api';
+import { useLateGoals } from '../../../lib/LateGoalsContext';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
@@ -20,13 +21,14 @@ import styles from './page.module.css';
 const STATUS_META = {
   open:      { label: 'Em aberto',  color: '#3b82f6' },
   completed: { label: 'Concluída',  color: '#10b981' },
-  paused:    { label: 'Pausada',    color: '#f59e0b' },
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
 
 export default function GoalDetailPage() {
   const { id } = useParams();
   const router  = useRouter();
+
+  const { setStreak } = useLateGoals();
 
   const [goal,       setGoal]       = useState(null);
   const [tasks,      setTasks]      = useState([]);
@@ -85,6 +87,7 @@ export default function GoalDetailPage() {
     try {
       await toggleTask(taskId);
       await Promise.all([loadTasks(), loadGoal()]);
+      getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
     } catch { setError('Erro ao atualizar tarefa.'); }
   };
 

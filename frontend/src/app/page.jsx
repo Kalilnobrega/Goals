@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import {
-  Target, CheckCircle2, Clock, Pause, TrendingUp,
+  Target, CheckCircle2, Clock, TrendingUp,
   ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle
 } from 'lucide-react';
 import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const total     = goals.length;
   const completed = goals.filter(g => g.status === 'completed').length;
   const open      = goals.filter(g => g.status === 'open').length;
-  const paused    = goals.filter(g => g.status === 'paused').length;
+  const late    = goals.filter(g => g.status === 'late').length;
   const rate      = total > 0 ? Math.round((completed / total) * 100) : 0;
   const habitCount = goals.reduce((acc, g) => acc + (g.tasks?.filter(t => t.recurrence_days)?.length ?? 0), 0);
   const firstName = userName.split(' ')[0];
@@ -65,7 +65,7 @@ export default function DashboardPage() {
     { label: 'Total de metas',  value: total,      icon: Target,       color: '#3b82f6' },
     { label: 'Concluídas',      value: completed,  icon: CheckCircle2, color: '#10b981' },
     { label: 'Em aberto',       value: open,       icon: Clock,        color: '#f59e0b' },
-    { label: 'Pausadas',        value: paused,     icon: Pause,        color: '#ff2e4f' },
+    { label: 'Atrasadas',        value: late,     icon: AlertTriangle,        color: '#ef4444' },
     { label: 'Taxa de sucesso', value: `${rate}%`, icon: TrendingUp,   color: '#8b5cf6' },
   ];
 

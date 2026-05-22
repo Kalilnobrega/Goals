@@ -57,7 +57,6 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             <select className={f.select} value={form.status} onChange={set('status')}>
               <option value="open">Em aberto</option>
               <option value="completed">Concluída</option>
-              <option value="paused">Pausada</option>
               <option value="late">Atrasada</option>
             </select>
           </div>

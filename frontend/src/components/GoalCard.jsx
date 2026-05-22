@@ -3,11 +3,10 @@ import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2 } from 'lucide-react';
 import styles from './GoalCard.module.css';
 
-// Status do backend: 'open' | 'completed' | 'paused' | 'late'
+// Status do backend: 'open' | 'completed' | 'late'
 const STATUS_META = {
   open:      { label: 'Em aberto',  color: '#3b82f6' },
   completed: { label: 'Concluída',  color: '#10b981' },
-  paused:    { label: 'Pausada',    color: '#f59e0b' },
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
 
