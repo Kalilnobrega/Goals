@@ -149,7 +149,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.04) 100%);
+  background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.05) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(239,68,68,0.25);
   box-shadow: 0 4px 20px rgba(239,68,68,0.08);
   animation: fadeUp 0.4s ease both;
@@ -211,19 +213,15 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  background: rgba(239,68,68,0.10);
-  border: 1px solid rgba(239,68,68,0.22);
-  color: #ef4444;
-  font-size: 0.82rem;
+  gap: 5px;
+  font-size: 0.85rem;
   font-weight: 600;
+  color: #dc2626;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: gap 0.2s;
 }
  
-.lateBannerBtn:hover { background: rgba(239,68,68,0.18); }
+.lateBannerBtn:hover {  gap: 8px; }
   
   /* ── Habit banner ─────────────────────────────── */
   .habitBanner {
