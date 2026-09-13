@@ -36,6 +36,9 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (res.status === 403) {
+          throw new Error('Verifique seu e-mail antes de fazer login. Cheque sua caixa de entrada.');
+        }
         throw new Error(data.detail || 'Email ou senha incorretos.');
       }
 
@@ -231,7 +234,7 @@ export default function LoginPage() {
                 </svg>
                 Entrar com Google
               </button>
-              
+
             </form>
           </div>
         </div>

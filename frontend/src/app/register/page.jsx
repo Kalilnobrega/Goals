@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Target, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
+import { saveToken, saveUserName } from '../../lib/auth';
 import { googleAuth } from '../../lib/api';
-import { saveToken } from '../../lib/auth';
 import styles from '../login/page.module.css';
 import reg from './register.module.css';
 
@@ -44,11 +44,8 @@ export default function RegisterPage() {
         throw new Error(data.detail || 'Erro ao criar conta.');
       }
 
-      const data = await res.json();
-      const token = data.access_token || data.token;
-      if (token) saveToken(token);
-
-      router.push('/');
+      saveUserName(form.name);
+      router.push(`/register/success?email=${encodeURIComponent(form.email)}`);
     } catch (err) {
       setError(err.message);
     } finally {

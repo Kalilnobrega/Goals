@@ -1,0 +1,112 @@
+.root {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+    background: linear-gradient(140deg, #dbeafe 0%, #eff6ff 35%, #ffffff 55%, #bfdbfe 80%, #dbeafe 100%);
+  }
+  
+  .orb1 {
+    position: fixed;
+    width: 600px; height: 600px;
+    top: -150px; right: -100px;
+    background: radial-gradient(circle, rgba(59,130,246,.16) 0%, transparent 68%);
+    filter: blur(60px);
+    border-radius: 50%;
+  }
+  
+  .orb2 {
+    position: fixed;
+    width: 400px; height: 400px;
+    bottom: -80px; left: -80px;
+    background: radial-gradient(circle, rgba(147,197,253,.20) 0%, transparent 68%);
+    filter: blur(50px);
+    border-radius: 50%;
+  }
+  
+  .card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 28px;
+    padding: 48px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) both;
+  }
+  
+  .iconWrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    margin-bottom: 8px;
+  }
+  
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+  }
+  
+  .sub {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.6;
+  }
+  
+  .redirect {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  
+  .tip {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+  
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, var(--b500), var(--b700));
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 14px;
+    text-decoration: none;
+    box-shadow: 0 6px 20px rgba(37,99,235,.30);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 4px;
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(37,99,235,.40);
+  }
+  
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
