@@ -22,6 +22,7 @@ class User(Base):
     name = Column("name", String)
     email = Column("email", String, unique=True, index=True, nullable=False)
     password = Column("password", String)
+    is_verify = Column("is_verify", Boolean, default=False)
     goals = relationship("Goal", back_populates="owner")
     streak = relationship("Streak", back_populates="user", uselist=False)
 
@@ -29,7 +30,6 @@ class User(Base):
 class GoalStatus(str, enum.Enum):
     OPEN = "open"
     COMPLETED = "completed"
-    PAUSED = "paused"
     LATE = "late"
 
 

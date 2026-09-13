@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from app.models import User, RefreshToken, Streak
 from app.database import get_db
@@ -9,6 +9,7 @@ from app.main import (
     REFRESH_TOKEN_EXPIRE_DAYS,
     ALGORITHM,
     SECRET_KEY,
+    RESEND_KEY,
 )
 from app.schemas import UserSchema, UserResponseSchema, TokenSchema, GoogleTokenSchema
 from sqlalchemy.orm import Session
@@ -17,8 +18,11 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import or_
 from google.auth.transport import requests
 import requests
+import resend
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+resend.api_key = RESEND_KEY
 
 
 def create_token(
@@ -87,6 +91,26 @@ def auth_user(email, password, session):
     return user
 
 
+def send_verification_email(email_to: str, token: str):
+    verify_link = f"http://localhost:3000/verify-email?token={token}"
+
+    try:
+        resend.Emails.send(
+            {
+                "from": "Goals App <onboarding@resend.dev>",
+                "to": "nobregakalilsz@gmail.com",
+                "subject": "Verifique seu e-mail no Goals!",
+                "html": f"""
+                <h2>Bem-vindo ao Goals!</h2>
+                <p>Clique no botão abaixo para verificar sua conta e começar a bater suas metas:</p>
+                <a href='{verify_link}' style='display:inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;'>Verificar E-mail</a>
+                <p><small>Este link expira em 24 horas.</small></p> """,
+            }
+        )
+    except Exception as e:
+        print(f"Erro ao enviar e-mail pelo Resend: {e}")
+
+
 @auth_router.get("/me", response_model=UserResponseSchema)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
@@ -107,19 +131,33 @@ def get_streak(
 
 
 @auth_router.post("/register")
-async def register(user_schema: UserSchema, session: Session = Depends(get_db)):
+async def register(
+    user_schema: UserSchema,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_db),
+):
     user = session.query(User).filter(User.email == user_schema.email).first()
     if user:
         raise HTTPException(status_code=400, detail="e-mail já cadastrado")
 
     crypt_password = bcrypt_context.hash(user_schema.password)
     new_user = User(
-        name=user_schema.name, email=user_schema.email, password=crypt_password
+        name=user_schema.name,
+        email=user_schema.email,
+        password=crypt_password,
     )
     session.add(new_user)
     session.commit()
 
-    return {"message": "Usúario cadastrado com sucesso"}
+    verification_token = create_token(
+        new_user.id, expire=timedelta(hours=24), token_type="verification"
+    )
+
+    background_tasks.add_task(
+        send_verification_email, new_user.email, verification_token
+    )
+
+    return {"message": "Usúario cadastrado com sucesso! Verifique seu e-mail."}
 
 
 @auth_router.post("/login")
@@ -129,6 +167,12 @@ async def login(
     user = auth_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(status_code=400, detail="e-mail ou senha incorretos")
+
+    if not user.is_verify:
+        raise HTTPException(
+            status_code=403,
+            detail="Por favor, verifique seu e-mail antes de fazer login.",
+        )
 
     new_access_token = create_token(user.id)
     new_refresh_token = create_token(
@@ -193,6 +237,36 @@ def google_auth(
 
     except ValueError:
         raise HTTPException(status_code=401, detail="Token do Google inválido")
+
+
+@auth_router.post("/verify-email")
+async def verify_email(token: str, session: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        if payload.get("type") != "verification":
+            raise HTTPException(status_code=400, detail="Token de verificação inválido")
+
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=400, detail="Token inválido")
+
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        if user.is_verify:
+            return {"message": "E-mail já estava verificado!"}
+
+        user.is_verify = True
+        session.commit()
+
+        return {"message": "E-mail verificado com sucesso!"}
+
+    except JWTError:
+        raise HTTPException(
+            status_code=400, detail="Token de verificação expirado ou inválido"
+        )
 
 
 @auth_router.post("/logout")

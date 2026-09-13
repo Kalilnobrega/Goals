@@ -77,7 +77,6 @@ class EditTaskSchema(BaseModel):
     is_recurring: bool | None = None
     recurrence_interval_days: int | None = None
     max_recurrences: int | None = None
-    end_of_goal: bool = False
 
     class Config:
         from_attributes = True
@@ -85,7 +84,7 @@ class EditTaskSchema(BaseModel):
 
 class TaskResponseSchema(BaseModel):
     id: int
-    goal_id: int
+    goals_id: int
     title: str
     goal_title: str
     status: bool
@@ -95,6 +94,14 @@ class TaskResponseSchema(BaseModel):
     max_recurrences: int | None = None
     recurrence_count: int | None = None
     last_reset_date: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class TaskTodaySchema(TaskSchema):
+    goal_id: int
+    goal_title: str
 
     class Config:
         from_attributes = True
