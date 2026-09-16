@@ -31,3 +31,6 @@ alembic/versions/*.pyc
 
 # Variáveis de ambiente
 .env
+
+# Saída gerada pelo graphify (mapa do repositório)
+graphify-out/
