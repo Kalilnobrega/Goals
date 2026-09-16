@@ -84,7 +84,7 @@ class EditTaskSchema(BaseModel):
 
 class TaskResponseSchema(BaseModel):
     id: int
-    goals_id: int
+    goal_id: int
     title: str
     goal_title: str
     status: bool
