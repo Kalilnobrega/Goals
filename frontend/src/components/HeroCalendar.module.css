@@ -102,12 +102,13 @@
   }
    
   .calDot {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     display: inline-block;
+    flex-shrink: 0;
   }
-   
+
   .calLegend {
     display: flex;
     gap: 10px;
@@ -116,7 +117,7 @@
     border-top: 1px solid rgba(255,255,255,0.10);
     flex-wrap: wrap;
   }
-   
+
   .calLegend span {
     display: flex;
     align-items: center;
@@ -124,4 +125,67 @@
     font-size: 0.65rem;
     color: rgba(255,255,255,0.55);
     font-weight: 500;
+  }
+
+  /* ── Prazos do mês ─────────────────────────────── */
+  .calDeadlines {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.10);
+  }
+
+  .calDeadlinesTitle {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 8px;
+  }
+
+  .calDeadlinesEmpty {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.40);
+  }
+
+  .calDeadlinesList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 132px;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  .calDeadlineItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .calDeadlineItem:hover {
+    background: rgba(255,255,255,0.10);
+  }
+
+  .calDeadlineTitle {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calDeadlineDay {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.55);
+    flex-shrink: 0;
   }
