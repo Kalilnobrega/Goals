@@ -92,6 +92,8 @@ def auth_user(email, password, session):
     user = session.query(User).filter(User.email == email).first()
     if not user:
         return False
+    if user.password == "google_oauth_account":
+        return False
     elif not bcrypt_context.verify(password, user.password):
         return False
 
