@@ -34,6 +34,12 @@ export const getMe = () => api.get("/auth/me").then((r) => r.data);
 export const googleAuth = (token) =>
   api.post("/auth/google", { token }).then((r) => r.data);
 export const getStreak = () => api.get("/auth/me/streak").then((r) => r.data);
+export const forgotPassword = (email) =>
+  api.post("/auth/forgot-password", { email }).then((r) => r.data);
+export const resetPassword = (token, newPassword) =>
+  api
+    .post("/auth/reset-password", { token, new_password: newPassword })
+    .then((r) => r.data);
 
 // ── Goals ──────────────────────────────────────────────
 export const getGoals = (status) =>

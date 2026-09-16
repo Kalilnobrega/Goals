@@ -13,6 +13,21 @@
   --blue-800: #1e40af;
   --blue-900: #1e3a8a;
 
+  /* Short aliases used by page-level CSS modules */
+  --b50:  var(--blue-50);
+  --b100: var(--blue-100);
+  --b200: var(--blue-200);
+  --b300: var(--blue-300);
+  --b400: var(--blue-400);
+  --b500: var(--blue-500);
+  --b600: var(--blue-600);
+  --b700: var(--blue-700);
+  --b800: var(--blue-800);
+  --b900: var(--blue-900);
+  --glass-strong: var(--glass-bg-strong);
+  --blur:         var(--glass-blur);
+  --shadow-lg:    var(--glass-shadow-lg);
+
   /* Liquid glass tokens */
   --glass-bg:          rgba(255, 255, 255, 0.55);
   --glass-bg-strong:   rgba(255, 255, 255, 0.75);

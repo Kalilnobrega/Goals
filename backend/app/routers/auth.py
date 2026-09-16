@@ -11,7 +11,14 @@ from app.main import (
     SECRET_KEY,
     RESEND_KEY,
 )
-from app.schemas import UserSchema, UserResponseSchema, TokenSchema, GoogleTokenSchema
+from app.schemas import (
+    UserSchema,
+    UserResponseSchema,
+    TokenSchema,
+    GoogleTokenSchema,
+    ForgotPasswordSchema,
+    ResetPasswordSchema,
+)
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
@@ -105,6 +112,26 @@ def send_verification_email(email_to: str, token: str):
                 <p>Clique no botão abaixo para verificar sua conta e começar a bater suas metas:</p>
                 <a href='{verify_link}' style='display:inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;'>Verificar E-mail</a>
                 <p><small>Este link expira em 24 horas.</small></p> """,
+            }
+        )
+    except Exception as e:
+        print(f"Erro ao enviar e-mail pelo Resend: {e}")
+
+
+def send_reset_email(email_to: str, token: str):
+    reset_link = f"http://localhost:3000/forgot-password?token={token}"
+
+    try:
+        resend.Emails.send(
+            {
+                "from": "Goals App <onboarding@resend.dev>",
+                "to": email_to,
+                "subject": "Redefina sua senha no Goals",
+                "html": f"""
+                <h2>Esqueceu sua senha?</h2>
+                <p>Clique no botão abaixo para escolher uma nova senha:</p>
+                <a href='{reset_link}' style='display:inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;'>Redefinir senha</a>
+                <p><small>Este link expira em 1 hora. Se você não solicitou isso, ignore este e-mail.</small></p> """,
             }
         )
     except Exception as e:
@@ -237,6 +264,59 @@ def google_auth(
 
     except ValueError:
         raise HTTPException(status_code=401, detail="Token do Google inválido")
+
+
+@auth_router.post("/forgot-password")
+async def forgot_password(
+    payload: ForgotPasswordSchema,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_db),
+):
+    user = session.query(User).filter(User.email == payload.email).first()
+
+    if user:
+        reset_token = create_token(
+            user.id, expire=timedelta(hours=1), token_type="reset"
+        )
+        background_tasks.add_task(send_reset_email, user.email, reset_token)
+
+    return {
+        "message": "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha."
+    }
+
+
+@auth_router.post("/reset-password")
+async def reset_password(
+    payload: ResetPasswordSchema, session: Session = Depends(get_db)
+):
+    try:
+        token_payload = jwt.decode(payload.token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        if token_payload.get("type") != "reset":
+            raise HTTPException(
+                status_code=400, detail="Token de redefinição inválido"
+            )
+
+        user_id = token_payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=400, detail="Token inválido")
+
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        user.password = bcrypt_context.hash(payload.new_password)
+        session.query(RefreshToken).filter(RefreshToken.user_id == user.id).update(
+            {"revoked": True}
+        )
+        session.commit()
+
+        return {"message": "Senha redefinida com sucesso!"}
+
+    except JWTError:
+        raise HTTPException(
+            status_code=400, detail="Token de redefinição expirado ou inválido"
+        )
 
 
 @auth_router.post("/verify-email")

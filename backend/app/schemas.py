@@ -109,3 +109,12 @@ class TaskTodaySchema(TaskSchema):
 
 class GoogleTokenSchema(BaseModel):
     token: str
+
+
+class ForgotPasswordSchema(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordSchema(BaseModel):
+    token: str
+    new_password: str
