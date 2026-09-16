@@ -4,7 +4,7 @@ import Navbar from '../../components/Navbar';
 import GoalCard from '../../components/GoalCard';
 import Modal from '../../components/Modal';
 import GoalForm from '../../components/GoalForm';
-import { getGoals, createGoal, deleteGoal } from '../../lib/api';
+import { getGoals, createGoal, updateGoal, deleteGoal } from '../../lib/api';
 import { Plus, Search } from 'lucide-react';
 import styles from './page.module.css';
 
