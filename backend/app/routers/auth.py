@@ -107,7 +107,7 @@ def send_verification_email(email_to: str, token: str):
         resend.Emails.send(
             {
                 "from": "Goals App <onboarding@resend.dev>",
-                "to": "nobregakalilsz@gmail.com",
+                "to": email_to,
                 "subject": "Verifique seu e-mail no Goals!",
                 "html": f"""
                 <h2>Bem-vindo ao Goals!</h2>
