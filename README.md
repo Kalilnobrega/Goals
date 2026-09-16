@@ -24,12 +24,16 @@ Diferente de um simples "To-Do List", este sistema possui um motor avançado par
 
 ## ⚙️ Como rodar o projeto localmente
 
-**1. Clone o repositório e entre na pasta**
-```bash
-git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
-cd seu-repositorio/backend
+### Backend (API)
 
-2. Crie e ative um ambiente virtual
+**1. Clone o repositório e entre na pasta do backend**
+```bash
+git clone https://github.com/seu-usuario/seu-repositorio.git
+cd seu-repositorio/backend
+```
+
+**2. Crie e ative um ambiente virtual**
+```bash
 # No Windows:
 python -m venv venv
 venv\Scripts\activate
@@ -37,18 +41,60 @@ venv\Scripts\activate
 # No Mac/Linux:
 python3 -m venv venv
 source venv/bin/activate
+```
 
-3. Instale as dependências
-pip install -r requirements.txt
+**3. Instale as dependências**
+```bash
+pip install -r app/requirements.txt
+```
 
-4. Rode as migrações do banco de dados
+**4. Configure as variáveis de ambiente**
+
+Crie um arquivo `.env` na pasta `backend/` com as seguintes chaves:
+```bash
+SECRET_KEY=uma-chave-secreta-aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+GOOGLE_CLIENT_ID=seu-google-client-id
+GOOGLE_CLIENT_SECRET=seu-google-client-secret
+RESEND_KEY=sua-chave-da-api-resend
+```
+
+**5. Rode as migrações do banco de dados**
+```bash
 alembic upgrade head
+```
 
-5. Inicie o servidor
+**6. Inicie o servidor**
+```bash
 uvicorn app.main:app --reload
+```
 
 A API estará rodando em http://127.0.0.1:8000.
 Para acessar a documentação interativa e testar as rotas, acesse o Swagger UI em: http://127.0.0.1:8000/docs.
+
+### Frontend (Next.js)
+
+**1. Entre na pasta do frontend e instale as dependências**
+```bash
+cd ../frontend
+npm install
+```
+
+**2. Configure as variáveis de ambiente**
+
+Crie um arquivo `.env.local` na pasta `frontend/`:
+```bash
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+**3. Inicie o servidor de desenvolvimento**
+```bash
+npm run dev
+```
+
+O frontend estará rodando em http://localhost:3000.
 
 📚 Estrutura de Endpoints (API)
 A documentação completa está disponível no Swagger, mas aqui estão as rotas principais:
