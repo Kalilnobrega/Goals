@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Target, CheckCircle2, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { googleAuth } from '../../lib/api';
-import { saveToken, saveUserName } from '../../lib/auth';
+import { saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import styles from './page.module.css';
 
 export default function LoginPage() {
@@ -46,7 +46,8 @@ export default function LoginPage() {
       const token = data.access_token;
       if (token) {
         saveToken(token);
- 
+        if (data.refresh_token) saveRefreshToken(data.refresh_token);
+
         // Busca o nome real do usuário via GET /auth/me
         const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -74,6 +75,7 @@ export default function LoginPage() {
         const token = data.access_token || data.token;
         if (token) {
           saveToken(token);
+          if (data.refresh_token) saveRefreshToken(data.refresh_token);
           const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });

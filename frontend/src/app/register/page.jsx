@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Target, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { saveToken, saveUserName } from '../../lib/auth';
+import { saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import { googleAuth } from '../../lib/api';
 import styles from '../login/page.module.css';
 import reg from './register.module.css';
@@ -62,6 +62,7 @@ export default function RegisterPage() {
         const token = data.access_token || data.token;
         if (token) {
           saveToken(token);
+          if (data.refresh_token) saveRefreshToken(data.refresh_token);
           const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });

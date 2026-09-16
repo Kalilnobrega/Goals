@@ -11,6 +11,7 @@ export function saveToken(token) {
 export function clearToken() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
   localStorage.removeItem('userName');
   document.cookie = 'token=; path=/; max-age=0';
 }
@@ -22,6 +23,17 @@ export function getToken() {
 
 export function isLoggedIn() {
   return !!getToken();
+}
+
+// ── Refresh token ────────────────────────────────────
+export function saveRefreshToken(token) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('refreshToken', token);
+}
+
+export function getRefreshToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('refreshToken');
 }
 
 // ── Nome do usuário ────────────────────────────────────
