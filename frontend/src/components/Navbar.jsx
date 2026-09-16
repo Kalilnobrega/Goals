@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Target, LayoutDashboard, ListChecks, LogOut, UserCircle2 } from 'lucide-react';
-import { clearToken, getUserName, saveUserName } from '../lib/auth';
-import { getMe } from '../lib/api';
+import { clearToken, getRefreshToken, getUserName, saveUserName } from '../lib/auth';
+import { getMe, logout } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 
@@ -35,6 +35,8 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
+    const refreshToken = getRefreshToken();
+    if (refreshToken) logout(refreshToken).catch(() => {});
     clearToken();
     router.push('/login');
   };

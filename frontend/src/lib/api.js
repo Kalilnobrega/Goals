@@ -76,6 +76,8 @@ export const resetPassword = (token, newPassword) =>
   api
     .post("/auth/reset-password", { token, new_password: newPassword })
     .then((r) => r.data);
+export const logout = (refreshToken) =>
+  api.post("/auth/logout", { refresh_token: refreshToken }).then((r) => r.data);
 
 // ── Goals ──────────────────────────────────────────────
 export const getGoals = (status) =>
