@@ -20,6 +20,9 @@ Thumbs.db
 # VS Code
 .vscode/
 
+# Claude Code local runtime state
+.claude/
+
 # Logs
 *.log
 
