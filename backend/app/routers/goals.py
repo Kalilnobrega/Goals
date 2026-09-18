@@ -4,7 +4,7 @@ from app.schemas import GoalsSchema, EditGoalSchema, GoalResponseSchema
 from app.database import get_db
 from app.models import Goal, User, GoalStatus
 from .auth import get_current_user
-from .tasks import update_streak
+from .tasks import update_streak, to_aware_utc
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -43,11 +43,15 @@ async def list_goals(
 
     my_goals = query.all()
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     late = False
 
     for goals in my_goals:
-        if goals.status == GoalStatus.OPEN and goals.deadline and goals.deadline < now:
+        if (
+            goals.status == GoalStatus.OPEN
+            and goals.deadline
+            and to_aware_utc(goals.deadline) < now
+        ):
             goals.status = GoalStatus.LATE
             late = True
 
@@ -72,8 +76,8 @@ async def get_single_goal(
     if not goal:
         raise HTTPException(status_code=404, detail="Meta não encontrada")
 
-    now = datetime.now()
-    if goal.status == GoalStatus.OPEN and goal.deadline and goal.deadline < now:
+    now = datetime.now(timezone.utc)
+    if goal.status == GoalStatus.OPEN and goal.deadline and to_aware_utc(goal.deadline) < now:
         goal.status = GoalStatus.LATE
         session.commit()
 

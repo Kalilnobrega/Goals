@@ -10,6 +10,14 @@ from typing import List
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
+def to_aware_utc(dt):
+    """Normaliza um datetime pra UTC-aware, funcionando tanto com valores
+    naive (SQLite) quanto com valores ja timezone-aware (Postgres)."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def check_and_reset_recurring_tasks(user_id: int, session: Session):
     now = datetime.now(timezone.utc)
 
@@ -22,7 +30,7 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
 
     for task in recurring_tasks:
         if task.last_reset_date and task.recurrence_interval_days:
-            last_reset = task.last_reset_date.replace(tzinfo=timezone.utc)
+            last_reset = to_aware_utc(task.last_reset_date)
             past_days = (now - last_reset).days
 
             if past_days >= task.recurrence_interval_days:
@@ -249,9 +257,9 @@ async def toggle_task(
         goal.status = GoalStatus.COMPLETED
 
     elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
-        if goal.deadline and goal.deadline < now:
+        if goal.deadline and to_aware_utc(goal.deadline) < now:
             goal.status = GoalStatus.LATE
         else:
             goal.status = GoalStatus.OPEN
