@@ -27,6 +27,7 @@ from datetime import datetime, timedelta, timezone, date
 from sqlalchemy import or_
 import requests
 import resend
+import uuid
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,7 +38,12 @@ def create_token(
     id_user, expire=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), token_type="access"
 ):
     expiration_date = datetime.now(timezone.utc) + expire
-    dic_info = {"sub": str(id_user), "exp": expiration_date, "type": token_type}
+    dic_info = {
+        "sub": str(id_user),
+        "exp": expiration_date,
+        "type": token_type,
+        "jti": str(uuid.uuid4()),
+    }
     jwt_encoded = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
 
     return jwt_encoded
