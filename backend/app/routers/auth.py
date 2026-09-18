@@ -86,12 +86,12 @@ def get_current_user(
         if user_id is None:
             raise HTTPException(status_code=401)
 
-        user = session.query(User).filter(User.id == user_id).first()
+        user = session.query(User).filter(User.id == int(user_id)).first()
         if not user:
             raise HTTPException(status_code=401)
 
         return user
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(status_code=401)
 
 
@@ -342,7 +342,7 @@ async def reset_password(
         if user_id is None:
             raise HTTPException(status_code=400, detail="Token inválido")
 
-        user = session.query(User).filter(User.id == user_id).first()
+        user = session.query(User).filter(User.id == int(user_id)).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
@@ -354,7 +354,7 @@ async def reset_password(
 
         return {"message": "Senha redefinida com sucesso!"}
 
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(
             status_code=400, detail="Token de redefinição expirado ou inválido"
         )
@@ -372,7 +372,7 @@ async def verify_email(token: str, session: Session = Depends(get_db)):
         if user_id is None:
             raise HTTPException(status_code=400, detail="Token inválido")
 
-        user = session.query(User).filter(User.id == user_id).first()
+        user = session.query(User).filter(User.id == int(user_id)).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
@@ -384,7 +384,7 @@ async def verify_email(token: str, session: Session = Depends(get_db)):
 
         return {"message": "E-mail verificado com sucesso!"}
 
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(
             status_code=400, detail="Token de verificação expirado ou inválido"
         )
@@ -425,6 +425,7 @@ async def refresh(token_schema: TokenSchema, session: Session = Depends(get_db))
         user_id = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Token inválido")
+        user_id = int(user_id)
         token_db.revoked = True
         session.commit()
 
@@ -440,5 +441,5 @@ async def refresh(token_schema: TokenSchema, session: Session = Depends(get_db))
             "refresh_token": new_refresh_token,
             "token_type": "Bearer",
         }
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Refresh token inválido")
