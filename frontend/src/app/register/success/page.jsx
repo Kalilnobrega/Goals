@@ -1,10 +1,19 @@
 'use client';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import styles from './success.module.css';
 
 export default function RegisterSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterSuccessContent />
+    </Suspense>
+  );
+}
+
+function RegisterSuccessContent() {
   const params = useSearchParams();
   const email  = params.get('email') || '';
 
@@ -40,7 +49,7 @@ export default function RegisterSuccessPage() {
           </div>
           <div className={styles.step}>
             <CheckCircle2 size={16} style={{ color: 'var(--b400)' }} />
-            <span>Clique em "Verificar E-mail"</span>
+            <span>Clique em &quot;Verificar E-mail&quot;</span>
           </div>
         </div>
 
