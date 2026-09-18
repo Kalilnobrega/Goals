@@ -16,7 +16,7 @@ Diferente de um simples "To-Do List", este sistema possui um motor avançado par
 
 * **Linguagem:** Python 3
 * **Framework Web:** FastAPI
-* **ORM & Banco de Dados:** SQLAlchemy e SQLite
+* **ORM & Banco de Dados:** SQLAlchemy e PostgreSQL (SQLite como fallback automático se `DATABASE_URL` não for configurado)
 * **Migrações:** Alembic
 * **Validação de Dados:** Pydantic
 * **Segurança:** Autenticação JWT (Passlib, python-jose)
@@ -48,7 +48,20 @@ source venv/bin/activate
 pip install -r app/requirements.txt
 ```
 
-**4. Configure as variáveis de ambiente**
+**4. Configure o PostgreSQL**
+
+O projeto usa PostgreSQL. Localmente, instale via Homebrew e crie um banco dedicado:
+```bash
+brew install postgresql@16
+brew services start postgresql@16
+
+createuser goals_app --pwprompt
+createdb goals_db --owner=goals_app
+```
+
+Sem um `DATABASE_URL` configurado, a aplicação cai automaticamente para um arquivo SQLite local (`banco.db`) — útil só para testes rápidos, não recomendado além disso.
+
+**5. Configure as variáveis de ambiente**
 
 Crie um arquivo `.env` na pasta `backend/` com as seguintes chaves:
 ```bash
@@ -59,9 +72,10 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 GOOGLE_CLIENT_ID=seu-google-client-id
 GOOGLE_CLIENT_SECRET=seu-google-client-secret
 RESEND_KEY=sua-chave-da-api-resend
+DATABASE_URL=postgresql+psycopg://goals_app:sua-senha@localhost:5432/goals_db
 ```
 
-**5. Rode as migrações do banco de dados**
+**6. Rode as migrações do banco de dados**
 ```bash
 alembic upgrade head
 ```
