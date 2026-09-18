@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from app.models import User, RefreshToken, Streak
 from app.database import get_db
 from app.main import (
     bcrypt_context,
     oauth2_scheme,
+    limiter,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
     ALGORITHM,
     SECRET_KEY,
     RESEND_KEY,
+    GOOGLE_CLIENT_ID,
 )
 from app.schemas import (
     UserSchema,
@@ -21,9 +23,8 @@ from app.schemas import (
 )
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from sqlalchemy import or_
-from google.auth.transport import requests
 import requests
 import resend
 
@@ -160,7 +161,9 @@ def get_streak(
 
 
 @auth_router.post("/register")
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_schema: UserSchema,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_db),
@@ -190,8 +193,11 @@ async def register(
 
 
 @auth_router.post("/login")
+@limiter.limit("5/minute")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db)
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_db),
 ):
     user = auth_user(form_data.username, form_data.password, session)
     if not user:
@@ -225,8 +231,24 @@ def google_auth(
 ):
     token = google_token_schema.token
     try:
+        tokeninfo_response = requests.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"access_token": token},
+            timeout=5,
+        )
+
+        if tokeninfo_response.status_code != 200:
+            raise ValueError("Token inválido")
+
+        tokeninfo = tokeninfo_response.json()
+
+        if tokeninfo.get("aud") != GOOGLE_CLIENT_ID:
+            raise ValueError("Token não pertence a este aplicativo")
+
         google_response = requests.get(
-            f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            params={"access_token": token},
+            timeout=5,
         )
 
         if google_response.status_code != 200:
@@ -243,6 +265,7 @@ def google_auth(
                 email=user_email,
                 name=user_name,
                 password="google_oauth_account",
+                is_verify=True,
             )
 
             session.add(user)
@@ -264,8 +287,12 @@ def google_auth(
             "token_type": "Bearer",
         }
 
-    except ValueError:
+    except (ValueError, KeyError):
         raise HTTPException(status_code=401, detail="Token do Google inválido")
+    except requests.RequestException:
+        raise HTTPException(
+            status_code=502, detail="Não foi possível validar o token com o Google"
+        )
 
 
 @auth_router.post("/forgot-password")
