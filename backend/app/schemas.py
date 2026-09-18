@@ -1,12 +1,12 @@
-from pydantic import BaseModel, EmailStr
-from datetime import datetime, date
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
 from app.models import GoalStatus
 
 
 class UserSchema(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=6)
 
     class Config:
         from_attributes = True
@@ -117,4 +117,4 @@ class ForgotPasswordSchema(BaseModel):
 
 class ResetPasswordSchema(BaseModel):
     token: str
-    new_password: str
+    new_password: str = Field(min_length=6)
