@@ -158,7 +158,3 @@ class Streak(Base):
     longest_streak = Column(Integer, default=0)
     last_activity = Column(Date, nullable=True)
     user = relationship("User", back_populates="streak")
-
-
-# Em User adicionar:
-streak = relationship("Streak", back_populates="user", uselist=False)
