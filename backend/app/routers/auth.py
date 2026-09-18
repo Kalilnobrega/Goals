@@ -153,6 +153,12 @@ def get_streak(
     streak = session.query(Streak).filter(Streak.user_id == current_user.id).first()
     if not streak:
         return {"current_streak": 0, "longest_streak": 0, "last_activity": None}
+
+    if streak.last_activity and streak.last_activity < date.today() - timedelta(days=1):
+        streak.current_streak = 0
+        streak.last_activity = None
+        session.commit()
+
     return {
         "current_streak": streak.current_streak,
         "longest_streak": streak.longest_streak,

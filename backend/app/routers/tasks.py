@@ -230,26 +230,16 @@ async def toggle_task(
             )
 
             if streak_db and streak_db.last_activity == date.today():
-                yesterday = date.today() - timedelta(days=1)
+                # Desfaz exatamente o incremento de hoje feito por update_streak,
+                # em vez de tentar redescobrir "teve atividade ontem" consultando
+                # tarefas (frágil: hábitos recorrentes já resetados não deixam
+                # rastro e zeravam a streak inteira indevidamente).
+                streak_db.current_streak = max(0, streak_db.current_streak - 1)
 
-                had_yesterday = (
-                    session.query(Task)
-                    .join(Goal)
-                    .filter(
-                        Goal.user_id == current_user.id,
-                        Task.status == True,
-                        Task.completed_at == yesterday,
-                    )
-                    .first()
-                )
-
-                if had_yesterday:
-                    streak_db.current_streak = max(1, streak_db.current_streak - 1)
-                    streak_db.last_activity = yesterday
-                else:
-
-                    streak_db.current_streak = 0
+                if streak_db.current_streak == 0:
                     streak_db.last_activity = None
+                else:
+                    streak_db.last_activity = date.today() - timedelta(days=1)
 
                 session.commit()
 
