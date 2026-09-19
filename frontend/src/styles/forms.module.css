@@ -76,3 +76,7 @@
 
 .btnSubmit:hover { opacity: 0.9; transform: translateY(-1px); }
 .btnSubmit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+@media (max-width: 420px) {
+  .row { grid-template-columns: 1fr; }
+}

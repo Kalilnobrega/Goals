@@ -18,8 +18,9 @@
     background: linear-gradient(135deg, rgba(37,99,235,0.92) 0%, rgba(29,78,216,0.96) 60%, rgba(30,58,138,1) 100%);
     box-shadow: 0 20px 60px rgba(37,99,235,0.35);
     display: flex;
-    align-items: center;            
+    align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 40px;
   }
   
@@ -31,7 +32,9 @@
     pointer-events: none;
   }
   
-  .heroContent { position: relative; z-index: 1; max-width: 520px; }
+  .heroContent { position: relative; z-index: 1; max-width: 520px; min-width: 260px; flex: 1 1 320px; }
+
+  .heroCalendar { width: 260px; max-width: 100%; }
   
   .heroBadge {
     display: inline-flex;
@@ -549,8 +552,11 @@
   
   @media (max-width: 640px) {
     .main { padding: 16px 16px 60px; gap: 28px; }
-    .hero { padding: 36px 28px; }
+    .hero { padding: 32px 20px; justify-content: center; text-align: center; }
+    .heroContent { min-width: 0; flex-basis: 100%; }
     .heroTitle { font-size: 1.75rem; }
+    .heroSub { max-width: 100%; }
+    .heroCalendar { margin: 0 auto; }
     .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .recentGrid { grid-template-columns: 1fr; }
   }

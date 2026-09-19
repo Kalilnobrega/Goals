@@ -216,11 +216,20 @@
 
 @media (max-width: 600px) {
   .header { padding: 10px 12px; }
+  .nav { padding: 8px 12px; gap: 10px; }
   .brandName { display: none; }
-  .link span:last-of-type { display: none; }
-  .link { padding: 8px 12px; }
+  .linkLabel { display: none; }
+  .link { padding: 8px 10px; }
+  .links { gap: 2px; }
   .logoutBtn span { display: none; }
   .logoutBtn { padding: 8px 10px; }
   .userChip span { display: none; }
   .userChip { padding: 6px 8px; }
+  .right { gap: 6px; }
+}
+
+@media (max-width: 420px) {
+  .userChip { display: none; }
+  .brandIcon { width: 32px; height: 32px; }
+  .streakChip { padding: 6px 9px; }
 }

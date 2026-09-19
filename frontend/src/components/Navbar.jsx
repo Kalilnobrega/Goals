@@ -66,7 +66,7 @@ export default function Navbar() {
                       </span>
                     )}
                   </span>
-                  <span>{label}</span>
+                  <span className={styles.linkLabel}>{label}</span>
                   {active && <span className={styles.activePill} />}
                 </Link>
               </li>

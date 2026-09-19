@@ -71,6 +71,12 @@
   }
   
   .visible { opacity: 1; }
+
+  /* Em telas touch nao existe :hover, entao as acoes ficariam
+     escondidas pra sempre — deixa sempre visivel nesse caso. */
+  @media (hover: none) {
+    .actions { opacity: 1; }
+  }
   
   .iconBtn {
     display: flex;
