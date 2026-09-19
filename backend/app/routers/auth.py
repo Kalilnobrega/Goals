@@ -12,6 +12,7 @@ from app.main import (
     SECRET_KEY,
     RESEND_KEY,
     GOOGLE_CLIENT_ID,
+    FRONTEND_URL,
 )
 from app.schemas import (
     UserSchema,
@@ -108,7 +109,7 @@ def auth_user(email, password, session):
 
 
 def send_verification_email(email_to: str, token: str):
-    verify_link = f"http://localhost:3000/verify-email?token={token}"
+    verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
 
     try:
         resend.Emails.send(
@@ -128,7 +129,7 @@ def send_verification_email(email_to: str, token: str):
 
 
 def send_reset_email(email_to: str, token: str):
-    reset_link = f"http://localhost:3000/forgot-password?token={token}"
+    reset_link = f"{FRONTEND_URL}/forgot-password?token={token}"
 
     try:
         resend.Emails.send(
