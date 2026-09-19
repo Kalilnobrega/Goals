@@ -17,12 +17,15 @@ export default function HeroCalendar({ goals }) {
     const firstDay  = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
    
-    // Mapeia deadlines das metas por data
+    // Mapeia deadlines das metas por data.
+    // Usa getters UTC: o prazo é guardado como "meia-noite UTC" do dia
+    // escolhido, e getters locais podem voltar um dia em fusos negativos
+    // (ex: Brasil, UTC-3).
     const deadlineMap = {};
     goals.forEach(g => {
       if (!g.deadline) return;
       const d = new Date(g.deadline);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
       if (!deadlineMap[key]) deadlineMap[key] = [];
       deadlineMap[key].push(g);
     });
@@ -36,12 +39,13 @@ export default function HeroCalendar({ goals }) {
       return '#93c5fd';
     };
 
-    // Metas com prazo dentro do mês exibido, ordenadas por dia
+    // Metas com prazo dentro do mês exibido, ordenadas por dia (getters UTC,
+    // mesmo motivo do deadlineMap acima)
     const monthGoals = goals
       .filter(g => g.deadline)
       .map(g => ({ ...g, _deadline: new Date(g.deadline) }))
-      .filter(g => g._deadline.getFullYear() === year && g._deadline.getMonth() === month)
-      .sort((a, b) => a._deadline.getDate() - b._deadline.getDate());
+      .filter(g => g._deadline.getUTCFullYear() === year && g._deadline.getUTCMonth() === month)
+      .sort((a, b) => a._deadline.getUTCDate() - b._deadline.getUTCDate());
 
     const cells = [];
     for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -116,7 +120,7 @@ export default function HeroCalendar({ goals }) {
                   <Link href={`/goals/${g.id}`} className={styles.calDeadlineItem}>
                     <span className={styles.calDot} style={{ background: statusColor(g.status) }} />
                     <span className={styles.calDeadlineTitle}>{g.title}</span>
-                    <span className={styles.calDeadlineDay}>{g._deadline.getDate()}</span>
+                    <span className={styles.calDeadlineDay}>{g._deadline.getUTCDate()}</span>
                   </Link>
                 </li>
               ))}

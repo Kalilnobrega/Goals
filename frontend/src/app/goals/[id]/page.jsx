@@ -10,6 +10,7 @@ import {
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
+import { formatDeadline } from '../../../lib/date';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
@@ -201,7 +202,7 @@ export default function GoalDetailPage() {
               {goal.deadline && (
                 <span className={styles.metaChip}>
                   <Calendar size={13} />
-                  {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+                  {formatDeadline(goal.deadline)}
                 </span>
               )}
               <span className={styles.metaChip}>

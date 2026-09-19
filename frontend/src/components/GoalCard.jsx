@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { formatDeadline } from '../lib/date';
 import styles from './GoalCard.module.css';
 
 // Status do backend: 'open' | 'completed' | 'late'
@@ -46,7 +47,7 @@ export default function GoalCard({ goal, onDelete, onComplete }) {
         {goal.deadline && (
           <span className={styles.metaItem}>
             <Calendar size={13} />
-            {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+            {formatDeadline(goal.deadline)}
           </span>
         )}
         {goal.tasks?.some(t => t.is_recurring) && (
