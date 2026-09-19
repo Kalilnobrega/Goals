@@ -112,7 +112,7 @@ export default function GoalsPage() {
                 className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`}
                 onClick={() => setFilter(f.value)}
               >
-                <span className={styles.filterDot} style={{ '--dot': f.value === 'all' ? '#3b82f6' : f.value === 'completed' ? '#10b981' : f.value === 'open' ? '#f59e0b' : '#ef4444' }} />
+                <span className={styles.filterDot} style={{ '--dot': f.value === 'all' ? '#94a3b8' : f.value === 'completed' ? '#10b981' : f.value === 'open' ? '#3b82f6' : '#ef4444' }} />
                 {f.label}
               </button>
             ))}

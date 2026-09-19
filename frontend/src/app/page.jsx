@@ -63,9 +63,9 @@ export default function DashboardPage() {
     .slice(0, 4);
 
   const stats = [
-    { label: 'Total de metas',  value: total,      icon: Target,       color: '#3b82f6' },
+    { label: 'Total de metas',  value: total,      icon: Target,       color: '#94a3b8' },
     { label: 'Concluídas',      value: completed,  icon: CheckCircle2, color: '#10b981' },
-    { label: 'Em aberto',       value: open,       icon: Clock,        color: '#f59e0b' },
+    { label: 'Em aberto',       value: open,       icon: Clock,        color: '#3b82f6' },
     { label: 'Atrasadas',        value: late,     icon: AlertTriangle,        color: '#ef4444' },
     { label: 'Taxa de sucesso', value: `${rate}%`, icon: TrendingUp,   color: '#8b5cf6' },
   ];
