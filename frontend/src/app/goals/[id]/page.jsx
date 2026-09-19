@@ -365,7 +365,7 @@ export default function GoalDetailPage() {
                         checked={editTask?.end_of_goal ?? false}
                         onChange={() => setEditTask(t => ({ ...t, end_of_goal: true, max_recurrences: null }))}
                       />
-                      🎯 Até a meta vencer
+                      Até a meta terminar
                     </label>
                     <label className={`${f.endOption} ${!editTask?.end_of_goal ? f.endOptionActive : ''}`}>
                       <input
@@ -374,7 +374,7 @@ export default function GoalDetailPage() {
                         checked={!editTask?.end_of_goal}
                         onChange={() => setEditTask(t => ({ ...t, end_of_goal: false }))}
                       />
-                      🔢 Número de vezes
+                      Quantidade de vezes
                     </label>
                   </div>
                 </div>
