@@ -14,6 +14,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  /* mais fosco que o .glass padrao usado no resto do site, mas ainda translucido */
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 .brand {
