@@ -114,7 +114,7 @@ def send_verification_email(email_to: str, token: str):
     try:
         resend.Emails.send(
             {
-                "from": "Goals App <onboarding@resend.dev>",
+                "from": "Goals App <noreply@goals.dev.br>",
                 "to": email_to,
                 "subject": "Verifique seu e-mail no Goals!",
                 "html": f"""
@@ -134,7 +134,7 @@ def send_reset_email(email_to: str, token: str):
     try:
         resend.Emails.send(
             {
-                "from": "Goals App <onboarding@resend.dev>",
+                "from": "Goals App <noreply@goals.dev.br>",
                 "to": email_to,
                 "subject": "Redefina sua senha no Goals",
                 "html": f"""
