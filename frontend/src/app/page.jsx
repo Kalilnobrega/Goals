@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import HeroCalendar from '../components/HeroCalendar';
 import {
   Target, CheckCircle2, Clock, TrendingUp,
-  ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle
+  ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle, Trophy
 } from 'lucide-react';
 import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
 import { getUserName } from '../lib/auth';
@@ -18,14 +18,16 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [todayTasks, setTodayTasks] = useState([]);
   const [toggling,   setToggling]   = useState({});
+  const [longestStreak, setLongestStreak] = useState(0);
   const { setLateCount, setStreak } = useLateGoals();
 
   const loadAll = async () => {
-    const [gs, today, streakData] = await Promise.all([getGoals(), getTodayTasks(),  getStreak().catch(() => ({ current_streak: 0}))]);
+    const [gs, today, streakData] = await Promise.all([getGoals(), getTodayTasks(),  getStreak().catch(() => ({ current_streak: 0, longest_streak: 0 }))]);
     setGoals(gs);
     setTodayTasks(today);
     setLateCount(gs.filter(g => g.status === 'late').length);
     setStreak(streakData.current_streak ?? 0);
+    setLongestStreak(streakData.longest_streak ?? 0);
   };
  
   useEffect(() => {
@@ -43,7 +45,10 @@ export default function DashboardPage() {
       );
 
       getStreak()
-        .then(s => setStreak(s.current_streak ?? 0))
+        .then(s => {
+          setStreak(s.current_streak ?? 0);
+          setLongestStreak(s.longest_streak ?? 0);
+        })
         .catch(() => {});
     } catch {}
     finally { setToggling(prev => ({ ...prev, [item.id]: false })); }
@@ -68,6 +73,7 @@ export default function DashboardPage() {
     { label: 'Em aberto',       value: open,       icon: Clock,        color: '#3b82f6' },
     { label: 'Atrasadas',        value: late,     icon: AlertTriangle,        color: '#ef4444' },
     { label: 'Taxa de sucesso', value: `${rate}%`, icon: TrendingUp,   color: '#8b5cf6' },
+    { label: 'Recorde de streak', value: longestStreak, icon: Trophy,  color: '#f59e0b' },
   ];
 
   const todayPending = todayTasks.filter(i => i.status === false);
@@ -107,7 +113,7 @@ export default function DashboardPage() {
         {/* Stats */}
         <section className={styles.stats}>
           {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
+            ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className={`${styles.statCard} glass ${styles.skeleton}`} />
               ))
             : stats.map((s, i) => (

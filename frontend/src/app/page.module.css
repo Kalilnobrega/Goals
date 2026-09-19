@@ -96,7 +96,7 @@
   /* ── Stats ────────────────────────────────────── */
   .stats {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 16px;
   }
   
@@ -547,9 +547,9 @@
   
   /* ── Responsive ───────────────────────────────── */
   @media (max-width: 900px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stats { grid-template-columns: repeat(3, 1fr); }
   }
-  
+
   @media (max-width: 640px) {
     .main { padding: 16px 16px 60px; gap: 28px; }
     .hero { padding: 32px 20px; justify-content: center; text-align: center; }
@@ -557,6 +557,18 @@
     .heroTitle { font-size: 1.75rem; }
     .heroSub { max-width: 100%; }
     .heroCalendar { margin: 0 auto; }
-    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .statCard {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 12px 6px;
+      gap: 8px;
+    }
+    .statIcon { width: 34px; height: 34px; border-radius: 10px; }
+    .statIcon svg { width: 16px; height: 16px; }
+    .statValue { font-size: 1.2rem; }
+    .statLabel { font-size: 0.66rem; margin-top: 0; line-height: 1.25; }
+    .skeleton { height: 84px; }
     .recentGrid { grid-template-columns: 1fr; }
   }
