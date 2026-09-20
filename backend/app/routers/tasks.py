@@ -18,6 +18,22 @@ def to_aware_utc(dt):
     return dt.astimezone(timezone.utc)
 
 
+# O app nao guarda o fuso horario de cada usuario, entao assume-se Brasil
+# (UTC-3, sem horario de verao desde 2019) — coerente com o app ser todo em
+# portugues. O deadline chega do frontend como um input type="date" (ex:
+# "2026-09-25"), vira um datetime naive de meia-noite, e o Postgres em
+# producao guarda isso como se ja fosse UTC (sessao em UTC) — ou seja, o
+# valor salvo eh "dia D, 00:00 UTC", nao a meia-noite real em Brasilia.
+# Pra a meta so virar atrasada depois que o dia D inteiro passar no horario
+# de Brasilia, soma-se 1 dia (o proprio dia D) + 3h (offset ate a meia-noite
+# real de Brasilia).
+LATE_GRACE_PERIOD = timedelta(days=1, hours=3)
+
+
+def is_late(deadline, now):
+    return to_aware_utc(deadline) + LATE_GRACE_PERIOD < now
+
+
 def check_and_reset_recurring_tasks(user_id: int, session: Session):
     now = datetime.now(timezone.utc)
 
@@ -259,7 +275,7 @@ async def toggle_task(
     elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
         now = datetime.now(timezone.utc)
 
-        if goal.deadline and to_aware_utc(goal.deadline) < now:
+        if goal.deadline and is_late(goal.deadline, now):
             goal.status = GoalStatus.LATE
         else:
             goal.status = GoalStatus.OPEN
