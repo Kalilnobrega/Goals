@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
-from app.models import Goal, Task, User, GoalStatus, Streak
+from app.models import Goal, Task, User, GoalStatus, Streak, TaskCompletion
 from .auth import get_current_user
 from datetime import datetime, timezone, date, timedelta
 from typing import List
@@ -231,6 +231,23 @@ async def toggle_task(
     task.status = not task.status
     task.completed_at = date.today() if task.status else None
 
+    if task.status:
+        session.add(
+            TaskCompletion(task_id=task.id, completed_at=datetime.now(timezone.utc))
+        )
+    else:
+        # Desfaz a ultima conclusao registrada, espelhando o completed_at
+        # sendo limpo acima — evita contar 2x um toggle acidental (marca/
+        # desmarca/marca de novo) no progresso do ciclo da meta recorrente.
+        last_completion = (
+            session.query(TaskCompletion)
+            .filter(TaskCompletion.task_id == task.id)
+            .order_by(TaskCompletion.completed_at.desc())
+            .first()
+        )
+        if last_completion:
+            session.delete(last_completion)
+
     session.commit()
     session.refresh(task)
 
@@ -269,16 +286,20 @@ async def toggle_task(
 
     goal = task.goal
 
-    if goal.progress >= 100.0:
-        goal.status = GoalStatus.COMPLETED
+    # Meta recorrente nao "termina" ao completar uma task do ciclo atual —
+    # ela reseta pra sempre (ou ate o deadline geral), entao o status
+    # OPEN/LATE/COMPLETED fica fora do calculo de progresso por task.
+    if not goal.is_recurring:
+        if goal.progress >= 100.0:
+            goal.status = GoalStatus.COMPLETED
 
-    elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
-        now = datetime.now(timezone.utc)
+        elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
+            now = datetime.now(timezone.utc)
 
-        if goal.deadline and is_late(goal.deadline, now):
-            goal.status = GoalStatus.LATE
-        else:
-            goal.status = GoalStatus.OPEN
+            if goal.deadline and is_late(goal.deadline, now):
+                goal.status = GoalStatus.LATE
+            else:
+                goal.status = GoalStatus.OPEN
 
     session.commit()
     session.refresh(task)

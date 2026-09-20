@@ -89,6 +89,8 @@ export const updateGoal = (id, data) =>
   api.put(`/goals/${id}`, { ...data, id: Number(id) }).then((r) => r.data);
 export const deleteGoal = (id) =>
   api.delete(`/goals/${id}`).then((r) => r.data);
+export const getGoalCycles = (id) =>
+  api.get(`/goals/${id}/cycles`).then((r) => r.data);
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTodayTasks = () => api.get("/tasks/today").then((r) => r.data);

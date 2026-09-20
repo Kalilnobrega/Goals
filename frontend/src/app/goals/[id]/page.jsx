@@ -7,14 +7,15 @@ import GoalForm from '../../../components/GoalForm';
 import TaskItem from '../../../components/TaskItem';
 import {
   getGoal, updateGoal, deleteGoal,
-  getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak
+  getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak,
+  getGoalCycles
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline } from '../../../lib/date';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
-  Target, RefreshCw
+  Target, RefreshCw, XCircle, History
 } from 'lucide-react';import f from '../../../styles/forms.module.css';
 import styles from './page.module.css';
 
@@ -33,6 +34,7 @@ export default function GoalDetailPage() {
 
   const [goal,       setGoal]       = useState(null);
   const [tasks,      setTasks]      = useState([]);
+  const [cycles,     setCycles]     = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [editModal,  setEditModal]  = useState(false);
   const [taskModal,  setTaskModal]  = useState(false);
@@ -46,9 +48,11 @@ export default function GoalDetailPage() {
   const loadGoal  = () => getGoal(Number(id)).then(setGoal);
   // GET /tasks/goal/{goal_id}
   const loadTasks = () => getTasks(Number(id)).then(setTasks);
+  // GET /goals/{id}/cycles
+  const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
 
   useEffect(() => {
-    Promise.all([loadGoal(), loadTasks()])
+    Promise.all([loadGoal(), loadTasks(), loadCycles()])
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -58,7 +62,7 @@ export default function GoalDetailPage() {
     setSaving(true);
     try {
       await updateGoal(id, { ...data, id: Number(id) });
-      await loadGoal();
+      await Promise.all([loadGoal(), loadCycles()]);
       setEditModal(false);
     } catch { setError('Erro ao atualizar meta.'); }
     finally { setSaving(false); }
@@ -87,7 +91,7 @@ export default function GoalDetailPage() {
   const handleToggleTask = async (taskId) => {
     try {
       await toggleTask(taskId);
-      await Promise.all([loadTasks(), loadGoal()]);
+      await Promise.all([loadTasks(), loadGoal(), loadCycles()]);
       getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
     } catch { setError('Erro ao atualizar tarefa.'); }
   };
@@ -215,6 +219,13 @@ export default function GoalDetailPage() {
                   {habits.length} hábito{habits.length !== 1 ? 's' : ''}
                 </span>
               )}
+              {goal.is_recurring && (
+                <span className={styles.metaChip} style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,.2)', background: 'rgba(139,92,246,.07)' }}>
+                  <RefreshCw size={13} />
+                  {goal.current_cycle_progress ?? 0}/{goal.recurrence_target ?? 1} neste ciclo
+                  {goal.cycle_ends_at && ` · reseta ${formatDeadline(goal.cycle_ends_at)}`}
+                </span>
+              )}
             </div>
 
             <div className={styles.progressWrap}>
@@ -228,6 +239,47 @@ export default function GoalDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Histórico de ciclos (só para metas recorrentes) */}
+        {(goal.is_recurring || cycles.length > 0) && (
+          <div className={styles.tasksSection}>
+            <div className={styles.taskHeader}>
+              <History size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Histórico de ciclos</h2>
+              <span className={styles.taskCount}>{cycles.length}</span>
+            </div>
+
+            {cycles.length === 0 ? (
+              <div className={`${styles.emptyTasks} glass`}>
+                <RefreshCw size={24} style={{ color: 'var(--b200)' }} />
+                <p>Nenhum ciclo fechado ainda.</p>
+              </div>
+            ) : (
+              <ul className={styles.taskList}>
+                {cycles.map(c => (
+                  <li
+                    key={c.id}
+                    className="glass"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: 10, padding: '10px 14px', borderRadius: 12,
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#475569' }}>
+                      {c.completed
+                        ? <CheckCircle2 size={16} style={{ color: '#10b981' }} />
+                        : <XCircle size={16} style={{ color: '#ef4444' }} />}
+                      {formatDeadline(c.cycle_start)} – {formatDeadline(c.cycle_end)}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: c.completed ? '#10b981' : '#ef4444' }}>
+                      {c.achieved_count}/{c.target_count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Tasks */}
         <div className={styles.tasksSection}>

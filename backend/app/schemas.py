@@ -32,6 +32,9 @@ class GoalsSchema(BaseModel):
     title: str
     description: str | None = None
     deadline: datetime | None = None
+    is_recurring: bool = False
+    recurrence_interval_days: int | None = None
+    recurrence_target: int | None = None
 
     class Config:
         from_attributes = True
@@ -42,6 +45,9 @@ class EditGoalSchema(BaseModel):
     description: str | None = None
     deadline: datetime | None = None
     status: GoalStatus | None = None
+    is_recurring: bool | None = None
+    recurrence_interval_days: int | None = None
+    recurrence_target: int | None = None
 
     class Config:
         from_attributes = True
@@ -55,6 +61,24 @@ class GoalResponseSchema(BaseModel):
     status: GoalStatus | None = None
     progress: float
     total_tasks: int
+    is_recurring: bool = False
+    recurrence_interval_days: int | None = None
+    recurrence_target: int | None = None
+    cycle_start_date: datetime | None = None
+    cycle_ends_at: datetime | None = None
+    current_cycle_progress: int | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class GoalCycleLogSchema(BaseModel):
+    id: int
+    cycle_start: datetime
+    cycle_end: datetime
+    target_count: int
+    achieved_count: int
+    completed: bool
 
     class Config:
         from_attributes = True

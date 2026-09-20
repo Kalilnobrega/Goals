@@ -50,7 +50,12 @@ export default function GoalCard({ goal, onDelete, onComplete }) {
             {formatDeadline(goal.deadline)}
           </span>
         )}
-        {goal.tasks?.some(t => t.is_recurring) && (
+        {goal.is_recurring ? (
+          <span className={styles.metaItem}>
+            <RefreshCw size={13} />
+            {goal.current_cycle_progress ?? 0}/{goal.recurrence_target ?? 1} neste ciclo
+          </span>
+        ) : goal.tasks?.some(t => t.is_recurring) && (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
             Hábitos ativos

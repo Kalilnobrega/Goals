@@ -12,7 +12,18 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
-from datetime import date
+from datetime import date, timedelta, timezone
+
+
+def _aware_utc(dt):
+    """Mesma normalizacao de app/routers/tasks.py::to_aware_utc, duplicada
+    aqui pra nao inverter a dependencia (routers importam de models, nao
+    o contrario)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 class User(Base):
@@ -43,12 +54,41 @@ class Goal(Base):
     status = Column(Enum(GoalStatus), default=GoalStatus.OPEN)
     create = Column(DateTime(timezone=True), server_default=func.now())
     deadline = Column(DateTime(timezone=True), nullable=True)
+    is_recurring = Column(Boolean, default=False)
+    recurrence_interval_days = Column(Integer, nullable=True)
+    recurrence_target = Column(Integer, nullable=True)
+    cycle_start_date = Column(DateTime(timezone=True), nullable=True)
     owner = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
+    cycle_logs = relationship(
+        "GoalCycleLog",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+        order_by="GoalCycleLog.cycle_start.desc()",
+    )
 
     @property
     def total_tasks(self) -> int:
         return len(self.tasks)
+
+    @property
+    def cycle_ends_at(self):
+        if not self.is_recurring or not self.cycle_start_date or not self.recurrence_interval_days:
+            return None
+        return _aware_utc(self.cycle_start_date) + timedelta(days=self.recurrence_interval_days)
+
+    @property
+    def current_cycle_progress(self) -> int | None:
+        if not self.is_recurring or not self.cycle_start_date:
+            return None
+
+        start = _aware_utc(self.cycle_start_date)
+        return sum(
+            1
+            for task in self.tasks
+            for completion in task.completions
+            if _aware_utc(completion.completed_at) >= start
+        )
 
     @property
     def days_remaining(self) -> int:
@@ -136,6 +176,41 @@ class Task(Base):
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(Date, nullable=True)
     goal = relationship("Goal", back_populates="tasks")
+    completions = relationship(
+        "TaskCompletion", back_populates="task", cascade="all, delete-orphan"
+    )
+
+
+class TaskCompletion(Base):
+    """Log de cada vez que uma task foi marcada como concluida. Existe
+    separado de Task.completed_at (que so guarda a ultima conclusao e eh
+    sobrescrito a cada reset de recorrencia) pra permitir contar quantas
+    vezes uma task recorrente foi concluida dentro da janela de um ciclo
+    de meta recorrente (ex: 4x essa semana)."""
+
+    __tablename__ = "task_completions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(ForeignKey("tasks.id"), nullable=False)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    task = relationship("Task", back_populates="completions")
+
+
+class GoalCycleLog(Base):
+    """Historico de ciclos de uma meta recorrente: um registro por ciclo
+    fechado, guardando se a meta bateu (ou nao) a quantidade alvo naquela
+    janela."""
+
+    __tablename__ = "goal_cycle_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    goal_id = Column(ForeignKey("goals.id"), nullable=False)
+    cycle_start = Column(DateTime(timezone=True), nullable=False)
+    cycle_end = Column(DateTime(timezone=True), nullable=False)
+    target_count = Column(Integer, nullable=False)
+    achieved_count = Column(Integer, nullable=False)
+    completed = Column(Boolean, nullable=False)
+    goal = relationship("Goal", back_populates="cycle_logs")
 
 
 class RefreshToken(Base):
