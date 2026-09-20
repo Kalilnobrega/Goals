@@ -38,6 +38,36 @@
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+.endOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.endOption:hover { background: rgba(59, 130, 246, 0.06); }
+
+.endOption input[type="radio"] {
+  accent-color: var(--blue-600);
+  cursor: pointer;
+}
+
+.endOptionActive {
+  background: rgba(59, 130, 246, 0.10) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  color: var(--blue-700) !important;
+  font-weight: 600 !important;
+}
+
 .submitRow {
   display: flex;
   justify-content: flex-end;
