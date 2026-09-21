@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { formatDeadline } from '../lib/date';
 import f from '../styles/forms.module.css';
 
 const CYCLE_PRESETS = [
@@ -9,25 +10,102 @@ const CYCLE_PRESETS = [
   { value: 'custom', label: 'Personalizado' },
 ];
 
+function parseDateOnly(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function formatDateOnly(date) {
+  return date.toISOString().split('T')[0];
+}
+
+function addDaysToDateOnly(dateOnlyStr, days) {
+  return formatDateOnly(new Date(parseDateOnly(dateOnlyStr).getTime() + days * 86400000));
+}
+
+function daysBetweenDateOnly(fromStr, toStr) {
+  return Math.round((parseDateOnly(toStr) - parseDateOnly(fromStr)) / 86400000);
+}
+
+function todayDateOnly() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) {
   const isEdit = !!initial.id;
   const initialInterval = initial.recurrence_interval_days || null;
   const initialIsPreset = initialInterval && CYCLE_PRESETS.some(p => p.value === String(initialInterval));
+  const initialDeadline = initial.deadline ? initial.deadline.split('T')[0] : '';
+  const cycleBaseDate = initial.cycle_start_date ? initial.cycle_start_date.split('T')[0] : todayDateOnly();
+  const initialCycleCount = (initial.is_recurring && initialDeadline && initialInterval)
+    ? (() => {
+        const days = daysBetweenDateOnly(cycleBaseDate, initialDeadline);
+        return days > 0 ? String(Math.max(1, Math.floor(days / initialInterval))) : '';
+      })()
+    : '';
 
   const [form, setForm] = useState({
     title:       initial.title       || '',
     description: initial.description || '',
     status:      initial.status      || 'open',
-    deadline:    initial.deadline    ? initial.deadline.split('T')[0] : '',
+    deadline:    initialDeadline,
     is_recurring: initial.is_recurring ?? false,
     cyclePreset: initialInterval
       ? (initialIsPreset ? String(initialInterval) : 'custom')
       : '7',
     recurrence_interval_days: initialInterval || 7,
     recurrence_target: initial.recurrence_target || initial.total_tasks || 1,
+    cycleCount: initialCycleCount,
   });
 
   const set = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
+
+  const handleDeadlineChange = (e) => {
+    const value = e.target.value;
+    setForm(prev => {
+      const next = { ...prev, deadline: value };
+      if (prev.is_recurring && value && prev.recurrence_interval_days) {
+        const days = daysBetweenDateOnly(cycleBaseDate, value);
+        next.cycleCount = days > 0 ? String(Math.max(1, Math.floor(days / Number(prev.recurrence_interval_days)))) : '';
+      }
+      return next;
+    });
+  };
+
+  const handleCycleCountChange = (e) => {
+    const value = e.target.value;
+    setForm(prev => {
+      const next = { ...prev, cycleCount: value };
+      if (value && Number(value) > 0 && prev.recurrence_interval_days) {
+        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(value) * Number(prev.recurrence_interval_days));
+      }
+      return next;
+    });
+  };
+
+  const handleIntervalDaysChange = (e) => {
+    const value = e.target.value;
+    setForm(prev => {
+      const next = { ...prev, recurrence_interval_days: value };
+      if (prev.cycleCount && Number(prev.cycleCount) > 0 && value) {
+        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(prev.cycleCount) * Number(value));
+      }
+      return next;
+    });
+  };
+
+  const handleCyclePresetChange = (e) => {
+    const preset = e.target.value;
+    setForm(prev => {
+      const interval = preset === 'custom' ? prev.recurrence_interval_days : Number(preset);
+      const next = { ...prev, cyclePreset: preset, recurrence_interval_days: interval };
+      if (prev.cycleCount && Number(prev.cycleCount) > 0 && interval) {
+        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(prev.cycleCount) * Number(interval));
+      }
+      return next;
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -86,8 +164,13 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             type="date"
             className={f.input}
             value={form.deadline}
-            onChange={set('deadline')}
+            onChange={handleDeadlineChange}
           />
+          {form.is_recurring && form.deadline && form.cycleCount && (
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              ≈ {form.cycleCount} ciclo{form.cycleCount !== '1' ? 's' : ''} até lá
+            </span>
+          )}
         </div>
       </div>
 
@@ -110,14 +193,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               <select
                 className={f.select}
                 value={form.cyclePreset}
-                onChange={e => {
-                  const preset = e.target.value;
-                  setForm(prev => ({
-                    ...prev,
-                    cyclePreset: preset,
-                    recurrence_interval_days: preset === 'custom' ? prev.recurrence_interval_days : Number(preset),
-                  }));
-                }}
+                onChange={handleCyclePresetChange}
               >
                 {CYCLE_PRESETS.map(p => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -134,7 +210,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                   className={f.input}
                   placeholder="Ex: 14"
                   value={form.recurrence_interval_days}
-                  onChange={set('recurrence_interval_days')}
+                  onChange={handleIntervalDaysChange}
                 />
               </div>
             )}
@@ -153,6 +229,23 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             {initial.total_tasks > 0 && (
               <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
                 Sugestão baseada nas {initial.total_tasks} tarefa{initial.total_tasks !== 1 ? 's' : ''} atuais da meta — ajuste se quiser.
+              </span>
+            )}
+          </div>
+
+          <div className={f.field}>
+            <label className={f.label}>Termina depois de quantos ciclos (Opcional)</label>
+            <input
+              type="number"
+              min="1"
+              className={f.input}
+              placeholder="Ex: 2"
+              value={form.cycleCount}
+              onChange={handleCycleCountChange}
+            />
+            {form.cycleCount && form.deadline && (
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Termina em {formatDeadline(form.deadline)}
               </span>
             )}
           </div>
