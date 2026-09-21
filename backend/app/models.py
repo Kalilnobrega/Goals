@@ -99,6 +99,16 @@ class Goal(Base):
 
     @property
     def progress(self) -> float:
+        if self.is_recurring:
+            # Progresso de meta ciclica eh sobre o ciclo atual (ex: 2/4
+            # essa semana), nao sobre tasks concluidas — 1 task batendo
+            # "concluida" nao significa a meta cheia se o alvo do ciclo eh 4.
+            target = self.recurrence_target or 1
+            current = self.current_cycle_progress or 0
+            if target <= 0:
+                return 0.0
+            return min(round((current / target) * 100, 1), 100.0)
+
         if not self.tasks:
             return 0.0
 
