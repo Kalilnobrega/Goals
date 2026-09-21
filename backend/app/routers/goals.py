@@ -66,7 +66,7 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
     session.commit()
 
 
-@goals_router.post("/")
+@goals_router.post("/", response_model=GoalResponseSchema)
 async def create_goal(
     goals_schema: GoalsSchema,
     current_user: User = Depends(get_current_user),
@@ -149,7 +149,7 @@ async def get_single_goal(
     return goal
 
 
-@goals_router.put("/{goal_id}")
+@goals_router.put("/{goal_id}", response_model=GoalResponseSchema)
 async def edit_goal(
     goal_id: int,
     edit_goal_schema: EditGoalSchema,
