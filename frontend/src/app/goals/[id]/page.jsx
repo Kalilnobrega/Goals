@@ -128,6 +128,9 @@ export default function GoalDetailPage() {
   const completed = tasks.filter(t => t.status === true);
   const habits    = tasks.filter(t => t.is_recurring);
 
+  const cyclesCompleted = cycles.filter(c => c.completed).length;
+  const consistency = cycles.length > 0 ? Math.round((cyclesCompleted / cycles.length) * 100) : null;
+
   if (loading) return (
     <>
       <Navbar />
@@ -253,6 +256,21 @@ export default function GoalDetailPage() {
               <History size={16} style={{ color: 'var(--b400)' }} />
               <h2 className={styles.taskTitle}>Histórico de ciclos</h2>
               <span className={styles.taskCount}>{cycles.length}</span>
+              {consistency !== null && (
+                <span
+                  className={styles.taskCount}
+                  style={{
+                    width: 'auto',
+                    whiteSpace: 'nowrap',
+                    padding: '0 8px',
+                    color: consistency >= 70 ? '#10b981' : consistency >= 40 ? '#f59e0b' : '#ef4444',
+                    background: consistency >= 70 ? 'rgba(16,185,129,.1)' : consistency >= 40 ? 'rgba(245,158,11,.1)' : 'rgba(239,68,68,.1)',
+                    border: 'none',
+                  }}
+                >
+                  {consistency}% consistência
+                </span>
+              )}
             </div>
 
             {cycles.length === 0 ? (
