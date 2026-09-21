@@ -16,9 +16,6 @@ from datetime import date, timedelta, timezone
 
 
 def _aware_utc(dt):
-    """Mesma normalizacao de app/routers/tasks.py::to_aware_utc, duplicada
-    aqui pra nao inverter a dependencia (routers importam de models, nao
-    o contrario)."""
     if dt is None:
         return None
     if dt.tzinfo is None:
@@ -100,9 +97,6 @@ class Goal(Base):
     @property
     def progress(self) -> float:
         if self.is_recurring:
-            # Progresso de meta ciclica eh sobre o ciclo atual (ex: 2/4
-            # essa semana), nao sobre tasks concluidas — 1 task batendo
-            # "concluida" nao significa a meta cheia se o alvo do ciclo eh 4.
             target = self.recurrence_target or 1
             current = self.current_cycle_progress or 0
             if target <= 0:
@@ -192,12 +186,6 @@ class Task(Base):
 
 
 class TaskCompletion(Base):
-    """Log de cada vez que uma task foi marcada como concluida. Existe
-    separado de Task.completed_at (que so guarda a ultima conclusao e eh
-    sobrescrito a cada reset de recorrencia) pra permitir contar quantas
-    vezes uma task recorrente foi concluida dentro da janela de um ciclo
-    de meta recorrente (ex: 4x essa semana)."""
-
     __tablename__ = "task_completions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -207,10 +195,6 @@ class TaskCompletion(Base):
 
 
 class GoalCycleLog(Base):
-    """Historico de ciclos de uma meta recorrente: um registro por ciclo
-    fechado, guardando se a meta bateu (ou nao) a quantidade alvo naquela
-    janela."""
-
     __tablename__ = "goal_cycle_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

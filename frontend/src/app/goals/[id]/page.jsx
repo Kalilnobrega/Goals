@@ -48,7 +48,6 @@ export default function GoalDetailPage() {
   const loadGoal  = () => getGoal(Number(id)).then(setGoal);
   // GET /tasks/goal/{goal_id}
   const loadTasks = () => getTasks(Number(id)).then(setTasks);
-  // GET /goals/{id}/cycles
   const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
 
   useEffect(() => {
@@ -240,7 +239,6 @@ export default function GoalDetailPage() {
           </div>
         </div>
 
-        {/* Histórico de ciclos (só para metas recorrentes) */}
         {(goal.is_recurring || cycles.length > 0) && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>

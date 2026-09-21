@@ -236,9 +236,6 @@ async def toggle_task(
             TaskCompletion(task_id=task.id, completed_at=datetime.now(timezone.utc))
         )
     else:
-        # Desfaz a ultima conclusao registrada, espelhando o completed_at
-        # sendo limpo acima — evita contar 2x um toggle acidental (marca/
-        # desmarca/marca de novo) no progresso do ciclo da meta recorrente.
         last_completion = (
             session.query(TaskCompletion)
             .filter(TaskCompletion.task_id == task.id)
@@ -286,9 +283,6 @@ async def toggle_task(
 
     goal = task.goal
 
-    # Meta recorrente nao "termina" ao completar uma task do ciclo atual —
-    # ela reseta pra sempre (ou ate o deadline geral), entao o status
-    # OPEN/LATE/COMPLETED fica fora do calculo de progresso por task.
     if not goal.is_recurring:
         if goal.progress >= 100.0:
             goal.status = GoalStatus.COMPLETED

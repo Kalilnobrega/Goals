@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import f from '../styles/forms.module.css';
 
-// Presets comuns de período de ciclo (em dias). "custom" libera um input manual.
 const CYCLE_PRESETS = [
   { value: '1',  label: 'Dia'   },
   { value: '7',  label: 'Semana'  },
@@ -25,7 +24,6 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
       ? (initialIsPreset ? String(initialInterval) : 'custom')
       : '7',
     recurrence_interval_days: initialInterval || 7,
-    // Sugestão inicial: quantidade de tarefas já cadastradas na meta (editável).
     recurrence_target: initial.recurrence_target || initial.total_tasks || 1,
   });
 

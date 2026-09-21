@@ -40,9 +40,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('goals', schema=None) as batch_op:
-        # server_default garante que metas ja existentes fiquem com False em
-        # vez de NULL — GoalResponseSchema.is_recurring exige um bool, e sem
-        # isso a serializacao de qualquer meta antiga quebra com 500.
         batch_op.add_column(sa.Column('is_recurring', sa.Boolean(), server_default=sa.text('false'), nullable=True))
         batch_op.add_column(sa.Column('recurrence_interval_days', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('recurrence_target', sa.Integer(), nullable=True))
