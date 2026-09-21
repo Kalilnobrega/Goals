@@ -141,7 +141,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           </div>
 
           <div className={f.field}>
-            <label className={f.label}>Quantas vezes por ciclo</label>
+            <label className={f.label}>Tarefas por ciclo</label>
             <input
               type="number"
               min="1"
