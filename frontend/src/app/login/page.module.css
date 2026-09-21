@@ -142,7 +142,6 @@
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255,255,255,.9);
   box-shadow: 0 8px 24px rgba(37,99,235,.10);
   font-family: var(--font-body);
@@ -200,7 +199,6 @@
 .glass-strong {
   background: var(--glass-strong);
   backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);
 }

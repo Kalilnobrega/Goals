@@ -111,7 +111,6 @@ body::after {
 .glass {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
@@ -119,7 +118,6 @@ body::after {
 .glass-strong {
   background: var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow-lg);
 }
@@ -127,7 +125,6 @@ body::after {
 .glass-subtle {
   background: var(--glass-bg-subtle);
   backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
   border: 1px solid var(--glass-border-dim);
 }
 

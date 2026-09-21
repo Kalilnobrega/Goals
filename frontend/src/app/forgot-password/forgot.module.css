@@ -34,7 +34,6 @@
 :global(.glass-strong) {
   background: var(--glass-strong);
   backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);
 }
