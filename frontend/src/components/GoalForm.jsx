@@ -4,9 +4,9 @@ import f from '../styles/forms.module.css';
 
 // Presets comuns de período de ciclo (em dias). "custom" libera um input manual.
 const CYCLE_PRESETS = [
-  { value: '1',  label: 'Diária'   },
-  { value: '7',  label: 'Semanal'  },
-  { value: '30', label: 'Mensal'   },
+  { value: '1',  label: 'Dia'   },
+  { value: '7',  label: 'Semana'  },
+  { value: '30', label: 'Mês'   },
   { value: 'custom', label: 'Personalizado' },
 ];
 
@@ -25,7 +25,8 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
       ? (initialIsPreset ? String(initialInterval) : 'custom')
       : '7',
     recurrence_interval_days: initialInterval || 7,
-    recurrence_target: initial.recurrence_target || 1,
+    // Sugestão inicial: quantidade de tarefas já cadastradas na meta (editável).
+    recurrence_target: initial.recurrence_target || initial.total_tasks || 1,
   });
 
   const set = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
@@ -82,7 +83,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
         )}
 
         <div className={f.field}>
-          <label className={f.label}>Prazo</label>
+          <label className={f.label}>Prazo (Opcional)</label>
           <input
             type="date"
             className={f.input}
@@ -151,6 +152,11 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               value={form.recurrence_target}
               onChange={set('recurrence_target')}
             />
+            {initial.total_tasks > 0 && (
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Sugestão baseada nas {initial.total_tasks} tarefa{initial.total_tasks !== 1 ? 's' : ''} atuais da meta — ajuste se quiser.
+              </span>
+            )}
           </div>
         </>
       )}
