@@ -1,11 +1,20 @@
 'use client';
 import { useState } from 'react';
 import { Check, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { celebrateTask } from '../lib/celebrate';
 import styles from './TaskItem.module.css';
 
 export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
   const [hovered, setHovered] = useState(false);
   const done = task.status === true;
+
+  const handleCheckClick = (e) => {
+    if (!done) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      celebrateTask(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+    onToggle?.(task.id);
+  };
 
   return (
     <li
@@ -15,7 +24,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
     >
       <button
         className={`${styles.check} ${done ? styles.checked : ''}`}
-        onClick={() => onToggle?.(task.id)}
+        onClick={handleCheckClick}
         aria-label={done ? 'Marcar como pendente' : 'Concluir tarefa'}
       >
         {done && <Check size={11} strokeWidth={3} />}

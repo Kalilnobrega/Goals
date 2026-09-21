@@ -10,6 +10,7 @@ import {
 import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
+import { celebrateTask } from '../lib/celebrate';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -36,7 +37,11 @@ export default function DashboardPage() {
     loadAll().catch(() => {}).finally(() => setLoading(false));
   }, []);
  
-  const handleToggle = async (item) => {
+  const handleToggle = async (item, e) => {
+    if (!item.status) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      celebrateTask(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
     setToggling(prev => ({ ...prev, [item.id]: true }));
     try {
       await toggleTask(item.id);
@@ -204,7 +209,7 @@ export default function DashboardPage() {
                 <div key={item.id} className={styles.todayItem}>
                   <button
                     className={styles.todayCheck}
-                    onClick={() => handleToggle(item)}
+                    onClick={(e) => handleToggle(item, e)}
                     disabled={toggling[item.id]}
                     aria-label="Concluir tarefa"
                   >
@@ -240,7 +245,7 @@ export default function DashboardPage() {
                 <div key={item.id} className={`${styles.todayItem} ${styles.todayItemDone}`}>
                   <button
                     className={`${styles.todayCheck} ${styles.todayChecked}`}
-                    onClick={() => handleToggle(item)}
+                    onClick={(e) => handleToggle(item, e)}
                     disabled={toggling[item.id]}
                     aria-label="Desmarcar tarefa"
                   >

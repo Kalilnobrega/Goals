@@ -12,6 +12,7 @@ import {
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline } from '../../../lib/date';
+import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
@@ -89,8 +90,11 @@ export default function GoalDetailPage() {
   // Toggle: PUT /tasks/{id}
   const handleToggleTask = async (taskId) => {
     try {
+      const prevProgress = goal?.progress ?? 0;
       await toggleTask(taskId);
-      await Promise.all([loadTasks(), loadGoal(), loadCycles()]);
+      const [, updatedGoal] = await Promise.all([loadTasks(), getGoal(Number(id)), loadCycles()]);
+      setGoal(updatedGoal);
+      if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
       getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
     } catch { setError('Erro ao atualizar tarefa.'); }
   };
@@ -181,7 +185,11 @@ export default function GoalDetailPage() {
                   <button
                     className={styles.btnComplete}
                     onClick={async () => {
-                      try { await updateGoal(id, { ...goal, status: 'completed' }); await loadGoal(); }
+                      try {
+                        await updateGoal(id, { ...goal, status: 'completed' });
+                        await loadGoal();
+                        celebrateGoal();
+                      }
                       catch { setError('Erro ao concluir meta.'); }
                     }}
                     title="Marcar como concluída"

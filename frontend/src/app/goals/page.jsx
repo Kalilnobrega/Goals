@@ -5,6 +5,7 @@ import GoalCard from '../../components/GoalCard';
 import Modal from '../../components/Modal';
 import GoalForm from '../../components/GoalForm';
 import { getGoals, createGoal, updateGoal, deleteGoal } from '../../lib/api';
+import { celebrateGoal } from '../../lib/celebrate';
 import { Plus, Search } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -49,6 +50,7 @@ export default function GoalsPage() {
     try {
       await updateGoal(id, { status: 'completed' });
       load(filter);
+      celebrateGoal();
     } catch { setError('Erro ao concluir meta.'); }
   };
 
