@@ -56,7 +56,8 @@
 
 .endOption:hover { background: rgba(59, 130, 246, 0.06); }
 
-.endOption input[type="radio"] {
+.endOption input[type="radio"],
+.endOption input[type="checkbox"] {
   accent-color: var(--blue-600);
   cursor: pointer;
 }

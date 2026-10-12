@@ -163,31 +163,42 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
         />
       </div>
 
-      {!isEdit && (
-        <div className={f.field}>
-          <label className={f.label}>Tipo de meta</label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <label className={`${f.endOption} ${!isNumeric ? f.endOptionActive : ''}`}>
-              <input
-                type="radio"
-                name="goal_kind"
-                checked={!isNumeric}
-                onChange={() => setForm(prev => ({ ...prev, kind: 'tasks' }))}
-              />
-              Tarefas
-            </label>
-            <label className={`${f.endOption} ${isNumeric ? f.endOptionActive : ''}`}>
-              <input
-                type="radio"
-                name="goal_kind"
-                checked={isNumeric}
-                onChange={() => setForm(prev => ({ ...prev, kind: 'numeric' }))}
-              />
-              Numérica (km, R$, kg...)
-            </label>
-          </div>
+      <div className={f.field}>
+        <label className={f.label}>Tipo de meta</label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <label className={`${f.endOption} ${form.is_recurring ? f.endOptionActive : ''}`}>
+            <input
+              type="checkbox"
+              checked={form.is_recurring}
+              onChange={e => {
+                const checked = e.target.checked;
+                setForm(prev => ({
+                  ...prev,
+                  is_recurring: checked,
+                  numeric_mode: checked && !isEdit ? 'sum' : prev.numeric_mode,
+                }));
+              }}
+              disabled={isEdit && isMeasurement}
+            />
+            Recorrente (ex: treinar 4x por semana)
+          </label>
+          <label
+            className={`${f.endOption} ${isNumeric ? f.endOptionActive : ''}`}
+            style={isEdit ? { opacity: 0.6, cursor: 'default' } : undefined}
+          >
+            <input
+              type="checkbox"
+              checked={isNumeric}
+              onChange={e => {
+                const checked = e.target.checked;
+                setForm(prev => ({ ...prev, kind: checked ? 'numeric' : 'tasks' }));
+              }}
+              disabled={isEdit}
+            />
+            Numérica (km, R$, kg...)
+          </label>
         </div>
-      )}
+      </div>
 
       {isNumeric && !isEdit && (
         <div className={f.field}>
@@ -284,21 +295,6 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           )}
         </div>
       </div>
-
-      {canRecur && (
-        <div className={f.field}>
-          <label className={f.label} style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: '0.875rem' }}>
-            <input
-              type="checkbox"
-              checked={form.is_recurring}
-              onChange={e => setForm(prev => ({ ...prev, is_recurring: e.target.checked }))}
-            />
-            {isNumeric
-              ? 'É uma meta recorrente? (ex: correr 20 km por semana)'
-              : 'É uma meta recorrente? (ex: treinar 4x por semana)'}
-          </label>
-        </div>
-      )}
 
       {canRecur && form.is_recurring && (
         <>
