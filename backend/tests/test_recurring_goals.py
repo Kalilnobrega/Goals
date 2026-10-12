@@ -147,3 +147,27 @@ def test_non_recurring_goal_progress_still_based_on_tasks(client, auth_headers):
     updated = client.get(f"/goals/{goal['id']}", headers=auth_headers).json()
     assert updated["progress"] == 100.0
     assert updated["status"] == "completed"
+
+
+def test_cycle_reset_logs_every_missed_cycle_without_drift(client, auth_headers, db_session):
+    goal = create_recurring_goal(client, auth_headers, target=1, interval_days=7)
+    task = create_recurring_task(client, auth_headers, goal["id"])
+
+    old_cycle_start = datetime.now(timezone.utc) - timedelta(days=22)
+    db_goal = db_session.query(Goal).filter(Goal.id == goal["id"]).first()
+    db_goal.cycle_start_date = old_cycle_start
+    db_session.add(
+        TaskCompletion(task_id=task["id"], completed_at=old_cycle_start + timedelta(days=8))
+    )
+    db_session.commit()
+
+    client.get(f"/goals/{goal['id']}", headers=auth_headers)
+
+    cycles = client.get(f"/goals/{goal['id']}/cycles", headers=auth_headers).json()
+    assert len(cycles) == 3
+    assert [c["completed"] for c in cycles] == [False, True, False]
+
+    db_session.refresh(db_goal)
+    expected_start = old_cycle_start + timedelta(days=21)
+    actual_start = db_goal.cycle_start_date.replace(tzinfo=timezone.utc)
+    assert abs(actual_start - expected_start) < timedelta(seconds=1)

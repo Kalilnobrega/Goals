@@ -29,39 +29,45 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
         if not goal.cycle_start_date or not goal.recurrence_interval_days:
             continue
 
+        interval = timedelta(days=goal.recurrence_interval_days)
+        deadline = to_aware_utc(goal.deadline) if goal.deadline else None
+        target = goal.recurrence_target or 1
         cycle_start = to_aware_utc(goal.cycle_start_date)
-        cycle_end = cycle_start + timedelta(days=goal.recurrence_interval_days)
+        cycle_end = cycle_start + interval
 
         if now < cycle_end:
             continue
 
-        achieved = (
-            session.query(TaskCompletion)
-            .join(Task, Task.id == TaskCompletion.task_id)
-            .filter(
-                Task.goals_id == goal.id,
-                TaskCompletion.completed_at >= cycle_start,
-                TaskCompletion.completed_at < cycle_end,
+        while cycle_end <= now and (deadline is None or cycle_start < deadline):
+            achieved = (
+                session.query(TaskCompletion)
+                .join(Task, Task.id == TaskCompletion.task_id)
+                .filter(
+                    Task.goals_id == goal.id,
+                    TaskCompletion.completed_at >= cycle_start,
+                    TaskCompletion.completed_at < cycle_end,
+                )
+                .count()
             )
-            .count()
-        )
-        target = goal.recurrence_target or 1
 
-        session.add(
-            GoalCycleLog(
-                goal_id=goal.id,
-                cycle_start=cycle_start,
-                cycle_end=cycle_end,
-                target_count=target,
-                achieved_count=achieved,
-                completed=achieved >= target,
+            session.add(
+                GoalCycleLog(
+                    goal_id=goal.id,
+                    cycle_start=cycle_start,
+                    cycle_end=cycle_end,
+                    target_count=target,
+                    achieved_count=achieved,
+                    completed=achieved >= target,
+                )
             )
-        )
 
-        if goal.deadline and to_aware_utc(goal.deadline) <= now:
+            cycle_start = cycle_end
+            cycle_end = cycle_start + interval
+
+        if deadline and deadline <= now:
             goal.is_recurring = False
         else:
-            goal.cycle_start_date = now
+            goal.cycle_start_date = cycle_start
 
     session.commit()
 
