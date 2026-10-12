@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Literal
-from datetime import datetime
+from datetime import datetime, timezone
 from app.models import GoalStatus
 
 
@@ -118,6 +118,13 @@ class GoalEntryResponseSchema(BaseModel):
     value: float
     note: str | None = None
     created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def assume_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
 
     class Config:
         from_attributes = True

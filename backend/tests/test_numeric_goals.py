@@ -166,6 +166,7 @@ def test_entries_listed_newest_first(client, auth_headers):
     entries = client.get(f"/goals/{goal['id']}/entries", headers=auth_headers).json()
 
     assert [e["note"] for e in entries] == ["segundo", "primeiro"]
+    assert datetime.fromisoformat(entries[0]["created_at"]).tzinfo is not None
 
 
 def test_entries_of_other_user_are_hidden(client, auth_headers, db_session):
