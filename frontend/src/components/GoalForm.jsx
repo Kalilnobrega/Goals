@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { CircleCheck, Repeat, TrendingUp } from 'lucide-react';
 import { formatDeadline } from '../lib/date';
 import f from '../styles/forms.module.css';
 
@@ -165,63 +166,93 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
 
       <div className={f.field}>
         <label className={f.label}>Tipo de meta</label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <label className={`${f.endOption} ${form.is_recurring ? f.endOptionActive : ''}`}>
-            <input
-              type="checkbox"
-              checked={form.is_recurring}
-              onChange={e => {
-                const checked = e.target.checked;
-                setForm(prev => ({
-                  ...prev,
-                  is_recurring: checked,
-                  numeric_mode: checked && !isEdit ? 'sum' : prev.numeric_mode,
-                }));
-              }}
-              disabled={isEdit && isMeasurement}
-            />
-            Recorrente (ex: treinar 4x por semana)
-          </label>
-          <label
-            className={`${f.endOption} ${isNumeric ? f.endOptionActive : ''}`}
-            style={isEdit ? { opacity: 0.6, cursor: 'default' } : undefined}
-          >
-            <input
-              type="checkbox"
-              checked={isNumeric}
-              onChange={e => {
-                const checked = e.target.checked;
-                setForm(prev => ({ ...prev, kind: checked ? 'numeric' : 'tasks' }));
-              }}
-              disabled={isEdit}
-            />
-            Numérica (km, R$, kg...)
-          </label>
+        <div className={f.typeGrid}>
+          {[
+            {
+              key: 'target',
+              icon: CircleCheck,
+              title: 'Alvo',
+              desc: 'Concluir tarefas até atingir um objetivo',
+              active: !form.is_recurring && !isNumeric,
+              disabled: isEdit && isNumeric,
+              onClick: () => setForm(prev => ({ ...prev, is_recurring: false, kind: 'tasks' })),
+            },
+            {
+              key: 'recurring',
+              icon: Repeat,
+              title: 'Recorrente',
+              desc: 'Repetir uma atividade ao longo do tempo',
+              active: form.is_recurring,
+              disabled: isEdit && isMeasurement,
+              onClick: () => setForm(prev => ({
+                ...prev,
+                is_recurring: !prev.is_recurring,
+                numeric_mode: !prev.is_recurring && !isEdit ? 'sum' : prev.numeric_mode,
+              })),
+            },
+            {
+              key: 'progress',
+              icon: TrendingUp,
+              title: 'Progresso',
+              desc: 'Acompanhar sua evolução até um valor',
+              active: isNumeric,
+              disabled: isEdit,
+              onClick: () => setForm(prev => ({ ...prev, kind: prev.kind === 'numeric' ? 'tasks' : 'numeric' })),
+            },
+          ].map(({ key, icon: Icon, title, desc, active, disabled, onClick }) => (
+            <button
+              key={key}
+              type="button"
+              className={`${f.typeCard} ${active ? f.typeCardActive : ''}`}
+              onClick={onClick}
+              disabled={disabled}
+              aria-pressed={active}
+            >
+              <Icon size={22} className={f.typeIcon} />
+              <span className={f.typeTitle}>{title}</span>
+              <span className={f.typeDesc}>{desc}</span>
+            </button>
+          ))}
         </div>
+        <span className={f.hint}>Recorrente e Progresso podem ser combinados.</span>
       </div>
 
       {isNumeric && !isEdit && (
         <div className={f.field}>
-          <label className={f.label}>Como medir</label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <label className={`${f.endOption} ${!isMeasurement ? f.endOptionActive : ''}`}>
-              <input
-                type="radio"
-                name="numeric_mode"
-                checked={!isMeasurement}
-                onChange={() => setForm(prev => ({ ...prev, numeric_mode: 'sum' }))}
-              />
-              Somar registros (ex: km corridos)
-            </label>
-            <label className={`${f.endOption} ${isMeasurement ? f.endOptionActive : ''}`}>
-              <input
-                type="radio"
-                name="numeric_mode"
-                checked={isMeasurement}
-                onChange={() => setForm(prev => ({ ...prev, numeric_mode: 'latest', is_recurring: false }))}
-              />
-              Medição atual (ex: peso)
-            </label>
+          <label className={f.label}>Como medir seu progresso?</label>
+          <div className={f.measureList}>
+            {[
+              {
+                mode: 'sum',
+                title: 'Somar progresso',
+                desc: 'Ex.: quilômetros corridos, dinheiro economizado',
+              },
+              {
+                mode: 'latest',
+                title: 'Progresso atual',
+                desc: 'Ex.: peso atual, saldo guardado',
+              },
+            ].map(({ mode, title, desc }) => {
+              const active = form.numeric_mode === mode;
+              return (
+                <label key={mode} className={`${f.measureOption} ${active ? f.measureOptionActive : ''}`}>
+                  <input
+                    type="radio"
+                    name="numeric_mode"
+                    checked={active}
+                    onChange={() => setForm(prev => ({
+                      ...prev,
+                      numeric_mode: mode,
+                      is_recurring: mode === 'latest' ? false : prev.is_recurring,
+                    }))}
+                  />
+                  <span className={f.measureText}>
+                    <span className={f.measureTitle}>{title}</span>
+                    <span className={f.measureDesc}>{desc}</span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
@@ -254,16 +285,26 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               required
             />
           </div>
-          <div className={f.field}>
-            <label className={f.label}>Unidade</label>
-            <input
-              className={f.input}
-              placeholder="Ex: km"
-              maxLength={20}
-              value={form.unit}
-              onChange={set('unit')}
-            />
-          </div>
+        </div>
+      )}
+
+      {isNumeric && (
+        <div className={f.field}>
+          <label className={f.label}>Unidade de medida</label>
+          <input
+            className={f.input}
+            placeholder="Ex: kg, R$, km"
+            maxLength={20}
+            value={form.unit}
+            onChange={set('unit')}
+          />
+          {!isEdit && (
+            <span className={f.hint}>
+              {isMeasurement
+                ? 'Você poderá registrar novas medições ao longo do tempo.'
+                : 'Você poderá somar novos registros ao longo do tempo.'}
+            </span>
+          )}
         </div>
       )}
 

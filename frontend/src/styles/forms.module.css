@@ -108,6 +108,97 @@
 .btnSubmit:hover { opacity: 0.9; transform: translateY(-1px); }
 .btnSubmit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+.hint { font-size: 0.78rem; color: #94a3b8; }
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.typeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-body);
+  text-align: left;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.typeCard:hover:not(:disabled) { background: rgba(59, 130, 246, 0.05); }
+
+.typeCard:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.typeIcon { color: #64748b; margin-bottom: 6px; }
+
+.typeTitle {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.typeDesc { font-size: 0.78rem; line-height: 1.4; color: #64748b; }
+
+.typeCardActive {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 1px var(--blue-500);
+}
+
+.typeCardActive .typeIcon { color: var(--blue-600); }
+
+.measureList { display: flex; flex-direction: column; gap: 10px; }
+
+.measureOption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.measureOption:hover { background: rgba(59, 130, 246, 0.05); }
+
+.measureOption input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--blue-600);
+  cursor: pointer;
+}
+
+.measureOptionActive {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 1px var(--blue-500);
+}
+
+.measureText { display: flex; flex-direction: column; gap: 2px; }
+
+.measureTitle { font-size: 0.9rem; font-weight: 600; color: #0f172a; }
+
+.measureDesc { font-size: 0.8rem; color: #64748b; }
+
 @media (max-width: 420px) {
   .row { grid-template-columns: 1fr; }
+  .typeGrid { grid-template-columns: 1fr; }
+  .typeCard {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    align-items: center;
+  }
+  .typeIcon { grid-row: span 2; margin-bottom: 0; }
 }
