@@ -465,6 +465,8 @@ async def refresh(token_schema: TokenSchema, session: Session = Depends(get_db))
 
         create_refresh_token_in_db(new_refresh_token, user_id, session)
 
+        cleanup_invalid_tokens(session)
+
         return {
             "access_token": new_access_token,
             "refresh_token": new_refresh_token,
