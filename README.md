@@ -45,7 +45,7 @@ source venv/bin/activate
 
 **3. Instale as dependências**
 ```bash
-pip install -r app/requirements.txt
+pip install -r requirements.txt
 ```
 
 **4. Configure o PostgreSQL**
