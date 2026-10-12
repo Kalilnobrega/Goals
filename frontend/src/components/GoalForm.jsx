@@ -57,7 +57,16 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     recurrence_interval_days: initialInterval || 7,
     recurrence_target: initial.recurrence_target || initial.total_tasks || 1,
     cycleCount: initialCycleCount,
+    kind: initial.is_numeric ? 'numeric' : 'tasks',
+    numeric_mode: initial.numeric_mode || 'sum',
+    target_value: initial.target_value ?? '',
+    start_value: initial.start_value ?? '',
+    unit: initial.unit || '',
   });
+
+  const isNumeric = form.kind === 'numeric';
+  const isMeasurement = isNumeric && form.numeric_mode === 'latest';
+  const canRecur = !isMeasurement;
 
   const set = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
 
@@ -113,10 +122,19 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
       title:       form.title,
       description: form.description || null,
       deadline:    form.deadline    || null,
-      is_recurring: form.is_recurring,
-      recurrence_interval_days: form.is_recurring ? Number(form.recurrence_interval_days) : null,
-      recurrence_target: form.is_recurring ? Number(form.recurrence_target) || 1 : null,
+      is_recurring: canRecur && form.is_recurring,
+      recurrence_interval_days: canRecur && form.is_recurring ? Number(form.recurrence_interval_days) : null,
+      recurrence_target: canRecur && form.is_recurring && !isNumeric ? Number(form.recurrence_target) || 1 : null,
     };
+
+    if (isNumeric) {
+      data.target_value = Number(form.target_value);
+      data.unit = form.unit.trim();
+      if (form.start_value !== '' && !(form.is_recurring && !isMeasurement)) {
+        data.start_value = Number(form.start_value);
+      }
+      if (!isEdit) data.numeric_mode = form.numeric_mode;
+    }
 
     if (isEdit) data.status = form.status;
     onSubmit(data);
@@ -144,6 +162,99 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           placeholder="Descreva sua meta..."
         />
       </div>
+
+      {!isEdit && (
+        <div className={f.field}>
+          <label className={f.label}>Tipo de meta</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <label className={`${f.endOption} ${!isNumeric ? f.endOptionActive : ''}`}>
+              <input
+                type="radio"
+                name="goal_kind"
+                checked={!isNumeric}
+                onChange={() => setForm(prev => ({ ...prev, kind: 'tasks' }))}
+              />
+              Tarefas
+            </label>
+            <label className={`${f.endOption} ${isNumeric ? f.endOptionActive : ''}`}>
+              <input
+                type="radio"
+                name="goal_kind"
+                checked={isNumeric}
+                onChange={() => setForm(prev => ({ ...prev, kind: 'numeric' }))}
+              />
+              Numérica (km, R$, kg...)
+            </label>
+          </div>
+        </div>
+      )}
+
+      {isNumeric && !isEdit && (
+        <div className={f.field}>
+          <label className={f.label}>Como medir</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <label className={`${f.endOption} ${!isMeasurement ? f.endOptionActive : ''}`}>
+              <input
+                type="radio"
+                name="numeric_mode"
+                checked={!isMeasurement}
+                onChange={() => setForm(prev => ({ ...prev, numeric_mode: 'sum' }))}
+              />
+              Somar registros (ex: km corridos)
+            </label>
+            <label className={`${f.endOption} ${isMeasurement ? f.endOptionActive : ''}`}>
+              <input
+                type="radio"
+                name="numeric_mode"
+                checked={isMeasurement}
+                onChange={() => setForm(prev => ({ ...prev, numeric_mode: 'latest', is_recurring: false }))}
+              />
+              Medição atual (ex: peso)
+            </label>
+          </div>
+        </div>
+      )}
+
+      {isNumeric && (
+        <div className={f.row}>
+          {(isMeasurement || !form.is_recurring) && (
+            <div className={f.field}>
+              <label className={f.label}>{isMeasurement ? 'Valor inicial *' : 'Já tenho (Opcional)'}</label>
+              <input
+                type="number"
+                step="any"
+                className={f.input}
+                placeholder={isMeasurement ? 'Ex: 80' : 'Ex: 0'}
+                value={form.start_value}
+                onChange={set('start_value')}
+                required={isMeasurement}
+              />
+            </div>
+          )}
+          <div className={f.field}>
+            <label className={f.label}>{form.is_recurring && !isMeasurement ? 'Meta por ciclo *' : 'Valor alvo *'}</label>
+            <input
+              type="number"
+              step="any"
+              className={f.input}
+              placeholder={isMeasurement ? 'Ex: 75' : 'Ex: 100'}
+              value={form.target_value}
+              onChange={set('target_value')}
+              required
+            />
+          </div>
+          <div className={f.field}>
+            <label className={f.label}>Unidade</label>
+            <input
+              className={f.input}
+              placeholder="Ex: km"
+              maxLength={20}
+              value={form.unit}
+              onChange={set('unit')}
+            />
+          </div>
+        </div>
+      )}
 
       <div className={f.row}>
         {/* Status só no modo edição */}
@@ -174,18 +285,22 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
         </div>
       </div>
 
-      <div className={f.field}>
-        <label className={f.label} style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={form.is_recurring}
-            onChange={e => setForm(prev => ({ ...prev, is_recurring: e.target.checked }))}
-          />
-          É uma meta recorrente? (ex: treinar 4x por semana)
-        </label>
-      </div>
+      {canRecur && (
+        <div className={f.field}>
+          <label className={f.label} style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: '0.875rem' }}>
+            <input
+              type="checkbox"
+              checked={form.is_recurring}
+              onChange={e => setForm(prev => ({ ...prev, is_recurring: e.target.checked }))}
+            />
+            {isNumeric
+              ? 'É uma meta recorrente? (ex: correr 20 km por semana)'
+              : 'É uma meta recorrente? (ex: treinar 4x por semana)'}
+          </label>
+        </div>
+      )}
 
-      {form.is_recurring && (
+      {canRecur && form.is_recurring && (
         <>
           <div className={f.row}>
             <div className={f.field}>
@@ -216,22 +331,24 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             )}
           </div>
 
-          <div className={f.field}>
-            <label className={f.label}>Tarefas por ciclo</label>
-            <input
-              type="number"
-              min="1"
-              className={f.input}
-              placeholder="Ex: 4"
-              value={form.recurrence_target}
-              onChange={set('recurrence_target')}
-            />
-            {initial.total_tasks > 0 && (
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Sugestão baseada nas {initial.total_tasks} tarefa{initial.total_tasks !== 1 ? 's' : ''} atuais da meta — ajuste se quiser.
-              </span>
-            )}
-          </div>
+          {!isNumeric && (
+            <div className={f.field}>
+              <label className={f.label}>Tarefas por ciclo</label>
+              <input
+                type="number"
+                min="1"
+                className={f.input}
+                placeholder="Ex: 4"
+                value={form.recurrence_target}
+                onChange={set('recurrence_target')}
+              />
+              {initial.total_tasks > 0 && (
+                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  Sugestão baseada nas {initial.total_tasks} tarefa{initial.total_tasks !== 1 ? 's' : ''} atuais da meta — ajuste se quiser.
+                </span>
+              )}
+            </div>
+          )}
 
           <div className={f.field}>
             <label className={f.label}>Termina depois de quantos ciclos (Opcional)</label>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Check, Trash2, Pencil, RefreshCw } from 'lucide-react';
 import { celebrateTask } from '../lib/celebrate';
+import { formatWeekdays } from '../lib/date';
 import styles from './TaskItem.module.css';
 
 export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
@@ -36,7 +37,9 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
         {task.is_recurring && (
           <span className={styles.habit}>
             <RefreshCw size={10} />
-            A cada {task.recurrence_interval_days}d
+            {task.recurrence_weekdays?.length
+              ? formatWeekdays(task.recurrence_weekdays)
+              : `A cada ${task.recurrence_interval_days}d`}
             {task.end_of_goal
               ? ' · até a meta vencer'
               : task.max_recurrences

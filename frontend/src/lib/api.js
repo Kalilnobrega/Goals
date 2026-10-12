@@ -91,6 +91,12 @@ export const deleteGoal = (id) =>
   api.delete(`/goals/${id}`).then((r) => r.data);
 export const getGoalCycles = (id) =>
   api.get(`/goals/${id}/cycles`).then((r) => r.data);
+export const getGoalEntries = (id) =>
+  api.get(`/goals/${id}/entries`).then((r) => r.data);
+export const addGoalEntry = (id, data) =>
+  api.post(`/goals/${id}/entries`, data).then((r) => r.data);
+export const deleteGoalEntry = (id, entryId) =>
+  api.delete(`/goals/${id}/entries/${entryId}`).then((r) => r.data);
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTodayTasks = () => api.get("/tasks/today").then((r) => r.data);
@@ -105,6 +111,7 @@ export const updateTask = (taskId, data) =>
       status: data.status,
       is_recurring: data.is_recurring,
       recurrence_interval_days: data.recurrence_interval_days,
+      recurrence_weekdays: data.recurrence_weekdays,
       max_recurrences: data.max_recurrences,
     })
     .then((r) => r.data);

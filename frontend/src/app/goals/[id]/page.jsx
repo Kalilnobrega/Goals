@@ -8,10 +8,11 @@ import TaskItem from '../../../components/TaskItem';
 import {
   getGoal, updateGoal, deleteGoal,
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak,
-  getGoalCycles
+  getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
-import { formatDeadline } from '../../../lib/date';
+import { formatDeadline, formatDateTime, WEEKDAYS } from '../../../lib/date';
+import { formatValue, formatProgressValue } from '../../../lib/numeric';
 import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
@@ -36,6 +37,10 @@ export default function GoalDetailPage() {
   const [goal,       setGoal]       = useState(null);
   const [tasks,      setTasks]      = useState([]);
   const [cycles,     setCycles]     = useState([]);
+  const [entries,    setEntries]    = useState([]);
+  const [entryValue, setEntryValue] = useState('');
+  const [entryNote,  setEntryNote]  = useState('');
+  const [addingEntry, setAddingEntry] = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [editModal,  setEditModal]  = useState(false);
   const [taskModal,  setTaskModal]  = useState(false);
@@ -50,9 +55,10 @@ export default function GoalDetailPage() {
   // GET /tasks/goal/{goal_id}
   const loadTasks = () => getTasks(Number(id)).then(setTasks);
   const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
+  const loadEntries = () => getGoalEntries(Number(id)).then(setEntries).catch(() => {});
 
   useEffect(() => {
-    Promise.all([loadGoal(), loadTasks(), loadCycles()])
+    Promise.all([loadGoal(), loadTasks(), loadCycles(), loadEntries()])
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -99,12 +105,47 @@ export default function GoalDetailPage() {
     } catch { setError('Erro ao atualizar tarefa.'); }
   };
 
+  const refreshAfterEntryChange = async () => {
+    const prevProgress = goal?.progress ?? 0;
+    const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadEntries(), loadCycles()]);
+    setGoal(updatedGoal);
+    if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
+    getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
+  };
+
+  const handleAddEntry = async (e) => {
+    e.preventDefault();
+    if (entryValue === '') return;
+    setAddingEntry(true);
+    try {
+      await addGoalEntry(Number(id), { value: Number(entryValue), note: entryNote.trim() || null });
+      setEntryValue('');
+      setEntryNote('');
+      await refreshAfterEntryChange();
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Erro ao registrar valor.');
+    } finally { setAddingEntry(false); }
+  };
+
+  const handleDeleteEntry = async (entryId) => {
+    if (!confirm('Excluir este registro?')) return;
+    try {
+      await deleteGoalEntry(Number(id), entryId);
+      await refreshAfterEntryChange();
+    } catch { setError('Erro ao excluir registro.'); }
+  };
+
   // DELETE /tasks/{id}
   const handleDeleteTask = async (taskId) => {
     try {
       await deleteTask(taskId);
       await Promise.all([loadTasks(), loadGoal()]);
     } catch { setError('Erro ao excluir tarefa.'); }
+  };
+
+  const openEditTask = (task) => {
+    setEditTask({ ...task, repeat_mode: task.recurrence_weekdays?.length ? 'weekdays' : 'interval' });
+    setTaskModal(true);
   };
 
   // PUT /tasks/{id} com EditTaskschema
@@ -229,10 +270,18 @@ export default function GoalDetailPage() {
                   {habits.length} hábito{habits.length !== 1 ? 's' : ''}
                 </span>
               )}
+              {goal.is_numeric && !goal.is_recurring && (
+                <span className={styles.metaChip}>
+                  <Target size={13} />
+                  {formatProgressValue(goal)}
+                </span>
+              )}
               {goal.is_recurring && (
                 <span className={styles.metaChip} style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,.2)', background: 'rgba(139,92,246,.07)' }}>
                   <RefreshCw size={13} />
-                  {goal.current_cycle_progress ?? 0}/{goal.recurrence_target ?? 1} neste ciclo
+                  {goal.is_numeric
+                    ? formatProgressValue(goal)
+                    : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1}`} neste ciclo
                   {goal.cycle_ends_at && ` · reseta ${formatDeadline(goal.cycle_ends_at)}`}
                 </span>
               )}
@@ -249,6 +298,81 @@ export default function GoalDetailPage() {
             </div>
           </div>
         </div>
+
+        {goal.is_numeric && (
+          <div className={styles.tasksSection}>
+            <div className={styles.taskHeader}>
+              <Target size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Registros</h2>
+              <span className={styles.taskCount}>{entries.length}</span>
+            </div>
+
+            <form className={`${styles.addTask} glass`} onSubmit={handleAddEntry}>
+              <input
+                type="number"
+                step="any"
+                className={styles.taskInput}
+                style={{ maxWidth: 160 }}
+                placeholder={goal.numeric_mode === 'latest'
+                  ? `Valor atual${goal.unit ? ` (${goal.unit})` : ''}`
+                  : `Quanto somar${goal.unit ? ` (${goal.unit})` : ''}`}
+                value={entryValue}
+                onChange={e => setEntryValue(e.target.value)}
+                disabled={addingEntry}
+                required
+              />
+              <input
+                className={styles.taskInput}
+                placeholder="Observação (opcional)"
+                maxLength={100}
+                value={entryNote}
+                onChange={e => setEntryNote(e.target.value)}
+                disabled={addingEntry}
+              />
+              <button type="submit" className={styles.addBtn} disabled={addingEntry || entryValue === ''}>
+                <Plus size={18} />
+              </button>
+            </form>
+
+            {entries.length === 0 ? (
+              <div className={`${styles.emptyTasks} glass`}>
+                <Target size={24} style={{ color: 'var(--b200)' }} />
+                <p>Nenhum registro ainda. Adicione o primeiro acima!</p>
+              </div>
+            ) : (
+              <ul className={styles.taskList}>
+                {entries.map(entry => (
+                  <li
+                    key={entry.id}
+                    className="glass"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: 10, padding: '10px 14px', borderRadius: 12,
+                    }}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.85rem', color: '#475569', minWidth: 0 }}>
+                      <strong style={{ color: '#1e293b' }}>
+                        {goal.numeric_mode === 'sum' && entry.value > 0 ? '+' : ''}
+                        {formatValue(entry.value, goal.unit)}
+                      </strong>
+                      {entry.note && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.note}</span>}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{formatDateTime(entry.created_at)}</span>
+                      <button
+                        className={`${styles.iconBtn} ${styles.danger}`}
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        aria-label="Excluir registro"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {(goal.is_recurring || cycles.length > 0) && (
           <div className={styles.tasksSection}>
@@ -296,7 +420,9 @@ export default function GoalDetailPage() {
                       {formatDeadline(c.cycle_start)} – {formatDeadline(c.cycle_end)}
                     </span>
                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: c.completed ? '#10b981' : '#ef4444' }}>
-                      {c.achieved_count}/{c.target_count}
+                      {c.achieved_value !== null && c.achieved_value !== undefined
+                        ? `${formatValue(c.achieved_value)}/${formatValue(c.target_value, goal.unit)}`
+                        : `${c.achieved_count}/${c.target_count}`}
                     </span>
                   </li>
                 ))}
@@ -344,7 +470,7 @@ export default function GoalDetailPage() {
                         task={t}
                         onToggle={handleToggleTask}
                         onDelete={handleDeleteTask}
-                        onEdit={(task) => { setEditTask(task); setTaskModal(true); }}
+                        onEdit={openEditTask}
                       />
                     ))}
                   </ul>
@@ -362,7 +488,7 @@ export default function GoalDetailPage() {
                         task={t}
                         onToggle={handleToggleTask}
                         onDelete={handleDeleteTask}
-                        onEdit={(task) => { setEditTask(task); setTaskModal(true); }}
+                        onEdit={openEditTask}
                       />
                     ))}
                   </ul>
@@ -392,6 +518,7 @@ export default function GoalDetailPage() {
                 title:                    editTask?.title,
                 is_recurring:             editTask?.is_recurring ?? false,
                 recurrence_interval_days: editTask?.recurrence_interval_days || null,
+                recurrence_weekdays:      editTask?.repeat_mode === 'weekdays' ? editTask.recurrence_weekdays : [],
                 end_of_goal:              editTask?.end_of_goal ?? false,
                 max_recurrences:          editTask?.end_of_goal ? null : (editTask?.max_recurrences || null),
               });
@@ -421,16 +548,68 @@ export default function GoalDetailPage() {
             {editTask?.is_recurring && (
               <>
                 <div className={f.field}>
-                  <label className={f.label}>Repetir a cada (dias)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    className={f.input}
-                    placeholder="Ex: 1 = todo dia"
-                    value={editTask?.recurrence_interval_days || ''}
-                    onChange={e => setEditTask(t => ({ ...t, recurrence_interval_days: e.target.value ? Number(e.target.value) : null }))}
-                  />
+                  <label className={f.label}>Repetir</label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <label className={`${f.endOption} ${editTask?.repeat_mode !== 'weekdays' ? f.endOptionActive : ''}`}>
+                      <input
+                        type="radio"
+                        name="edit_repeat_mode"
+                        checked={editTask?.repeat_mode !== 'weekdays'}
+                        onChange={() => setEditTask(t => ({ ...t, repeat_mode: 'interval' }))}
+                      />
+                      A cada N dias
+                    </label>
+                    <label className={`${f.endOption} ${editTask?.repeat_mode === 'weekdays' ? f.endOptionActive : ''}`}>
+                      <input
+                        type="radio"
+                        name="edit_repeat_mode"
+                        checked={editTask?.repeat_mode === 'weekdays'}
+                        onChange={() => setEditTask(t => ({ ...t, repeat_mode: 'weekdays', recurrence_weekdays: t.recurrence_weekdays || [] }))}
+                      />
+                      Dias da semana
+                    </label>
+                  </div>
                 </div>
+
+                {editTask?.repeat_mode === 'weekdays' ? (
+                  <div className={f.field}>
+                    <label className={f.label}>Quais dias</label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {WEEKDAYS.map(day => {
+                        const selected = editTask.recurrence_weekdays?.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            className={`${f.endOption} ${selected ? f.endOptionActive : ''}`}
+                            style={{ padding: '8px 12px' }}
+                            aria-pressed={selected}
+                            onClick={() => setEditTask(t => ({
+                              ...t,
+                              recurrence_weekdays: selected
+                                ? t.recurrence_weekdays.filter(d => d !== day.value)
+                                : [...(t.recurrence_weekdays || []), day.value].sort(),
+                            }))}
+                          >
+                            {day.short}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={f.field}>
+                    <label className={f.label}>Repetir a cada (dias)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className={f.input}
+                      placeholder="Ex: 1 = todo dia"
+                      value={editTask?.recurrence_interval_days || ''}
+                      onChange={e => setEditTask(t => ({ ...t, recurrence_interval_days: e.target.value ? Number(e.target.value) : null }))}
+                    />
+                  </div>
+                )}
 
                 <div className={f.field}>
                   <label className={f.label}>Até quando</label>
@@ -476,7 +655,11 @@ export default function GoalDetailPage() {
               <button type="button" className={f.btnCancel} onClick={() => { setTaskModal(false); setEditTask(null); }}>
                 Cancelar
               </button>
-              <button type="submit" className={f.btnSubmit} disabled={saving}>
+              <button
+                type="submit"
+                className={f.btnSubmit}
+                disabled={saving || (editTask?.is_recurring && editTask?.repeat_mode === 'weekdays' && !editTask?.recurrence_weekdays?.length)}
+              >
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
