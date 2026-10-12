@@ -4,7 +4,8 @@ from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
 from app.models import Goal, Task, User, GoalStatus, Streak, TaskCompletion
 from .auth import get_current_user
-from datetime import datetime, timezone, date, timedelta
+from datetime import datetime, timezone, timedelta
+from app.dates import today_br
 from typing import List
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -67,7 +68,7 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
 
 
 def update_streak(user_id: int, session: Session):
-    today = date.today()
+    today = today_br()
 
     has_activity = (
         session.query(Task)
@@ -128,7 +129,7 @@ async def create_task(
                 detail="A meta precisa ter uma data final para usar essa opção.",
             )
 
-        days_remaining = (goal.deadline.date() - date.today()).days
+        days_remaining = (goal.deadline.date() - today_br()).days
 
         if days_remaining < 0:
             raise HTTPException(status_code=400, detail="A meta já venceu.")
@@ -229,7 +230,7 @@ async def toggle_task(
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
     task.status = not task.status
-    task.completed_at = date.today() if task.status else None
+    task.completed_at = today_br() if task.status else None
 
     if task.status:
         session.add(
@@ -257,7 +258,7 @@ async def toggle_task(
             .filter(
                 Goal.user_id == current_user.id,
                 Task.status == True,
-                Task.completed_at == date.today(),
+                Task.completed_at == today_br(),
             )
             .first()
         )
@@ -267,7 +268,7 @@ async def toggle_task(
                 session.query(Streak).filter(Streak.user_id == current_user.id).first()
             )
 
-            if streak_db and streak_db.last_activity == date.today():
+            if streak_db and streak_db.last_activity == today_br():
                 # Desfaz exatamente o incremento de hoje feito por update_streak,
                 # em vez de tentar redescobrir "teve atividade ontem" consultando
                 # tarefas (frágil: hábitos recorrentes já resetados não deixam
@@ -277,7 +278,7 @@ async def toggle_task(
                 if streak_db.current_streak == 0:
                     streak_db.last_activity = None
                 else:
-                    streak_db.last_activity = date.today() - timedelta(days=1)
+                    streak_db.last_activity = today_br() - timedelta(days=1)
 
                 session.commit()
 

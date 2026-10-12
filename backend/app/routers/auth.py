@@ -24,7 +24,8 @@ from app.schemas import (
 )
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
+from app.dates import today_br
 from sqlalchemy import or_
 import requests
 import resend
@@ -164,7 +165,7 @@ def get_streak(
     if not streak:
         return {"current_streak": 0, "longest_streak": 0, "last_activity": None}
 
-    if streak.last_activity and streak.last_activity < date.today() - timedelta(days=1):
+    if streak.last_activity and streak.last_activity < today_br() - timedelta(days=1):
         streak.current_streak = 0
         streak.last_activity = None
         session.commit()

@@ -12,7 +12,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
-from datetime import date, timedelta, timezone
+from datetime import timedelta, timezone
+from app.dates import today_br
 
 
 def _aware_utc(dt):
@@ -92,7 +93,7 @@ class Goal(Base):
         if not self.deadline:
             return None
 
-        return (self.deadline.date() - date.today()).days
+        return (self.deadline.date() - today_br()).days
 
     @property
     def progress(self) -> float:
