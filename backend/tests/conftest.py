@@ -8,6 +8,19 @@ from app.database import Base, get_db
 import app.main as main_module
 from app.models import User
 from app.routers.auth import create_token
+import resend
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    main_module.limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def sent_emails(monkeypatch):
+    sent = []
+    monkeypatch.setattr(resend.Emails, "send", lambda params: sent.append(params))
+    return sent
 
 
 @pytest.fixture()
