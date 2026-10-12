@@ -29,8 +29,11 @@ from sqlalchemy import or_
 import requests
 import resend
 import uuid
+import logging
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 resend.api_key = RESEND_KEY
 
@@ -124,8 +127,8 @@ def send_verification_email(email_to: str, token: str):
                 <p><small>Este link expira em 24 horas.</small></p> """,
             }
         )
-    except Exception as e:
-        print(f"Erro ao enviar e-mail pelo Resend: {e}")
+    except Exception:
+        logger.exception("Erro ao enviar e-mail pelo Resend para %s", email_to)
 
 
 def send_reset_email(email_to: str, token: str):
@@ -144,8 +147,8 @@ def send_reset_email(email_to: str, token: str):
                 <p><small>Este link expira em 1 hora. Se você não solicitou isso, ignore este e-mail.</small></p> """,
             }
         )
-    except Exception as e:
-        print(f"Erro ao enviar e-mail pelo Resend: {e}")
+    except Exception:
+        logger.exception("Erro ao enviar e-mail pelo Resend para %s", email_to)
 
 
 @auth_router.get("/me", response_model=UserResponseSchema)
