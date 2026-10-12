@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import GoalCard from '../../components/GoalCard';
 import Modal from '../../components/Modal';
@@ -17,6 +18,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function GoalsPage() {
+  const router = useRouter();
   const [goals,   setGoals]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal,   setModal]   = useState(false);
@@ -39,11 +41,12 @@ export default function GoalsPage() {
   const handleCreate = async (data) => {
     setSaving(true);
     try {
-      await createGoal(data);
-      setModal(false);
-      load(filter);
-    } catch { setError('Erro ao criar meta.'); }
-    finally { setSaving(false); }
+      const goal = await createGoal(data);
+      router.push(`/goals/${goal.id}`);
+    } catch {
+      setError('Erro ao criar meta.');
+      setSaving(false);
+    }
   };
 
   const handleComplete = async (id) => {
