@@ -48,9 +48,10 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
     for task in recurring_tasks:
         if task.last_reset_date and task.recurrence_interval_days:
             last_reset = to_aware_utc(task.last_reset_date)
-            past_days = (now - last_reset).days
+            interval = timedelta(days=task.recurrence_interval_days)
+            elapsed_periods = (now - last_reset) // interval
 
-            if past_days >= task.recurrence_interval_days:
+            if elapsed_periods >= 1:
                 if (
                     task.max_recurrences is None
                     or task.recurrence_count < task.max_recurrences
@@ -59,7 +60,7 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
                         task.recurrence_count += 1
 
                     task.status = False
-                    task.last_reset_date = now
+                    task.last_reset_date = last_reset + elapsed_periods * interval
 
                 elif task.recurrence_count >= task.max_recurrences:
                     task.is_recurring = False
