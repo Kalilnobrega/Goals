@@ -19,7 +19,6 @@ export default function GoalCard({ goal, onDelete, onComplete }) {
 
   return (
     <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} glass`}>
-      {goal.status === 'late' && <div className={styles.lateStripe} />}
       {/* Status badge */}
       <div className={styles.badge} style={{ '--badge-color': meta.color }}>
         <span className={styles.badgeDot} />
