@@ -9,7 +9,7 @@ from app.schemas import (
 from app.database import get_db
 from app.models import Goal, User, GoalStatus, Task, TaskCompletion, GoalCycleLog
 from .auth import get_current_user
-from .tasks import update_streak, is_late, to_aware_utc
+from .tasks import update_streak, is_late, to_aware_utc, check_and_reset_recurring_tasks
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
@@ -104,6 +104,7 @@ async def list_goals(
     session: Session = Depends(get_db),
 ):
     check_and_reset_recurring_goals(current_user.id, session)
+    check_and_reset_recurring_tasks(current_user.id, session)
 
     query = session.query(Goal).filter(Goal.user_id == current_user.id)
 
@@ -137,6 +138,7 @@ async def get_single_goal(
     session: Session = Depends(get_db),
 ):
     check_and_reset_recurring_goals(current_user.id, session)
+    check_and_reset_recurring_tasks(current_user.id, session)
 
     goal = (
         session.query(Goal)

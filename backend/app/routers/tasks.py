@@ -209,6 +209,8 @@ async def list_tasks_by_goal(
             status_code=404, detail="Meta não encontrada ou acesso negado"
         )
 
+    check_and_reset_recurring_tasks(current_user.id, session)
+
     tasks = session.query(Task).filter(Task.goals_id == goal_id).all()
 
     return tasks

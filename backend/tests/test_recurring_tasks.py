@@ -45,3 +45,15 @@ def test_recurring_task_not_reset_before_interval(client, auth_headers, db_sessi
 
     db_session.refresh(db_task)
     assert db_task.status is True
+
+
+def test_goal_page_resets_stale_recurring_task(client, auth_headers, db_session):
+    goal, task = create_goal_with_recurring_task(client, auth_headers, interval_days=1)
+
+    db_task = db_session.query(Task).filter(Task.id == task["id"]).first()
+    db_task.last_reset_date = datetime.now(timezone.utc) - timedelta(days=2)
+    db_task.status = True
+    db_session.commit()
+
+    tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
+    assert tasks[0]["status"] is False
