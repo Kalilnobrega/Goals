@@ -2,7 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
-from app.models import Goal, Task, User, GoalStatus, Streak, TaskCompletion, GoalEntry
+from app.models import (
+    Goal,
+    Task,
+    User,
+    GoalStatus,
+    Streak,
+    TaskCompletion,
+    GoalEntry,
+    GoalCycleLog,
+)
 from .auth import get_current_user
 from datetime import datetime, timezone, timedelta
 from app.dates import (
@@ -39,6 +48,90 @@ LATE_GRACE_PERIOD = timedelta(days=1, hours=3)
 
 def is_late(deadline, now):
     return to_aware_utc(deadline) + LATE_GRACE_PERIOD < now
+
+
+def uncheck_goal_tasks(goal: Goal):
+    for task in goal.tasks:
+        if not task.status:
+            continue
+
+        if task.is_recurring and (
+            task.max_recurrences is None
+            or task.recurrence_count < task.max_recurrences
+        ):
+            task.recurrence_count += 1
+
+        task.status = False
+
+
+def check_and_reset_recurring_goals(user_id: int, session: Session):
+    now = datetime.now(timezone.utc)
+
+    recurring_goals = (
+        session.query(Goal)
+        .filter(Goal.user_id == user_id, Goal.is_recurring == True)
+        .all()
+    )
+
+    for goal in recurring_goals:
+        if not goal.cycle_start_date or not goal.recurrence_interval_days:
+            continue
+
+        interval = timedelta(days=goal.recurrence_interval_days)
+        deadline = to_aware_utc(goal.deadline) if goal.deadline else None
+        target = goal.recurrence_target or 1
+        cycle_start = to_aware_utc(goal.cycle_start_date)
+        cycle_end = cycle_start + interval
+
+        if now < cycle_end:
+            continue
+
+        while cycle_end <= now and (deadline is None or cycle_start < deadline):
+            if goal.is_numeric:
+                achieved_value = sum(
+                    entry.value
+                    for entry in goal.entries
+                    if cycle_start <= to_aware_utc(entry.created_at) < cycle_end
+                )
+                log = GoalCycleLog(
+                    target_count=0,
+                    achieved_count=0,
+                    target_value=goal.target_value,
+                    achieved_value=achieved_value,
+                    completed=achieved_value >= goal.target_value,
+                )
+            else:
+                achieved = (
+                    session.query(TaskCompletion)
+                    .join(Task, Task.id == TaskCompletion.task_id)
+                    .filter(
+                        Task.goals_id == goal.id,
+                        TaskCompletion.completed_at >= cycle_start,
+                        TaskCompletion.completed_at < cycle_end,
+                    )
+                    .count()
+                )
+                log = GoalCycleLog(
+                    target_count=target,
+                    achieved_count=achieved,
+                    completed=achieved >= target,
+                )
+
+            log.goal_id = goal.id
+            log.cycle_start = cycle_start
+            log.cycle_end = cycle_end
+            session.add(log)
+
+            cycle_start = cycle_end
+            cycle_end = cycle_start + interval
+
+        if deadline and deadline <= now:
+            goal.is_recurring = False
+        else:
+            goal.cycle_start_date = cycle_start
+            uncheck_goal_tasks(goal)
+
+    session.commit()
 
 
 def check_and_reset_recurring_tasks(user_id: int, session: Session):
@@ -256,6 +349,7 @@ async def create_task(
 async def list_today_tasks(
     current_user: User = Depends(get_current_user), session: Session = Depends(get_db)
 ):
+    check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
     tasks = (
@@ -309,6 +403,7 @@ async def list_tasks_by_goal(
             status_code=404, detail="Meta não encontrada ou acesso negado"
         )
 
+    check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
     tasks = session.query(Task).filter(Task.goals_id == goal_id).all()
@@ -322,6 +417,8 @@ async def toggle_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
+    check_and_reset_recurring_goals(current_user.id, session)
+
     task = (
         session.query(Task)
         .join(Goal)

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
-from app.models import Goal, TaskCompletion
+from app.models import Goal, Task, TaskCompletion
 
 
 def create_recurring_goal(client, auth_headers, target=4, interval_days=7):
@@ -171,3 +171,61 @@ def test_cycle_reset_logs_every_missed_cycle_without_drift(client, auth_headers,
     expected_start = old_cycle_start + timedelta(days=21)
     actual_start = db_goal.cycle_start_date.replace(tzinfo=timezone.utc)
     assert abs(actual_start - expected_start) < timedelta(seconds=1)
+
+
+def move_cycle_back(db_session, goal_id, days=8):
+    db_goal = db_session.query(Goal).filter(Goal.id == goal_id).first()
+    db_goal.cycle_start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    db_session.commit()
+
+
+def test_cycle_reset_unchecks_plain_tasks(client, auth_headers, db_session):
+    goal = create_recurring_goal(client, auth_headers, target=1, interval_days=7)
+    task = client.post(
+        f"/tasks/{goal['id']}", json={"title": "ler"}, headers=auth_headers
+    ).json()
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    move_cycle_back(db_session, goal["id"])
+
+    tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
+    assert tasks[0]["status"] is False
+
+
+def test_cycle_reset_unchecks_recurring_tasks_and_counts_recurrence(client, auth_headers, db_session):
+    goal = create_recurring_goal(client, auth_headers, target=1, interval_days=7)
+    task = client.post(
+        f"/tasks/{goal['id']}",
+        json={"title": "ler", "is_recurring": True, "recurrence_interval_days": 7},
+        headers=auth_headers,
+    ).json()
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    move_cycle_back(db_session, goal["id"])
+
+    tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
+    assert tasks[0]["status"] is False
+
+    db_task = db_session.query(Task).filter(Task.id == task["id"]).first()
+    db_session.refresh(db_task)
+    assert db_task.recurrence_count == 1
+
+
+def test_cycle_reset_does_not_uncheck_tasks_when_goal_ends(client, auth_headers, db_session):
+    goal = client.post(
+        "/goals/",
+        json={
+            "title": "Treinar",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+            "recurrence_target": 1,
+            "deadline": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        },
+        headers=auth_headers,
+    ).json()
+    task = client.post(
+        f"/tasks/{goal['id']}", json={"title": "ler"}, headers=auth_headers
+    ).json()
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    move_cycle_back(db_session, goal["id"])
+
+    tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
+    assert tasks[0]["status"] is True

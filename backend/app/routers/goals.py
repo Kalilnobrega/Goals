@@ -14,7 +14,6 @@ from app.models import (
     User,
     GoalStatus,
     Task,
-    TaskCompletion,
     GoalCycleLog,
     GoalEntry,
 )
@@ -24,6 +23,7 @@ from .tasks import (
     is_late,
     to_aware_utc,
     check_and_reset_recurring_tasks,
+    check_and_reset_recurring_goals,
     undo_today_streak_if_inactive,
     refresh_goal_status,
 )
@@ -31,75 +31,6 @@ from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
 goals_router = APIRouter(prefix="/goals", tags=["goals"])
-
-
-def check_and_reset_recurring_goals(user_id: int, session: Session):
-    now = datetime.now(timezone.utc)
-
-    recurring_goals = (
-        session.query(Goal)
-        .filter(Goal.user_id == user_id, Goal.is_recurring == True)
-        .all()
-    )
-
-    for goal in recurring_goals:
-        if not goal.cycle_start_date or not goal.recurrence_interval_days:
-            continue
-
-        interval = timedelta(days=goal.recurrence_interval_days)
-        deadline = to_aware_utc(goal.deadline) if goal.deadline else None
-        target = goal.recurrence_target or 1
-        cycle_start = to_aware_utc(goal.cycle_start_date)
-        cycle_end = cycle_start + interval
-
-        if now < cycle_end:
-            continue
-
-        while cycle_end <= now and (deadline is None or cycle_start < deadline):
-            if goal.is_numeric:
-                achieved_value = sum(
-                    entry.value
-                    for entry in goal.entries
-                    if cycle_start <= to_aware_utc(entry.created_at) < cycle_end
-                )
-                log = GoalCycleLog(
-                    target_count=0,
-                    achieved_count=0,
-                    target_value=goal.target_value,
-                    achieved_value=achieved_value,
-                    completed=achieved_value >= goal.target_value,
-                )
-            else:
-                achieved = (
-                    session.query(TaskCompletion)
-                    .join(Task, Task.id == TaskCompletion.task_id)
-                    .filter(
-                        Task.goals_id == goal.id,
-                        TaskCompletion.completed_at >= cycle_start,
-                        TaskCompletion.completed_at < cycle_end,
-                    )
-                    .count()
-                )
-                log = GoalCycleLog(
-                    target_count=target,
-                    achieved_count=achieved,
-                    completed=achieved >= target,
-                )
-
-            log.goal_id = goal.id
-            log.cycle_start = cycle_start
-            log.cycle_end = cycle_end
-            session.add(log)
-
-            cycle_start = cycle_end
-            cycle_end = cycle_start + interval
-
-        if deadline and deadline <= now:
-            goal.is_recurring = False
-        else:
-            goal.cycle_start_date = cycle_start
-
-    session.commit()
 
 
 def validate_numeric_goal(goal: Goal):
