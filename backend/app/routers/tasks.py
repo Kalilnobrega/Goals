@@ -89,7 +89,11 @@ def update_streak(user_id: int, session: Session):
 
     if not streak_db:
         streak_db = Streak(
-            user_id=user_id, current_streak=1, longest_streak=1, last_activity=today
+            user_id=user_id,
+            current_streak=1,
+            longest_streak=1,
+            longest_before_today=0,
+            last_activity=today,
         )
         session.add(streak_db)
         session.commit()
@@ -103,6 +107,7 @@ def update_streak(user_id: int, session: Session):
     else:
         streak_db.current_streak = 1
 
+    streak_db.longest_before_today = streak_db.longest_streak
     streak_db.longest_streak = max(streak_db.longest_streak, streak_db.current_streak)
     streak_db.last_activity = today
     session.commit()
@@ -277,6 +282,9 @@ async def toggle_task(
                 # tarefas (frágil: hábitos recorrentes já resetados não deixam
                 # rastro e zeravam a streak inteira indevidamente).
                 streak_db.current_streak = max(0, streak_db.current_streak - 1)
+
+                if streak_db.longest_before_today is not None:
+                    streak_db.longest_streak = streak_db.longest_before_today
 
                 if streak_db.current_streak == 0:
                     streak_db.last_activity = None

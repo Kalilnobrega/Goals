@@ -226,5 +226,6 @@ class Streak(Base):
     user_id = Column(ForeignKey("users.id"), unique=True)
     current_streak = Column(Integer, default=0)
     longest_streak = Column(Integer, default=0)
+    longest_before_today = Column(Integer, nullable=True)
     last_activity = Column(Date, nullable=True)
     user = relationship("User", back_populates="streak")

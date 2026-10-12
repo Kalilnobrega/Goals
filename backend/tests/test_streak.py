@@ -127,9 +127,40 @@ def test_untoggling_first_ever_task_clears_streak(client, auth_headers):
     client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
     client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
 
+    assert get_streak(client, auth_headers) == {
+        "current_streak": 0,
+        "longest_streak": 0,
+        "last_activity": None,
+    }
+
+
+def test_untoggling_task_that_set_new_record_restores_previous_record(
+    client, auth_headers, user, db_session
+):
+    set_streak(db_session, user, 5, 5, today_br() - timedelta(days=1))
+    task = create_task(client, auth_headers)
+
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    assert get_streak(client, auth_headers)["longest_streak"] == 6
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+
     streak = get_streak(client, auth_headers)
-    assert streak["current_streak"] == 0
-    assert streak["last_activity"] is None
+    assert streak["current_streak"] == 5
+    assert streak["longest_streak"] == 5
+
+
+def test_untoggling_keeps_older_record_equal_to_todays_streak(
+    client, auth_headers, user, db_session
+):
+    set_streak(db_session, user, 5, 6, today_br() - timedelta(days=1))
+    task = create_task(client, auth_headers)
+
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+
+    streak = get_streak(client, auth_headers)
+    assert streak["current_streak"] == 5
+    assert streak["longest_streak"] == 6
 
 
 def test_untoggling_one_of_two_tasks_keeps_streak(client, auth_headers):
