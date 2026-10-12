@@ -31,6 +31,8 @@ import requests
 import resend
 import uuid
 import logging
+import hashlib
+import hmac
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,7 +42,10 @@ resend.api_key = RESEND_KEY
 
 
 def create_token(
-    id_user, expire=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), token_type="access"
+    id_user,
+    expire=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    token_type="access",
+    extra_claims=None,
 ):
     expiration_date = datetime.now(timezone.utc) + expire
     dic_info = {
@@ -48,6 +53,7 @@ def create_token(
         "exp": expiration_date,
         "type": token_type,
         "jti": str(uuid.uuid4()),
+        **(extra_claims or {}),
     }
     jwt_encoded = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
 
@@ -65,6 +71,12 @@ def create_refresh_token_in_db(new_refresh_token: str, user_id: str, session: Se
     session.commit()
 
     return {"message": "refresh token cadastrado no banco de dados"}
+
+
+def password_fingerprint(password_hash: str) -> str:
+    return hmac.new(
+        SECRET_KEY.encode(), password_hash.encode(), hashlib.sha256
+    ).hexdigest()[:16]
 
 
 def cleanup_invalid_tokens(session: Session):
@@ -324,7 +336,10 @@ async def forgot_password(
 
     if user:
         reset_token = create_token(
-            user.id, expire=timedelta(hours=1), token_type="reset"
+            user.id,
+            expire=timedelta(hours=1),
+            token_type="reset",
+            extra_claims={"pwd": password_fingerprint(user.password)},
         )
         background_tasks.add_task(send_reset_email, user.email, reset_token)
 
@@ -352,6 +367,13 @@ async def reset_password(
         user = session.query(User).filter(User.id == int(user_id)).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        if not hmac.compare_digest(
+            str(token_payload.get("pwd", "")), password_fingerprint(user.password)
+        ):
+            raise HTTPException(
+                status_code=400, detail="Este link de redefinição já foi usado"
+            )
 
         user.password = bcrypt_context.hash(payload.new_password)
         session.query(RefreshToken).filter(RefreshToken.user_id == user.id).update(
