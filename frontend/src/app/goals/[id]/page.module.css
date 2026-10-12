@@ -549,6 +549,13 @@
   box-shadow: 0 0 10px rgba(59,130,246,0.4);
 }
 
+.progressFillComplete {
+  background: linear-gradient(90deg, #4ade80, #16a34a);
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.4);
+}
+
+.progressPctComplete { color: #16a34a; }
+
 /* ── Tasks section ────────────────────────────── */
 .tasksSection {
   display: flex;

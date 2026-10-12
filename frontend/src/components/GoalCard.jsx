@@ -34,9 +34,9 @@ export default function GoalCard({ goal, onDelete, onComplete }) {
       {/* Progress bar */}
       <div className={styles.progressWrap}>
         <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+          <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
         </div>
-        <span className={styles.progressLabel}>{progress}%</span>
+        <span className={`${styles.progressLabel} ${progress >= 100 ? styles.progressLabelComplete : ''}`}>{progress}%</span>
       </div>
 
       {/* Meta info */}

@@ -302,9 +302,9 @@ export default function DashboardPage() {
                     <div className={styles.recentBody}>
                       <span className={styles.recentTitle}>{g.title}</span>
                       <div className={styles.recentBar}>
-                        <div className={styles.recentFill} style={{ width: `${progress}%` }} />
+                        <div className={`${styles.recentFill} ${progress >= 100 ? styles.recentFillComplete : ''}`} style={{ width: `${progress}%` }} />
                       </div>
-                      <span className={styles.recentPct}>{progress}%</span>
+                      <span className={`${styles.recentPct} ${progress >= 100 ? styles.recentPctComplete : ''}`}>{progress}%</span>
                     </div>
                     <ArrowRight size={14} className={styles.recentArrow} />
                   </Link>

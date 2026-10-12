@@ -290,10 +290,10 @@ export default function GoalDetailPage() {
             <div className={styles.progressWrap}>
               <div className={styles.progressInfo}>
                 <span className={styles.progressLabel}>Progresso geral</span>
-                <span className={styles.progressPct}>{progress}%</span>
+                <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}>{progress}%</span>
               </div>
               <div className={styles.progressTrack}>
-                <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+                <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
               </div>
             </div>
           </div>
