@@ -313,7 +313,9 @@ def google_auth(
 
 
 @auth_router.post("/forgot-password")
+@limiter.limit("3/minute")
 async def forgot_password(
+    request: Request,
     payload: ForgotPasswordSchema,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_db),
