@@ -2,10 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
 from app.database import get_db
-from app.models import Goal, Task, User, GoalStatus, Streak, TaskCompletion
+from app.models import Goal, Task, User, GoalStatus, Streak, TaskCompletion, GoalEntry
 from .auth import get_current_user
 from datetime import datetime, timezone, timedelta
-from app.dates import today_br
+from app.dates import (
+    today_br,
+    to_br_date,
+    br_day_start_utc,
+    count_weekdays,
+    last_scheduled_day,
+)
 from typing import List
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -46,32 +52,54 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
     )
 
     for task in recurring_tasks:
-        if task.last_reset_date and task.recurrence_interval_days:
-            last_reset = to_aware_utc(task.last_reset_date)
-            interval = timedelta(days=task.recurrence_interval_days)
-            elapsed_periods = (now - last_reset) // interval
+        if not task.last_reset_date:
+            continue
 
-            if elapsed_periods >= 1:
-                if (
-                    task.max_recurrences is None
-                    or task.recurrence_count < task.max_recurrences
-                ):
-                    if task.status == True:
-                        task.recurrence_count += 1
+        last_reset = to_aware_utc(task.last_reset_date)
+        next_reset = next_reset_date(task, last_reset, now)
 
-                    task.status = False
-                    task.last_reset_date = last_reset + elapsed_periods * interval
+        if next_reset is None:
+            continue
 
-                elif task.recurrence_count >= task.max_recurrences:
-                    task.is_recurring = False
+        if task.max_recurrences is None or task.recurrence_count < task.max_recurrences:
+            if task.status == True:
+                task.recurrence_count += 1
+
+            task.status = False
+            task.last_reset_date = next_reset
+
+        elif task.recurrence_count >= task.max_recurrences:
+            task.is_recurring = False
 
     session.commit()
 
 
-def update_streak(user_id: int, session: Session):
+def next_reset_date(task: Task, last_reset: datetime, now: datetime):
+    if task.recurrence_weekdays:
+        day = last_scheduled_day(
+            to_br_date(last_reset), today_br(now), task.recurrence_weekdays
+        )
+        return br_day_start_utc(day) if day else None
+
+    if task.recurrence_interval_days:
+        interval = timedelta(days=task.recurrence_interval_days)
+        elapsed_periods = (now - last_reset) // interval
+        if elapsed_periods >= 1:
+            return last_reset + elapsed_periods * interval
+
+    return None
+
+
+def is_scheduled_today(task: Task) -> bool:
+    if not task.is_recurring or not task.recurrence_weekdays:
+        return True
+    return today_br().weekday() in task.recurrence_weekdays
+
+
+def has_activity_today(user_id: int, session: Session) -> bool:
     today = today_br()
 
-    has_activity = (
+    completed_task = (
         session.query(Task)
         .join(Goal)
         .filter(
@@ -81,8 +109,66 @@ def update_streak(user_id: int, session: Session):
         )
         .first()
     )
+    if completed_task:
+        return True
 
-    if not has_activity:
+    entry = (
+        session.query(GoalEntry)
+        .join(Goal)
+        .filter(
+            Goal.user_id == user_id,
+            GoalEntry.created_at >= br_day_start_utc(today),
+            GoalEntry.created_at < br_day_start_utc(today + timedelta(days=1)),
+        )
+        .first()
+    )
+    return entry is not None
+
+
+def undo_today_streak_if_inactive(user_id: int, session: Session):
+    if has_activity_today(user_id, session):
+        return
+
+    streak_db = session.query(Streak).filter(Streak.user_id == user_id).first()
+
+    if streak_db and streak_db.last_activity == today_br():
+        # Desfaz exatamente o incremento de hoje feito por update_streak,
+        # em vez de tentar redescobrir "teve atividade ontem" consultando
+        # tarefas (frágil: hábitos recorrentes já resetados não deixam
+        # rastro e zeravam a streak inteira indevidamente).
+        streak_db.current_streak = max(0, streak_db.current_streak - 1)
+
+        if streak_db.longest_before_today is not None:
+            streak_db.longest_streak = streak_db.longest_before_today
+
+        if streak_db.current_streak == 0:
+            streak_db.last_activity = None
+        else:
+            streak_db.last_activity = today_br() - timedelta(days=1)
+
+        session.commit()
+
+
+def refresh_goal_status(goal: Goal):
+    if goal.is_recurring:
+        return
+
+    if goal.progress >= 100.0:
+        goal.status = GoalStatus.COMPLETED
+
+    elif goal.status == GoalStatus.COMPLETED:
+        now = datetime.now(timezone.utc)
+
+        if goal.deadline and is_late(goal.deadline, now):
+            goal.status = GoalStatus.LATE
+        else:
+            goal.status = GoalStatus.OPEN
+
+
+def update_streak(user_id: int, session: Session):
+    today = today_br()
+
+    if not has_activity_today(user_id, session):
         return
 
     streak_db = session.query(Streak).filter(Streak.user_id == user_id).first()
@@ -140,15 +226,21 @@ async def create_task(
         if days_remaining < 0:
             raise HTTPException(status_code=400, detail="A meta já venceu.")
 
-        task_schema.max_recurrences = (
-            days_remaining // task_schema.recurrence_interval_days
-        )
+        if task_schema.recurrence_weekdays:
+            task_schema.max_recurrences = count_weekdays(
+                today_br(), goal.deadline.date(), task_schema.recurrence_weekdays
+            )
+        else:
+            task_schema.max_recurrences = (
+                days_remaining // task_schema.recurrence_interval_days
+            )
 
     new_task = Task(
         title=task_schema.title,
         goals_id=goal.id,
         is_recurring=task_schema.is_recurring,
         recurrence_interval_days=task_schema.recurrence_interval_days,
+        recurrence_weekdays=task_schema.recurrence_weekdays or None,
         max_recurrences=task_schema.max_recurrences,
         recurrence_count=0,
     )
@@ -179,6 +271,8 @@ async def list_today_tasks(
 
     task_response = []
     for task in tasks:
+        if not is_scheduled_today(task):
+            continue
         task_data = TaskResponseSchema(
             id=task.id,
             goal_id=task.goals_id,
@@ -188,6 +282,7 @@ async def list_today_tasks(
             created_at=task.created_at,
             is_recurring=task.is_recurring,
             recurrence_interval_days=task.recurrence_interval_days,
+            recurrence_weekdays=task.recurrence_weekdays,
             max_recurrences=task.max_recurrences,
             recurrence_count=task.recurrence_count,
             last_reset_date=task.last_reset_date,
@@ -260,52 +355,9 @@ async def toggle_task(
     if task.status:
         update_streak(current_user.id, session)
     else:
-        still_has_activity = (
-            session.query(Task)
-            .join(Goal)
-            .filter(
-                Goal.user_id == current_user.id,
-                Task.status == True,
-                Task.completed_at == today_br(),
-            )
-            .first()
-        )
+        undo_today_streak_if_inactive(current_user.id, session)
 
-        if not still_has_activity:
-            streak_db = (
-                session.query(Streak).filter(Streak.user_id == current_user.id).first()
-            )
-
-            if streak_db and streak_db.last_activity == today_br():
-                # Desfaz exatamente o incremento de hoje feito por update_streak,
-                # em vez de tentar redescobrir "teve atividade ontem" consultando
-                # tarefas (frágil: hábitos recorrentes já resetados não deixam
-                # rastro e zeravam a streak inteira indevidamente).
-                streak_db.current_streak = max(0, streak_db.current_streak - 1)
-
-                if streak_db.longest_before_today is not None:
-                    streak_db.longest_streak = streak_db.longest_before_today
-
-                if streak_db.current_streak == 0:
-                    streak_db.last_activity = None
-                else:
-                    streak_db.last_activity = today_br() - timedelta(days=1)
-
-                session.commit()
-
-    goal = task.goal
-
-    if not goal.is_recurring:
-        if goal.progress >= 100.0:
-            goal.status = GoalStatus.COMPLETED
-
-        elif goal.progress < 100.0 and goal.status == GoalStatus.COMPLETED:
-            now = datetime.now(timezone.utc)
-
-            if goal.deadline and is_late(goal.deadline, now):
-                goal.status = GoalStatus.LATE
-            else:
-                goal.status = GoalStatus.OPEN
+    refresh_goal_status(task.goal)
 
     session.commit()
     session.refresh(task)
@@ -341,6 +393,8 @@ async def edit_task(
         task.is_recurring = task_schema.is_recurring
     if task_schema.recurrence_interval_days is not None:
         task.recurrence_interval_days = task_schema.recurrence_interval_days
+    if task_schema.recurrence_weekdays is not None:
+        task.recurrence_weekdays = task_schema.recurrence_weekdays or None
     if task_schema.max_recurrences is not None:
         task.max_recurrences = task_schema.max_recurrences
 

@@ -8,12 +8,14 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Date,
+    Float,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
 from datetime import timedelta, timezone
-from app.dates import today_br
+from app.dates import today_br, count_weekdays
 
 
 def _aware_utc(dt):
@@ -56,7 +58,17 @@ class Goal(Base):
     recurrence_interval_days = Column(Integer, nullable=True)
     recurrence_target = Column(Integer, nullable=True)
     cycle_start_date = Column(DateTime(timezone=True), nullable=True)
+    target_value = Column(Float, nullable=True)
+    start_value = Column(Float, nullable=True)
+    unit = Column(String(20), nullable=True)
+    numeric_mode = Column(String(10), nullable=True)
     owner = relationship("User", back_populates="goals")
+    entries = relationship(
+        "GoalEntry",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+        order_by="GoalEntry.created_at.desc()",
+    )
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
     cycle_logs = relationship(
         "GoalCycleLog",
@@ -68,6 +80,41 @@ class Goal(Base):
     @property
     def total_tasks(self) -> int:
         return len(self.tasks)
+
+    @property
+    def is_numeric(self) -> bool:
+        return self.target_value is not None
+
+    @property
+    def current_value(self) -> float | None:
+        if not self.is_numeric:
+            return None
+
+        if self.numeric_mode == "latest":
+            if self.entries:
+                return self.entries[0].value
+            return self.start_value
+
+        if self.is_recurring:
+            if not self.cycle_start_date:
+                return 0.0
+            start = _aware_utc(self.cycle_start_date)
+            return sum(
+                entry.value
+                for entry in self.entries
+                if _aware_utc(entry.created_at) >= start
+            )
+
+        return (self.start_value or 0.0) + sum(entry.value for entry in self.entries)
+
+    def _numeric_progress(self) -> float:
+        start = 0.0 if self.is_recurring else (self.start_value or 0.0)
+        current = self.current_value
+        if current is None or self.target_value == start:
+            return 100.0 if current == self.target_value else 0.0
+
+        ratio = (current - start) / (self.target_value - start)
+        return min(max(round(ratio * 100, 1), 0.0), 100.0)
 
     @property
     def cycle_ends_at(self):
@@ -97,6 +144,9 @@ class Goal(Base):
 
     @property
     def progress(self) -> float:
+        if self.is_numeric:
+            return self._numeric_progress()
+
         if self.is_recurring:
             target = self.recurrence_target or 1
             current = self.current_cycle_progress or 0
@@ -139,12 +189,17 @@ class Goal(Base):
                         else task.created_at
                     )
 
-                    total_days = (end - start).days
-                    if total_days < 0:
-                        total_days = 0
+                    if task.recurrence_weekdays:
+                        task_total = max(
+                            count_weekdays(start, end, task.recurrence_weekdays), 1
+                        )
+                    else:
+                        total_days = (end - start).days
+                        if total_days < 0:
+                            total_days = 0
 
-                    interval = task.recurrence_interval_days or 1
-                    task_total = (total_days // interval) + 1
+                        interval = task.recurrence_interval_days or 1
+                        task_total = (total_days // interval) + 1
 
                 else:
                     task_total = (task.recurrence_count or 0) + 1
@@ -176,6 +231,7 @@ class Task(Base):
     created_at = Column(DateTime, default=func.now())
     is_recurring = Column(Boolean, default=False)
     recurrence_interval_days = Column(Integer, nullable=True)
+    recurrence_weekdays = Column(JSON, nullable=True)
     max_recurrences = Column(Integer, nullable=True)
     recurrence_count = Column(Integer, default=0)
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -204,8 +260,21 @@ class GoalCycleLog(Base):
     cycle_end = Column(DateTime(timezone=True), nullable=False)
     target_count = Column(Integer, nullable=False)
     achieved_count = Column(Integer, nullable=False)
+    target_value = Column(Float, nullable=True)
+    achieved_value = Column(Float, nullable=True)
     completed = Column(Boolean, nullable=False)
     goal = relationship("Goal", back_populates="cycle_logs")
+
+
+class GoalEntry(Base):
+    __tablename__ = "goal_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    goal_id = Column(ForeignKey("goals.id"), nullable=False, index=True)
+    value = Column(Float, nullable=False)
+    note = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    goal = relationship("Goal", back_populates="entries")
 
 
 class RefreshToken(Base):

@@ -5,11 +5,28 @@ from app.schemas import (
     EditGoalSchema,
     GoalResponseSchema,
     GoalCycleLogSchema,
+    GoalEntrySchema,
+    GoalEntryResponseSchema,
 )
 from app.database import get_db
-from app.models import Goal, User, GoalStatus, Task, TaskCompletion, GoalCycleLog
+from app.models import (
+    Goal,
+    User,
+    GoalStatus,
+    Task,
+    TaskCompletion,
+    GoalCycleLog,
+    GoalEntry,
+)
 from .auth import get_current_user
-from .tasks import update_streak, is_late, to_aware_utc, check_and_reset_recurring_tasks
+from .tasks import (
+    update_streak,
+    is_late,
+    to_aware_utc,
+    check_and_reset_recurring_tasks,
+    undo_today_streak_if_inactive,
+    refresh_goal_status,
+)
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
@@ -39,27 +56,40 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
             continue
 
         while cycle_end <= now and (deadline is None or cycle_start < deadline):
-            achieved = (
-                session.query(TaskCompletion)
-                .join(Task, Task.id == TaskCompletion.task_id)
-                .filter(
-                    Task.goals_id == goal.id,
-                    TaskCompletion.completed_at >= cycle_start,
-                    TaskCompletion.completed_at < cycle_end,
+            if goal.is_numeric:
+                achieved_value = sum(
+                    entry.value
+                    for entry in goal.entries
+                    if cycle_start <= to_aware_utc(entry.created_at) < cycle_end
                 )
-                .count()
-            )
-
-            session.add(
-                GoalCycleLog(
-                    goal_id=goal.id,
-                    cycle_start=cycle_start,
-                    cycle_end=cycle_end,
+                log = GoalCycleLog(
+                    target_count=0,
+                    achieved_count=0,
+                    target_value=goal.target_value,
+                    achieved_value=achieved_value,
+                    completed=achieved_value >= goal.target_value,
+                )
+            else:
+                achieved = (
+                    session.query(TaskCompletion)
+                    .join(Task, Task.id == TaskCompletion.task_id)
+                    .filter(
+                        Task.goals_id == goal.id,
+                        TaskCompletion.completed_at >= cycle_start,
+                        TaskCompletion.completed_at < cycle_end,
+                    )
+                    .count()
+                )
+                log = GoalCycleLog(
                     target_count=target,
                     achieved_count=achieved,
                     completed=achieved >= target,
                 )
-            )
+
+            log.goal_id = goal.id
+            log.cycle_start = cycle_start
+            log.cycle_end = cycle_end
+            session.add(log)
 
             cycle_start = cycle_end
             cycle_end = cycle_start + interval
@@ -70,6 +100,48 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
             goal.cycle_start_date = cycle_start
 
     session.commit()
+
+
+def validate_numeric_goal(goal: Goal):
+    if not goal.is_numeric:
+        return
+
+    if goal.numeric_mode == "latest":
+        if goal.is_recurring:
+            raise HTTPException(
+                status_code=400,
+                detail="Metas de medição não podem ser recorrentes.",
+            )
+        if goal.start_value is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Informe o valor inicial para metas de medição.",
+            )
+        if goal.start_value == goal.target_value:
+            raise HTTPException(
+                status_code=400,
+                detail="O valor alvo precisa ser diferente do valor inicial.",
+            )
+    elif goal.is_recurring and goal.target_value <= 0:
+        raise HTTPException(
+            status_code=400, detail="A meta por ciclo precisa ser maior que zero."
+        )
+    elif not goal.is_recurring and goal.target_value <= (goal.start_value or 0):
+        raise HTTPException(
+            status_code=400,
+            detail="O valor alvo precisa ser maior que o valor inicial.",
+        )
+
+
+def get_user_goal(goal_id: int, user: User, session: Session) -> Goal:
+    goal = (
+        session.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == user.id)
+        .first()
+    )
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    return goal
 
 
 @goals_router.post("/", response_model=GoalResponseSchema)
@@ -89,7 +161,16 @@ async def create_goal(
         cycle_start_date=(
             datetime.now(timezone.utc) if goals_schema.is_recurring else None
         ),
+        target_value=goals_schema.target_value,
+        start_value=goals_schema.start_value,
+        unit=goals_schema.unit,
+        numeric_mode=(
+            (goals_schema.numeric_mode or "sum")
+            if goals_schema.target_value is not None
+            else None
+        ),
     )
+    validate_numeric_goal(new_goal)
     session.add(new_goal)
     session.commit()
     session.refresh(new_goal)
@@ -194,6 +275,19 @@ async def edit_goal(
         goal.recurrence_interval_days = edit_goal_schema.recurrence_interval_days
     if edit_goal_schema.recurrence_target is not None:
         goal.recurrence_target = edit_goal_schema.recurrence_target
+    if goal.is_numeric:
+        if edit_goal_schema.target_value is not None:
+            goal.target_value = edit_goal_schema.target_value
+        if edit_goal_schema.start_value is not None:
+            goal.start_value = edit_goal_schema.start_value
+        if edit_goal_schema.unit is not None:
+            goal.unit = edit_goal_schema.unit or None
+
+    try:
+        validate_numeric_goal(goal)
+    except HTTPException:
+        session.rollback()
+        raise
 
     session.commit()
     session.refresh(goal)
@@ -246,3 +340,76 @@ async def delete_goal(
     session.commit()
 
     return {"message": "Meta apagada com sucesso"}
+
+
+@goals_router.get("/{goal_id}/entries", response_model=List[GoalEntryResponseSchema])
+async def list_goal_entries(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    return get_user_goal(goal_id, current_user, session).entries
+
+
+@goals_router.post("/{goal_id}/entries", response_model=GoalEntryResponseSchema)
+async def add_goal_entry(
+    goal_id: int,
+    entry_schema: GoalEntrySchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = get_user_goal(goal_id, current_user, session)
+
+    if not goal.is_numeric:
+        raise HTTPException(
+            status_code=400, detail="Só metas numéricas aceitam registros."
+        )
+
+    check_and_reset_recurring_goals(current_user.id, session)
+
+    entry = GoalEntry(
+        goal_id=goal.id,
+        value=entry_schema.value,
+        note=entry_schema.note or None,
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(entry)
+    session.commit()
+    session.refresh(goal)
+
+    refresh_goal_status(goal)
+    session.commit()
+    session.refresh(entry)
+
+    update_streak(current_user.id, session)
+
+    return entry
+
+
+@goals_router.delete("/{goal_id}/entries/{entry_id}")
+async def delete_goal_entry(
+    goal_id: int,
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = get_user_goal(goal_id, current_user, session)
+
+    entry = (
+        session.query(GoalEntry)
+        .filter(GoalEntry.id == entry_id, GoalEntry.goal_id == goal.id)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+
+    session.delete(entry)
+    session.commit()
+    session.refresh(goal)
+
+    refresh_goal_status(goal)
+    session.commit()
+
+    undo_today_streak_if_inactive(current_user.id, session)
+
+    return {"message": "Registro apagado com sucesso"}
