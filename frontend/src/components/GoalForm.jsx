@@ -261,7 +261,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
         <div className={f.row}>
           {(isMeasurement || !form.is_recurring) && (
             <div className={f.field}>
-              <label className={f.label}>{isMeasurement ? 'Valor inicial *' : 'Já tenho (Opcional)'}</label>
+              <label className={f.label}>{isMeasurement ? 'Valor inicial *' : 'Valor inicial (Opcional)'}</label>
               <input
                 type="number"
                 step="any"
