@@ -17,6 +17,7 @@ class UserResponseSchema(BaseModel):
     id: int
     email: EmailStr
     name: str
+    has_password: bool
 
     class Config:
         from_attributes = True
@@ -195,6 +196,27 @@ class ForgotPasswordSchema(BaseModel):
 class ResetPasswordSchema(BaseModel):
     token: str
     new_password: str = Field(min_length=6)
+
+
+class UpdateNameSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("o nome não pode ficar vazio")
+        return value
+
+
+class ChangePasswordSchema(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
+
+
+class DeleteAccountSchema(BaseModel):
+    password: str | None = None
 
 
 class StatsDaySchema(BaseModel):

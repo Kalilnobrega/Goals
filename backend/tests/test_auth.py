@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from app.models import RefreshToken, User
+from app.models import Goal, RefreshToken, Task, User
 import app.routers.auth as auth_module
 from app.routers.auth import create_token, create_refresh_token_in_db, password_fingerprint
 
@@ -275,3 +275,125 @@ def test_google_login_rejects_invalid_token(client, monkeypatch):
     resp = client.post("/auth/google", json={"token": "abc"})
 
     assert resp.status_code == 401
+
+
+def make_password_user(db_session, password="senha123"):
+    user = User(
+        name="Conta",
+        email="conta@example.com",
+        password=auth_module.bcrypt_context.hash(password),
+        is_verify=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user, {"Authorization": f"Bearer {create_token(user.id)}"}
+
+
+def test_update_name(client, user, auth_headers):
+    resp = client.patch("/auth/me", json={"name": "  Novo Nome  "}, headers=auth_headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Novo Nome"
+    assert client.get("/auth/me", headers=auth_headers).json()["name"] == "Novo Nome"
+
+
+def test_update_name_rejects_blank(client, auth_headers):
+    resp = client.patch("/auth/me", json={"name": "   "}, headers=auth_headers)
+
+    assert resp.status_code == 422
+
+
+def test_me_reports_has_password(client, db_session):
+    google_user = User(
+        name="G", email="g@example.com", password="google_oauth_account", is_verify=True
+    )
+    db_session.add(google_user)
+    db_session.commit()
+    headers = {"Authorization": f"Bearer {create_token(google_user.id)}"}
+
+    assert client.get("/auth/me", headers=headers).json()["has_password"] is False
+
+
+def test_change_password(client, db_session):
+    user, headers = make_password_user(db_session)
+
+    wrong = client.post(
+        "/auth/me/password",
+        json={"current_password": "errada", "new_password": "novasenha"},
+        headers=headers,
+    )
+    ok = client.post(
+        "/auth/me/password",
+        json={"current_password": "senha123", "new_password": "novasenha"},
+        headers=headers,
+    )
+
+    assert wrong.status_code == 400
+    assert ok.status_code == 200
+    assert login(client, "conta@example.com", "novasenha").status_code == 200
+
+
+def test_change_password_rejected_for_google_account(client, db_session):
+    google_user = User(
+        name="G", email="g@example.com", password="google_oauth_account", is_verify=True
+    )
+    db_session.add(google_user)
+    db_session.commit()
+    headers = {"Authorization": f"Bearer {create_token(google_user.id)}"}
+
+    resp = client.post(
+        "/auth/me/password",
+        json={"current_password": "google_oauth_account", "new_password": "novasenha"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 400
+
+
+def test_delete_account_requires_password(client, db_session):
+    user, headers = make_password_user(db_session)
+
+    resp = client.request("DELETE", "/auth/me", json={"password": "errada"}, headers=headers)
+
+    assert resp.status_code == 400
+    assert db_session.query(User).filter(User.id == user.id).first() is not None
+
+
+def test_delete_account_removes_user_and_data(client, db_session):
+    user, headers = make_password_user(db_session)
+    goal = client.post("/goals/", json={"title": "Meta"}, headers=headers).json()
+    client.post(f"/tasks/{goal['id']}", json={"title": "Tarefa"}, headers=headers)
+    refresh_token = create_token(user.id, timedelta(days=7), "refresh")
+    create_refresh_token_in_db(refresh_token, user.id, db_session)
+    user_id = user.id
+
+    resp = client.request("DELETE", "/auth/me", json={"password": "senha123"}, headers=headers)
+
+    assert resp.status_code == 200
+    db_session.expire_all()
+    assert db_session.query(User).filter(User.id == user_id).first() is None
+    assert db_session.query(Goal).filter(Goal.user_id == user_id).count() == 0
+    assert db_session.query(Task).count() == 0
+    assert db_session.query(RefreshToken).filter(RefreshToken.user_id == user_id).count() == 0
+    assert client.get("/auth/me", headers=headers).status_code == 401
+
+
+def test_change_password_revokes_other_sessions_and_returns_new_tokens(client, db_session):
+    user, headers = make_password_user(db_session)
+    other_session = create_token(user.id, timedelta(days=7), "refresh")
+    create_refresh_token_in_db(other_session, user.id, db_session)
+
+    resp = client.post(
+        "/auth/me/password",
+        json={"current_password": "senha123", "new_password": "novasenha"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert client.post("/auth/refresh", json={"refresh_token": other_session}).status_code == 401
+    assert client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"}
+    ).status_code == 200
+    assert client.post("/auth/refresh", json={"refresh_token": body["refresh_token"]}).status_code == 200

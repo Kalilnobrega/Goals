@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models import User, RefreshToken, Streak
+from app.models import User, RefreshToken, Streak, Goal
 from app.database import get_db
 from app.main import (
     bcrypt_context,
@@ -21,6 +21,9 @@ from app.schemas import (
     GoogleTokenSchema,
     ForgotPasswordSchema,
     ResetPasswordSchema,
+    UpdateNameSchema,
+    ChangePasswordSchema,
+    DeleteAccountSchema,
 )
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -167,6 +170,80 @@ def send_reset_email(email_to: str, token: str):
 @auth_router.get("/me", response_model=UserResponseSchema)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@auth_router.patch("/me", response_model=UserResponseSchema)
+def update_me(
+    payload: UpdateNameSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    current_user.name = payload.name
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+
+@auth_router.post("/me/password")
+@limiter.limit("5/minute")
+async def change_password(
+    request: Request,
+    payload: ChangePasswordSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    if not current_user.has_password:
+        raise HTTPException(
+            status_code=400, detail="Contas do Google não possuem senha"
+        )
+    if not bcrypt_context.verify(payload.current_password, current_user.password):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+
+    current_user.password = bcrypt_context.hash(payload.new_password)
+    session.query(RefreshToken).filter(RefreshToken.user_id == current_user.id).update(
+        {"revoked": True}
+    )
+    session.commit()
+
+    new_access_token = create_token(current_user.id)
+    new_refresh_token = create_token(
+        current_user.id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), "refresh"
+    )
+    create_refresh_token_in_db(new_refresh_token, current_user.id, session)
+    cleanup_invalid_tokens(session)
+
+    return {
+        "message": "Senha alterada com sucesso!",
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "Bearer",
+    }
+
+
+@auth_router.delete("/me")
+@limiter.limit("5/minute")
+async def delete_me(
+    request: Request,
+    payload: DeleteAccountSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    if current_user.has_password and not (
+        payload.password
+        and bcrypt_context.verify(payload.password, current_user.password)
+    ):
+        raise HTTPException(status_code=400, detail="Senha incorreta")
+
+    for goal in session.query(Goal).filter(Goal.user_id == current_user.id).all():
+        session.delete(goal)
+    session.query(RefreshToken).filter(
+        RefreshToken.user_id == current_user.id
+    ).delete()
+    session.query(Streak).filter(Streak.user_id == current_user.id).delete()
+    session.delete(current_user)
+    session.commit()
+
+    return {"message": "Conta excluída"}
 
 
 @auth_router.get("/me/streak")

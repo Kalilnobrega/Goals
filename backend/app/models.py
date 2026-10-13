@@ -37,6 +37,10 @@ class User(Base):
     goals = relationship("Goal", back_populates="owner")
     streak = relationship("Streak", back_populates="user", uselist=False)
 
+    @property
+    def has_password(self) -> bool:
+        return self.password != "google_oauth_account"
+
 
 class GoalStatus(str, enum.Enum):
     OPEN = "open"
