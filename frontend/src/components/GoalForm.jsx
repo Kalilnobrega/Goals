@@ -33,12 +33,16 @@ function todayDateOnly() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function brDateOnly(isoString) {
+  return new Date(isoString).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
 export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) {
   const isEdit = !!initial.id;
   const initialInterval = initial.recurrence_interval_days || null;
   const initialIsPreset = initialInterval && CYCLE_PRESETS.some(p => p.value === String(initialInterval));
   const initialDeadline = initial.deadline ? initial.deadline.split('T')[0] : '';
-  const cycleBaseDate = initial.cycle_start_date ? initial.cycle_start_date.split('T')[0] : todayDateOnly();
+  const cycleBaseDate = initial.cycle_start_date ? brDateOnly(initial.cycle_start_date) : todayDateOnly();
   const initialCycleCount = (initial.is_recurring && initialDeadline && initialInterval)
     ? (() => {
         const days = daysBetweenDateOnly(cycleBaseDate, initialDeadline);
@@ -58,6 +62,8 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     recurrence_interval_days: initialInterval || 7,
     recurrence_target: initial.recurrence_target || initial.total_tasks || 1,
     cycleCount: initialCycleCount,
+    cycle_start: cycleBaseDate,
+    cycleStartMode: cycleBaseDate === todayDateOnly() ? 'today' : 'custom',
     kind: initial.is_numeric ? 'numeric' : 'tasks',
     numeric_mode: initial.numeric_mode || 'sum',
     target_value: initial.target_value ?? '',
@@ -76,7 +82,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     setForm(prev => {
       const next = { ...prev, deadline: value };
       if (prev.is_recurring && value && prev.recurrence_interval_days) {
-        const days = daysBetweenDateOnly(cycleBaseDate, value);
+        const days = daysBetweenDateOnly(prev.cycle_start, value);
         next.cycleCount = days > 0 ? String(Math.max(1, Math.floor(days / Number(prev.recurrence_interval_days)))) : '';
       }
       return next;
@@ -88,7 +94,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     setForm(prev => {
       const next = { ...prev, cycleCount: value };
       if (value && Number(value) > 0 && prev.recurrence_interval_days) {
-        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(value) * Number(prev.recurrence_interval_days));
+        next.deadline = addDaysToDateOnly(prev.cycle_start, Number(value) * Number(prev.recurrence_interval_days));
       }
       return next;
     });
@@ -99,7 +105,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     setForm(prev => {
       const next = { ...prev, recurrence_interval_days: value };
       if (prev.cycleCount && Number(prev.cycleCount) > 0 && value) {
-        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(prev.cycleCount) * Number(value));
+        next.deadline = addDaysToDateOnly(prev.cycle_start, Number(prev.cycleCount) * Number(value));
       }
       return next;
     });
@@ -111,11 +117,23 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
       const interval = preset === 'custom' ? prev.recurrence_interval_days : Number(preset);
       const next = { ...prev, cyclePreset: preset, recurrence_interval_days: interval };
       if (prev.cycleCount && Number(prev.cycleCount) > 0 && interval) {
-        next.deadline = addDaysToDateOnly(cycleBaseDate, Number(prev.cycleCount) * Number(interval));
+        next.deadline = addDaysToDateOnly(prev.cycle_start, Number(prev.cycleCount) * Number(interval));
       }
       return next;
     });
   };
+
+  const setCycleStart = (value, mode) => {
+    setForm(prev => {
+      const next = { ...prev, cycle_start: value, cycleStartMode: mode };
+      if (value && prev.cycleCount && Number(prev.cycleCount) > 0 && prev.recurrence_interval_days) {
+        next.deadline = addDaysToDateOnly(value, Number(prev.cycleCount) * Number(prev.recurrence_interval_days));
+      }
+      return next;
+    });
+  };
+
+  const cycleStartMin = addDaysToDateOnly(todayDateOnly(), -(Math.max(1, Number(form.recurrence_interval_days) || 1) - 1));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -127,6 +145,13 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
       recurrence_interval_days: canRecur && form.is_recurring ? Number(form.recurrence_interval_days) : null,
       recurrence_target: canRecur && form.is_recurring && !isNumeric ? Number(form.recurrence_target) || 1 : null,
     };
+
+    const cycleStartChanged = isEdit && initial.is_recurring
+      ? form.cycle_start !== cycleBaseDate
+      : form.cycleStartMode === 'custom';
+    if (data.is_recurring && form.cycle_start && cycleStartChanged) {
+      data.cycle_start_date = form.cycle_start;
+    }
 
     if (isNumeric) {
       data.target_value = Number(form.target_value);
@@ -365,6 +390,45 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                   onChange={handleIntervalDaysChange}
                 />
               </div>
+            )}
+          </div>
+
+          <div className={f.field}>
+            <label className={f.label}>{isEdit && initial.is_recurring ? 'Ciclo atual começou' : 'Quando o ciclo começa?'}</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <label className={`${f.endOption} ${form.cycleStartMode === 'today' ? f.endOptionActive : ''}`}>
+                <input
+                  type="radio"
+                  name="cycle_start_mode"
+                  checked={form.cycleStartMode === 'today'}
+                  onChange={() => setCycleStart(todayDateOnly(), 'today')}
+                />
+                Hoje
+              </label>
+              <label className={`${f.endOption} ${form.cycleStartMode === 'custom' ? f.endOptionActive : ''}`}>
+                <input
+                  type="radio"
+                  name="cycle_start_mode"
+                  checked={form.cycleStartMode === 'custom'}
+                  onChange={() => setCycleStart(form.cycle_start, 'custom')}
+                />
+                Outra data
+              </label>
+            </div>
+            {form.cycleStartMode === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  className={f.input}
+                  value={form.cycle_start}
+                  min={cycleStartMin}
+                  onChange={(e) => setCycleStart(e.target.value, 'custom')}
+                  required
+                />
+                <span className={f.hint}>
+                  Escolha um dia recente se o ciclo já começou, ou uma data futura para começar depois.
+                </span>
+              </>
             )}
           </div>
 

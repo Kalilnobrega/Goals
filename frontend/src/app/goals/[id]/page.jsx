@@ -12,7 +12,7 @@ import {
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
-import { formatDeadline, formatDateTime, WEEKDAYS } from '../../../lib/date';
+import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
 import { formatValue, formatProgressValue } from '../../../lib/numeric';
 import { celebrateGoal } from '../../../lib/celebrate';
 import {
@@ -310,10 +310,16 @@ export default function GoalDetailPage() {
               {goal.is_recurring && (
                 <span className={styles.metaChip} style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,.2)', background: 'rgba(139,92,246,.07)' }}>
                   <RefreshCw size={13} />
-                  {goal.is_numeric
-                    ? formatProgressValue(goal)
-                    : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1}`} neste ciclo
-                  {goal.cycle_ends_at && ` · reseta ${formatDeadline(goal.cycle_ends_at)}`}
+                  {cycleNotStarted(goal) ? (
+                    `Ciclo começa em ${formatDeadline(goal.cycle_start_date)}`
+                  ) : (
+                    <>
+                      {goal.is_numeric
+                        ? formatProgressValue(goal)
+                        : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1}`} neste ciclo
+                      {goal.cycle_ends_at && ` · reseta ${formatDeadline(goal.cycle_ends_at)}`}
+                    </>
+                  )}
                 </span>
               )}
             </div>

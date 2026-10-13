@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target } from 'lucide-react';
-import { formatDeadline } from '../lib/date';
+import { formatDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue } from '../lib/numeric';
 import styles from './GoalCard.module.css';
 
@@ -62,12 +62,14 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
         {goal.is_recurring && goal.is_numeric ? (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
-            Por ciclo
+            {cycleNotStarted(goal) ? `Começa em ${formatDeadline(goal.cycle_start_date)}` : 'Por ciclo'}
           </span>
         ) : goal.is_recurring ? (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
-            {goal.current_cycle_progress ?? 0}/{goal.recurrence_target ?? 1} neste ciclo
+            {cycleNotStarted(goal)
+              ? `Começa em ${formatDeadline(goal.cycle_start_date)}`
+              : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1} neste ciclo`}
           </span>
         ) : goal.tasks?.some(t => t.is_recurring) && (
           <span className={styles.metaItem}>
