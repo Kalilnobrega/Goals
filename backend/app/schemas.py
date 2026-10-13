@@ -195,3 +195,112 @@ class ForgotPasswordSchema(BaseModel):
 class ResetPasswordSchema(BaseModel):
     token: str
     new_password: str = Field(min_length=6)
+
+
+class StatsDaySchema(BaseModel):
+    date: str
+    tasks: int
+    entries: int
+
+
+class StatsSummarySchema(BaseModel):
+    total_activities: int
+    active_days: int
+    best_weekday: int | None
+    goals_completed: int
+    goals_open: int
+    goals_late: int
+
+
+class StatsPointSchema(BaseModel):
+    date: datetime
+    value: float
+
+
+class StatsForecastSchema(BaseModel):
+    status: Literal["reached", "on_track", "behind", "no_trend", "no_data"]
+    eta: datetime | None
+    rate_per_day: float | None
+    needed_per_day: float | None
+    deadline: datetime | None
+
+
+class StatsNumericGoalSchema(BaseModel):
+    id: int
+    title: str
+    unit: str | None
+    numeric_mode: str | None
+    start_value: float | None
+    target_value: float
+    status: GoalStatus
+    points: list[StatsPointSchema]
+    forecast: StatsForecastSchema
+
+
+class StatsCycleSchema(BaseModel):
+    cycle_start: datetime
+    cycle_end: datetime
+    target: float
+    achieved: float
+    completed: bool
+
+
+class StatsRecurringGoalSchema(BaseModel):
+    id: int
+    title: str
+    unit: str | None
+    total_cycles: int
+    completed_cycles: int
+    rate: float | None
+    cycles: list[StatsCycleSchema]
+
+
+class StatsPeriodSchema(BaseModel):
+    current: int
+    previous: int
+
+
+class StatsPeriodsSchema(BaseModel):
+    week: StatsPeriodSchema
+    month: StatsPeriodSchema
+
+
+class StatsStreakRunSchema(BaseModel):
+    start: str
+    end: str
+    length: int
+
+
+class StatsStreaksSchema(BaseModel):
+    top: list[StatsStreakRunSchema]
+    total_runs: int
+
+
+class StatsTopTaskSchema(BaseModel):
+    task_id: int
+    title: str
+    goal_id: int
+    goal_title: str
+    count: int
+
+
+class StatsNeglectedTaskSchema(BaseModel):
+    task_id: int
+    title: str
+    goal_id: int
+    goal_title: str
+    done: int
+    expected: int
+    rate: float
+
+
+class StatsResponseSchema(BaseModel):
+    days: list[StatsDaySchema]
+    hours: list[int]
+    summary: StatsSummarySchema
+    periods: StatsPeriodsSchema
+    streaks: StatsStreaksSchema
+    top_tasks: list[StatsTopTaskSchema]
+    neglected_tasks: list[StatsNeglectedTaskSchema]
+    numeric_goals: list[StatsNumericGoalSchema]
+    recurring_goals: list[StatsRecurringGoalSchema]

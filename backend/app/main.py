@@ -56,8 +56,10 @@ from app.routers.auth import auth_router
 from app.routers.home import home_router
 from app.routers.goals import goals_router
 from app.routers.tasks import tasks_router
+from app.routers.stats import stats_router
 
 app.include_router(auth_router)
 app.include_router(home_router)
 app.include_router(goals_router)
 app.include_router(tasks_router)
+app.include_router(stats_router)
