@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.schemas import (
     GoalsSchema,
@@ -7,6 +8,7 @@ from app.schemas import (
     GoalCycleLogSchema,
     GoalEntrySchema,
     GoalEntryResponseSchema,
+    ReorderSchema,
 )
 from app.database import get_db
 from app.models import (
@@ -26,6 +28,7 @@ from .tasks import (
     check_and_reset_recurring_goals,
     undo_today_streak_if_inactive,
     refresh_goal_status,
+    apply_order,
 )
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
@@ -81,7 +84,14 @@ async def create_goal(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
+    last_position = (
+        session.query(func.max(Goal.position))
+        .filter(Goal.user_id == current_user.id)
+        .scalar()
+    )
+
     new_goal = Goal(
+        position=0 if last_position is None else last_position + 1,
         title=goals_schema.title,
         description=goals_schema.description,
         deadline=goals_schema.deadline,
@@ -123,7 +133,7 @@ async def list_goals(
     if status is not None:
         query = query.filter(Goal.status == status)
 
-    my_goals = query.all()
+    my_goals = query.order_by(Goal.position, Goal.id).all()
 
     now = datetime.now(timezone.utc)
     late = False
@@ -141,6 +151,24 @@ async def list_goals(
         session.commit()
 
     return my_goals
+
+
+@goals_router.put("/order")
+async def reorder_goals(
+    payload: ReorderSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goals = (
+        session.query(Goal)
+        .filter(Goal.user_id == current_user.id)
+        .order_by(Goal.position, Goal.id)
+        .all()
+    )
+    apply_order(goals, payload.ids)
+    session.commit()
+
+    return {"message": "Ordem atualizada"}
 
 
 @goals_router.get("/{goal_id}", response_model=GoalResponseSchema)

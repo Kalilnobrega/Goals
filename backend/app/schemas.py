@@ -189,6 +189,10 @@ class GoogleTokenSchema(BaseModel):
     token: str
 
 
+class ReorderSchema(BaseModel):
+    ids: list[int] = Field(min_length=1)
+
+
 class ForgotPasswordSchema(BaseModel):
     email: EmailStr
 

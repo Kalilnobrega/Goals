@@ -66,6 +66,7 @@ class Goal(Base):
     start_value = Column(Float, nullable=True)
     unit = Column(String(20), nullable=True)
     numeric_mode = Column(String(10), nullable=True)
+    position = Column(Integer, nullable=False, default=0, server_default="0")
     owner = relationship("User", back_populates="goals")
     entries = relationship(
         "GoalEntry",
@@ -73,7 +74,12 @@ class Goal(Base):
         cascade="all, delete-orphan",
         order_by="GoalEntry.created_at.desc()",
     )
-    tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
+    tasks = relationship(
+        "Task",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+        order_by="[Task.position, Task.id]",
+    )
     cycle_logs = relationship(
         "GoalCycleLog",
         back_populates="goal",
@@ -240,6 +246,7 @@ class Task(Base):
     recurrence_count = Column(Integer, default=0)
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(Date, nullable=True)
+    position = Column(Integer, nullable=False, default=0, server_default="0")
     goal = relationship("Goal", back_populates="tasks")
     completions = relationship(
         "TaskCompletion", back_populates="task", cascade="all, delete-orphan"

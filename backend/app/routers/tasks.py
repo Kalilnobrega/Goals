@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema
+from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema, ReorderSchema
 from app.database import get_db
 from app.models import (
     Goal,
@@ -44,6 +45,21 @@ def to_aware_utc(dt):
 # de Brasilia, soma-se 1 dia (o proprio dia D) + 3h (offset ate a meia-noite
 # real de Brasilia).
 LATE_GRACE_PERIOD = timedelta(days=1, hours=3)
+
+
+def apply_order(items, ids):
+    by_id = {item.id: item for item in items}
+    if len(set(ids)) != len(ids) or any(item_id not in by_id for item_id in ids):
+        raise HTTPException(status_code=400, detail="Lista de ordenação inválida")
+
+    selected = set(ids)
+    slots = [index for index, item in enumerate(items) if item.id in selected]
+    ordered = list(items)
+    for slot, item_id in zip(slots, ids):
+        ordered[slot] = by_id[item_id]
+
+    for position, item in enumerate(ordered):
+        item.position = position
 
 
 def is_late(deadline, now):
@@ -328,9 +344,14 @@ async def create_task(
                 days_remaining // task_schema.recurrence_interval_days
             )
 
+    last_position = (
+        session.query(func.max(Task.position)).filter(Task.goals_id == goal.id).scalar()
+    )
+
     new_task = Task(
         title=task_schema.title,
         goals_id=goal.id,
+        position=0 if last_position is None else last_position + 1,
         is_recurring=task_schema.is_recurring,
         recurrence_interval_days=task_schema.recurrence_interval_days,
         recurrence_weekdays=task_schema.recurrence_weekdays or None,
@@ -360,6 +381,7 @@ async def list_today_tasks(
             Goal.status.in_([GoalStatus.OPEN, GoalStatus.LATE]),
             Task.status == False,
         )
+        .order_by(Goal.position, Goal.id, Task.position, Task.id)
         .all()
     )
 
@@ -406,9 +428,41 @@ async def list_tasks_by_goal(
     check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    tasks = session.query(Task).filter(Task.goals_id == goal_id).all()
+    tasks = (
+        session.query(Task)
+        .filter(Task.goals_id == goal_id)
+        .order_by(Task.position, Task.id)
+        .all()
+    )
 
     return tasks
+
+
+@tasks_router.put("/goal/{goal_id}/order")
+async def reorder_tasks(
+    goal_id: int,
+    payload: ReorderSchema,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = (
+        session.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .first()
+    )
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+
+    tasks = (
+        session.query(Task)
+        .filter(Task.goals_id == goal_id)
+        .order_by(Task.position, Task.id)
+        .all()
+    )
+    apply_order(tasks, payload.ids)
+    session.commit()
+
+    return {"message": "Ordem atualizada"}
 
 
 @tasks_router.patch("/{task_id}/toggle")
