@@ -65,7 +65,7 @@ api.interceptors.response.use(
 );
 
 // ── Auth ───────────────────────────────────────────────
-// Retorna { id, email, name } (UserResponseSchema)
+// Retorna { id, email, name, has_password } (UserResponseSchema)
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
 export const googleAuth = (token) =>
   api.post("/auth/google", { token }).then((r) => r.data);
@@ -76,6 +76,17 @@ export const resetPassword = (token, newPassword) =>
   api
     .post("/auth/reset-password", { token, new_password: newPassword })
     .then((r) => r.data);
+export const updateName = (name) =>
+  api.patch("/auth/me", { name }).then((r) => r.data);
+export const changePassword = (currentPassword, newPassword) =>
+  api
+    .post("/auth/me/password", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    .then((r) => r.data);
+export const deleteAccount = (password) =>
+  api.delete("/auth/me", { data: { password } }).then((r) => r.data);
 export const logout = (refreshToken) =>
   api.post("/auth/logout", { refresh_token: refreshToken }).then((r) => r.data);
 

@@ -194,6 +194,17 @@
   color: var(--blue-700);
 }
 
+.userChip {
+  text-decoration: none;
+  transition: background .2s, border-color .2s;
+}
+
+.userChip:hover,
+.userChipActive {
+  background: rgba(59,130,246,.14);
+  border-color: rgba(59,130,246,.30);
+}
+
 .userChip svg { color: var(--blue-500); }
 
 .logoutBtn {
@@ -232,7 +243,6 @@
 }
 
 @media (max-width: 420px) {
-  .userChip { display: none; }
   .brandIcon { width: 32px; height: 32px; }
   .streakChip { padding: 6px 9px; }
 }

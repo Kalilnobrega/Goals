@@ -32,6 +32,9 @@ export default function Navbar() {
         })
         .catch(() => {});
     }
+    const handleNameChange = () => setUserName(getUserName());
+    window.addEventListener('username-changed', handleNameChange);
+    return () => window.removeEventListener('username-changed', handleNameChange);
   }, []);
 
   const handleLogout = () => {
@@ -95,10 +98,14 @@ export default function Navbar() {
           </div>
 
           {firstName && (
-            <div className={styles.userChip}>
+            <Link
+              href="/account"
+              className={`${styles.userChip} ${pathname.startsWith('/account') ? styles.userChipActive : ''}`}
+              aria-label="Minha conta"
+            >
               <UserCircle2 size={16} />
               <span>{firstName}</span>
-            </div>
+            </Link>
           )}
           <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Sair">
             <LogOut size={16} />
