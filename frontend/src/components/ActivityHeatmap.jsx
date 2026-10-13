@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { ChevronDown, ListFilter, Trophy, X } from 'lucide-react';
 import styles from './ActivityHeatmap.module.css';
 
 const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -113,24 +113,47 @@ export default function ActivityHeatmap({ days, goals = [] }) {
     <div className={styles.wrap} onMouseLeave={() => setHover(null)}>
       {goalOptions.length > 0 && (
         <div className={styles.toolbar}>
-          <select
-            className={styles.filter}
-            value={goalId}
-            onChange={e => {
-              setHover(null);
-              setGoalId(e.target.value === 'all' ? 'all' : Number(e.target.value));
-            }}
-            aria-label="Filtrar atividade por meta"
-          >
-            <option value="all">Todas as metas</option>
-            {goalOptions.map(g => (
-              <option key={g.id} value={g.id}>{g.title}</option>
-            ))}
-          </select>
+          <div className={styles.filterGroup}>
+            <label className={styles.filter} data-active={goalId !== 'all' || undefined}>
+              <ListFilter size={14} className={styles.filterIcon} />
+              <span className={styles.filterLabel}>
+                {goalId === 'all' ? 'Todas as metas' : goalTitles[goalId]}
+              </span>
+              <ChevronDown size={14} className={styles.filterChevron} />
+              <select
+                className={styles.filterSelect}
+                value={goalId}
+                onChange={e => {
+                  setHover(null);
+                  setGoalId(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                }}
+                aria-label="Filtrar atividade por meta"
+              >
+                <option value="all">Todas as metas</option>
+                {goalOptions.map(g => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </select>
+            </label>
+            {goalId !== 'all' && (
+              <button
+                type="button"
+                className={styles.filterClear}
+                onClick={() => { setHover(null); setGoalId('all'); }}
+                aria-label="Limpar filtro"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
           {goalId !== 'all' && (
             <span className={styles.filterSummary}>
-              {filteredTotals.activities} atividade{filteredTotals.activities !== 1 ? 's' : ''} no período
-              {filteredTotals.completed > 0 && ' · concluída'}
+              <span>
+                <strong>{filteredTotals.activities}</strong> atividade{filteredTotals.activities !== 1 ? 's' : ''} no período
+              </span>
+              {filteredTotals.completed > 0 && (
+                <span className={styles.filterDone}><Trophy size={12} /> concluída</span>
+              )}
             </span>
           )}
         </div>
