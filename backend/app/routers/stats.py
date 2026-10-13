@@ -190,14 +190,14 @@ async def get_stats(
     since = br_day_start_utc(first_day)
 
     completions = (
-        session.query(TaskCompletion.task_id, TaskCompletion.completed_at)
+        session.query(TaskCompletion.task_id, TaskCompletion.completed_at, Task.goals_id)
         .join(Task)
         .join(Goal)
         .filter(Goal.user_id == current_user.id, TaskCompletion.completed_at >= since)
         .all()
     )
     entries = (
-        session.query(GoalEntry.created_at)
+        session.query(GoalEntry.goal_id, GoalEntry.created_at)
         .join(Goal)
         .filter(Goal.user_id == current_user.id, GoalEntry.created_at >= since)
         .all()
@@ -206,6 +206,23 @@ async def get_stats(
     task_counts = Counter(to_br_date(row.completed_at) for row in completions)
     entry_counts = Counter(to_br_date(row.created_at) for row in entries)
     completion_counts = Counter(row.task_id for row in completions)
+    goal_task_counts = Counter((to_br_date(row.completed_at), row.goals_id) for row in completions)
+    goal_entry_counts = Counter((to_br_date(row.created_at), row.goal_id) for row in entries)
+
+    goals = (
+        session.query(Goal)
+        .filter(Goal.user_id == current_user.id)
+        .order_by(Goal.position, Goal.id)
+        .all()
+    )
+    goals_by_day = {}
+    for day, goal_id in list(goal_task_counts) + list(goal_entry_counts):
+        goals_by_day.setdefault(day, set()).add(goal_id)
+
+    completed_by_day = {}
+    for goal in goals:
+        if goal.status == GoalStatus.COMPLETED and goal.completed_at:
+            completed_by_day.setdefault(to_br_date(goal.completed_at), []).append(goal.id)
 
     hours = [0] * 24
     for moment in [row.completed_at for row in completions] + [row.created_at for row in entries]:
@@ -217,14 +234,29 @@ async def get_stats(
         day = first_day + timedelta(days=offset)
         tasks = task_counts.get(day, 0)
         entries_count = entry_counts.get(day, 0)
-        days.append({"date": day.isoformat(), "tasks": tasks, "entries": entries_count})
+        goal_ids = sorted(goals_by_day.get(day, ()))
+        days.append(
+            {
+                "date": day.isoformat(),
+                "tasks": tasks,
+                "entries": entries_count,
+                "goals": [
+                    {
+                        "goal_id": goal_id,
+                        "tasks": goal_task_counts.get((day, goal_id), 0),
+                        "entries": goal_entry_counts.get((day, goal_id), 0),
+                    }
+                    for goal_id in goal_ids
+                ],
+                "completed_goals": completed_by_day.get(day, []),
+            }
+        )
         if tasks + entries_count:
             weekday_totals[day.weekday()] += tasks + entries_count
 
     runs = streak_runs(days)
     top_runs = sorted(reversed(runs), key=lambda run: -run["length"])[:TOP_STREAKS]
 
-    goals = session.query(Goal).filter(Goal.user_id == current_user.id).all()
     status_counts = Counter(goal.status for goal in goals)
     user_tasks = [task for goal in goals for task in goal.tasks]
     top_tasks, neglected_tasks = task_rankings(user_tasks, completion_counts, first_day, today)
@@ -250,6 +282,9 @@ async def get_stats(
 
     return {
         "days": days,
+        "goals": [
+            {"id": goal.id, "title": goal.title, "status": goal.status} for goal in goals
+        ],
         "hours": hours,
         "summary": {
             "total_activities": sum(d["tasks"] + d["entries"] for d in days),

@@ -225,10 +225,24 @@ class DeleteAccountSchema(BaseModel):
     password: str | None = None
 
 
+class StatsDayGoalSchema(BaseModel):
+    goal_id: int
+    tasks: int
+    entries: int
+
+
 class StatsDaySchema(BaseModel):
     date: str
     tasks: int
     entries: int
+    goals: list[StatsDayGoalSchema] = []
+    completed_goals: list[int] = []
+
+
+class StatsGoalOptionSchema(BaseModel):
+    id: int
+    title: str
+    status: GoalStatus
 
 
 class StatsSummarySchema(BaseModel):
@@ -324,6 +338,7 @@ class StatsNeglectedTaskSchema(BaseModel):
 
 class StatsResponseSchema(BaseModel):
     days: list[StatsDaySchema]
+    goals: list[StatsGoalOptionSchema]
     hours: list[int]
     summary: StatsSummarySchema
     periods: StatsPeriodsSchema

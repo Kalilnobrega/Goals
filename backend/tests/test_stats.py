@@ -49,7 +49,16 @@ def test_stats_counts_task_completions_and_entries_today(client, auth_headers):
     stats = get_stats(client, auth_headers)
     today = stats["days"][-1]
 
-    assert today == {"date": today_br().isoformat(), "tasks": 1, "entries": 1}
+    assert today == {
+        "date": today_br().isoformat(),
+        "tasks": 1,
+        "entries": 1,
+        "goals": [
+            {"goal_id": goal["id"], "tasks": 1, "entries": 0},
+            {"goal_id": numeric["id"], "tasks": 0, "entries": 1},
+        ],
+        "completed_goals": [],
+    }
     assert stats["summary"]["total_activities"] == 2
     assert stats["summary"]["active_days"] == 1
     assert stats["summary"]["best_weekday"] == today_br().weekday()
@@ -309,3 +318,51 @@ def test_forecast_reached_and_no_data(client, auth_headers, db_session, user):
 def test_forecast_without_entries_has_no_data(client, auth_headers):
     client.post("/goals/", json={"title": "Correr", "target_value": 100}, headers=auth_headers)
     assert get_forecast(client, auth_headers)["status"] == "no_data"
+
+
+def test_stats_lists_goals_for_filter(client, auth_headers):
+    first = client.post("/goals/", json={"title": "Primeira"}, headers=auth_headers).json()
+    second = client.post("/goals/", json={"title": "Segunda"}, headers=auth_headers).json()
+
+    stats = get_stats(client, auth_headers)
+
+    assert stats["goals"] == [
+        {"id": first["id"], "title": "Primeira", "status": "open"},
+        {"id": second["id"], "title": "Segunda", "status": "open"},
+    ]
+
+
+def test_stats_marks_day_goal_was_completed(client, auth_headers):
+    goal = client.post("/goals/", json={"title": "Meta"}, headers=auth_headers).json()
+    task = create_task(client, auth_headers, goal["id"])
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+
+    stats = get_stats(client, auth_headers)
+
+    assert stats["days"][-1]["completed_goals"] == [goal["id"]]
+    assert stats["summary"]["goals_completed"] == 1
+
+
+def test_reopening_goal_clears_completion_date(client, auth_headers, db_session):
+    goal = client.post("/goals/", json={"title": "Meta"}, headers=auth_headers).json()
+    task = create_task(client, auth_headers, goal["id"])
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+
+    db_goal = db_session.query(Goal).filter(Goal.id == goal["id"]).first()
+    db_session.refresh(db_goal)
+    assert db_goal.completed_at is not None
+
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+    db_session.refresh(db_goal)
+    assert db_goal.status.value == "open"
+    assert db_goal.completed_at is None
+    assert get_stats(client, auth_headers)["days"][-1]["completed_goals"] == []
+
+
+def test_completing_goal_manually_sets_completion_date(client, auth_headers):
+    goal = client.post("/goals/", json={"title": "Meta"}, headers=auth_headers).json()
+    client.put(f"/goals/{goal['id']}", json={"status": "completed"}, headers=auth_headers)
+
+    stats = get_stats(client, auth_headers)
+
+    assert stats["days"][-1]["completed_goals"] == [goal["id"]]

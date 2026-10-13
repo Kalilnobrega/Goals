@@ -11,10 +11,10 @@ from sqlalchemy import (
     Float,
     JSON,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
 from .database import Base
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from app.dates import today_br, count_weekdays
 
 
@@ -66,6 +66,7 @@ class Goal(Base):
     start_value = Column(Float, nullable=True)
     unit = Column(String(20), nullable=True)
     numeric_mode = Column(String(10), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     position = Column(Integer, nullable=False, default=0, server_default="0")
     owner = relationship("User", back_populates="goals")
     entries = relationship(
@@ -86,6 +87,15 @@ class Goal(Base):
         cascade="all, delete-orphan",
         order_by="GoalCycleLog.cycle_start.desc()",
     )
+
+    @validates("status")
+    def track_completion(self, key, value):
+        if value == GoalStatus.COMPLETED:
+            if self.status != GoalStatus.COMPLETED or self.completed_at is None:
+                self.completed_at = datetime.now(timezone.utc)
+        else:
+            self.completed_at = None
+        return value
 
     @property
     def total_tasks(self) -> int:
