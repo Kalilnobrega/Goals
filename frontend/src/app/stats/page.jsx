@@ -309,8 +309,8 @@ export default function StatsPage() {
             </div>
 
             <section className={`${styles.card} glass`}>
-              <CardHeader icon={Activity} title="Atividade" hint="tarefas concluídas e registros de progresso por dia" />
-              <ActivityHeatmap days={stats.days} />
+              <CardHeader icon={Activity} title="Atividade" hint="tarefas, registros de progresso e metas concluídas por dia" />
+              <ActivityHeatmap days={stats.days} goals={stats.goals} />
             </section>
 
             <div className={styles.pair}>
