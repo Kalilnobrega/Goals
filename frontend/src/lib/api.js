@@ -104,6 +104,8 @@ export const reorderGoals = (ids) =>
   api.put("/goals/order", { ids }).then((r) => r.data);
 export const getGoalCycles = (id) =>
   api.get(`/goals/${id}/cycles`).then((r) => r.data);
+export const getGoalProgress = (id) =>
+  api.get(`/goals/${id}/progress`).then((r) => r.data);
 export const getGoalEntries = (id) =>
   api.get(`/goals/${id}/entries`).then((r) => r.data);
 export const addGoalEntry = (id, data) =>

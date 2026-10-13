@@ -254,10 +254,12 @@
 .taskHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
 .taskTitle {
+  white-space: nowrap;
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
@@ -355,6 +357,49 @@
 }
 
 .emptyTasks p { font-size: 0.875rem; color: #94a3b8; }
+
+.seeStats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blue-600);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: gap 0.2s;
+}
+
+.seeStats:hover { gap: 8px; }
+
+.showMore {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--blue-600);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.showMore:hover { background: rgba(59, 130, 246, 0.06); }
+
+.chartCard {
+  border-radius: 16px;
+  padding: 18px 18px 14px;
+}
+
+.chartEmpty {
+  padding: 24px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
 
 /* ── Misc ─────────────────────────────────────── */
 .error {
@@ -567,10 +612,12 @@
 .taskHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
 .taskTitle {
+  white-space: nowrap;
   font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;

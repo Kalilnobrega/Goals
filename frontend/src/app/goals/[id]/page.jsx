@@ -1,15 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Navbar from '../../../components/Navbar';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
 import TaskItem from '../../../components/TaskItem';
+import NumericGoalChart from '../../../components/NumericGoalChart';
+import GoalForecast from '../../../components/GoalForecast';
+import CycleChart, { buildCycleBars } from '../../../components/CycleChart';
 import { SortableList, SortableItem, moveSubset } from '../../../components/Sortable';
 import {
   getGoal, updateGoal, deleteGoal,
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
-  getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry
+  getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
@@ -18,11 +22,13 @@ import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
-  Target, RefreshCw, XCircle, History
+  Target, RefreshCw, XCircle, History, TrendingUp, ArrowRight
 } from 'lucide-react';import f from '../../../styles/forms.module.css';
 import styles from './page.module.css';
 
 // GoalStatus do backend: 'open' | 'completed' | 'paused' | 'late'
+const ENTRIES_PREVIEW = 5;
+
 const STATUS_META = {
   open:      { label: 'Em aberto',  color: '#3b82f6' },
   completed: { label: 'Concluída',  color: '#10b981' },
@@ -39,6 +45,8 @@ export default function GoalDetailPage() {
   const [tasks,      setTasks]      = useState([]);
   const [cycles,     setCycles]     = useState([]);
   const [entries,    setEntries]    = useState([]);
+  const [progressData, setProgressData] = useState(null);
+  const [showAllEntries, setShowAllEntries] = useState(false);
   const [entryValue, setEntryValue] = useState('');
   const [entryNote,  setEntryNote]  = useState('');
   const [addingEntry, setAddingEntry] = useState(false);
@@ -57,9 +65,19 @@ export default function GoalDetailPage() {
   const loadTasks = () => getTasks(Number(id)).then(setTasks);
   const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
   const loadEntries = () => getGoalEntries(Number(id)).then(setEntries).catch(() => {});
+  const loadProgress = (current) => {
+    if (!current?.is_numeric || current.is_recurring) {
+      setProgressData(null);
+      return Promise.resolve();
+    }
+    return getGoalProgress(Number(id)).then(setProgressData).catch(() => setProgressData(null));
+  };
 
   useEffect(() => {
-    Promise.all([loadGoal(), loadTasks(), loadCycles(), loadEntries()])
+    Promise.all([
+      getGoal(Number(id)).then(g => { setGoal(g); return loadProgress(g); }),
+      loadTasks(), loadCycles(), loadEntries(),
+    ])
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -69,7 +87,9 @@ export default function GoalDetailPage() {
     setSaving(true);
     try {
       await updateGoal(id, { ...data, id: Number(id) });
-      await Promise.all([loadGoal(), loadCycles()]);
+      const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadCycles()]);
+      setGoal(updatedGoal);
+      await loadProgress(updatedGoal);
       setEditModal(false);
     } catch { setError('Erro ao atualizar meta.'); }
     finally { setSaving(false); }
@@ -110,6 +130,7 @@ export default function GoalDetailPage() {
     const prevProgress = goal?.progress ?? 0;
     const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadEntries(), loadCycles()]);
     setGoal(updatedGoal);
+    await loadProgress(updatedGoal);
     if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
     getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
   };
@@ -199,6 +220,9 @@ export default function GoalDetailPage() {
   const pending   = tasks.filter(t => t.status === false);
   const completed = tasks.filter(t => t.status === true);
   const habits    = tasks.filter(t => t.is_recurring);
+
+  const cycleBars = goal ? buildCycleBars(goal, cycles) : [];
+  const visibleEntries = showAllEntries ? entries : entries.slice(0, ENTRIES_PREVIEW);
 
   const cyclesCompleted = cycles.filter(c => c.completed).length;
   const consistency = cycles.length > 0 ? Math.round((cyclesCompleted / cycles.length) * 100) : null;
@@ -339,9 +363,8 @@ export default function GoalDetailPage() {
         {goal.is_numeric && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <Target size={16} style={{ color: 'var(--b400)' }} />
-              <h2 className={styles.taskTitle}>Registros</h2>
-              <span className={styles.taskCount}>{entries.length}</span>
+              <Plus size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Registrar progresso</h2>
             </div>
 
             <form className={`${styles.addTask} glass`} onSubmit={handleAddEntry}>
@@ -370,6 +393,66 @@ export default function GoalDetailPage() {
                 <Plus size={18} />
               </button>
             </form>
+          </div>
+        )}
+
+        {progressData && (
+          <div className={styles.tasksSection}>
+            <div className={styles.taskHeader}>
+              <TrendingUp size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Evolução</h2>
+              <Link href="/stats" className={styles.seeStats}>
+                Ver todas as estatísticas <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className={`${styles.chartCard} glass`}>
+              {progressData.points.length > 1 ? (
+                <NumericGoalChart goal={progressData} />
+              ) : (
+                <p className={styles.chartEmpty}>Adicione registros para ver o gráfico.</p>
+              )}
+              <GoalForecast goal={progressData} />
+            </div>
+          </div>
+        )}
+
+        {cycleBars.length > 0 && (
+          <div className={styles.tasksSection}>
+            <div className={styles.taskHeader}>
+              <RefreshCw size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Ciclos</h2>
+              {consistency !== null && (
+                <span
+                  className={styles.taskCount}
+                  style={{
+                    width: 'auto',
+                    whiteSpace: 'nowrap',
+                    padding: '0 8px',
+                    color: consistency >= 70 ? '#10b981' : consistency >= 40 ? '#f59e0b' : '#ef4444',
+                    background: consistency >= 70 ? 'rgba(16,185,129,.1)' : consistency >= 40 ? 'rgba(245,158,11,.1)' : 'rgba(239,68,68,.1)',
+                    border: 'none',
+                  }}
+                >
+                  {consistency}% consistência
+                </span>
+              )}
+              <Link href="/stats" className={styles.seeStats}>
+                Ver todas as estatísticas <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className={`${styles.chartCard} glass`}>
+              <CycleChart goal={goal} bars={cycleBars} />
+            </div>
+          </div>
+        )}
+
+        {goal.is_numeric && (
+          <div className={styles.tasksSection}>
+            <div className={styles.taskHeader}>
+              <Target size={16} style={{ color: 'var(--b400)' }} />
+              <h2 className={styles.taskTitle}>Registros</h2>
+              <span className={styles.taskCount}>{entries.length}</span>
+            </div>
 
             {entries.length === 0 ? (
               <div className={`${styles.emptyTasks} glass`}>
@@ -378,7 +461,7 @@ export default function GoalDetailPage() {
               </div>
             ) : (
               <ul className={styles.taskList}>
-                {entries.map(entry => (
+                {visibleEntries.map(entry => (
                   <li
                     key={entry.id}
                     className="glass"
@@ -408,6 +491,12 @@ export default function GoalDetailPage() {
                 ))}
               </ul>
             )}
+
+            {entries.length > ENTRIES_PREVIEW && (
+              <button type="button" className={styles.showMore} onClick={() => setShowAllEntries(v => !v)}>
+                {showAllEntries ? 'Mostrar menos' : `Ver todos os ${entries.length} registros`}
+              </button>
+            )}
           </div>
         )}
 
@@ -417,21 +506,6 @@ export default function GoalDetailPage() {
               <History size={16} style={{ color: 'var(--b400)' }} />
               <h2 className={styles.taskTitle}>Histórico de ciclos</h2>
               <span className={styles.taskCount}>{cycles.length}</span>
-              {consistency !== null && (
-                <span
-                  className={styles.taskCount}
-                  style={{
-                    width: 'auto',
-                    whiteSpace: 'nowrap',
-                    padding: '0 8px',
-                    color: consistency >= 70 ? '#10b981' : consistency >= 40 ? '#f59e0b' : '#ef4444',
-                    background: consistency >= 70 ? 'rgba(16,185,129,.1)' : consistency >= 40 ? 'rgba(245,158,11,.1)' : 'rgba(239,68,68,.1)',
-                    border: 'none',
-                  }}
-                >
-                  {consistency}% consistência
-                </span>
-              )}
             </div>
 
             {cycles.length === 0 ? (
