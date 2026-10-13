@@ -1,0 +1,77 @@
+.chart {
+  position: relative;
+  width: 100%;
+  min-height: 170px;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: rgba(148, 163, 184, 0.22);
+  stroke-width: 1;
+}
+
+.axis {
+  font-size: 10.5px;
+  fill: #94a3b8;
+  font-family: var(--font-body);
+}
+
+.target {
+  stroke: #10b981;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.targetLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: #475569;
+  font-family: var(--font-body);
+}
+
+.area {
+  fill: rgba(59, 130, 246, 0.10);
+}
+
+.line {
+  fill: none;
+  stroke: var(--blue-600);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--blue-600);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.crosshair {
+  stroke: rgba(15, 23, 42, 0.25);
+  stroke-width: 1;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
+
+.tooltip span {
+  color: #cbd5e1;
+}

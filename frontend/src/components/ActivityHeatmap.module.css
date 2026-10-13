@@ -1,0 +1,122 @@
+.wrap {
+  position: relative;
+  --cell: 13px;
+  --gap: 3px;
+}
+
+.scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 28px auto;
+  grid-template-rows: 16px auto;
+  column-gap: 6px;
+  row-gap: 4px;
+  width: max-content;
+}
+
+.months {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), var(--cell));
+  column-gap: var(--gap);
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.months span {
+  white-space: nowrap;
+}
+
+.rowLabels {
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  row-gap: var(--gap);
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: var(--cell);
+}
+
+.cells {
+  display: flex;
+  gap: var(--gap);
+}
+
+.week {
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  row-gap: var(--gap);
+}
+
+.cell,
+.empty {
+  width: var(--cell);
+  height: var(--cell);
+  border-radius: 3px;
+}
+
+.cell {
+  background: rgba(148, 163, 184, 0.16);
+  outline: 1px solid rgba(15, 23, 42, 0.04);
+  outline-offset: -1px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.cell:hover {
+  transform: scale(1.25);
+}
+
+.cell[data-level='1'] { background: var(--blue-200); }
+.cell[data-level='2'] { background: var(--blue-400); }
+.cell[data-level='3'] { background: var(--blue-600); }
+.cell[data-level='4'] { background: var(--blue-900); }
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap);
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.legend span:first-child { margin-right: 4px; }
+.legend span:last-child { margin-left: 4px; }
+
+.legend .cell {
+  cursor: default;
+}
+
+.legend .cell:hover {
+  transform: none;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
+
+.tooltip span {
+  color: #cbd5e1;
+}
+
+.tooltip span::first-letter {
+  text-transform: uppercase;
+}

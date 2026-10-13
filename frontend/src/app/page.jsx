@@ -116,7 +116,14 @@ export default function DashboardPage() {
         </section>
 
         {/* Stats */}
-        <section className={styles.stats}>
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Resumo</h2>
+            <Link href="/stats" className={styles.seeAll}>
+              Ver estatísticas completas <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className={styles.stats}>
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className={`${styles.statCard} glass ${styles.skeleton}`} />
@@ -137,6 +144,7 @@ export default function DashboardPage() {
               </div>
             ))
           }
+          </div>
         </section>
         {/* Banner metas atrasadas */}
         {!loading && lateGoals.length > 0 && (

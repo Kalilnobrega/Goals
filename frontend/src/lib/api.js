@@ -119,3 +119,6 @@ export const deleteTask = (taskId) =>
   api.delete(`/tasks/${taskId}`).then((r) => r.data);
 export const toggleTask = (taskId) =>
   api.patch(`/tasks/${taskId}/toggle`).then((r) => r.data);
+
+// ── Stats ──────────────────────────────────────────────
+export const getStats = () => api.get("/stats/").then((r) => r.data);
