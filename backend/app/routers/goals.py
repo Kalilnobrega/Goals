@@ -30,8 +30,9 @@ from .tasks import (
     refresh_goal_status,
     apply_order,
 )
+from app.dates import today_br, br_day_start_utc
 from typing import Optional, List
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 goals_router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -67,6 +68,33 @@ def validate_numeric_goal(goal: Goal):
         )
 
 
+def resolve_cycle_start(
+    day: date,
+    interval_days: int | None,
+    deadline: datetime | None = None,
+    not_before: datetime | None = None,
+) -> datetime:
+    today = today_br()
+    if interval_days and (today - day).days >= interval_days:
+        raise HTTPException(
+            status_code=400,
+            detail="O início do ciclo precisa estar dentro do ciclo atual.",
+        )
+
+    start = br_day_start_utc(day)
+    if deadline and start >= to_aware_utc(deadline):
+        raise HTTPException(
+            status_code=400,
+            detail="O início do ciclo precisa ser antes do prazo da meta.",
+        )
+    if not_before and start < not_before:
+        raise HTTPException(
+            status_code=400,
+            detail="O início do ciclo não pode ser antes do fim do último ciclo registrado.",
+        )
+    return start
+
+
 def get_user_goal(goal_id: int, user: User, session: Session) -> Goal:
     goal = (
         session.query(Goal)
@@ -100,7 +128,17 @@ async def create_goal(
         recurrence_interval_days=goals_schema.recurrence_interval_days,
         recurrence_target=goals_schema.recurrence_target,
         cycle_start_date=(
-            datetime.now(timezone.utc) if goals_schema.is_recurring else None
+            (
+                resolve_cycle_start(
+                    goals_schema.cycle_start_date,
+                    goals_schema.recurrence_interval_days,
+                    goals_schema.deadline,
+                )
+                if goals_schema.cycle_start_date
+                else datetime.now(timezone.utc)
+            )
+            if goals_schema.is_recurring
+            else None
         ),
         target_value=goals_schema.target_value,
         start_value=goals_schema.start_value,
@@ -234,6 +272,22 @@ async def edit_goal(
         goal.recurrence_interval_days = edit_goal_schema.recurrence_interval_days
     if edit_goal_schema.recurrence_target is not None:
         goal.recurrence_target = edit_goal_schema.recurrence_target
+    if edit_goal_schema.cycle_start_date is not None and goal.is_recurring:
+        last_cycle_end = (
+            session.query(func.max(GoalCycleLog.cycle_end))
+            .filter(GoalCycleLog.goal_id == goal.id)
+            .scalar()
+        )
+        try:
+            goal.cycle_start_date = resolve_cycle_start(
+                edit_goal_schema.cycle_start_date,
+                goal.recurrence_interval_days,
+                goal.deadline,
+                to_aware_utc(last_cycle_end) if last_cycle_end else None,
+            )
+        except HTTPException:
+            session.rollback()
+            raise
     if goal.is_numeric:
         if edit_goal_schema.target_value is not None:
             goal.target_value = edit_goal_schema.target_value

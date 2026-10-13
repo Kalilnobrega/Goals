@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Literal
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from app.models import GoalStatus
 
 
@@ -45,6 +45,7 @@ class GoalsSchema(BaseModel):
     is_recurring: bool = False
     recurrence_interval_days: int | None = None
     recurrence_target: int | None = None
+    cycle_start_date: date | None = None
     target_value: float | None = None
     start_value: float | None = None
     unit: str | None = Field(default=None, max_length=20)
@@ -62,6 +63,7 @@ class EditGoalSchema(BaseModel):
     is_recurring: bool | None = None
     recurrence_interval_days: int | None = None
     recurrence_target: int | None = None
+    cycle_start_date: date | None = None
     target_value: float | None = None
     start_value: float | None = None
     unit: str | None = Field(default=None, max_length=20)

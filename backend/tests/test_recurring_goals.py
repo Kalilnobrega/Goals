@@ -229,3 +229,129 @@ def test_cycle_reset_does_not_uncheck_tasks_when_goal_ends(client, auth_headers,
 
     tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
     assert tasks[0]["status"] is True
+
+
+def test_create_recurring_goal_with_past_cycle_start(client, auth_headers):
+    from app.dates import today_br, br_day_start_utc
+
+    yesterday = today_br() - timedelta(days=1)
+    resp = client.post(
+        "/goals/",
+        json={
+            "title": "Treinar",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+            "recurrence_target": 4,
+            "cycle_start_date": yesterday.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    goal = resp.json()
+    start = datetime.fromisoformat(goal["cycle_start_date"])
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    assert start == br_day_start_utc(yesterday)
+    ends = datetime.fromisoformat(goal["cycle_ends_at"])
+    if ends.tzinfo is None:
+        ends = ends.replace(tzinfo=timezone.utc)
+    assert ends == br_day_start_utc(yesterday) + timedelta(days=7)
+
+
+def test_future_cycle_start_ignores_completions_before_it(client, auth_headers):
+    from app.dates import today_br, br_day_start_utc
+
+    start = today_br() + timedelta(days=3)
+    resp = client.post(
+        "/goals/",
+        json={
+            "title": "Treinar",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+            "recurrence_target": 4,
+            "cycle_start_date": start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    goal = resp.json()
+    stored = datetime.fromisoformat(goal["cycle_start_date"])
+    if stored.tzinfo is None:
+        stored = stored.replace(tzinfo=timezone.utc)
+    assert stored == br_day_start_utc(start)
+
+    task = create_recurring_task(client, auth_headers, goal["id"])
+    client.patch(f"/tasks/{task['id']}/toggle", headers=auth_headers)
+
+    updated = client.get(f"/goals/{goal['id']}", headers=auth_headers).json()
+    assert updated["current_cycle_progress"] == 0
+    assert updated["status"] == "open"
+
+
+def test_cycle_start_must_be_before_deadline(client, auth_headers):
+    from app.dates import today_br
+
+    resp = client.post(
+        "/goals/",
+        json={
+            "title": "Treinar",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+            "recurrence_target": 4,
+            "deadline": (today_br() + timedelta(days=5)).isoformat() + "T00:00:00Z",
+            "cycle_start_date": (today_br() + timedelta(days=10)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+
+
+def test_create_recurring_goal_rejects_cycle_start_older_than_interval(client, auth_headers):
+    from app.dates import today_br
+
+    resp = client.post(
+        "/goals/",
+        json={
+            "title": "Treinar",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+            "recurrence_target": 4,
+            "cycle_start_date": (today_br() - timedelta(days=7)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+
+
+def test_edit_cycle_start_moves_current_cycle(client, auth_headers):
+    from app.dates import today_br, br_day_start_utc
+
+    goal = create_recurring_goal(client, auth_headers)
+    day = today_br() - timedelta(days=2)
+    resp = client.put(
+        f"/goals/{goal['id']}",
+        json={"cycle_start_date": day.isoformat()},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    start = datetime.fromisoformat(resp.json()["cycle_start_date"])
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    assert start == br_day_start_utc(day)
+
+
+def test_edit_cycle_start_cannot_overlap_logged_cycle(client, auth_headers, db_session):
+    from app.dates import today_br
+
+    goal = create_recurring_goal(client, auth_headers, interval_days=7)
+    db_goal = db_session.query(Goal).filter(Goal.id == goal["id"]).first()
+    db_goal.cycle_start_date = datetime.now(timezone.utc) - timedelta(days=8)
+    db_session.commit()
+    client.get(f"/goals/{goal['id']}", headers=auth_headers)
+
+    resp = client.put(
+        f"/goals/{goal['id']}",
+        json={"cycle_start_date": (today_br() - timedelta(days=2)).isoformat()},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
