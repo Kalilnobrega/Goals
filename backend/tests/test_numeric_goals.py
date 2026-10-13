@@ -227,3 +227,38 @@ def test_task_goal_progress_unchanged(client, auth_headers):
 
     assert goal["is_numeric"] is False
     assert goal["current_value"] is None
+
+
+def test_goal_progress_returns_points_and_forecast(client, auth_headers):
+    goal = client.post(
+        "/goals/",
+        json={"title": "Correr", "target_value": 100, "start_value": 10, "unit": "km"},
+        headers=auth_headers,
+    ).json()
+    client.post(f"/goals/{goal['id']}/entries", json={"value": 5}, headers=auth_headers)
+    client.post(f"/goals/{goal['id']}/entries", json={"value": 7}, headers=auth_headers)
+
+    resp = client.get(f"/goals/{goal['id']}/progress", headers=auth_headers)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert [p["value"] for p in data["points"]] == [10, 15, 22]
+    assert data["target_value"] == 100
+    assert data["forecast"]["status"] == "no_data"
+
+
+def test_goal_progress_rejects_recurring_and_task_goals(client, auth_headers):
+    recurring = client.post(
+        "/goals/",
+        json={"title": "Semana", "target_value": 20, "is_recurring": True, "recurrence_interval_days": 7},
+        headers=auth_headers,
+    ).json()
+    tasks_goal = client.post("/goals/", json={"title": "Tarefas"}, headers=auth_headers).json()
+
+    assert client.get(f"/goals/{recurring['id']}/progress", headers=auth_headers).status_code == 400
+    assert client.get(f"/goals/{tasks_goal['id']}/progress", headers=auth_headers).status_code == 400
+
+
+def test_goal_progress_is_scoped_to_owner(client, auth_headers):
+    resp = client.get("/goals/9999/progress", headers=auth_headers)
+    assert resp.status_code == 404

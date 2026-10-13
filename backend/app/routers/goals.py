@@ -9,6 +9,7 @@ from app.schemas import (
     GoalEntrySchema,
     GoalEntryResponseSchema,
     ReorderSchema,
+    StatsNumericGoalSchema,
 )
 from app.database import get_db
 from app.models import (
@@ -31,6 +32,7 @@ from .tasks import (
     apply_order,
 )
 from app.dates import today_br, br_day_start_utc
+from .stats import numeric_summary
 from typing import Optional, List
 from datetime import date, datetime, timezone, timedelta
 
@@ -329,6 +331,23 @@ async def list_goal_cycles(
         .order_by(GoalCycleLog.cycle_start.desc())
         .all()
     )
+
+
+@goals_router.get("/{goal_id}/progress", response_model=StatsNumericGoalSchema)
+async def get_goal_progress(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    goal = get_user_goal(goal_id, current_user, session)
+
+    if not goal.is_numeric or goal.is_recurring:
+        raise HTTPException(
+            status_code=400,
+            detail="Só metas de progresso não recorrentes têm evolução.",
+        )
+
+    return numeric_summary(goal, datetime.now(timezone.utc))
 
 
 @goals_router.delete("/{goal_id}")

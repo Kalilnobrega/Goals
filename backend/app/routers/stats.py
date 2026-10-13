@@ -79,6 +79,21 @@ def numeric_forecast(goal: Goal, points, now: datetime):
     return result
 
 
+def numeric_summary(goal: Goal, now: datetime):
+    points = numeric_points(goal)
+    return {
+        "id": goal.id,
+        "title": goal.title,
+        "unit": goal.unit,
+        "numeric_mode": goal.numeric_mode,
+        "start_value": goal.start_value,
+        "target_value": goal.target_value,
+        "status": goal.status,
+        "points": points,
+        "forecast": numeric_forecast(goal, points, now),
+    }
+
+
 def recurring_summary(goal: Goal):
     logs = sorted(goal.cycle_logs, key=lambda log: to_aware_utc(log.cycle_start))
     completed = sum(1 for log in logs if log.completed)
@@ -261,24 +276,11 @@ async def get_stats(
     user_tasks = [task for goal in goals for task in goal.tasks]
     top_tasks, neglected_tasks = task_rankings(user_tasks, completion_counts, first_day, today)
 
-    numeric_goals = []
-    for goal in goals:
-        if not goal.is_numeric or goal.is_recurring:
-            continue
-        points = numeric_points(goal)
-        numeric_goals.append(
-            {
-                "id": goal.id,
-                "title": goal.title,
-                "unit": goal.unit,
-                "numeric_mode": goal.numeric_mode,
-                "start_value": goal.start_value,
-                "target_value": goal.target_value,
-                "status": goal.status,
-                "points": points,
-                "forecast": numeric_forecast(goal, points, now),
-            }
-        )
+    numeric_goals = [
+        numeric_summary(goal, now)
+        for goal in goals
+        if goal.is_numeric and not goal.is_recurring
+    ]
 
     return {
         "days": days,
