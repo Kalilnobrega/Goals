@@ -5,9 +5,10 @@ import Navbar from '../../../components/Navbar';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
 import TaskItem from '../../../components/TaskItem';
+import { SortableList, SortableItem, moveSubset } from '../../../components/Sortable';
 import {
   getGoal, updateGoal, deleteGoal,
-  getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak,
+  getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry
 } from '../../../lib/api';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
@@ -142,6 +143,36 @@ export default function GoalDetailPage() {
       await Promise.all([loadTasks(), loadGoal()]);
     } catch { setError('Erro ao excluir tarefa.'); }
   };
+
+  const handleReorderTasks = async (ids) => {
+    setTasks(prev => moveSubset(prev, ids));
+    try {
+      await reorderTasks(Number(id), ids);
+    } catch {
+      setError('Erro ao salvar a nova ordem.');
+      loadTasks();
+    }
+  };
+
+  const renderTaskGroup = (group) => (
+    <SortableList ids={group.map(t => t.id)} onReorder={handleReorderTasks}>
+      <ul className={styles.taskList}>
+        {group.map(t => (
+          <SortableItem key={t.id} id={t.id}>
+            {(sortable) => (
+              <TaskItem
+                task={t}
+                sortable={sortable}
+                onToggle={handleToggleTask}
+                onDelete={handleDeleteTask}
+                onEdit={openEditTask}
+              />
+            )}
+          </SortableItem>
+        ))}
+      </ul>
+    </SortableList>
+  );
 
   const openEditTask = (task) => {
     setEditTask({ ...task, repeat_mode: task.recurrence_weekdays?.length ? 'weekdays' : 'interval' });
@@ -463,17 +494,7 @@ export default function GoalDetailPage() {
                   <div className={styles.groupLabel}>
                     <Circle size={13} /> Pendentes ({pending.length})
                   </div>
-                  <ul className={styles.taskList}>
-                    {pending.map(t => (
-                      <TaskItem
-                        key={t.id}
-                        task={t}
-                        onToggle={handleToggleTask}
-                        onDelete={handleDeleteTask}
-                        onEdit={openEditTask}
-                      />
-                    ))}
-                  </ul>
+                  {renderTaskGroup(pending)}
                 </div>
               )}
               {completed.length > 0 && (
@@ -481,17 +502,7 @@ export default function GoalDetailPage() {
                   <div className={styles.groupLabel} style={{ color: '#10b981' }}>
                     <CheckCircle2 size={13} /> Concluídas ({completed.length})
                   </div>
-                  <ul className={styles.taskList}>
-                    {completed.map(t => (
-                      <TaskItem
-                        key={t.id}
-                        task={t}
-                        onToggle={handleToggleTask}
-                        onDelete={handleDeleteTask}
-                        onEdit={openEditTask}
-                      />
-                    ))}
-                  </ul>
+                  {renderTaskGroup(completed)}
                 </div>
               )}
             </div>

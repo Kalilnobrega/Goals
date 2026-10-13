@@ -1,0 +1,28 @@
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: grab;
+  touch-action: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.handle:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--blue-600);
+}
+
+.handle:active { cursor: grabbing; }
+
+.handle:focus-visible {
+  outline: 2px solid var(--blue-400);
+  outline-offset: 1px;
+}

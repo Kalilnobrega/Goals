@@ -12,17 +12,19 @@ const STATUS_META = {
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
 
-export default function GoalCard({ goal, onDelete, onComplete }) {
+export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragging }) {
   const progress = typeof goal.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta = STATUS_META[goal.status] || STATUS_META.open;
   const isCompleted = goal.status === 'completed';
 
   return (
-    <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} glass`}>
-      {/* Status badge */}
-      <div className={styles.badge} style={{ '--badge-color': meta.color }}>
-        <span className={styles.badgeDot} />
-        {meta.label}
+    <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`}>
+      <div className={styles.topRow}>
+        <div className={styles.badge} style={{ '--badge-color': meta.color }}>
+          <span className={styles.badgeDot} />
+          {meta.label}
+        </div>
+        {dragHandle}
       </div>
 
       <h3 className={styles.title}>{goal.title}</h3>

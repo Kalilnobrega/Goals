@@ -11,6 +11,13 @@
   }
   
   .item:hover { background: rgba(255,255,255,0.75); }
+
+  .dragging {
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 10px 28px rgba(37,99,235,0.18);
+  }
+
+  .handle { margin: 0 -6px 0 -8px; }
   
   .done .label {
     text-decoration: line-through;

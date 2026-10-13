@@ -100,6 +100,8 @@ export const updateGoal = (id, data) =>
   api.put(`/goals/${id}`, { ...data, id: Number(id) }).then((r) => r.data);
 export const deleteGoal = (id) =>
   api.delete(`/goals/${id}`).then((r) => r.data);
+export const reorderGoals = (ids) =>
+  api.put("/goals/order", { ids }).then((r) => r.data);
 export const getGoalCycles = (id) =>
   api.get(`/goals/${id}/cycles`).then((r) => r.data);
 export const getGoalEntries = (id) =>
@@ -128,6 +130,8 @@ export const updateTask = (taskId, data) =>
     .then((r) => r.data);
 export const deleteTask = (taskId) =>
   api.delete(`/tasks/${taskId}`).then((r) => r.data);
+export const reorderTasks = (goalId, ids) =>
+  api.put(`/tasks/goal/${goalId}/order`, { ids }).then((r) => r.data);
 export const toggleTask = (taskId) =>
   api.patch(`/tasks/${taskId}/toggle`).then((r) => r.data);
 

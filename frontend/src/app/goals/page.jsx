@@ -5,7 +5,8 @@ import Navbar from '../../components/Navbar';
 import GoalCard from '../../components/GoalCard';
 import Modal from '../../components/Modal';
 import GoalForm from '../../components/GoalForm';
-import { getGoals, createGoal, updateGoal, deleteGoal } from '../../lib/api';
+import { SortableList, SortableItem, DragHandle, moveSubset } from '../../components/Sortable';
+import { getGoals, createGoal, updateGoal, deleteGoal, reorderGoals } from '../../lib/api';
 import { celebrateGoal } from '../../lib/celebrate';
 import { Plus, Search } from 'lucide-react';
 import styles from './page.module.css';
@@ -63,6 +64,16 @@ export default function GoalsPage() {
       await deleteGoal(id);
       load(filter);
     } catch { setError('Erro ao excluir meta.'); }
+  };
+
+  const handleReorder = async (ids) => {
+    setGoals(prev => moveSubset(prev, ids));
+    try {
+      await reorderGoals(ids);
+    } catch {
+      setError('Erro ao salvar a nova ordem.');
+      load(filter);
+    }
   };
 
   // Filtro de busca local — late goals ficam no topo
@@ -143,13 +154,25 @@ export default function GoalsPage() {
             )}
           </div>
         ) : (
-          <div className={styles.grid}>
-            {filtered.map((g, i) => (
-              <div key={g.id} style={{ animationDelay: `${i * 60}ms` }}>
-                <GoalCard goal={g} onDelete={handleDelete} onComplete={handleComplete} />
-              </div>
-            ))}
-          </div>
+          <SortableList ids={filtered.map(g => g.id)} onReorder={handleReorder} layout="grid">
+            <div className={styles.grid}>
+              {filtered.map((g, i) => (
+                <SortableItem key={g.id} id={g.id}>
+                  {({ itemProps, isDragging, handleProps }) => (
+                    <div {...itemProps} style={{ ...itemProps.style, animationDelay: `${i * 60}ms` }}>
+                      <GoalCard
+                        goal={g}
+                        onDelete={handleDelete}
+                        onComplete={handleComplete}
+                        dragging={isDragging}
+                        dragHandle={<DragHandle handleProps={handleProps} />}
+                      />
+                    </div>
+                  )}
+                </SortableItem>
+              ))}
+            </div>
+          </SortableList>
         )}
 
         <Modal open={modal} onClose={() => setModal(false)} title="Nova meta">

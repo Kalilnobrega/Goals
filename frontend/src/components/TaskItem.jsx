@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { Check, Trash2, Pencil, RefreshCw } from 'lucide-react';
 import { celebrateTask } from '../lib/celebrate';
+import { DragHandle } from './Sortable';
 import { formatWeekdays } from '../lib/date';
 import styles from './TaskItem.module.css';
 
-export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
+export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable }) {
   const [hovered, setHovered] = useState(false);
   const done = task.status === true;
 
@@ -19,10 +20,13 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
 
   return (
     <li
-      className={`${styles.item} ${done ? styles.done : ''}`}
+      {...sortable?.itemProps}
+      className={`${styles.item} ${done ? styles.done : ''} ${sortable?.isDragging ? styles.dragging : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {sortable && <DragHandle handleProps={sortable.handleProps} className={styles.handle} />}
+
       <button
         className={`${styles.check} ${done ? styles.checked : ''}`}
         onClick={handleCheckClick}
