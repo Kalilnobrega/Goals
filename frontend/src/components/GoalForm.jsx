@@ -33,6 +33,12 @@ function todayDateOnly() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function openDatePicker(e) {
+  try {
+    e.currentTarget.showPicker?.();
+  } catch {}
+}
+
 function brDateOnly(isoString) {
   return new Date(isoString).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
@@ -350,6 +356,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           <label className={f.label}>Prazo (Opcional)</label>
           <input
             type="date"
+            onClick={openDatePicker}
             className={f.input}
             value={form.deadline}
             onChange={handleDeadlineChange}
@@ -419,6 +426,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               <>
                 <input
                   type="date"
+                  onClick={openDatePicker}
                   className={f.input}
                   value={form.cycle_start}
                   min={cycleStartMin}

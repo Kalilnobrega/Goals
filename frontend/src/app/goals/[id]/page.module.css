@@ -293,6 +293,7 @@
 
 .taskInput {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   font-family: var(--font-body);
@@ -647,6 +648,7 @@
 
 .taskInput {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   font-family: var(--font-body);
