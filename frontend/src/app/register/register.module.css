@@ -20,7 +20,9 @@
     transition: gap .2s;
     width: fit-content;
   }
-  .backLink:hover { gap: 10px; }
+  @media (hover: hover) {
+    .backLink:hover { gap: 10px; }
+  }
   
   .card {
     border-radius: 28px;

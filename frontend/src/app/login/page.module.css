@@ -239,7 +239,9 @@
   border-bottom: 1px solid rgba(37,99,235,.25);
   transition: border-color .2s;
 }
-.linkInline:hover { border-color: var(--b500); }
+@media (hover: hover) {
+  .linkInline:hover { border-color: var(--b500); }
+}
 
 /* ── Error box ────────────────────────────────── */
 .errorBox {
@@ -286,7 +288,9 @@
   font-weight: 500;
   text-decoration: none;
 }
-.forgot:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .forgot:hover { text-decoration: underline; }
+}
 
 .input {
   width: 100%;
@@ -328,7 +332,9 @@
   border-radius: 6px;
   transition: color .2s;
 }
-.eyeBtn:hover { color: var(--b500); }
+@media (hover: hover) {
+  .eyeBtn:hover { color: var(--b500); }
+}
 
 /* ── Submit ───────────────────────────────────── */
 .submitBtn {
@@ -352,10 +358,12 @@
   letter-spacing: .01em;
 }
 
-.submitBtn:hover:not(:disabled) {
-  opacity: .92;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(37,99,235,.42);
+@media (hover: hover) {
+  .submitBtn:hover:not(:disabled) {
+    opacity: .92;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(37,99,235,.42);
+  }
 }
 
 .submitBtn:disabled { opacity: .6; cursor: not-allowed; }
@@ -398,11 +406,13 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
  
-.googleBtn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(59, 130, 246, 0.3);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+@media (hover: hover) {
+  .googleBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+  }
 }
  
 .googleBtn:disabled { opacity: 0.6; cursor: not-allowed; }

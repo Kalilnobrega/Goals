@@ -46,7 +46,9 @@
     transition: background 0.2s;
   }
    
-  .calNav:hover { background: rgba(255,255,255,0.22); }
+  @media (hover: hover) {
+    .calNav:hover { background: rgba(255,255,255,0.22); }
+  }
    
   .calGrid {
     display: grid;
@@ -82,7 +84,9 @@
     line-height: 1;
   }
    
-  .calDay:hover { background: rgba(255,255,255,0.08); }
+  @media (hover: hover) {
+    .calDay:hover { background: rgba(255,255,255,0.08); }
+  }
    
   .calToday {
     background: rgba(255,255,255,0.18) !important;
@@ -168,8 +172,10 @@
     transition: background 0.15s;
   }
 
-  .calDeadlineItem:hover {
-    background: rgba(255,255,255,0.10);
+  @media (hover: hover) {
+    .calDeadlineItem:hover {
+      background: rgba(255,255,255,0.10);
+    }
   }
 
   .calDeadlineTitle {

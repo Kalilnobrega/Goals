@@ -163,8 +163,10 @@
   white-space: nowrap;
 }
 
-.goalLink:hover {
-  color: var(--blue-600);
+@media (hover: hover) {
+  .goalLink:hover {
+    color: var(--blue-600);
+  }
 }
 
 .chartValue {
@@ -470,8 +472,10 @@
   white-space: nowrap;
 }
 
-.taskGoal:hover {
-  color: var(--blue-600);
+@media (hover: hover) {
+  .taskGoal:hover {
+    color: var(--blue-600);
+  }
 }
 
 .taskMeta {

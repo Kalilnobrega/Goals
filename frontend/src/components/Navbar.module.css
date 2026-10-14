@@ -72,9 +72,11 @@
   transition: color 0.2s, background 0.2s;
 }
 
-.link:hover {
-  color: var(--blue-600);
-  background: rgba(59, 130, 246, 0.08);
+@media (hover: hover) {
+  .link:hover {
+    color: var(--blue-600);
+    background: rgba(59, 130, 246, 0.08);
+  }
 }
 
 .active {
@@ -199,10 +201,16 @@
   transition: background .2s, border-color .2s;
 }
 
-.userChip:hover,
 .userChipActive {
   background: rgba(59,130,246,.14);
   border-color: rgba(59,130,246,.30);
+}
+
+@media (hover: hover) {
+  .userChip:hover {
+    background: rgba(59,130,246,.14);
+    border-color: rgba(59,130,246,.30);
+  }
 }
 
 .userChip svg { color: var(--blue-500); }
@@ -223,9 +231,11 @@
   transition: background .2s, transform .2s;
 }
 
-.logoutBtn:hover {
-  background: rgba(239,68,68,.13);
-  transform: scale(1.03);
+@media (hover: hover) {
+  .logoutBtn:hover {
+    background: rgba(239,68,68,.13);
+    transform: scale(1.03);
+  }
 }
 
 @media (max-width: 600px) {

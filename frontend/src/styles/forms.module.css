@@ -56,7 +56,9 @@
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.endOption:hover { background: rgba(59, 130, 246, 0.06); }
+@media (hover: hover) {
+  .endOption:hover { background: rgba(59, 130, 246, 0.06); }
+}
 
 .endOption input[type="radio"],
 .endOption input[type="checkbox"] {
@@ -91,7 +93,9 @@
   transition: background 0.2s;
 }
 
-.btnCancel:hover { background: rgba(59, 130, 246, 0.06); }
+@media (hover: hover) {
+  .btnCancel:hover { background: rgba(59, 130, 246, 0.06); }
+}
 
 .btnSubmit {
   padding: 10px 24px;
@@ -107,7 +111,9 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
-.btnSubmit:hover { opacity: 0.9; transform: translateY(-1px); }
+@media (hover: hover) {
+  .btnSubmit:hover { opacity: 0.9; transform: translateY(-1px); }
+}
 .btnSubmit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .hint { font-size: 0.78rem; color: #94a3b8; }
@@ -134,7 +140,9 @@
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
-.typeCard:hover:not(:disabled) { background: rgba(59, 130, 246, 0.05); }
+@media (hover: hover) {
+  .typeCard:hover:not(:disabled) { background: rgba(59, 130, 246, 0.05); }
+}
 
 .typeCard:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -171,7 +179,9 @@
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
-.measureOption:hover { background: rgba(59, 130, 246, 0.05); }
+@media (hover: hover) {
+  .measureOption:hover { background: rgba(59, 130, 246, 0.05); }
+}
 
 .measureOption input[type="radio"] {
   width: 18px;

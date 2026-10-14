@@ -79,10 +79,12 @@
   letter-spacing: -0.01em;
 }
 
-.btnNew:hover {
-  opacity: 0.92;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+@media (hover: hover) {
+  .btnNew:hover {
+    opacity: 0.92;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+  }
 }
 
 /* ── Toolbar ──────────────────────────────────── */
@@ -163,9 +165,11 @@
   white-space: nowrap;
 }
 
-.filterBtn:hover {
-  background: rgba(59, 130, 246, 0.07);
-  color: var(--b600);
+@media (hover: hover) {
+  .filterBtn:hover {
+    background: rgba(59, 130, 246, 0.07);
+    color: var(--b600);
+  }
 }
 
 .filterActive {
@@ -186,8 +190,11 @@
   transition: opacity 0.2s;
 }
 
-.filterActive .filterDot,
-.filterBtn:hover .filterDot { opacity: 1; }
+.filterActive .filterDot { opacity: 1; }
+
+@media (hover: hover) {
+  .filterBtn:hover .filterDot { opacity: 1; }
+}
 
 /* ── Grid ─────────────────────────────────────── */
 .grid {
@@ -233,9 +240,11 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.emptyBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.4);
+@media (hover: hover) {
+  .emptyBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.4);
+  }
 }
 
 .error {

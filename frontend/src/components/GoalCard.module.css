@@ -24,11 +24,13 @@
   background: radial-gradient(circle, rgba(239, 68, 68, 0.14) 0%, transparent 70%) !important;
 }
 
-.cardLate:hover {
-  border-color: rgba(239, 68, 68, 0.42) !important;
-  box-shadow:
-    0 0 0 4px rgba(239, 68, 68, 0.10),
-    0 18px 40px -16px rgba(220, 38, 38, 0.45) !important;
+@media (hover: hover) {
+  .cardLate:hover {
+    border-color: rgba(239, 68, 68, 0.42) !important;
+    box-shadow:
+      0 0 0 4px rgba(239, 68, 68, 0.10),
+      0 18px 40px -16px rgba(220, 38, 38, 0.45) !important;
+  }
 }
 
 .card::before {
@@ -43,16 +45,25 @@
   pointer-events: none;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--glass-shadow-lg);
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--glass-shadow-lg);
+  }
 }
 
-.cardDragging,
-.cardDragging:hover {
+.cardDragging {
   transform: scale(1.02);
   box-shadow: var(--glass-shadow-lg);
   cursor: grabbing;
+}
+
+@media (hover: hover) {
+  .cardDragging:hover {
+    transform: scale(1.02);
+    box-shadow: var(--glass-shadow-lg);
+    cursor: grabbing;
+  }
 }
 
 .topRow {
@@ -192,10 +203,12 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
-.btnPrimary:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+@media (hover: hover) {
+  .btnPrimary:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+  }
 }
 
 .btnComplete {
@@ -212,9 +225,11 @@
   transition: background 0.2s, transform 0.2s;
 }
 
-.btnComplete:hover {
-  background: rgba(16, 185, 129, 0.16);
-  transform: scale(1.05);
+@media (hover: hover) {
+  .btnComplete:hover {
+    background: rgba(16, 185, 129, 0.16);
+    transform: scale(1.05);
+  }
 }
 
 .btnDelete {
@@ -231,9 +246,11 @@
   transition: background 0.2s, transform 0.2s;
 }
 
-.btnDelete:hover {
-  background: rgba(239, 68, 68, 0.14);
-  transform: scale(1.05);
+@media (hover: hover) {
+  .btnDelete:hover {
+    background: rgba(239, 68, 68, 0.14);
+    transform: scale(1.05);
+  }
 }
 
 @keyframes fadeUp {

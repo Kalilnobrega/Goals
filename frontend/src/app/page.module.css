@@ -91,7 +91,9 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
   
-  .heroBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+  @media (hover: hover) {
+    .heroBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+  }
   
   /* ── Stats ────────────────────────────────────── */
   .stats {
@@ -209,7 +211,9 @@
   transition: opacity 0.2s;
 }
  
-.lateBannerLink:hover { opacity: 0.75; text-decoration: underline; }
+@media (hover: hover) {
+  .lateBannerLink:hover { opacity: 0.75; text-decoration: underline; }
+}
  
 .lateBannerBtn {
   flex-shrink: 0;
@@ -223,7 +227,9 @@
   transition: gap 0.2s;
 }
  
-.lateBannerBtn:hover {  gap: 8px; }
+@media (hover: hover) {
+  .lateBannerBtn:hover {  gap: 8px; }
+}
   
   /* ── Habit banner ─────────────────────────────── */
   .habitBanner {
@@ -274,7 +280,9 @@
   transition: background 0.2s;
 }
  
-.todayItem:hover { background: rgba(255,255,255,0.5); }
+@media (hover: hover) {
+  .todayItem:hover { background: rgba(255,255,255,0.5); }
+}
  
 .todayItemDone { opacity: 0.55; }
  
@@ -293,7 +301,9 @@
   transition: background 0.2s, border-color 0.2s, transform 0.15s;
 }
  
-.todayCheck:hover { border-color: var(--b500); background: rgba(59,130,246,0.08); transform: scale(1.1); }
+@media (hover: hover) {
+  .todayCheck:hover { border-color: var(--b500); background: rgba(59,130,246,0.08); transform: scale(1.1); }
+}
 .todayCheck:disabled { cursor: not-allowed; opacity: 0.6; }
  
 .todayChecked {
@@ -345,7 +355,9 @@
   text-overflow: ellipsis;
 }
  
-.todayGoal:hover { color: var(--b500); }
+@media (hover: hover) {
+  .todayGoal:hover { color: var(--b500); }
+}
  
 .todayRecurring {
   display: flex;
@@ -425,7 +437,9 @@
     transition: gap 0.2s;
   }
   
-  .seeAll:hover { gap: 8px; }
+  @media (hover: hover) {
+    .seeAll:hover { gap: 8px; }
+  }
   
   /* ── Recent grid ──────────────────────────────── */
   .recentGrid {
@@ -445,7 +459,9 @@
     animation: fadeUp 0.4s ease both;
   }
   
-  .recentCard:hover { transform: translateY(-2px); box-shadow: var(--glass-shadow-lg); }
+  @media (hover: hover) {
+    .recentCard:hover { transform: translateY(-2px); box-shadow: var(--glass-shadow-lg); }
+  }
   
   .recentDot {
     flex-shrink: 0;
@@ -503,7 +519,9 @@
     transition: color 0.2s;
   }
   
-  .recentCard:hover .recentArrow { color: var(--blue-500); }
+  @media (hover: hover) {
+    .recentCard:hover .recentArrow { color: var(--blue-500); }
+  }
   
   .recentSkeleton {
     height: 70px;

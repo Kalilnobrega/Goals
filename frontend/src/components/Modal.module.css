@@ -56,7 +56,9 @@
     transition: background 0.2s, color 0.2s;
   }
   
-  .close:hover { background: rgba(59, 130, 246, 0.12); color: var(--blue-600); }
+  @media (hover: hover) {
+    .close:hover { background: rgba(59, 130, 246, 0.12); color: var(--blue-600); }
+  }
   
   .body {
     padding: 20px 24px 24px;

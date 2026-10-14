@@ -66,8 +66,10 @@
   transition: transform 0.12s;
 }
 
-.cell:hover {
-  transform: scale(1.25);
+@media (hover: hover) {
+  .cell:hover {
+    transform: scale(1.25);
+  }
 }
 
 .cell[data-level='1'] { background: var(--blue-200); }
@@ -139,9 +141,11 @@
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
-.filter:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: #fff;
+@media (hover: hover) {
+  .filter:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    background: #fff;
+  }
 }
 
 .filter:focus-within {
@@ -178,8 +182,10 @@
   transition: transform 0.2s;
 }
 
-.filter:hover .filterChevron {
-  transform: translateY(1px);
+@media (hover: hover) {
+  .filter:hover .filterChevron {
+    transform: translateY(1px);
+  }
 }
 
 .filterSelect {
@@ -205,9 +211,11 @@
   transition: background 0.2s, color 0.2s;
 }
 
-.filterClear:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+@media (hover: hover) {
+  .filterClear:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+  }
 }
 
 .filterSummary {
@@ -238,8 +246,10 @@
   cursor: default;
 }
 
-.legend .cell:hover {
-  transform: none;
+@media (hover: hover) {
+  .legend .cell:hover {
+    transform: none;
+  }
 }
 
 .tooltip {

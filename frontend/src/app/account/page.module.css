@@ -115,7 +115,9 @@
   transition: color .2s;
 }
 
-.eyeBtn:hover { color: var(--blue-500); }
+@media (hover: hover) {
+  .eyeBtn:hover { color: var(--blue-500); }
+}
 
 .error {
   color: #ef4444;
@@ -147,9 +149,11 @@
   transition: background 0.2s, color 0.2s;
 }
 
-.btnDanger:hover:not(:disabled) {
-  background: #ef4444;
-  color: white;
+@media (hover: hover) {
+  .btnDanger:hover:not(:disabled) {
+    background: #ef4444;
+    color: white;
+  }
 }
 
 .btnDanger:disabled { opacity: 0.5; cursor: not-allowed; }

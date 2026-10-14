@@ -26,9 +26,11 @@
   transition: background 0.2s, gap 0.2s;
 }
 
-.backLink:hover {
-  background: rgba(59,130,246,0.13);
-  gap: 10px;
+@media (hover: hover) {
+  .backLink:hover {
+    background: rgba(59,130,246,0.13);
+    gap: 10px;
+  }
 }
 
 /* ── Goal card ────────────────────────────────── */
@@ -103,10 +105,12 @@
   transition: background 0.2s, color 0.2s, transform 0.15s;
 }
 
-.iconBtn:hover {
-  background: rgba(59,130,246,0.12);
-  color: var(--b600);
-  transform: scale(1.07);
+@media (hover: hover) {
+  .iconBtn:hover {
+    background: rgba(59,130,246,0.12);
+    color: var(--b600);
+    transform: scale(1.07);
+  }
 }
 
 .danger {
@@ -115,10 +119,12 @@
   color: #f87171;
 }
 
-.danger:hover {
-  background: rgba(239,68,68,0.12);
-  color: #ef4444;
-  transform: scale(1.07);
+@media (hover: hover) {
+  .danger:hover {
+    background: rgba(239,68,68,0.12);
+    color: #ef4444;
+    transform: scale(1.07);
+  }
 }
 
 .btnComplete {
@@ -132,9 +138,11 @@
   transition: background 0.2s, transform 0.15s;
 }
 
-.btnComplete:hover {
-  background: rgba(16,185,129,0.16);
-  transform: scale(1.07);
+@media (hover: hover) {
+  .btnComplete:hover {
+    background: rgba(16,185,129,0.16);
+    transform: scale(1.07);
+  }
 }
 
 .goalTitle {
@@ -319,10 +327,12 @@
   flex-shrink: 0;
 }
 
-.addBtn:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: scale(1.08) rotate(8deg);
-  box-shadow: 0 5px 16px rgba(37,99,235,0.4);
+@media (hover: hover) {
+  .addBtn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: scale(1.08) rotate(8deg);
+    box-shadow: 0 5px 16px rgba(37,99,235,0.4);
+  }
 }
 
 .addBtn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -372,7 +382,9 @@
   transition: gap 0.2s;
 }
 
-.seeStats:hover { gap: 8px; }
+@media (hover: hover) {
+  .seeStats:hover { gap: 8px; }
+}
 
 .showMore {
   align-self: center;
@@ -388,7 +400,9 @@
   transition: background 0.2s;
 }
 
-.showMore:hover { background: rgba(59, 130, 246, 0.06); }
+@media (hover: hover) {
+  .showMore:hover { background: rgba(59, 130, 246, 0.06); }
+}
 
 .chartCard {
   border-radius: 16px;
@@ -475,7 +489,9 @@
   transition: gap 0.2s;
 }
 
-.backLink:hover { gap: 10px; }
+@media (hover: hover) {
+  .backLink:hover { gap: 10px; }
+}
 
 /* ── Goal card ────────────────────────────────── */
 .goalCard {
@@ -534,9 +550,13 @@
   transition: background 0.2s, color 0.2s;
 }
 
-.iconBtn:hover { background: rgba(59,130,246,0.12); color: var(--blue-600); }
+@media (hover: hover) {
+  .iconBtn:hover { background: rgba(59,130,246,0.12); color: var(--blue-600); }
+}
 .danger { border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.06); color: #ef4444; }
-.danger:hover { background: rgba(239,68,68,0.12); }
+@media (hover: hover) {
+  .danger:hover { background: rgba(239,68,68,0.12); }
+}
 
 .goalTitle {
   font-family: var(--font-display);
@@ -675,7 +695,9 @@
   flex-shrink: 0;
 }
 
-.addBtn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.05); }
+@media (hover: hover) {
+  .addBtn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.05); }
+}
 .addBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .taskGroups { display: flex; flex-direction: column; gap: 20px; }
