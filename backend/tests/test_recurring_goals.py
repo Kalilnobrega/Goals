@@ -355,3 +355,27 @@ def test_edit_cycle_start_cannot_overlap_logged_cycle(client, auth_headers, db_s
         headers=auth_headers,
     )
     assert resp.status_code == 400
+
+
+def test_create_recurring_goal_without_cycle_start_begins_at_br_midnight(client, auth_headers):
+    from app.dates import today_br, br_day_start_utc
+
+    goal = create_recurring_goal(client, auth_headers)
+    start = datetime.fromisoformat(goal["cycle_start_date"]).replace(tzinfo=timezone.utc)
+    assert start == br_day_start_utc(today_br())
+
+
+def test_turning_goal_recurring_starts_cycle_at_br_midnight(client, auth_headers):
+    from app.dates import today_br, br_day_start_utc
+
+    resp = client.post("/goals/", json={"title": "Ler"}, headers=auth_headers)
+    goal_id = resp.json()["id"]
+
+    resp = client.put(
+        f"/goals/{goal_id}",
+        json={"is_recurring": True, "recurrence_interval_days": 7, "recurrence_target": 3},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    start = datetime.fromisoformat(resp.json()["cycle_start_date"]).replace(tzinfo=timezone.utc)
+    assert start == br_day_start_utc(today_br())

@@ -137,7 +137,7 @@ async def create_goal(
                     goals_schema.deadline,
                 )
                 if goals_schema.cycle_start_date
-                else datetime.now(timezone.utc)
+                else br_day_start_utc(today_br())
             )
             if goals_schema.is_recurring
             else None
@@ -268,7 +268,7 @@ async def edit_goal(
             update_streak(current_user.id, session)
     if edit_goal_schema.is_recurring is not None:
         if edit_goal_schema.is_recurring and not goal.is_recurring:
-            goal.cycle_start_date = datetime.now(timezone.utc)
+            goal.cycle_start_date = br_day_start_utc(today_br())
         goal.is_recurring = edit_goal_schema.is_recurring
     if edit_goal_schema.recurrence_interval_days is not None:
         goal.recurrence_interval_days = edit_goal_schema.recurrence_interval_days
