@@ -809,3 +809,77 @@
   color: var(--b600);
   text-decoration: none;
 }
+
+.skeletonHeader { height: 200px; }
+.skeletonBody { height: 300px; }
+
+.notFound > svg { color: var(--b300); }
+.taskHeader > svg { color: var(--b400); }
+.emptyTasks > svg { color: var(--b200); }
+
+.metaChipHabit {
+  color: #8b5cf6;
+  border-color: rgba(139,92,246,.2);
+  background: rgba(139,92,246,.07);
+}
+
+.valueInput { max-width: 160px; }
+
+.groupLabelDone { color: #10b981; }
+
+.consistency {
+  width: auto;
+  white-space: nowrap;
+  padding: 0 8px;
+  border: none;
+}
+
+.consistencyGood { color: #10b981; background: rgba(16,185,129,.1); }
+.consistencyMid { color: #f59e0b; background: rgba(245,158,11,.1); }
+.consistencyLow { color: #ef4444; background: rgba(239,68,68,.1); }
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.listItemSide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.entryText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  color: #475569;
+  min-width: 0;
+}
+
+.entryValue { color: #1e293b; }
+
+.entryNote { overflow: hidden; text-overflow: ellipsis; }
+
+.entryAuthor { font-size: 0.75rem; color: #94a3b8; }
+
+.entryDate { font-size: 0.78rem; color: #94a3b8; }
+
+.cycleRange {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.cycleScore { font-size: 0.82rem; font-weight: 600; }
+
+.cycleDone { color: #10b981; }
+.cycleMissed { color: #ef4444; }

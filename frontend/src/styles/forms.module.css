@@ -214,3 +214,17 @@
   }
   .typeIcon { grid-row: span 2; margin-bottom: 0; }
 }
+.typeGridWide { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+.optionRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.optionRowTight { gap: 6px; }
+
+.dayOption { padding: 8px 12px; }
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  font-size: 0.875rem;
+}

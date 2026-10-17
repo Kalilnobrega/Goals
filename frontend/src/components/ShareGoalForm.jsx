@@ -28,7 +28,7 @@ export default function ShareGoalForm({ onSubmit, onCancel, loading }) {
     >
       <div className={f.field}>
         <label className={f.label}>Tipo de compartilhamento</label>
-        <div className={f.typeGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        <div className={`${f.typeGrid} ${f.typeGridWide}`}>
           {KINDS.map(({ key, icon: Icon, title, desc }) => (
             <button
               key={key}

@@ -34,10 +34,16 @@ import styles from './page.module.css';
 const ENTRIES_PREVIEW = 5;
 
 const STATUS_META = {
-  open:      { label: 'Em aberto',  color: '#3b82f6' },
-  completed: { label: 'Concluída',  color: '#10b981' },
-  late:      { label: 'Atrasada',   color: '#ef4444' },
+  open:      { label: 'Em aberto',  color: '#3b82f6', banner: '#1d4ed8' },
+  completed: { label: 'Concluída',  color: '#10b981', banner: '#059669' },
+  late:      { label: 'Atrasada',   color: '#ef4444', banner: '#d97706' },
 };
+
+function consistencyClass(value) {
+  if (value >= 70) return styles.consistencyGood;
+  if (value >= 40) return styles.consistencyMid;
+  return styles.consistencyLow;
+}
 
 export default function GoalDetailPage() {
   const { id } = useParams();
@@ -282,8 +288,8 @@ export default function GoalDetailPage() {
     <>
       <Navbar />
       <main className={styles.main}>
-        <div className={`${styles.skeleton} glass`} style={{ height: 200 }} />
-        <div className={`${styles.skeleton} glass`} style={{ height: 300 }} />
+        <div className={`${styles.skeleton} ${styles.skeletonHeader} glass`} />
+        <div className={`${styles.skeleton} ${styles.skeletonBody} glass`} />
       </main>
     </>
   );
@@ -293,7 +299,7 @@ export default function GoalDetailPage() {
       <Navbar />
       <main className={styles.main}>
         <div className={`${styles.notFound} glass`}>
-          <Target size={40} style={{ color: 'var(--b300)' }} />
+          <Target size={40} />
           <p>Meta não encontrada.</p>
           <button className={styles.backBtn} onClick={() => router.push('/goals')}>
             <ArrowLeft size={15} /> Voltar
@@ -331,10 +337,7 @@ export default function GoalDetailPage() {
           {/* Faixa colorida no topo baseada no status */}
           <div
             className={styles.goalBanner}
-            style={{
-              '--banner-a': meta.color,
-              '--banner-b': meta.color === '#3b82f6' ? '#1d4ed8' : meta.color === '#10b981' ? '#059669' : '#d97706',
-            }}
+            style={{ '--banner-a': meta.color, '--banner-b': meta.banner }}
           />
           <div className={styles.goalCardBody}>
             <div className={styles.goalTop}>
@@ -392,7 +395,7 @@ export default function GoalDetailPage() {
                 {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
               </span>
               {habits.length > 0 && (
-                <span className={styles.metaChip} style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,.2)', background: 'rgba(139,92,246,.07)' }}>
+                <span className={`${styles.metaChip} ${styles.metaChipHabit}`}>
                   <RefreshCw size={13} />
                   {habits.length} hábito{habits.length !== 1 ? 's' : ''}
                 </span>
@@ -404,7 +407,7 @@ export default function GoalDetailPage() {
                 </span>
               )}
               {goal.is_recurring && (
-                <span className={styles.metaChip} style={{ color: '#8b5cf6', borderColor: 'rgba(139,92,246,.2)', background: 'rgba(139,92,246,.07)' }}>
+                <span className={`${styles.metaChip} ${styles.metaChipHabit}`}>
                   <RefreshCw size={13} />
                   {cycleNotStarted(goal) ? (
                     `Ciclo começa em ${formatDeadline(goal.cycle_start_date)}`
@@ -444,7 +447,7 @@ export default function GoalDetailPage() {
         {goal.is_numeric && goal.can_act && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <Plus size={16} style={{ color: 'var(--b400)' }} />
+              <Plus size={16} />
               <h2 className={styles.taskTitle}>Registrar progresso</h2>
             </div>
 
@@ -452,8 +455,7 @@ export default function GoalDetailPage() {
               <input
                 type="number"
                 step="any"
-                className={styles.taskInput}
-                style={{ maxWidth: 160 }}
+                className={`${styles.taskInput} ${styles.valueInput}`}
                 placeholder={goal.numeric_mode === 'latest'
                   ? `Valor atual${goal.unit ? ` (${goal.unit})` : ''}`
                   : `Quanto somar${goal.unit ? ` (${goal.unit})` : ''}`}
@@ -480,7 +482,7 @@ export default function GoalDetailPage() {
         {progressData && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <TrendingUp size={16} style={{ color: 'var(--b400)' }} />
+              <TrendingUp size={16} />
               <h2 className={styles.taskTitle}>Evolução</h2>
               <Link href="/stats" className={styles.seeStats}>
                 Ver todas as estatísticas <ArrowRight size={14} />
@@ -500,20 +502,10 @@ export default function GoalDetailPage() {
         {cycleBars.length > 0 && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <RefreshCw size={16} style={{ color: 'var(--b400)' }} />
+              <RefreshCw size={16} />
               <h2 className={styles.taskTitle}>Ciclos</h2>
               {consistency !== null && (
-                <span
-                  className={styles.taskCount}
-                  style={{
-                    width: 'auto',
-                    whiteSpace: 'nowrap',
-                    padding: '0 8px',
-                    color: consistency >= 70 ? '#10b981' : consistency >= 40 ? '#f59e0b' : '#ef4444',
-                    background: consistency >= 70 ? 'rgba(16,185,129,.1)' : consistency >= 40 ? 'rgba(245,158,11,.1)' : 'rgba(239,68,68,.1)',
-                    border: 'none',
-                  }}
-                >
+                <span className={`${styles.taskCount} ${styles.consistency} ${consistencyClass(consistency)}`}>
                   {consistency}% consistência
                 </span>
               )}
@@ -530,39 +522,32 @@ export default function GoalDetailPage() {
         {goal.is_numeric && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <Target size={16} style={{ color: 'var(--b400)' }} />
+              <Target size={16} />
               <h2 className={styles.taskTitle}>Registros</h2>
               <span className={styles.taskCount}>{entries.length}</span>
             </div>
 
             {entries.length === 0 ? (
               <div className={`${styles.emptyTasks} glass`}>
-                <Target size={24} style={{ color: 'var(--b200)' }} />
+                <Target size={24} />
                 <p>Nenhum registro ainda. Adicione o primeiro acima!</p>
               </div>
             ) : (
               <ul className={styles.taskList}>
                 {visibleEntries.map(entry => (
-                  <li
-                    key={entry.id}
-                    className="glass"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      gap: 10, padding: '10px 14px', borderRadius: 12,
-                    }}
-                  >
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.85rem', color: '#475569', minWidth: 0 }}>
-                      <strong style={{ color: '#1e293b' }}>
+                  <li key={entry.id} className={`${styles.listItem} glass`}>
+                    <span className={styles.entryText}>
+                      <strong className={styles.entryValue}>
                         {goal.numeric_mode === 'sum' && entry.value > 0 ? '+' : ''}
                         {formatValue(entry.value, goal.unit)}
                       </strong>
-                      {entry.note && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.note}</span>}
+                      {entry.note && <span className={styles.entryNote}>{entry.note}</span>}
                       {goal.group_kind === 'collaborative' && entry.user_name && (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>por {entry.user_name}</span>
+                        <span className={styles.entryAuthor}>por {entry.user_name}</span>
                       )}
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{formatDateTime(entry.created_at)}</span>
+                    <span className={styles.listItemSide}>
+                      <span className={styles.entryDate}>{formatDateTime(entry.created_at)}</span>
                       {entry.can_delete && (
                         <button
                           className={`${styles.iconBtn} ${styles.danger}`}
@@ -589,34 +574,27 @@ export default function GoalDetailPage() {
         {(goal.is_recurring || cycles.length > 0) && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
-              <History size={16} style={{ color: 'var(--b400)' }} />
+              <History size={16} />
               <h2 className={styles.taskTitle}>Histórico de ciclos</h2>
               <span className={styles.taskCount}>{cycles.length}</span>
             </div>
 
             {cycles.length === 0 ? (
               <div className={`${styles.emptyTasks} glass`}>
-                <RefreshCw size={24} style={{ color: 'var(--b200)' }} />
+                <RefreshCw size={24} />
                 <p>Nenhum ciclo fechado ainda.</p>
               </div>
             ) : (
               <ul className={styles.taskList}>
                 {cycles.map(c => (
-                  <li
-                    key={c.id}
-                    className="glass"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      gap: 10, padding: '10px 14px', borderRadius: 12,
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#475569' }}>
+                  <li key={c.id} className={`${styles.listItem} glass`}>
+                    <span className={styles.cycleRange}>
                       {c.completed
-                        ? <CheckCircle2 size={16} style={{ color: '#10b981' }} />
-                        : <XCircle size={16} style={{ color: '#ef4444' }} />}
+                        ? <CheckCircle2 size={16} className={styles.cycleDone} />
+                        : <XCircle size={16} className={styles.cycleMissed} />}
                       {formatDeadline(c.cycle_start)} – {formatDeadline(c.cycle_end)}
                     </span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: c.completed ? '#10b981' : '#ef4444' }}>
+                    <span className={`${styles.cycleScore} ${c.completed ? styles.cycleDone : styles.cycleMissed}`}>
                       {c.achieved_value !== null && c.achieved_value !== undefined
                         ? `${formatValue(c.achieved_value)}/${formatValue(c.target_value, goal.unit)}`
                         : `${c.achieved_count}/${c.target_count}`}
@@ -652,7 +630,7 @@ export default function GoalDetailPage() {
 
           {tasks.length === 0 ? (
             <div className={`${styles.emptyTasks} glass`}>
-              <CheckCircle2 size={28} style={{ color: 'var(--b200)' }} />
+              <CheckCircle2 size={28} />
               <p>{goal.can_edit ? 'Nenhuma tarefa ainda. Adicione acima!' : 'Nenhuma tarefa ainda.'}</p>
             </div>
           ) : (
@@ -667,7 +645,7 @@ export default function GoalDetailPage() {
               )}
               {completed.length > 0 && (
                 <div className={styles.taskGroup}>
-                  <div className={styles.groupLabel} style={{ color: '#10b981' }}>
+                  <div className={`${styles.groupLabel} ${styles.groupLabelDone}`}>
                     <CheckCircle2 size={13} /> Concluídas ({completed.length})
                   </div>
                   {renderTaskGroup(completed)}
@@ -722,7 +700,7 @@ export default function GoalDetailPage() {
             </div>
 
             <div className={f.field}>
-              <label className={f.label} style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: '0.875rem' }}>
+              <label className={`${f.label} ${f.checkLabel}`}>
                 <input
                   type="checkbox"
                   checked={editTask?.is_recurring ?? false}
@@ -736,7 +714,7 @@ export default function GoalDetailPage() {
               <>
                 <div className={f.field}>
                   <label className={f.label}>Repetir</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div className={f.optionRow}>
                     <label className={`${f.endOption} ${editTask?.repeat_mode !== 'weekdays' ? f.endOptionActive : ''}`}>
                       <input
                         type="radio"
@@ -761,15 +739,14 @@ export default function GoalDetailPage() {
                 {editTask?.repeat_mode === 'weekdays' ? (
                   <div className={f.field}>
                     <label className={f.label}>Quais dias</label>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <div className={`${f.optionRow} ${f.optionRowTight}`}>
                       {WEEKDAYS.map(day => {
                         const selected = editTask.recurrence_weekdays?.includes(day.value);
                         return (
                           <button
                             key={day.value}
                             type="button"
-                            className={`${f.endOption} ${selected ? f.endOptionActive : ''}`}
-                            style={{ padding: '8px 12px' }}
+                            className={`${f.endOption} ${f.dayOption} ${selected ? f.endOptionActive : ''}`}
                             aria-pressed={selected}
                             onClick={() => setEditTask(t => ({
                               ...t,
@@ -800,7 +777,7 @@ export default function GoalDetailPage() {
 
                 <div className={f.field}>
                   <label className={f.label}>Até quando</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div className={f.optionRow}>
                     <label className={`${f.endOption} ${editTask?.end_of_goal ? f.endOptionActive : ''}`}>
                       <input
                         type="radio"

@@ -362,7 +362,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             onChange={handleDeadlineChange}
           />
           {form.is_recurring && form.deadline && form.cycleCount && (
-            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+            <span className={f.hint}>
               ≈ {form.cycleCount} ciclo{form.cycleCount !== '1' ? 's' : ''} até lá
             </span>
           )}
@@ -402,7 +402,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
 
           <div className={f.field}>
             <label className={f.label}>{isEdit && initial.is_recurring ? 'Ciclo atual começou' : 'Quando o ciclo começa?'}</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className={f.optionRow}>
               <label className={`${f.endOption} ${form.cycleStartMode === 'today' ? f.endOptionActive : ''}`}>
                 <input
                   type="radio"
@@ -452,7 +452,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                 onChange={set('recurrence_target')}
               />
               {initial.total_tasks > 0 && (
-                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                <span className={f.hint}>
                   Sugestão baseada nas {initial.total_tasks} tarefa{initial.total_tasks !== 1 ? 's' : ''} atuais da meta — ajuste se quiser.
                 </span>
               )}
@@ -470,7 +470,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               onChange={handleCycleCountChange}
             />
             {form.cycleCount && form.deadline && (
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              <span className={f.hint}>
                 Termina em {formatDeadline(form.deadline)}
               </span>
             )}
