@@ -2,15 +2,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Target, LayoutDashboard, ListChecks, UserCircle2 } from 'lucide-react';
+import { Target, House, ListChecks, ChartColumn, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../lib/auth';
 import { getMe } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 
 const links = [
-  { href: '/',      label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/goals', label: 'Metas',     icon: ListChecks },
+  { href: '/',      label: 'Início',       icon: House },
+  { href: '/goals', label: 'Metas',        icon: ListChecks },
+  { href: '/stats', label: 'Estatísticas', icon: ChartColumn },
 ];
 
 export default function Navbar() {
