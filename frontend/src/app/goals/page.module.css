@@ -277,5 +277,6 @@
   .grid { grid-template-columns: 1fr; }
   .toolbar { flex-direction: column; align-items: stretch; }
   .divider { display: none; }
-  .filters { justify-content: flex-start; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .filterBtn { justify-content: center; }
 }
