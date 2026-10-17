@@ -74,6 +74,13 @@
   margin: -2px -8px -2px 0;
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

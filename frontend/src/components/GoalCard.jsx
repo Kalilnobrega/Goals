@@ -12,17 +12,31 @@ const STATUS_META = {
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
 
+const KIND_META = {
+  collaborative: { label: 'Colaborativa', color: '#8b5cf6', icon: Users },
+  challenge:     { label: 'Desafio',      color: '#d97706', icon: Trophy },
+};
+
 export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragging }) {
   const progress = typeof goal.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta = STATUS_META[goal.status] || STATUS_META.open;
   const isCompleted = goal.status === 'completed';
+  const kind = KIND_META[goal.group_kind];
 
   return (
     <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`}>
       <div className={styles.topRow}>
-        <div className={styles.badge} style={{ '--badge-color': meta.color }}>
-          <span className={styles.badgeDot} />
-          {meta.label}
+        <div className={styles.badges}>
+          <div className={styles.badge} style={{ '--badge-color': meta.color }}>
+            <span className={styles.badgeDot} />
+            {meta.label}
+          </div>
+          {kind && (
+            <div className={styles.badge} style={{ '--badge-color': kind.color }}>
+              <kind.icon size={12} strokeWidth={2.5} />
+              {kind.label}
+            </div>
+          )}
         </div>
         {dragHandle}
       </div>
@@ -55,8 +69,8 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
         )}
         {goal.group_kind && (
           <span className={styles.metaItem}>
-            {goal.group_kind === 'challenge' ? <Trophy size={13} /> : <Users size={13} />}
-            {goal.group_kind === 'challenge' ? 'Desafio' : 'Compartilhada'} · {goal.member_count} pessoa{goal.member_count !== 1 ? 's' : ''}
+            <Users size={13} />
+            {goal.member_count} pessoa{goal.member_count !== 1 ? 's' : ''}
           </span>
         )}
         {goal.deadline && (
