@@ -133,7 +133,6 @@ function StreaksCard({ streaks, lastDay }) {
           </ol>
           <p className={styles.cardFoot}>
             {streaks.total_runs} sequência{streaks.total_runs !== 1 ? 's' : ''} no último ano
-            {streaks.total_runs > 1 && ` · você recomeçou ${streaks.total_runs - 1} vez${streaks.total_runs - 1 !== 1 ? 'es' : ''}`}
           </p>
         </>
       )}
