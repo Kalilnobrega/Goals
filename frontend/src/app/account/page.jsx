@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2, LogOut } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Modal from '../../components/Modal';
-import { getMe, updateName, changePassword, deleteAccount } from '../../lib/api';
-import { clearToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
+import { getMe, updateName, changePassword, deleteAccount, logout } from '../../lib/api';
+import { clearToken, getRefreshToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import forms from '../../styles/forms.module.css';
 import styles from './page.module.css';
 
@@ -203,6 +203,28 @@ function PasswordCard({ me }) {
   );
 }
 
+function LogoutCard() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    const refreshToken = getRefreshToken();
+    if (refreshToken) logout(refreshToken).catch(() => {});
+    clearToken();
+    router.push('/login');
+  };
+
+  return (
+    <section className={`${styles.card} glass`}>
+      <div className={styles.logoutRow}>
+        <CardHeader icon={LogOut} title="Sessão" sub="Desconectar deste dispositivo" />
+        <button type="button" className={styles.btnLogout} onClick={handleLogout}>
+          <LogOut size={15} /> Sair
+        </button>
+      </div>
+    </section>
+  );
+}
+
 const CONFIRM_WORD = 'EXCLUIR';
 
 function DeleteCard({ me }) {
@@ -325,6 +347,7 @@ export default function AccountPage() {
           <>
             <NameCard me={me} onSaved={handleNameSaved} />
             <PasswordCard me={me} />
+            <LogoutCard />
             <DeleteCard me={me} />
           </>
         )}

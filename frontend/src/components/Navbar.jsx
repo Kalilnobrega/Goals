@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Target, LayoutDashboard, ListChecks, LogOut, UserCircle2 } from 'lucide-react';
-import { clearToken, getRefreshToken, getUserName, saveUserName } from '../lib/auth';
-import { getMe, logout } from '../lib/api';
+import { Target, LayoutDashboard, ListChecks, UserCircle2 } from 'lucide-react';
+import { getUserName, saveUserName } from '../lib/auth';
+import { getMe } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 
@@ -15,7 +15,6 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router   = useRouter();
   const [userName, setUserName] = useState('');
   const { lateCount, streak } = useLateGoals();
 
@@ -36,13 +35,6 @@ export default function Navbar() {
     window.addEventListener('username-changed', handleNameChange);
     return () => window.removeEventListener('username-changed', handleNameChange);
   }, []);
-
-  const handleLogout = () => {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) logout(refreshToken).catch(() => {});
-    clearToken();
-    router.push('/login');
-  };
 
   const firstName = userName.split(' ')[0];
 
@@ -107,10 +99,6 @@ export default function Navbar() {
               <span>{firstName}</span>
             </Link>
           )}
-          <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Sair">
-            <LogOut size={16} />
-            <span>Sair</span>
-          </button>
         </div>
       </nav>
     </header>

@@ -215,29 +215,6 @@
 
 .userChip svg { color: var(--blue-500); }
 
-.logoutBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(239,68,68,.22);
-  background: rgba(239,68,68,.06);
-  color: #ef4444;
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .2s, transform .2s;
-}
-
-@media (hover: hover) {
-  .logoutBtn:hover {
-    background: rgba(239,68,68,.13);
-    transform: scale(1.03);
-  }
-}
-
 @media (max-width: 600px) {
   .header { padding: 10px 12px; }
   .nav { padding: 8px 12px; gap: 10px; }
@@ -245,8 +222,6 @@
   .linkLabel { display: none; }
   .link { padding: 8px 10px; }
   .links { gap: 2px; }
-  .logoutBtn span { display: none; }
-  .logoutBtn { padding: 8px 10px; }
   .userChip span { display: none; }
   .userChip { padding: 6px 8px; }
   .right { gap: 6px; }
