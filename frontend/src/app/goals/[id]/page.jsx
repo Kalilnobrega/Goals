@@ -18,7 +18,8 @@ import {
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress,
   getGroup, createGroup
 } from '../../../lib/api';
-import { deleteGoalMessage } from '../../../lib/sharing';
+import { deleteGoalConfirm } from '../../../lib/sharing';
+import { useConfirm } from '../../../components/ConfirmDialog';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
 import { formatValue, formatProgressValue } from '../../../lib/numeric';
@@ -48,6 +49,7 @@ function consistencyClass(value) {
 export default function GoalDetailPage() {
   const { id } = useParams();
   const router  = useRouter();
+  const confirmAction = useConfirm();
 
   const { setStreak } = useLateGoals();
 
@@ -115,7 +117,7 @@ export default function GoalDetailPage() {
   };
 
   const handleDeleteGoal = async () => {
-    if (!confirm(deleteGoalMessage(goal))) return;
+    if (!(await confirmAction(deleteGoalConfirm(goal)))) return;
     try { await deleteGoal(id); router.push('/goals'); }
     catch { setError('Erro ao excluir meta.'); }
   };
@@ -170,7 +172,12 @@ export default function GoalDetailPage() {
   };
 
   const handleDeleteEntry = async (entryId) => {
-    if (!confirm('Excluir este registro?')) return;
+    const confirmed = await confirmAction({
+      title: 'Excluir registro',
+      message: 'O registro sai do histórico e o progresso da meta é recalculado.',
+      confirmLabel: 'Excluir',
+    });
+    if (!confirmed) return;
     try {
       await deleteGoalEntry(Number(id), entryId);
       await refreshAfterEntryChange();

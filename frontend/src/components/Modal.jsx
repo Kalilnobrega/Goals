@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import styles from './Modal.module.css';
 
-export default function Modal({ open, onClose, title, children }) {
+export default function Modal({ open, onClose, title, children, size }) {
   const overlayRef = useRef(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Modal({ open, onClose, title, children }) {
       ref={overlayRef}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className={`${styles.modal} glass-strong`} role="dialog" aria-modal="true">
+      <div className={`${styles.modal} ${size === 'sm' ? styles.modalSm : ''} glass-strong`} role="dialog" aria-modal="true">
         <div className={styles.header}>
           <h2 className={styles.title}>{title}</h2>
           <button className={styles.close} onClick={onClose} aria-label="Fechar">

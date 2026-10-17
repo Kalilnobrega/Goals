@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { createInvite, changeMemberRole, transferLeadership, removeMember } from '../lib/api';
 import { formatDeadline } from '../lib/date';
+import { useConfirm } from './ConfirmDialog';
 import styles from './GroupPanel.module.css';
 
 const ROLE_LABEL = { leader: 'Líder', moderator: 'Moderador' };
@@ -20,6 +21,7 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [menuFor, setMenuFor] = useState(null);
+  const confirmAction = useConfirm();
   const menuRef = useRef(null);
 
   const isChallenge = group.kind === 'challenge';
@@ -75,36 +77,50 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
     onChange(await changeMemberRole(group.id, member.user_id, role));
   }, 'Erro ao mudar o cargo.');
 
-  const handleTransfer = (member) => {
-    if (!confirm(`Passar a liderança para ${member.name}? Você vira moderador.`)) return;
+  const handleTransfer = async (member) => {
+    const confirmed = await confirmAction({
+      title: 'Passar liderança',
+      message: <><strong>{member.name}</strong> vira líder desta meta e você passa a ser moderador.</>,
+      confirmLabel: 'Passar liderança',
+      danger: false,
+    });
+    if (!confirmed) return;
     run(async () => {
       onChange(await transferLeadership(group.id, member.user_id));
     }, 'Erro ao transferir a liderança.');
   };
 
-  const handleRemove = (member) => {
-    if (!confirm(`Remover ${member.name} da meta?`)) return;
+  const handleRemove = async (member) => {
+    const confirmed = await confirmAction({
+      title: 'Remover participante',
+      message: isChallenge
+        ? <><strong>{member.name}</strong> sai do desafio e fica com a meta dele como uma meta pessoal.</>
+        : <><strong>{member.name}</strong> perde o acesso à meta. O que já foi feito continua contando no progresso.</>,
+      confirmLabel: 'Remover',
+    });
+    if (!confirmed) return;
     run(async () => {
       await removeMember(group.id, member.user_id);
       onChange(null);
     }, 'Erro ao remover participante.');
   };
 
-  const leaveWarning = () => {
+  const leaveConfirm = () => {
+    const title = isChallenge ? 'Sair do desafio' : 'Sair da meta';
     if (group.members.length === 1) {
       return isChallenge
-        ? 'Você é o único participante. O desafio acaba e a meta vira uma meta pessoal. Continuar?'
-        : 'Você é o único participante. Sair vai excluir a meta. Continuar?';
+        ? { title, message: 'Você é o único participante. O desafio acaba e a meta vira uma meta pessoal.', confirmLabel: 'Sair' }
+        : { title, message: ['Você é o único participante, então a meta será excluída.', 'Isso não pode ser desfeito.'], confirmLabel: 'Sair e excluir' };
     }
-    const lines = [isChallenge
-      ? 'Sair do desafio? Sua meta continua com você como uma meta pessoal.'
-      : 'Sair da meta? O que você já fez continua contando no progresso.'];
-    if (myRole === 'leader') lines.push('A liderança passa para o moderador mais antigo ou, se não houver, para o participante mais antigo.');
-    return lines.join('\n\n');
+    const message = [isChallenge
+      ? 'Sua meta continua com você como uma meta pessoal.'
+      : 'Você perde o acesso à meta. O que já fez continua contando no progresso.'];
+    if (myRole === 'leader') message.push('A liderança passa para o moderador mais antigo ou, se não houver, para o participante mais antigo.');
+    return { title, message, confirmLabel: 'Sair' };
   };
 
-  const handleLeave = () => {
-    if (!confirm(leaveWarning())) return;
+  const handleLeave = async () => {
+    if (!(await confirmAction(leaveConfirm()))) return;
     run(async () => {
       await removeMember(group.id, me.user_id);
       onLeft();

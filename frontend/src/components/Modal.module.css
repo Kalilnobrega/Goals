@@ -26,6 +26,8 @@
     backdrop-filter: blur(24px) saturate(180%) !important;
   }
   
+  .modalSm { max-width: 420px; }
+
   .header {
     display: flex;
     align-items: center;

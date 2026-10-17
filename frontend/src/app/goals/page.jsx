@@ -8,7 +8,8 @@ import GoalForm from '../../components/GoalForm';
 import { SortableList, SortableItem, DragHandle, moveSubset } from '../../components/Sortable';
 import { getGoals, createGoal, updateGoal, deleteGoal, reorderGoals } from '../../lib/api';
 import { celebrateGoal } from '../../lib/celebrate';
-import { deleteGoalMessage } from '../../lib/sharing';
+import { deleteGoalConfirm } from '../../lib/sharing';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { Plus, Search } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -21,6 +22,7 @@ const STATUS_FILTERS = [
 
 export default function GoalsPage() {
   const router = useRouter();
+  const confirmAction = useConfirm();
   const [goals,   setGoals]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal,   setModal]   = useState(false);
@@ -60,7 +62,7 @@ export default function GoalsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm(deleteGoalMessage(goals.find(g => g.id === id)))) return;
+    if (!(await confirmAction(deleteGoalConfirm(goals.find(g => g.id === id))))) return;
     try {
       await deleteGoal(id);
       load(filter);
