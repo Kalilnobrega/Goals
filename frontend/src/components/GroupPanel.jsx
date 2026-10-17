@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
-  Users, Trophy, UserPlus, Copy, Check, Crown, ShieldPlus, ShieldMinus, UserMinus, LogOut, ArrowRight,
+  Users, Trophy, UserPlus, Copy, Check, Crown, ShieldPlus, ShieldMinus, UserMinus, LogOut, ArrowRight, MoreHorizontal,
 } from 'lucide-react';
 import { createInvite, changeMemberRole, transferLeadership, removeMember } from '../lib/api';
 import { formatDeadline } from '../lib/date';
@@ -19,12 +19,28 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [menuFor, setMenuFor] = useState(null);
+  const menuRef = useRef(null);
 
   const isChallenge = group.kind === 'challenge';
   const myRole = group.my_role;
   const canInvite = myRole === 'leader' || myRole === 'moderator';
   const full = group.members.length >= group.member_limit;
   const me = group.members.find(m => m.is_me);
+
+  useEffect(() => {
+    if (menuFor === null) return;
+    const handlePointer = (e) => {
+      if (!menuRef.current?.contains(e.target)) setMenuFor(null);
+    };
+    const handleKey = (e) => { if (e.key === 'Escape') setMenuFor(null); };
+    document.addEventListener('pointerdown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [menuFor]);
 
   const run = async (action, fallback) => {
     setBusy(true);
@@ -109,23 +125,41 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
     if (myRole === 'leader' || (myRole === 'moderator' && member.role === 'member')) {
       actions.push({ key: 'remove', icon: UserMinus, label: 'Remover da meta', onClick: () => handleRemove(member), danger: true });
     }
-    return actions.length ? (
-      <span className={styles.memberActions}>
-        {actions.map(({ key, icon: Icon, label, onClick, danger }) => (
-          <button
-            key={key}
-            type="button"
-            className={`${styles.iconBtn} ${danger ? styles.danger : ''}`}
-            onClick={onClick}
-            disabled={busy}
-            title={label}
-            aria-label={label}
-          >
-            <Icon size={14} />
-          </button>
-        ))}
+    if (!actions.length) return null;
+
+    const open = menuFor === member.user_id;
+    return (
+      <span className={styles.menuWrap} ref={open ? menuRef : null}>
+        <button
+          type="button"
+          className={`${styles.iconBtn} ${open ? styles.iconBtnActive : ''}`}
+          onClick={() => setMenuFor(open ? null : member.user_id)}
+          disabled={busy}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Ações para ${member.name}`}
+          title="Ações"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+        {open && (
+          <div className={styles.menu} role="menu">
+            {actions.map(({ key, icon: Icon, label, onClick, danger }) => (
+              <button
+                key={key}
+                type="button"
+                role="menuitem"
+                className={`${styles.menuItem} ${danger ? styles.menuItemDanger : ''}`}
+                onClick={() => { setMenuFor(null); onClick(); }}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </span>
-    ) : null;
+    );
   };
 
   return (
@@ -169,7 +203,7 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
           const progress = Math.round(member.progress ?? 0);
           const viewing = member.goal_id === goalId;
           return (
-            <li key={member.user_id} className={`${styles.member} ${viewing && isChallenge ? styles.memberViewing : ''} glass`}>
+            <li key={member.user_id} className={`${styles.member} ${viewing && isChallenge ? styles.memberViewing : ''} ${menuFor === member.user_id ? styles.memberMenuOpen : ''} glass`}>
               {isChallenge && (
                 <span className={`${styles.rank} ${index === 0 ? styles.rankFirst : ''}`}>{index + 1}</span>
               )}
