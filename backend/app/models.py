@@ -10,6 +10,7 @@ from sqlalchemy import (
     Date,
     Float,
     JSON,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -68,7 +69,9 @@ class Goal(Base):
     numeric_mode = Column(String(10), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     position = Column(Integer, nullable=False, default=0, server_default="0")
+    group_id = Column(ForeignKey("goal_groups.id"), nullable=True, index=True)
     owner = relationship("User", back_populates="goals")
+    group = relationship("GoalGroup", back_populates="goals")
     entries = relationship(
         "GoalEntry",
         back_populates="goal",
@@ -257,10 +260,21 @@ class Task(Base):
     last_reset_date = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(Date, nullable=True)
     position = Column(Integer, nullable=False, default=0, server_default="0")
+    group_task_key = Column(String(36), nullable=True, index=True)
     goal = relationship("Goal", back_populates="tasks")
     completions = relationship(
-        "TaskCompletion", back_populates="task", cascade="all, delete-orphan"
+        "TaskCompletion",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        order_by="TaskCompletion.completed_at",
     )
+
+    @property
+    def completed_by(self) -> str | None:
+        if not self.status or not self.completions:
+            return None
+        author = self.completions[-1].user
+        return author.name if author else None
 
 
 class TaskCompletion(Base):
@@ -269,7 +283,9 @@ class TaskCompletion(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(ForeignKey("tasks.id"), nullable=False)
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(ForeignKey("users.id"), nullable=True, index=True)
     task = relationship("Task", back_populates="completions")
+    user = relationship("User")
 
 
 class GoalCycleLog(Base):
@@ -295,7 +311,66 @@ class GoalEntry(Base):
     value = Column(Float, nullable=False)
     note = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(ForeignKey("users.id"), nullable=True, index=True)
     goal = relationship("Goal", back_populates="entries")
+    user = relationship("User")
+
+    @property
+    def user_name(self) -> str | None:
+        return self.user.name if self.user else None
+
+
+class GroupKind(str, enum.Enum):
+    COLLABORATIVE = "collaborative"
+    CHALLENGE = "challenge"
+
+
+class GroupRole(str, enum.Enum):
+    LEADER = "leader"
+    MODERATOR = "moderator"
+    MEMBER = "member"
+
+
+class GoalGroup(Base):
+    __tablename__ = "goal_groups"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    kind = Column(Enum(GroupKind), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    goals = relationship("Goal", back_populates="group")
+    members = relationship(
+        "GroupMember",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        order_by="[GroupMember.joined_at, GroupMember.id]",
+    )
+    invites = relationship(
+        "GroupInvite", back_populates="group", cascade="all, delete-orphan"
+    )
+
+
+class GroupMember(Base):
+    __tablename__ = "group_members"
+    __table_args__ = (UniqueConstraint("group_id", "user_id"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(ForeignKey("goal_groups.id"), nullable=False, index=True)
+    user_id = Column(ForeignKey("users.id"), nullable=False, index=True)
+    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.MEMBER)
+    position = Column(Integer, nullable=False, default=0, server_default="0")
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    group = relationship("GoalGroup", back_populates="members")
+    user = relationship("User")
+
+
+class GroupInvite(Base):
+    __tablename__ = "group_invites"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(ForeignKey("goal_groups.id"), nullable=False, index=True)
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    group = relationship("GoalGroup", back_populates="invites")
 
 
 class RefreshToken(Base):

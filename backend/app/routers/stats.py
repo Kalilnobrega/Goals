@@ -6,6 +6,7 @@ from app.database import get_db
 from app.dates import today_br, to_br_date, br_day_start_utc, count_weekdays, BRT
 from app.models import Goal, GoalEntry, GoalStatus, Task, TaskCompletion, User
 from app.schemas import StatsResponseSchema
+from app.access import member_goal_filter, completion_by, entry_by, sort_for_user
 from .auth import get_current_user
 from .tasks import check_and_reset_recurring_goals, to_aware_utc
 
@@ -208,13 +209,21 @@ async def get_stats(
         session.query(TaskCompletion.task_id, TaskCompletion.completed_at, Task.goals_id)
         .join(Task)
         .join(Goal)
-        .filter(Goal.user_id == current_user.id, TaskCompletion.completed_at >= since)
+        .filter(
+            member_goal_filter(current_user.id),
+            completion_by(current_user.id),
+            TaskCompletion.completed_at >= since,
+        )
         .all()
     )
     entries = (
         session.query(GoalEntry.goal_id, GoalEntry.created_at)
         .join(Goal)
-        .filter(Goal.user_id == current_user.id, GoalEntry.created_at >= since)
+        .filter(
+            member_goal_filter(current_user.id),
+            entry_by(current_user.id),
+            GoalEntry.created_at >= since,
+        )
         .all()
     )
 
@@ -224,11 +233,10 @@ async def get_stats(
     goal_task_counts = Counter((to_br_date(row.completed_at), row.goals_id) for row in completions)
     goal_entry_counts = Counter((to_br_date(row.created_at), row.goal_id) for row in entries)
 
-    goals = (
-        session.query(Goal)
-        .filter(Goal.user_id == current_user.id)
-        .order_by(Goal.position, Goal.id)
-        .all()
+    goals = sort_for_user(
+        session.query(Goal).filter(member_goal_filter(current_user.id)).all(),
+        current_user.id,
+        session,
     )
     goals_by_day = {}
     for day, goal_id in list(goal_task_counts) + list(goal_entry_counts):

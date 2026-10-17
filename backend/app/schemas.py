@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Literal
 from datetime import date, datetime, timezone
-from app.models import GoalStatus
+from app.models import GoalStatus, GroupKind, GroupRole
 
 
 class UserSchema(BaseModel):
@@ -92,6 +92,16 @@ class GoalResponseSchema(BaseModel):
     current_value: float | None = None
     unit: str | None = None
     numeric_mode: str | None = None
+    group_id: int | None = None
+    group_kind: GroupKind | None = None
+    my_role: GroupRole | None = None
+    can_edit: bool = False
+    can_act: bool = False
+    can_delete: bool = False
+    can_complete: bool = False
+    is_mine: bool = False
+    owner_name: str | None = None
+    member_count: int | None = None
 
     class Config:
         from_attributes = True
@@ -121,6 +131,9 @@ class GoalEntryResponseSchema(BaseModel):
     value: float
     note: str | None = None
     created_at: datetime
+    user_id: int | None = None
+    user_name: str | None = None
+    can_delete: bool = False
 
     @field_validator("created_at")
     @classmethod
@@ -174,6 +187,26 @@ class TaskResponseSchema(BaseModel):
     max_recurrences: int | None = None
     recurrence_count: int | None = None
     last_reset_date: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class GoalTaskResponseSchema(BaseModel):
+    id: int
+    goals_id: int
+    title: str
+    status: bool
+    created_at: datetime | None = None
+    is_recurring: bool
+    recurrence_interval_days: int | None = None
+    recurrence_weekdays: list[int] | None = None
+    max_recurrences: int | None = None
+    recurrence_count: int | None = None
+    last_reset_date: datetime | None = None
+    completed_at: date | None = None
+    position: int
+    completed_by: str | None = None
 
     class Config:
         from_attributes = True
@@ -347,3 +380,59 @@ class StatsResponseSchema(BaseModel):
     neglected_tasks: list[StatsNeglectedTaskSchema]
     numeric_goals: list[StatsNumericGoalSchema]
     recurring_goals: list[StatsRecurringGoalSchema]
+
+
+class CreateGroupSchema(BaseModel):
+    goal_id: int
+    kind: GroupKind
+
+
+class GroupMemberSchema(BaseModel):
+    user_id: int
+    name: str
+    role: GroupRole
+    joined_at: datetime | None = None
+    is_me: bool
+    goal_id: int | None = None
+    progress: float | None = None
+    status: GoalStatus | None = None
+    completed_at: datetime | None = None
+
+
+class GroupResponseSchema(BaseModel):
+    id: int
+    kind: GroupKind
+    my_role: GroupRole
+    goal_id: int
+    goal_title: str
+    deadline: datetime | None = None
+    finished: bool
+    member_limit: int
+    members: list[GroupMemberSchema]
+
+
+class GroupInviteSchema(BaseModel):
+    token: str
+    expires_at: datetime
+
+
+class InvitePreviewSchema(BaseModel):
+    kind: GroupKind
+    goal_title: str
+    leader_name: str | None = None
+    member_count: int
+    member_limit: int
+    is_member: bool
+    goal_id: int | None = None
+
+
+class InviteAcceptSchema(BaseModel):
+    goal_id: int
+
+
+class MemberRoleSchema(BaseModel):
+    role: Literal[GroupRole.MODERATOR, GroupRole.MEMBER]
+
+
+class TransferLeadershipSchema(BaseModel):
+    user_id: int

@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
-from app.schemas import TaskSchema, EditTaskSchema, TaskResponseSchema, ReorderSchema
+import uuid
+from app.schemas import (
+    TaskSchema,
+    EditTaskSchema,
+    TaskResponseSchema,
+    GoalTaskResponseSchema,
+    ReorderSchema,
+)
 from app.database import get_db
 from app.models import (
     Goal,
@@ -12,6 +19,18 @@ from app.models import (
     TaskCompletion,
     GoalEntry,
     GoalCycleLog,
+    GoalGroup,
+    GroupKind,
+)
+from app.access import (
+    member_goal_filter,
+    entry_by,
+    get_goal_with_access,
+    get_task_with_access,
+    goal_copies,
+    task_copies,
+    is_challenge,
+    sort_for_user,
 )
 from .auth import get_current_user
 from datetime import datetime, timezone, timedelta
@@ -85,7 +104,7 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
 
     recurring_goals = (
         session.query(Goal)
-        .filter(Goal.user_id == user_id, Goal.is_recurring == True)
+        .filter(member_goal_filter(user_id), Goal.is_recurring == True)
         .all()
     )
 
@@ -156,7 +175,7 @@ def check_and_reset_recurring_tasks(user_id: int, session: Session):
     recurring_tasks = (
         session.query(Task)
         .join(Goal)
-        .filter(Goal.user_id == user_id, Task.is_recurring == True)
+        .filter(member_goal_filter(user_id), Task.is_recurring == True)
         .all()
     )
 
@@ -211,8 +230,10 @@ def has_activity_today(user_id: int, session: Session) -> bool:
     completed_task = (
         session.query(Task)
         .join(Goal)
+        .outerjoin(GoalGroup, GoalGroup.id == Goal.group_id)
         .filter(
             Goal.user_id == user_id,
+            or_(Goal.group_id.is_(None), GoalGroup.kind == GroupKind.CHALLENGE),
             Task.status == True,
             Task.completed_at == today,
         )
@@ -221,11 +242,29 @@ def has_activity_today(user_id: int, session: Session) -> bool:
     if completed_task:
         return True
 
+    shared_completion = (
+        session.query(TaskCompletion)
+        .join(Task, Task.id == TaskCompletion.task_id)
+        .join(Goal)
+        .join(GoalGroup, GoalGroup.id == Goal.group_id)
+        .filter(
+            TaskCompletion.user_id == user_id,
+            GoalGroup.kind == GroupKind.COLLABORATIVE,
+            Task.status == True,
+            Task.completed_at == today,
+            TaskCompletion.completed_at >= br_day_start_utc(today),
+        )
+        .first()
+    )
+    if shared_completion:
+        return True
+
     entry = (
         session.query(GoalEntry)
         .join(Goal)
         .filter(
-            Goal.user_id == user_id,
+            member_goal_filter(user_id),
+            entry_by(user_id),
             GoalEntry.created_at >= br_day_start_utc(today),
             GoalEntry.created_at < br_day_start_utc(today + timedelta(days=1)),
         )
@@ -315,13 +354,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
-    if not goal:
-        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    goal = get_goal_with_access(goal_id, current_user, session, "edit")
 
     if task_schema.end_of_goal:
         if not goal.deadline:
@@ -344,22 +377,30 @@ async def create_task(
                 days_remaining // task_schema.recurrence_interval_days
             )
 
-    last_position = (
-        session.query(func.max(Task.position)).filter(Task.goals_id == goal.id).scalar()
-    )
+    key = str(uuid.uuid4()) if is_challenge(goal) else None
+    new_task = None
 
-    new_task = Task(
-        title=task_schema.title,
-        goals_id=goal.id,
-        position=0 if last_position is None else last_position + 1,
-        is_recurring=task_schema.is_recurring,
-        recurrence_interval_days=task_schema.recurrence_interval_days,
-        recurrence_weekdays=task_schema.recurrence_weekdays or None,
-        max_recurrences=task_schema.max_recurrences,
-        recurrence_count=0,
-    )
+    for copy in goal_copies(goal):
+        last_position = (
+            session.query(func.max(Task.position))
+            .filter(Task.goals_id == copy.id)
+            .scalar()
+        )
+        task = Task(
+            title=task_schema.title,
+            goals_id=copy.id,
+            position=0 if last_position is None else last_position + 1,
+            is_recurring=task_schema.is_recurring,
+            recurrence_interval_days=task_schema.recurrence_interval_days,
+            recurrence_weekdays=task_schema.recurrence_weekdays or None,
+            max_recurrences=task_schema.max_recurrences,
+            recurrence_count=0,
+            group_task_key=key,
+        )
+        session.add(task)
+        if copy is goal:
+            new_task = task
 
-    session.add(new_task)
     session.commit()
     session.refresh(new_task)
 
@@ -377,13 +418,20 @@ async def list_today_tasks(
         session.query(Task)
         .join(Goal)
         .filter(
-            Goal.user_id == current_user.id,
+            member_goal_filter(current_user.id),
             Goal.status.in_([GoalStatus.OPEN, GoalStatus.LATE]),
             Task.status == False,
         )
-        .order_by(Goal.position, Goal.id, Task.position, Task.id)
+        .order_by(Task.position, Task.id)
         .all()
     )
+    goal_order = {
+        goal.id: index
+        for index, goal in enumerate(
+            sort_for_user({task.goal for task in tasks}, current_user.id, session)
+        )
+    }
+    tasks.sort(key=lambda task: goal_order[task.goals_id])
 
     task_response = []
     for task in tasks:
@@ -408,25 +456,20 @@ async def list_today_tasks(
     return task_response
 
 
-@tasks_router.get("/goal/{goal_id}")
+@tasks_router.get("/goal/{goal_id}", response_model=List[GoalTaskResponseSchema])
 async def list_tasks_by_goal(
     goal_id: int,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
-
-    if not goal:
-        raise HTTPException(
-            status_code=404, detail="Meta não encontrada ou acesso negado"
-        )
+    goal = get_goal_with_access(goal_id, current_user, session)
+    owner_id = goal.user_id
 
     check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
+    if owner_id != current_user.id:
+        check_and_reset_recurring_goals(owner_id, session)
+        check_and_reset_recurring_tasks(owner_id, session)
 
     tasks = (
         session.query(Task)
@@ -445,13 +488,7 @@ async def reorder_tasks(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
-    if not goal:
-        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    goal = get_goal_with_access(goal_id, current_user, session, "edit")
 
     tasks = (
         session.query(Task)
@@ -460,6 +497,19 @@ async def reorder_tasks(
         .all()
     )
     apply_order(tasks, payload.ids)
+
+    if is_challenge(goal):
+        keys = {task.id: task.group_task_key for task in tasks}
+        ordered_keys = [keys[task_id] for task_id in payload.ids]
+        for copy in goal_copies(goal):
+            if copy is goal:
+                continue
+            copy_tasks = sorted(copy.tasks, key=lambda t: (t.position, t.id))
+            by_key = {t.group_task_key: t.id for t in copy_tasks if t.group_task_key}
+            copy_ids = [by_key[key] for key in ordered_keys if key in by_key]
+            if copy_ids:
+                apply_order(copy_tasks, copy_ids)
+
     session.commit()
 
     return {"message": "Ordem atualizada"}
@@ -473,22 +523,19 @@ async def toggle_task(
 ):
     check_and_reset_recurring_goals(current_user.id, session)
 
-    task = (
-        session.query(Task)
-        .join(Goal)
-        .filter(Task.id == task_id, Goal.user_id == current_user.id)
-        .first()
-    )
-
-    if not task:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    task = get_task_with_access(task_id, current_user, session, "act")
 
     task.status = not task.status
     task.completed_at = today_br() if task.status else None
+    author_id = current_user.id
 
     if task.status:
         session.add(
-            TaskCompletion(task_id=task.id, completed_at=datetime.now(timezone.utc))
+            TaskCompletion(
+                task_id=task.id,
+                user_id=current_user.id,
+                completed_at=datetime.now(timezone.utc),
+            )
         )
     else:
         last_completion = (
@@ -498,6 +545,7 @@ async def toggle_task(
             .first()
         )
         if last_completion:
+            author_id = last_completion.user_id or task.goal.user_id
             session.delete(last_completion)
 
     session.commit()
@@ -506,7 +554,7 @@ async def toggle_task(
     if task.status:
         update_streak(current_user.id, session)
     else:
-        undo_today_streak_if_inactive(current_user.id, session)
+        undo_today_streak_if_inactive(author_id, session)
 
     refresh_goal_status(task.goal)
 
@@ -523,31 +571,25 @@ async def edit_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    task = (
-        session.query(Task)
-        .join(Goal)
-        .filter(Task.id == task_id, Goal.user_id == current_user.id)
-        .first()
-    )
-
-    if not task:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    task = get_task_with_access(task_id, current_user, session, "edit")
 
     if task_schema.status is not None:
         task.status = task_schema.status
-    if task_schema.title is not None:
-        task.title = task_schema.title
-    if task_schema.is_recurring is not None:
-        if task_schema.is_recurring == True and task.is_recurring == False:
-            task.last_reset_date = datetime.now(timezone.utc)
-            task.recurrence_count = 0
-        task.is_recurring = task_schema.is_recurring
-    if task_schema.recurrence_interval_days is not None:
-        task.recurrence_interval_days = task_schema.recurrence_interval_days
-    if task_schema.recurrence_weekdays is not None:
-        task.recurrence_weekdays = task_schema.recurrence_weekdays or None
-    if task_schema.max_recurrences is not None:
-        task.max_recurrences = task_schema.max_recurrences
+
+    for copy in task_copies(task):
+        if task_schema.title is not None:
+            copy.title = task_schema.title
+        if task_schema.is_recurring is not None:
+            if task_schema.is_recurring == True and copy.is_recurring == False:
+                copy.last_reset_date = datetime.now(timezone.utc)
+                copy.recurrence_count = 0
+            copy.is_recurring = task_schema.is_recurring
+        if task_schema.recurrence_interval_days is not None:
+            copy.recurrence_interval_days = task_schema.recurrence_interval_days
+        if task_schema.recurrence_weekdays is not None:
+            copy.recurrence_weekdays = task_schema.recurrence_weekdays or None
+        if task_schema.max_recurrences is not None:
+            copy.max_recurrences = task_schema.max_recurrences
 
     session.commit()
     session.refresh(task)
@@ -561,19 +603,10 @@ async def delete_task(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    task = (
-        session.query(Task)
-        .join(Goal)
-        .filter(Task.id == task_id, Goal.user_id == current_user.id)
-        .first()
-    )
+    task = get_task_with_access(task_id, current_user, session, "edit")
 
-    if not task:
-        raise HTTPException(
-            status_code=404, detail="Tarefa não encontrada ou acesso negado"
-        )
-
-    session.delete(task)
+    for copy in task_copies(task):
+        session.delete(copy)
     session.commit()
 
     return {"message": "Tarefa apagada com sucesso"}

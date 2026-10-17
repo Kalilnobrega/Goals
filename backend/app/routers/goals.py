@@ -20,6 +20,19 @@ from app.models import (
     GoalCycleLog,
     GoalEntry,
 )
+from app.access import (
+    member_goal_filter,
+    get_goal_with_access,
+    goal_permissions,
+    annotate_goal,
+    goal_copies,
+    is_collaborative,
+    sort_for_user,
+    collaborative_positions,
+    next_goal_position,
+    find_member,
+)
+from app.sharing import delete_shared_goal
 from .auth import get_current_user
 from .tasks import (
     update_streak,
@@ -97,15 +110,55 @@ def resolve_cycle_start(
     return start
 
 
-def get_user_goal(goal_id: int, user: User, session: Session) -> Goal:
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == user.id)
-        .first()
-    )
-    if not goal:
-        raise HTTPException(status_code=404, detail="Meta não encontrada")
-    return goal
+def mark_late(goals: list[Goal], session: Session):
+    now = datetime.now(timezone.utc)
+    late = False
+
+    for goal in goals:
+        if goal.status == GoalStatus.OPEN and goal.deadline and is_late(goal.deadline, now):
+            goal.status = GoalStatus.LATE
+            late = True
+
+    if late:
+        session.commit()
+
+
+def apply_goal_edit(goal: Goal, schema: EditGoalSchema, session: Session):
+    if schema.title is not None:
+        goal.title = schema.title
+    if schema.description is not None:
+        goal.description = schema.description
+    if schema.deadline is not None:
+        goal.deadline = schema.deadline
+    if schema.is_recurring is not None:
+        if schema.is_recurring and not goal.is_recurring:
+            goal.cycle_start_date = br_day_start_utc(today_br())
+        goal.is_recurring = schema.is_recurring
+    if schema.recurrence_interval_days is not None:
+        goal.recurrence_interval_days = schema.recurrence_interval_days
+    if schema.recurrence_target is not None:
+        goal.recurrence_target = schema.recurrence_target
+    if schema.cycle_start_date is not None and goal.is_recurring:
+        last_cycle_end = (
+            session.query(func.max(GoalCycleLog.cycle_end))
+            .filter(GoalCycleLog.goal_id == goal.id)
+            .scalar()
+        )
+        goal.cycle_start_date = resolve_cycle_start(
+            schema.cycle_start_date,
+            goal.recurrence_interval_days,
+            goal.deadline,
+            to_aware_utc(last_cycle_end) if last_cycle_end else None,
+        )
+    if goal.is_numeric:
+        if schema.target_value is not None:
+            goal.target_value = schema.target_value
+        if schema.start_value is not None:
+            goal.start_value = schema.start_value
+        if schema.unit is not None:
+            goal.unit = schema.unit or None
+
+    validate_numeric_goal(goal)
 
 
 @goals_router.post("/", response_model=GoalResponseSchema)
@@ -114,14 +167,8 @@ async def create_goal(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    last_position = (
-        session.query(func.max(Goal.position))
-        .filter(Goal.user_id == current_user.id)
-        .scalar()
-    )
-
     new_goal = Goal(
-        position=0 if last_position is None else last_position + 1,
+        position=next_goal_position(current_user.id, session),
         title=goals_schema.title,
         description=goals_schema.description,
         deadline=goals_schema.deadline,
@@ -156,7 +203,7 @@ async def create_goal(
     session.commit()
     session.refresh(new_goal)
 
-    return new_goal
+    return annotate_goal(new_goal, goal_permissions(new_goal, current_user.id), current_user.id)
 
 
 @goals_router.get("/", response_model=List[GoalResponseSchema])
@@ -168,29 +215,18 @@ async def list_goals(
     check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    query = session.query(Goal).filter(Goal.user_id == current_user.id)
+    query = session.query(Goal).filter(member_goal_filter(current_user.id))
 
     if status is not None:
         query = query.filter(Goal.status == status)
 
-    my_goals = query.order_by(Goal.position, Goal.id).all()
+    my_goals = sort_for_user(query.all(), current_user.id, session)
+    mark_late(my_goals, session)
 
-    now = datetime.now(timezone.utc)
-    late = False
-
-    for goals in my_goals:
-        if (
-            goals.status == GoalStatus.OPEN
-            and goals.deadline
-            and is_late(goals.deadline, now)
-        ):
-            goals.status = GoalStatus.LATE
-            late = True
-
-    if late:
-        session.commit()
-
-    return my_goals
+    return [
+        annotate_goal(goal, goal_permissions(goal, current_user.id), current_user.id)
+        for goal in my_goals
+    ]
 
 
 @goals_router.put("/order")
@@ -199,13 +235,21 @@ async def reorder_goals(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goals = (
-        session.query(Goal)
-        .filter(Goal.user_id == current_user.id)
-        .order_by(Goal.position, Goal.id)
-        .all()
+    goals = sort_for_user(
+        session.query(Goal).filter(member_goal_filter(current_user.id)).all(),
+        current_user.id,
+        session,
     )
+    shared = collaborative_positions(current_user.id, session)
+    own_positions = {goal.id: goal.position for goal in goals if goal.id in shared}
+
     apply_order(goals, payload.ids)
+
+    for goal in goals:
+        if goal.id in shared:
+            find_member(goal.group, current_user.id).position = goal.position
+            goal.position = own_positions[goal.id]
+
     session.commit()
 
     return {"message": "Ordem atualizada"}
@@ -220,19 +264,12 @@ async def get_single_goal(
     check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
+    goal = get_goal_with_access(goal_id, current_user, session)
+    if goal.user_id != current_user.id:
+        check_and_reset_recurring_goals(goal.user_id, session)
+        check_and_reset_recurring_tasks(goal.user_id, session)
 
-    if not goal:
-        raise HTTPException(status_code=404, detail="Meta não encontrada")
-
-    now = datetime.now(timezone.utc)
-    if goal.status == GoalStatus.OPEN and goal.deadline and is_late(goal.deadline, now):
-        goal.status = GoalStatus.LATE
-        session.commit()
+    mark_late([goal], session)
 
     return goal
 
@@ -244,70 +281,38 @@ async def edit_goal(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
+    goal = get_goal_with_access(goal_id, current_user, session)
+    perms = goal_permissions(goal, current_user.id)
 
-    if not goal:
+    edits = {
+        field
+        for field in edit_goal_schema.model_fields_set
+        if field != "status" and getattr(edit_goal_schema, field) is not None
+    }
+    if (edits and not perms["edit"]) or (
+        edit_goal_schema.status is not None and not perms["complete"]
+    ):
         raise HTTPException(
-            status_code=404,
-            detail="Meta não encontrada ou não tem permissão para a alterar",
+            status_code=403, detail="Você não tem permissão para fazer isso nesta meta."
         )
 
-    if edit_goal_schema.title is not None:
-        goal.title = edit_goal_schema.title
-    if edit_goal_schema.description is not None:
-        goal.description = edit_goal_schema.description
-    if edit_goal_schema.deadline is not None:
-        goal.deadline = edit_goal_schema.deadline
     if edit_goal_schema.status is not None:
         goal.status = edit_goal_schema.status
         if edit_goal_schema.status == GoalStatus.COMPLETED:
             update_streak(current_user.id, session)
-    if edit_goal_schema.is_recurring is not None:
-        if edit_goal_schema.is_recurring and not goal.is_recurring:
-            goal.cycle_start_date = br_day_start_utc(today_br())
-        goal.is_recurring = edit_goal_schema.is_recurring
-    if edit_goal_schema.recurrence_interval_days is not None:
-        goal.recurrence_interval_days = edit_goal_schema.recurrence_interval_days
-    if edit_goal_schema.recurrence_target is not None:
-        goal.recurrence_target = edit_goal_schema.recurrence_target
-    if edit_goal_schema.cycle_start_date is not None and goal.is_recurring:
-        last_cycle_end = (
-            session.query(func.max(GoalCycleLog.cycle_end))
-            .filter(GoalCycleLog.goal_id == goal.id)
-            .scalar()
-        )
+
+    if edits:
         try:
-            goal.cycle_start_date = resolve_cycle_start(
-                edit_goal_schema.cycle_start_date,
-                goal.recurrence_interval_days,
-                goal.deadline,
-                to_aware_utc(last_cycle_end) if last_cycle_end else None,
-            )
+            for copy in goal_copies(goal):
+                apply_goal_edit(copy, edit_goal_schema, session)
         except HTTPException:
             session.rollback()
             raise
-    if goal.is_numeric:
-        if edit_goal_schema.target_value is not None:
-            goal.target_value = edit_goal_schema.target_value
-        if edit_goal_schema.start_value is not None:
-            goal.start_value = edit_goal_schema.start_value
-        if edit_goal_schema.unit is not None:
-            goal.unit = edit_goal_schema.unit or None
-
-    try:
-        validate_numeric_goal(goal)
-    except HTTPException:
-        session.rollback()
-        raise
 
     session.commit()
     session.refresh(goal)
 
-    return goal
+    return annotate_goal(goal, perms, current_user.id)
 
 
 @goals_router.get("/{goal_id}/cycles", response_model=List[GoalCycleLogSchema])
@@ -316,14 +321,7 @@ async def list_goal_cycles(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
-
-    if not goal:
-        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    get_goal_with_access(goal_id, current_user, session)
 
     return (
         session.query(GoalCycleLog)
@@ -339,7 +337,7 @@ async def get_goal_progress(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = get_user_goal(goal_id, current_user, session)
+    goal = get_goal_with_access(goal_id, current_user, session)
 
     if not goal.is_numeric or goal.is_recurring:
         raise HTTPException(
@@ -356,19 +354,12 @@ async def delete_goal(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = (
-        session.query(Goal)
-        .filter(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .first()
-    )
+    goal = get_goal_with_access(goal_id, current_user, session, "delete")
 
-    if not goal:
-        raise HTTPException(
-            status_code=404,
-            detail="Meta não encontrada ou não tem permissão para apagar",
-        )
-
-    session.delete(goal)
+    if goal.group:
+        delete_shared_goal(goal, session)
+    else:
+        session.delete(goal)
     session.commit()
 
     return {"message": "Meta apagada com sucesso"}
@@ -380,7 +371,16 @@ async def list_goal_entries(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    return get_user_goal(goal_id, current_user, session).entries
+    goal = get_goal_with_access(goal_id, current_user, session)
+
+    for entry in goal.entries:
+        entry.can_delete = goal.can_act and (
+            not is_collaborative(goal)
+            or goal.can_edit
+            or entry.user_id == current_user.id
+        )
+
+    return goal.entries
 
 
 @goals_router.post("/{goal_id}/entries", response_model=GoalEntryResponseSchema)
@@ -390,7 +390,7 @@ async def add_goal_entry(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = get_user_goal(goal_id, current_user, session)
+    goal = get_goal_with_access(goal_id, current_user, session, "act")
 
     if not goal.is_numeric:
         raise HTTPException(
@@ -401,6 +401,7 @@ async def add_goal_entry(
 
     entry = GoalEntry(
         goal_id=goal.id,
+        user_id=current_user.id,
         value=entry_schema.value,
         note=entry_schema.note or None,
         created_at=datetime.now(timezone.utc),
@@ -415,6 +416,7 @@ async def add_goal_entry(
 
     update_streak(current_user.id, session)
 
+    entry.can_delete = True
     return entry
 
 
@@ -425,7 +427,7 @@ async def delete_goal_entry(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    goal = get_user_goal(goal_id, current_user, session)
+    goal = get_goal_with_access(goal_id, current_user, session, "act")
 
     entry = (
         session.query(GoalEntry)
@@ -435,6 +437,12 @@ async def delete_goal_entry(
     if not entry:
         raise HTTPException(status_code=404, detail="Registro não encontrado")
 
+    if is_collaborative(goal) and not goal.can_edit and entry.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Você só pode apagar os seus próprios registros."
+        )
+
+    author_id = entry.user_id or goal.user_id
     session.delete(entry)
     session.commit()
     session.refresh(goal)
@@ -442,6 +450,6 @@ async def delete_goal_entry(
     refresh_goal_status(goal)
     session.commit()
 
-    undo_today_streak_if_inactive(current_user.id, session)
+    undo_today_streak_if_inactive(author_id, session)
 
     return {"message": "Registro apagado com sucesso"}

@@ -1,6 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models import User, RefreshToken, Streak, Goal
+from app.models import (
+    User,
+    RefreshToken,
+    Streak,
+    Goal,
+    GroupMember,
+    TaskCompletion,
+    GoalEntry,
+)
+from app.sharing import remove_member
 from app.database import get_db
 from app.main import (
     bcrypt_context,
@@ -234,8 +243,21 @@ async def delete_me(
     ):
         raise HTTPException(status_code=400, detail="Senha incorreta")
 
+    memberships = (
+        session.query(GroupMember).filter(GroupMember.user_id == current_user.id).all()
+    )
+    for member in memberships:
+        remove_member(member.group, member, session)
+    session.flush()
+
     for goal in session.query(Goal).filter(Goal.user_id == current_user.id).all():
         session.delete(goal)
+    session.query(TaskCompletion).filter(
+        TaskCompletion.user_id == current_user.id
+    ).update({"user_id": None})
+    session.query(GoalEntry).filter(GoalEntry.user_id == current_user.id).update(
+        {"user_id": None}
+    )
     session.query(RefreshToken).filter(
         RefreshToken.user_id == current_user.id
     ).delete()
