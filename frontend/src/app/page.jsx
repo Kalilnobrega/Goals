@@ -94,7 +94,7 @@ export default function DashboardPage() {
           <div className={styles.heroContent}>
             <div className={styles.heroBadge}>
               <Sparkles size={14} />
-              Bem-vindo de volta {firstName ? `, ${firstName}` : ''}! 👋
+              Bem-vindo de volta{firstName ? `, ${firstName}` : ''}! 👋
             </div>
             <h1 className={styles.heroTitle}>
               Suas metas,<br />
