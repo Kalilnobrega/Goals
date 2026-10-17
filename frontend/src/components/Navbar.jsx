@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Target, House, ListChecks, ChartColumn, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../lib/auth';
-import { getMe } from '../lib/api';
+import { getMe, getStreak } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 
@@ -17,7 +17,7 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   const [userName, setUserName] = useState('');
-  const { lateCount, streak } = useLateGoals();
+  const { lateCount, streak, setStreak } = useLateGoals();
 
   useEffect(() => {
     const cached = getUserName();
@@ -32,10 +32,13 @@ export default function Navbar() {
         })
         .catch(() => {});
     }
+    getStreak()
+      .then(s => setStreak(s.current_streak ?? 0))
+      .catch(() => {});
     const handleNameChange = () => setUserName(getUserName());
     window.addEventListener('username-changed', handleNameChange);
     return () => window.removeEventListener('username-changed', handleNameChange);
-  }, []);
+  }, [setStreak]);
 
   const firstName = userName.split(' ')[0];
 
