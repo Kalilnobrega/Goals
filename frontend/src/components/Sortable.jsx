@@ -54,7 +54,12 @@ export function SortableList({ ids, onReorder, layout = 'list', children }) {
     useSensor(HandleKeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const setInstantScroll = (on) => {
+    document.documentElement.style.scrollBehavior = on ? 'auto' : '';
+  };
+
   const handleDragEnd = ({ active, over }) => {
+    setInstantScroll(false);
     if (!over || active.id === over.id) return;
     onReorder(arrayMove(ids, ids.indexOf(active.id), ids.indexOf(over.id)));
   };
@@ -64,7 +69,9 @@ export function SortableList({ ids, onReorder, layout = 'list', children }) {
       id={id}
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={() => setInstantScroll(true)}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setInstantScroll(false)}
       accessibility={accessibility}
     >
       <SortableContext
