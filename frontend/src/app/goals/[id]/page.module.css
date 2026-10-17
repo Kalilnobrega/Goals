@@ -786,3 +786,26 @@
   .goalTitle { font-size: 1.45rem; }
   .goalCard { padding: 22px; }
 }
+.viewingBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.viewingBanner svg { color: var(--b500); flex-shrink: 0; }
+
+.viewingLink {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--b600);
+  text-decoration: none;
+}

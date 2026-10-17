@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target } from 'lucide-react';
+import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy } from 'lucide-react';
 import { formatDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue } from '../lib/numeric';
 import styles from './GoalCard.module.css';
@@ -53,6 +53,12 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
             {goal.total_tasks ?? 0} tarefa{goal.total_tasks !== 1 ? 's' : ''}
           </span>
         )}
+        {goal.group_kind && (
+          <span className={styles.metaItem}>
+            {goal.group_kind === 'challenge' ? <Trophy size={13} /> : <Users size={13} />}
+            {goal.group_kind === 'challenge' ? 'Desafio' : 'Compartilhada'} · {goal.member_count} pessoa{goal.member_count !== 1 ? 's' : ''}
+          </span>
+        )}
         {goal.deadline && (
           <span className={styles.metaItem}>
             <Calendar size={13} />
@@ -84,7 +90,7 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
         <Link href={`/goals/${goal.id}`} className={styles.btnPrimary}>
           Ver detalhes <ArrowRight size={14} />
         </Link>
-        {!isCompleted && (
+        {!isCompleted && goal.can_complete && (
           <button
             className={styles.btnComplete}
             onClick={() => onComplete?.(goal.id)}
@@ -94,13 +100,15 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
             <CheckCircle2 size={15} />
           </button>
         )}
-        <button
-          className={styles.btnDelete}
-          onClick={() => onDelete?.(goal.id)}
-          aria-label="Excluir meta"
-        >
-          <Trash2 size={15} />
-        </button>
+        {goal.can_delete && (
+          <button
+            className={styles.btnDelete}
+            onClick={() => onDelete?.(goal.id)}
+            aria-label="Excluir meta"
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
       </div>
     </article>
   );

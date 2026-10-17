@@ -139,3 +139,21 @@ export const toggleTask = (taskId) =>
 
 // ── Stats ──────────────────────────────────────────────
 export const getStats = () => api.get("/stats/").then((r) => r.data);
+
+// ── Groups ─────────────────────────────────────────────
+export const createGroup = (goalId, kind) =>
+  api.post("/groups/", { goal_id: Number(goalId), kind }).then((r) => r.data);
+export const getGroup = (groupId) =>
+  api.get(`/groups/${groupId}`).then((r) => r.data);
+export const createInvite = (groupId) =>
+  api.post(`/groups/${groupId}/invites`).then((r) => r.data);
+export const previewInvite = (token) =>
+  api.get(`/groups/invites/${token}`).then((r) => r.data);
+export const acceptInvite = (token) =>
+  api.post(`/groups/invites/${token}/accept`).then((r) => r.data);
+export const changeMemberRole = (groupId, userId, role) =>
+  api.patch(`/groups/${groupId}/members/${userId}`, { role }).then((r) => r.data);
+export const transferLeadership = (groupId, userId) =>
+  api.post(`/groups/${groupId}/transfer`, { user_id: userId }).then((r) => r.data);
+export const removeMember = (groupId, userId) =>
+  api.delete(`/groups/${groupId}/members/${userId}`).then((r) => r.data);

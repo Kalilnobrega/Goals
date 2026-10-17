@@ -74,6 +74,16 @@
     font-weight: 500;
   }
   
+  .author {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .check:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
   .actions {
     display: flex;
     gap: 4px;

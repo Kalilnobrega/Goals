@@ -8,6 +8,7 @@ import GoalForm from '../../components/GoalForm';
 import { SortableList, SortableItem, DragHandle, moveSubset } from '../../components/Sortable';
 import { getGoals, createGoal, updateGoal, deleteGoal, reorderGoals } from '../../lib/api';
 import { celebrateGoal } from '../../lib/celebrate';
+import { deleteGoalMessage } from '../../lib/sharing';
 import { Plus, Search } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -59,7 +60,7 @@ export default function GoalsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Excluir esta meta e todas as suas tarefas?')) return;
+    if (!confirm(deleteGoalMessage(goals.find(g => g.id === id)))) return;
     try {
       await deleteGoal(id);
       load(filter);

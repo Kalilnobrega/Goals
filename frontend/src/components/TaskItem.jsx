@@ -6,11 +6,12 @@ import { DragHandle } from './Sortable';
 import { formatWeekdays } from '../lib/date';
 import styles from './TaskItem.module.css';
 
-export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable }) {
+export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, canAct = true, canEdit = true, showAuthor = false }) {
   const [hovered, setHovered] = useState(false);
   const done = task.status === true;
 
   const handleCheckClick = (e) => {
+    if (!canAct) return;
     if (!done) {
       const rect = e.currentTarget.getBoundingClientRect();
       celebrateTask(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -30,6 +31,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable })
       <button
         className={`${styles.check} ${done ? styles.checked : ''}`}
         onClick={handleCheckClick}
+        disabled={!canAct}
         aria-label={done ? 'Marcar como pendente' : 'Concluir tarefa'}
       >
         {done && <Check size={11} strokeWidth={3} />}
@@ -51,16 +53,21 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable })
                 : ''}
           </span>
         )}
+        {showAuthor && done && task.completed_by && (
+          <span className={styles.author}>Feita por {task.completed_by}</span>
+        )}
       </div>
 
-      <div className={`${styles.actions} ${hovered ? styles.visible : ''}`}>
-        <button className={styles.iconBtn} onClick={() => onEdit?.(task)} aria-label="Editar">
-          <Pencil size={13} />
-        </button>
-        <button className={`${styles.iconBtn} ${styles.danger}`} onClick={() => onDelete?.(task.id)} aria-label="Excluir">
-          <Trash2 size={13} />
-        </button>
-      </div>
+      {canEdit && (
+        <div className={`${styles.actions} ${hovered ? styles.visible : ''}`}>
+          <button className={styles.iconBtn} onClick={() => onEdit?.(task)} aria-label="Editar">
+            <Pencil size={13} />
+          </button>
+          <button className={`${styles.iconBtn} ${styles.danger}`} onClick={() => onDelete?.(task.id)} aria-label="Excluir">
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
     </li>
   );
 }

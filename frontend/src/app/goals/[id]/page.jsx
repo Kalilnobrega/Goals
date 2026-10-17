@@ -9,12 +9,16 @@ import TaskItem from '../../../components/TaskItem';
 import NumericGoalChart from '../../../components/NumericGoalChart';
 import GoalForecast from '../../../components/GoalForecast';
 import CycleChart, { buildCycleBars } from '../../../components/CycleChart';
+import GroupPanel from '../../../components/GroupPanel';
+import ShareGoalForm from '../../../components/ShareGoalForm';
 import { SortableList, SortableItem, moveSubset } from '../../../components/Sortable';
 import {
   getGoal, updateGoal, deleteGoal,
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
-  getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress
+  getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress,
+  getGroup, createGroup
 } from '../../../lib/api';
+import { deleteGoalMessage } from '../../../lib/sharing';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
 import { formatValue, formatProgressValue } from '../../../lib/numeric';
@@ -22,7 +26,7 @@ import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
-  Target, RefreshCw, XCircle, History, TrendingUp, ArrowRight
+  Target, RefreshCw, XCircle, History, TrendingUp, ArrowRight, Share2, Eye
 } from 'lucide-react';import f from '../../../styles/forms.module.css';
 import styles from './page.module.css';
 
@@ -58,9 +62,18 @@ export default function GoalDetailPage() {
   const [newTask,      setNewTask]      = useState('');
   const [addingTask,   setAddingTask]   = useState(false);
   const [error,      setError]      = useState('');
+  const [group,      setGroup]      = useState(null);
+  const [shareModal, setShareModal] = useState(false);
 
+  const loadGroup = (current) => {
+    if (!current?.group_id) {
+      setGroup(null);
+      return Promise.resolve();
+    }
+    return getGroup(current.group_id).then(setGroup).catch(() => setGroup(null));
+  };
   // GET /goals/{id}
-  const loadGoal  = () => getGoal(Number(id)).then(setGoal);
+  const loadGoal  = () => getGoal(Number(id)).then(g => { setGoal(g); return loadGroup(g); });
   // GET /tasks/goal/{goal_id}
   const loadTasks = () => getTasks(Number(id)).then(setTasks);
   const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
@@ -75,7 +88,7 @@ export default function GoalDetailPage() {
 
   useEffect(() => {
     Promise.all([
-      getGoal(Number(id)).then(g => { setGoal(g); return loadProgress(g); }),
+      getGoal(Number(id)).then(g => { setGoal(g); return Promise.all([loadProgress(g), loadGroup(g)]); }),
       loadTasks(), loadCycles(), loadEntries(),
     ])
       .catch(() => setError('Erro ao carregar dados.'))
@@ -89,14 +102,14 @@ export default function GoalDetailPage() {
       await updateGoal(id, { ...data, id: Number(id) });
       const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadCycles()]);
       setGoal(updatedGoal);
-      await loadProgress(updatedGoal);
+      await Promise.all([loadProgress(updatedGoal), loadGroup(updatedGoal)]);
       setEditModal(false);
     } catch { setError('Erro ao atualizar meta.'); }
     finally { setSaving(false); }
   };
 
   const handleDeleteGoal = async () => {
-    if (!confirm('Excluir esta meta permanentemente?')) return;
+    if (!confirm(deleteGoalMessage(goal))) return;
     try { await deleteGoal(id); router.push('/goals'); }
     catch { setError('Erro ao excluir meta.'); }
   };
@@ -121,16 +134,17 @@ export default function GoalDetailPage() {
       await toggleTask(taskId);
       const [, updatedGoal] = await Promise.all([loadTasks(), getGoal(Number(id)), loadCycles()]);
       setGoal(updatedGoal);
+      loadGroup(updatedGoal);
       if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
       getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
-    } catch { setError('Erro ao atualizar tarefa.'); }
+    } catch (err) { setError(err?.response?.data?.detail || 'Erro ao atualizar tarefa.'); }
   };
 
   const refreshAfterEntryChange = async () => {
     const prevProgress = goal?.progress ?? 0;
     const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadEntries(), loadCycles()]);
     setGoal(updatedGoal);
-    await loadProgress(updatedGoal);
+    await Promise.all([loadProgress(updatedGoal), loadGroup(updatedGoal)]);
     if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
     getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
   };
@@ -175,24 +189,61 @@ export default function GoalDetailPage() {
     }
   };
 
-  const renderTaskGroup = (group) => (
-    <SortableList ids={group.map(t => t.id)} onReorder={handleReorderTasks}>
+  const handleShare = async (kind) => {
+    setSaving(true);
+    try {
+      setGroup(await createGroup(id, kind));
+      setGoal(await getGoal(Number(id)));
+      setShareModal(false);
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Erro ao compartilhar meta.');
+    } finally { setSaving(false); }
+  };
+
+  const handleGroupChange = async (updated) => {
+    const updatedGoal = await getGoal(Number(id)).catch(() => null);
+    if (!updatedGoal) { router.push('/goals'); return; }
+    setGoal(updatedGoal);
+    if (updated) setGroup(updated);
+    else await loadGroup(updatedGoal);
+  };
+
+  const handleLeftGroup = async () => {
+    if (group?.kind === 'challenge' && group.goal_id !== Number(id)) {
+      router.push(`/goals/${group.goal_id}`);
+      return;
+    }
+    if (group?.kind === 'challenge') {
+      await handleGroupChange(null);
+      return;
+    }
+    router.push('/goals');
+  };
+
+  const taskItemProps = (t) => ({
+    task: t,
+    onToggle: handleToggleTask,
+    onDelete: handleDeleteTask,
+    onEdit: openEditTask,
+    canAct: goal.can_act,
+    canEdit: goal.can_edit,
+    showAuthor: goal.group_kind === 'collaborative',
+  });
+
+  const renderTaskGroup = (items) => goal.can_edit ? (
+    <SortableList ids={items.map(t => t.id)} onReorder={handleReorderTasks}>
       <ul className={styles.taskList}>
-        {group.map(t => (
+        {items.map(t => (
           <SortableItem key={t.id} id={t.id}>
-            {(sortable) => (
-              <TaskItem
-                task={t}
-                sortable={sortable}
-                onToggle={handleToggleTask}
-                onDelete={handleDeleteTask}
-                onEdit={openEditTask}
-              />
-            )}
+            {(sortable) => <TaskItem {...taskItemProps(t)} sortable={sortable} />}
           </SortableItem>
         ))}
       </ul>
     </SortableList>
+  ) : (
+    <ul className={styles.taskList}>
+      {items.map(t => <TaskItem key={t.id} {...taskItemProps(t)} />)}
+    </ul>
   );
 
   const openEditTask = (task) => {
@@ -263,6 +314,18 @@ export default function GoalDetailPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
+        {goal.group_kind === 'challenge' && !goal.is_mine && (
+          <div className={`${styles.viewingBanner} glass`}>
+            <Eye size={16} />
+            <span>Você está vendo o progresso de <strong>{goal.owner_name}</strong>.</span>
+            {group?.goal_id && (
+              <Link href={`/goals/${group.goal_id}`} className={styles.viewingLink}>
+                Ver a minha <ArrowRight size={13} />
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* Goal header card */}
         <div className={`${styles.goalCard} glass`}>
           {/* Faixa colorida no topo baseada no status */}
@@ -280,12 +343,12 @@ export default function GoalDetailPage() {
                 {meta.label}
               </div>
               <div className={styles.goalActions}>
-                {goal.status !== 'completed' && (
+                {goal.status !== 'completed' && goal.can_complete && (
                   <button
                     className={styles.btnComplete}
                     onClick={async () => {
                       try {
-                        await updateGoal(id, { ...goal, status: 'completed' });
+                        await updateGoal(id, { status: 'completed' });
                         await loadGoal();
                         celebrateGoal();
                       }
@@ -296,12 +359,21 @@ export default function GoalDetailPage() {
                     <CheckCircle2 size={15} />
                   </button>
                 )}
-                <button className={styles.iconBtn} onClick={() => setEditModal(true)}>
-                  <Pencil size={15} />
-                </button>
-                <button className={`${styles.iconBtn} ${styles.danger}`} onClick={handleDeleteGoal}>
-                  <Trash2 size={15} />
-                </button>
+                {!goal.group_id && goal.can_edit && (
+                  <button className={styles.iconBtn} onClick={() => setShareModal(true)} title="Compartilhar" aria-label="Compartilhar">
+                    <Share2 size={15} />
+                  </button>
+                )}
+                {goal.can_edit && (
+                  <button className={styles.iconBtn} onClick={() => setEditModal(true)} title="Editar" aria-label="Editar">
+                    <Pencil size={15} />
+                  </button>
+                )}
+                {goal.can_delete && (
+                  <button className={`${styles.iconBtn} ${styles.danger}`} onClick={handleDeleteGoal} title="Excluir" aria-label="Excluir">
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -360,7 +432,16 @@ export default function GoalDetailPage() {
           </div>
         </div>
 
-        {goal.is_numeric && (
+        {group && (
+          <GroupPanel
+            group={group}
+            goalId={goal.id}
+            onChange={handleGroupChange}
+            onLeft={handleLeftGroup}
+          />
+        )}
+
+        {goal.is_numeric && goal.can_act && (
           <div className={styles.tasksSection}>
             <div className={styles.taskHeader}>
               <Plus size={16} style={{ color: 'var(--b400)' }} />
@@ -476,16 +557,21 @@ export default function GoalDetailPage() {
                         {formatValue(entry.value, goal.unit)}
                       </strong>
                       {entry.note && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.note}</span>}
+                      {goal.group_kind === 'collaborative' && entry.user_name && (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>por {entry.user_name}</span>
+                      )}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{formatDateTime(entry.created_at)}</span>
-                      <button
-                        className={`${styles.iconBtn} ${styles.danger}`}
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        aria-label="Excluir registro"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {entry.can_delete && (
+                        <button
+                          className={`${styles.iconBtn} ${styles.danger}`}
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          aria-label="Excluir registro"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -549,23 +635,25 @@ export default function GoalDetailPage() {
             <span className={styles.taskCount}>{tasks.length}</span>
           </div>
 
-          <form className={`${styles.addTask} glass`} onSubmit={handleAddTask}>
-            <input
-              className={styles.taskInput}
-              placeholder="Nova tarefa... (Enter para adicionar)"
-              value={newTask}
-              onChange={e => setNewTask(e.target.value)}
-              disabled={addingTask}
-            />
-            <button type="submit" className={styles.addBtn} disabled={addingTask || !newTask.trim()}>
-              <Plus size={18} />
-            </button>
-          </form>
+          {goal.can_edit && (
+            <form className={`${styles.addTask} glass`} onSubmit={handleAddTask}>
+              <input
+                className={styles.taskInput}
+                placeholder="Nova tarefa... (Enter para adicionar)"
+                value={newTask}
+                onChange={e => setNewTask(e.target.value)}
+                disabled={addingTask}
+              />
+              <button type="submit" className={styles.addBtn} disabled={addingTask || !newTask.trim()}>
+                <Plus size={18} />
+              </button>
+            </form>
+          )}
 
           {tasks.length === 0 ? (
             <div className={`${styles.emptyTasks} glass`}>
               <CheckCircle2 size={28} style={{ color: 'var(--b200)' }} />
-              <p>Nenhuma tarefa ainda. Adicione acima!</p>
+              <p>{goal.can_edit ? 'Nenhuma tarefa ainda. Adicione acima!' : 'Nenhuma tarefa ainda.'}</p>
             </div>
           ) : (
             <div className={styles.taskGroups}>
@@ -588,6 +676,14 @@ export default function GoalDetailPage() {
             </div>
           )}
         </div>
+
+        <Modal open={shareModal} onClose={() => setShareModal(false)} title="Compartilhar meta">
+          <ShareGoalForm
+            onSubmit={handleShare}
+            onCancel={() => setShareModal(false)}
+            loading={saving}
+          />
+        </Modal>
 
         {/* Edit goal modal */}
         <Modal open={editModal} onClose={() => setEditModal(false)} title="Editar meta">

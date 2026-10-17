@@ -8,6 +8,11 @@ import { googleAuth } from '../../lib/api';
 import { saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import styles from './page.module.css';
 
+function redirectTarget() {
+  const from = new URLSearchParams(window.location.search).get('from');
+  return from && from.startsWith('/') && !from.startsWith('//') ? from : '/';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm]       = useState({ email: '', password: '' });
@@ -58,7 +63,7 @@ export default function LoginPage() {
         }
       }
 
-      router.push('/');
+      router.push(redirectTarget());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,7 +89,7 @@ export default function LoginPage() {
             saveUserName(me.name);
           }
         }
-        router.push('/');
+        router.push(redirectTarget());
       } catch {
         setError('Erro ao entrar com Google. Tente novamente.');
       } finally {
