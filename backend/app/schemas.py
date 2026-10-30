@@ -87,6 +87,7 @@ class GoalResponseSchema(BaseModel):
     cycle_ends_at: datetime | None = None
     current_cycle_progress: int | None = None
     is_numeric: bool = False
+    has_target: bool = False
     target_value: float | None = None
     start_value: float | None = None
     current_value: float | None = None
@@ -395,6 +396,7 @@ class GroupMemberSchema(BaseModel):
     is_me: bool
     goal_id: int | None = None
     progress: float | None = None
+    current_value: float | None = None
     status: GoalStatus | None = None
     completed_at: datetime | None = None
 
@@ -407,6 +409,8 @@ class GroupResponseSchema(BaseModel):
     goal_title: str
     deadline: datetime | None = None
     finished: bool
+    has_target: bool = True
+    unit: str | None = None
     member_limit: int
     members: list[GroupMemberSchema]
 

@@ -56,6 +56,14 @@ def validate_numeric_goal(goal: Goal):
     if not goal.is_numeric:
         return
 
+    if not goal.has_target:
+        if goal.numeric_mode != "sum" or goal.is_recurring:
+            raise HTTPException(
+                status_code=400,
+                detail="Só metas de soma não recorrentes podem ficar sem valor alvo.",
+            )
+        return
+
     if goal.numeric_mode == "latest":
         if goal.is_recurring:
             raise HTTPException(
@@ -116,7 +124,11 @@ def mark_late(goals: list[Goal], session: Session):
 
     for goal in goals:
         if goal.status == GoalStatus.OPEN and goal.deadline and is_late(goal.deadline, now):
-            goal.status = GoalStatus.LATE
+            goal.status = (
+                GoalStatus.COMPLETED
+                if goal.is_numeric and not goal.has_target
+                else GoalStatus.LATE
+            )
             late = True
 
     if late:
@@ -194,7 +206,7 @@ async def create_goal(
         unit=goals_schema.unit,
         numeric_mode=(
             (goals_schema.numeric_mode or "sum")
-            if goals_schema.target_value is not None
+            if goals_schema.target_value is not None or goals_schema.numeric_mode
             else None
         ),
     )
@@ -339,7 +351,7 @@ async def get_goal_progress(
 ):
     goal = get_goal_with_access(goal_id, current_user, session)
 
-    if not goal.is_numeric or goal.is_recurring:
+    if not goal.has_target or goal.is_recurring:
         raise HTTPException(
             status_code=400,
             detail="Só metas de progresso não recorrentes têm evolução.",

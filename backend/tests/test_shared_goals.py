@@ -533,3 +533,19 @@ def test_stats_count_only_own_activity_in_collaborative(client, auth_headers, an
 
     assert ana_stats["summary"]["total_activities"] == 1
     assert leader_stats["summary"]["total_activities"] == 0
+
+
+def test_challenge_without_target_ranks_by_total(client, auth_headers, ana):
+    _, ana_headers = ana
+    goal = create_goal(client, auth_headers, numeric_mode="sum", unit="ml")
+    group = share(client, auth_headers, goal["id"], "challenge")
+    ana_goal_id = join(client, ana_headers, invite(client, auth_headers, group["id"]))
+
+    client.post(f"/goals/{goal['id']}/entries", json={"value": 500}, headers=auth_headers)
+    client.post(f"/goals/{ana_goal_id}/entries", json={"value": 800}, headers=ana_headers)
+
+    detail = client.get(f"/groups/{group['id']}", headers=auth_headers).json()
+    assert detail["has_target"] is False
+    assert detail["unit"] == "ml"
+    assert [m["goal_id"] for m in detail["members"]] == [ana_goal_id, goal["id"]]
+    assert [m["current_value"] for m in detail["members"]] == [800, 500]

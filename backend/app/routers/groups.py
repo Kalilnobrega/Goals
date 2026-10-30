@@ -103,15 +103,18 @@ def group_detail(group: GoalGroup, user: User, session: Session) -> dict:
             row.update(
                 goal_id=copy.id,
                 progress=copy.progress,
+                current_value=copy.current_value,
                 status=copy.status,
                 completed_at=copy.completed_at,
             )
         members.append(row)
 
+    open_ended = goal.is_numeric and not goal.has_target
+
     if group.kind == GroupKind.CHALLENGE:
         members.sort(
             key=lambda m: (
-                -(m["progress"] or 0),
+                -((m["current_value"] if open_ended else m["progress"]) or 0),
                 to_aware_utc(m["completed_at"]) if m["completed_at"] else FAR_FUTURE,
             )
         )
@@ -128,6 +131,8 @@ def group_detail(group: GoalGroup, user: User, session: Session) -> dict:
         "finished": bool(
             goal.deadline and is_late(goal.deadline, datetime.now(timezone.utc))
         ),
+        "has_target": not open_ended,
+        "unit": goal.unit,
         "member_limit": MEMBER_LIMIT,
         "members": members,
     }

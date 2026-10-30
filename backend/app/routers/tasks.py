@@ -298,7 +298,7 @@ def undo_today_streak_if_inactive(user_id: int, session: Session):
 
 
 def refresh_goal_status(goal: Goal):
-    if goal.is_recurring:
+    if goal.is_recurring or (goal.is_numeric and not goal.has_target):
         return
 
     if goal.progress >= 100.0:

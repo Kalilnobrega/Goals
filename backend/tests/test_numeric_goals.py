@@ -262,3 +262,60 @@ def test_goal_progress_rejects_recurring_and_task_goals(client, auth_headers):
 def test_goal_progress_is_scoped_to_owner(client, auth_headers):
     resp = client.get("/goals/9999/progress", headers=auth_headers)
     assert resp.status_code == 404
+
+
+def test_sum_goal_without_target_accumulates_without_completing(client, auth_headers):
+    response = client.post(
+        "/goals/",
+        json={"title": "Beber água", "numeric_mode": "sum", "unit": "ml"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    goal = response.json()
+    assert goal["is_numeric"] is True
+    assert goal["has_target"] is False
+
+    add_entry(client, auth_headers, goal["id"], 500)
+    add_entry(client, auth_headers, goal["id"], 750)
+
+    updated = get_goal(client, auth_headers, goal["id"])
+    assert updated["current_value"] == 1250
+    assert updated["progress"] == 0
+    assert updated["status"] == "open"
+
+
+def test_goal_without_target_must_be_sum_and_not_recurring(client, auth_headers):
+    latest = client.post(
+        "/goals/",
+        json={"title": "Peso", "numeric_mode": "latest", "start_value": 80},
+        headers=auth_headers,
+    )
+    recurring = client.post(
+        "/goals/",
+        json={
+            "title": "Água",
+            "numeric_mode": "sum",
+            "is_recurring": True,
+            "recurrence_interval_days": 7,
+        },
+        headers=auth_headers,
+    )
+
+    assert latest.status_code == 400
+    assert recurring.status_code == 400
+
+
+def test_goal_without_target_finishes_at_deadline(client, db_session, auth_headers):
+    goal = client.post(
+        "/goals/",
+        json={"title": "Água", "numeric_mode": "sum"},
+        headers=auth_headers,
+    ).json()
+    stored = db_session.get(Goal, goal["id"])
+    stored.deadline = datetime.now(timezone.utc) - timedelta(days=2)
+    db_session.commit()
+
+    assert get_goal(client, auth_headers, goal["id"])["status"] == "completed"
+
+    add_entry(client, auth_headers, goal["id"], 300)
+    assert get_goal(client, auth_headers, goal["id"])["status"] == "completed"

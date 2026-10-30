@@ -287,7 +287,7 @@ async def get_stats(
     numeric_goals = [
         numeric_summary(goal, now)
         for goal in goals
-        if goal.is_numeric and not goal.is_recurring
+        if goal.has_target and not goal.is_recurring
     ]
 
     return {

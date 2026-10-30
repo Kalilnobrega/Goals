@@ -106,6 +106,10 @@ class Goal(Base):
 
     @property
     def is_numeric(self) -> bool:
+        return self.target_value is not None or self.numeric_mode is not None
+
+    @property
+    def has_target(self) -> bool:
         return self.target_value is not None
 
     @property
@@ -131,6 +135,8 @@ class Goal(Base):
         return (self.start_value or 0.0) + sum(entry.value for entry in self.entries)
 
     def _numeric_progress(self) -> float:
+        if not self.has_target:
+            return 0.0
         start = 0.0 if self.is_recurring else (self.start_value or 0.0)
         current = self.current_value
         if current is None or self.target_value == start:
