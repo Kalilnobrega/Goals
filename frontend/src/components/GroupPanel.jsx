@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { createInvite, changeMemberRole, transferLeadership, removeMember } from '../lib/api';
 import { formatDeadline } from '../lib/date';
+import { formatValue } from '../lib/numeric';
 import { useConfirm } from './ConfirmDialog';
 import styles from './GroupPanel.module.css';
 
@@ -236,7 +237,12 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
                     </span>
                   )}
                 </div>
-                {isChallenge && (
+                {isChallenge && !group.has_target && (
+                  <div className={styles.progressRow}>
+                    <span className={styles.progressPct}>{formatValue(member.current_value ?? 0, group.unit)}</span>
+                  </div>
+                )}
+                {isChallenge && group.has_target && (
                   <div className={styles.progressRow}>
                     <div className={styles.progressTrack}>
                       <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressDone : ''}`} style={{ width: `${progress}%` }} />

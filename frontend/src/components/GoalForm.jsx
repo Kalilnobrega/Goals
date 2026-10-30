@@ -72,6 +72,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     cycleStartMode: cycleBaseDate === todayDateOnly() ? 'today' : 'custom',
     kind: initial.is_numeric ? 'numeric' : 'tasks',
     numeric_mode: initial.numeric_mode || 'sum',
+    noTarget: Boolean(initial.is_numeric) && initial.target_value == null,
     target_value: initial.target_value ?? '',
     start_value: initial.start_value ?? '',
     unit: initial.unit || '',
@@ -79,7 +80,8 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
 
   const isNumeric = form.kind === 'numeric';
   const isMeasurement = isNumeric && form.numeric_mode === 'latest';
-  const canRecur = !isMeasurement;
+  const isOpenEnded = isNumeric && form.noTarget;
+  const canRecur = !isMeasurement && !isOpenEnded;
 
   const set = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
 
@@ -160,7 +162,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     }
 
     if (isNumeric) {
-      data.target_value = Number(form.target_value);
+      if (!isOpenEnded) data.target_value = Number(form.target_value);
       data.unit = form.unit.trim();
       if (form.start_value !== '' && !(form.is_recurring && !isMeasurement)) {
         data.start_value = Number(form.start_value);
@@ -214,10 +216,11 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               title: 'Recorrente',
               desc: 'Repetir uma atividade ao longo do tempo',
               active: form.is_recurring,
-              disabled: isEdit && isMeasurement,
+              disabled: isEdit && (isMeasurement || isOpenEnded),
               onClick: () => setForm(prev => ({
                 ...prev,
                 is_recurring: !prev.is_recurring,
+                noTarget: !prev.is_recurring ? false : prev.noTarget,
                 numeric_mode: !prev.is_recurring && !isEdit ? 'sum' : prev.numeric_mode,
               })),
             },
@@ -254,19 +257,30 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           <div className={f.measureList}>
             {[
               {
+                key: 'sum',
                 mode: 'sum',
+                noTarget: false,
                 title: 'Somar progresso',
                 desc: 'Ex.: quilômetros corridos, dinheiro economizado',
               },
               {
+                key: 'latest',
                 mode: 'latest',
+                noTarget: false,
                 title: 'Progresso atual',
                 desc: 'Ex.: peso atual, saldo guardado',
               },
-            ].map(({ mode, title, desc }) => {
-              const active = form.numeric_mode === mode;
+              {
+                key: 'open',
+                mode: 'sum',
+                noTarget: true,
+                title: 'Somar sem limite',
+                desc: 'Ex.: copos de água. Em desafios, vence quem somar mais',
+              },
+            ].map(({ key, mode, noTarget, title, desc }) => {
+              const active = form.numeric_mode === mode && form.noTarget === noTarget;
               return (
-                <label key={mode} className={`${f.measureOption} ${active ? f.measureOptionActive : ''}`}>
+                <label key={key} className={`${f.measureOption} ${active ? f.measureOptionActive : ''}`}>
                   <input
                     type="radio"
                     name="numeric_mode"
@@ -274,7 +288,8 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                     onChange={() => setForm(prev => ({
                       ...prev,
                       numeric_mode: mode,
-                      is_recurring: mode === 'latest' ? false : prev.is_recurring,
+                      noTarget,
+                      is_recurring: mode === 'latest' || noTarget ? false : prev.is_recurring,
                     }))}
                   />
                   <span className={f.measureText}>
@@ -288,7 +303,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
         </div>
       )}
 
-      {isNumeric && (
+      {isNumeric && !isOpenEnded && (
         <div className={f.row}>
           {(isMeasurement || !form.is_recurring) && (
             <div className={f.field}>

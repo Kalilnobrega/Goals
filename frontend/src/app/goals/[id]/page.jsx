@@ -22,7 +22,7 @@ import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
-import { formatValue, formatProgressValue } from '../../../lib/numeric';
+import { formatValue, formatProgressValue, hasTarget } from '../../../lib/numeric';
 import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
@@ -87,7 +87,7 @@ export default function GoalDetailPage() {
   const loadCycles = () => getGoalCycles(Number(id)).then(setCycles).catch(() => {});
   const loadEntries = () => getGoalEntries(Number(id)).then(setEntries).catch(() => {});
   const loadProgress = (current) => {
-    if (!current?.is_numeric || current.is_recurring) {
+    if (!current?.is_numeric || current.is_recurring || !hasTarget(current)) {
       setProgressData(null);
       return Promise.resolve();
     }
@@ -430,15 +430,24 @@ export default function GoalDetailPage() {
               )}
             </div>
 
-            <div className={styles.progressWrap}>
-              <div className={styles.progressInfo}>
-                <span className={styles.progressLabel}>Progresso geral</span>
-                <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}>{progress}%</span>
+            {goal.is_numeric && !hasTarget(goal) ? (
+              <div className={styles.progressWrap}>
+                <div className={styles.progressInfo}>
+                  <span className={styles.progressLabel}>Total acumulado</span>
+                  <span className={styles.progressPct}>{formatProgressValue(goal)}</span>
+                </div>
               </div>
-              <div className={styles.progressTrack}>
-                <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
+            ) : (
+              <div className={styles.progressWrap}>
+                <div className={styles.progressInfo}>
+                  <span className={styles.progressLabel}>Progresso geral</span>
+                  <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}>{progress}%</span>
+                </div>
+                <div className={styles.progressTrack}>
+                  <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

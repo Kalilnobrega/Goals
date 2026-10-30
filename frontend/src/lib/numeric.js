@@ -5,7 +5,12 @@ export function formatValue(value, unit) {
   return unit === 'R$' ? `R$ ${number}` : `${number} ${unit}`;
 }
 
+export function hasTarget(goal) {
+  return goal.target_value !== null && goal.target_value !== undefined;
+}
+
 export function formatProgressValue(goal) {
+  if (!hasTarget(goal)) return formatValue(goal.current_value ?? 0, goal.unit);
   return `${formatValue(goal.current_value ?? 0)} / ${formatValue(goal.target_value, goal.unit)}`;
 }
 

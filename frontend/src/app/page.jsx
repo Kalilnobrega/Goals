@@ -11,6 +11,7 @@ import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import { celebrateTask } from '../lib/celebrate';
+import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -309,10 +310,16 @@ export default function DashboardPage() {
                     <div className={styles.recentDot} style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
                     <div className={styles.recentBody}>
                       <span className={styles.recentTitle}>{g.title}</span>
-                      <div className={styles.recentBar}>
-                        <div className={`${styles.recentFill} ${progress >= 100 ? styles.recentFillComplete : ''}`} style={{ width: `${progress}%` }} />
-                      </div>
-                      <span className={`${styles.recentPct} ${progress >= 100 ? styles.recentPctComplete : ''}`}>{progress}%</span>
+                      {g.is_numeric && !hasTarget(g) ? (
+                        <span className={styles.recentPct}>{formatProgressValue(g)}</span>
+                      ) : (
+                        <>
+                          <div className={styles.recentBar}>
+                            <div className={`${styles.recentFill} ${progress >= 100 ? styles.recentFillComplete : ''}`} style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className={`${styles.recentPct} ${progress >= 100 ? styles.recentPctComplete : ''}`}>{progress}%</span>
+                        </>
+                      )}
                     </div>
                     <ArrowRight size={14} className={styles.recentArrow} />
                   </Link>

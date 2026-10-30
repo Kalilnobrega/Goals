@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy } from 'lucide-react';
 import { formatDeadline, cycleNotStarted } from '../lib/date';
-import { formatProgressValue } from '../lib/numeric';
+import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './GoalCard.module.css';
 
 // Status do backend: 'open' | 'completed' | 'late'
@@ -47,12 +47,14 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
       )}
 
       {/* Progress bar */}
-      <div className={styles.progressWrap}>
-        <div className={styles.progressBar}>
-          <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
+      {!(goal.is_numeric && !hasTarget(goal)) && (
+        <div className={styles.progressWrap}>
+          <div className={styles.progressBar}>
+            <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
+          </div>
+          <span className={`${styles.progressLabel} ${progress >= 100 ? styles.progressLabelComplete : ''}`}>{progress}%</span>
         </div>
-        <span className={`${styles.progressLabel} ${progress >= 100 ? styles.progressLabelComplete : ''}`}>{progress}%</span>
-      </div>
+      )}
 
       {/* Meta info */}
       <div className={styles.meta}>
