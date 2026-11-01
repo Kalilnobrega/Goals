@@ -623,3 +623,37 @@ def test_challenge_saves_final_top_three_when_it_ends(client, db_session, auth_h
     assert podium["cycle_start"] is None
     assert [p["user_name"] for p in podium["places"]] == ["Ana", "Bruno", "Test User"]
     assert [p["value"] for p in podium["places"]] == [50, 40, 30]
+
+
+def test_clearing_deadline_removes_it_and_reopens_late_goal(client, db_session, auth_headers):
+    goal = create_goal(client, auth_headers, deadline="2026-01-10T00:00:00")
+    assert client.get(f"/goals/{goal['id']}", headers=auth_headers).json()["status"] == "late"
+
+    response = client.put(
+        f"/goals/{goal['id']}",
+        json={"deadline": None, "status": "late"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["deadline"] is None
+    assert response.json()["status"] == "open"
+
+
+def test_omitting_deadline_keeps_it(client, auth_headers):
+    goal = create_goal(client, auth_headers, deadline="2099-01-10T00:00:00")
+
+    client.put(f"/goals/{goal['id']}", json={"title": "Novo"}, headers=auth_headers)
+
+    assert client.get(f"/goals/{goal['id']}", headers=auth_headers).json()["deadline"].startswith("2099-01-10")
+
+
+def test_challenge_member_cannot_clear_deadline(client, auth_headers, ana):
+    _, ana_headers = ana
+    goal = create_goal(client, auth_headers, deadline="2099-01-10T00:00:00")
+    group = share(client, auth_headers, goal["id"], "challenge")
+    ana_goal_id = join(client, ana_headers, invite(client, auth_headers, group["id"]))
+
+    response = client.put(f"/goals/{ana_goal_id}", json={"deadline": None}, headers=ana_headers)
+
+    assert response.status_code == 403

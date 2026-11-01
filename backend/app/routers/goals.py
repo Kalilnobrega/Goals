@@ -151,8 +151,12 @@ def apply_goal_edit(goal: Goal, schema: EditGoalSchema, session: Session):
         goal.title = schema.title
     if schema.description is not None:
         goal.description = schema.description
-    if schema.deadline is not None:
+    if "deadline" in schema.model_fields_set:
         goal.deadline = schema.deadline
+        if goal.status == GoalStatus.LATE and not (
+            goal.deadline and is_late(goal.deadline, datetime.now(timezone.utc))
+        ):
+            goal.status = GoalStatus.OPEN
     if schema.is_recurring is not None:
         if schema.is_recurring and not goal.is_recurring:
             goal.cycle_start_date = br_day_start_utc(today_br())
@@ -310,7 +314,11 @@ async def edit_goal(
     edits = {
         field
         for field in edit_goal_schema.model_fields_set
-        if field != "status" and getattr(edit_goal_schema, field) is not None
+        if field != "status"
+        and (
+            getattr(edit_goal_schema, field) is not None
+            or (field == "deadline" and goal.deadline is not None)
+        )
     }
     if (edits and not perms["edit"]) or (
         edit_goal_schema.status is not None and not perms["complete"]
