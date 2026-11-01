@@ -57,10 +57,10 @@ def validate_numeric_goal(goal: Goal):
         return
 
     if not goal.has_target:
-        if goal.numeric_mode != "sum" or goal.is_recurring:
+        if goal.numeric_mode != "sum":
             raise HTTPException(
                 status_code=400,
-                detail="Só metas de soma não recorrentes podem ficar sem valor alvo.",
+                detail="Só metas de soma podem ficar sem valor alvo.",
             )
         return
 

@@ -112,6 +112,7 @@ def recurring_summary(goal: Goal):
         "id": goal.id,
         "title": goal.title,
         "unit": goal.unit,
+        "has_target": goal.has_target,
         "total_cycles": len(logs),
         "completed_cycles": completed,
         "rate": round(completed / len(logs) * 100, 1) if logs else None,

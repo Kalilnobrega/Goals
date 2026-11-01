@@ -284,25 +284,50 @@ def test_sum_goal_without_target_accumulates_without_completing(client, auth_hea
     assert updated["status"] == "open"
 
 
-def test_goal_without_target_must_be_sum_and_not_recurring(client, auth_headers):
+def test_goal_without_target_must_be_sum(client, auth_headers):
     latest = client.post(
         "/goals/",
         json={"title": "Peso", "numeric_mode": "latest", "start_value": 80},
         headers=auth_headers,
     )
-    recurring = client.post(
+
+    assert latest.status_code == 400
+
+
+def test_recurring_sum_goal_without_target_logs_cycle_totals(client, auth_headers, db_session):
+    response = client.post(
         "/goals/",
         json={
-            "title": "Água",
+            "title": "Leitura semanal",
             "numeric_mode": "sum",
+            "unit": "páginas",
             "is_recurring": True,
             "recurrence_interval_days": 7,
         },
         headers=auth_headers,
     )
+    assert response.status_code == 200
+    goal = response.json()
+    assert goal["has_target"] is False
 
-    assert latest.status_code == 400
-    assert recurring.status_code == 400
+    first_start = datetime.now(timezone.utc) - timedelta(days=15)
+    db_goal = db_session.query(Goal).filter(Goal.id == goal["id"]).first()
+    db_goal.cycle_start_date = first_start
+    db_session.add(
+        GoalEntry(goal_id=goal["id"], value=40, created_at=first_start + timedelta(days=1))
+    )
+    db_session.commit()
+
+    add_entry(client, auth_headers, goal["id"], 12)
+
+    updated = get_goal(client, auth_headers, goal["id"])
+    assert updated["current_value"] == 12
+    assert updated["status"] == "open"
+
+    cycles = client.get(f"/goals/{goal['id']}/cycles", headers=auth_headers).json()
+    assert [c["achieved_value"] for c in cycles] == [0, 40]
+    assert [c["target_value"] for c in cycles] == [None, None]
+    assert [c["completed"] for c in cycles] == [False, True]
 
 
 def test_goal_without_target_finishes_at_deadline(client, db_session, auth_headers):

@@ -133,7 +133,11 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
                     achieved_count=0,
                     target_value=goal.target_value,
                     achieved_value=achieved_value,
-                    completed=achieved_value >= goal.target_value,
+                    completed=(
+                        achieved_value >= goal.target_value
+                        if goal.has_target
+                        else achieved_value > 0
+                    ),
                 )
             else:
                 achieved = (
