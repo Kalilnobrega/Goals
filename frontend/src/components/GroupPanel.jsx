@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
-  Users, Trophy, UserPlus, Copy, Check, Crown, ShieldPlus, ShieldMinus, UserMinus, LogOut, ArrowRight, MoreHorizontal,
+  Users, Trophy, UserPlus, Copy, Check, Crown, ShieldPlus, ShieldMinus, UserMinus, LogOut, ArrowRight, MoreHorizontal, Medal,
 } from 'lucide-react';
 import { createInvite, changeMemberRole, transferLeadership, removeMember } from '../lib/api';
 import { formatDeadline } from '../lib/date';
@@ -11,6 +11,7 @@ import { useConfirm } from './ConfirmDialog';
 import styles from './GroupPanel.module.css';
 
 const ROLE_LABEL = { leader: 'Líder', moderator: 'Moderador' };
+const PODIUMS_PREVIEW = 3;
 
 function errorMessage(err, fallback) {
   return err?.response?.data?.detail || fallback;
@@ -22,6 +23,7 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [menuFor, setMenuFor] = useState(null);
+  const [showAllPodiums, setShowAllPodiums] = useState(false);
   const confirmAction = useConfirm();
   const menuRef = useRef(null);
 
@@ -30,6 +32,14 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
   const canInvite = myRole === 'leader' || myRole === 'moderator';
   const full = group.members.length >= group.member_limit;
   const me = group.members.find(m => m.is_me);
+  const podiums = isChallenge ? group.podiums ?? [] : [];
+  const visiblePodiums = showAllPodiums ? podiums : podiums.slice(0, PODIUMS_PREVIEW);
+
+  const placeScore = (place) => {
+    if (!group.has_target) return formatValue(place.value ?? 0, group.unit);
+    if (place.progress !== null && place.progress !== undefined) return `${Math.round(place.progress)}%`;
+    return formatValue(place.value ?? 0, group.unit);
+  };
 
   useEffect(() => {
     if (menuFor === null) return;
@@ -261,6 +271,47 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
           );
         })}
       </ul>
+
+      {podiums.length > 0 && (
+        <div className={styles.podiums}>
+          <div className={styles.header}>
+            <Medal size={16} className={styles.headerIcon} />
+            <h3 className={styles.title}>Pódios</h3>
+            <span className={styles.count}>{podiums.length}</span>
+          </div>
+          <ul className={styles.list}>
+            {visiblePodiums.map(podium => (
+              <li key={podium.id} className={`${styles.podium} glass`}>
+                <span className={styles.podiumTitle}>
+                  {podium.cycle_start
+                    ? `Ciclo ${formatDeadline(podium.cycle_start)} – ${formatDeadline(podium.cycle_end)}`
+                    : 'Resultado final'}
+                </span>
+                {podium.places.length === 0 ? (
+                  <span className={styles.podiumEmpty}>Ninguém pontuou.</span>
+                ) : (
+                  <ol className={styles.places}>
+                    {podium.places.map(place => (
+                      <li key={place.position} className={styles.place} data-position={place.position}>
+                        <span className={styles.placeMedal}>{place.position}º</span>
+                        <span className={styles.placeName}>
+                          {place.user_name}{me && place.user_id === me.user_id && <span className={styles.you}> (você)</span>}
+                        </span>
+                        <span className={styles.placeScore}>{placeScore(place)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            ))}
+          </ul>
+          {podiums.length > PODIUMS_PREVIEW && (
+            <button type="button" className={styles.showMore} onClick={() => setShowAllPodiums(v => !v)}>
+              {showAllPodiums ? 'Mostrar menos' : `Ver todos os ${podiums.length} pódios`}
+            </button>
+          )}
+        </div>
+      )}
 
       <button type="button" className={styles.leaveBtn} onClick={handleLeave} disabled={busy}>
         <LogOut size={14} /> {isChallenge ? 'Sair do desafio' : 'Sair da meta'}

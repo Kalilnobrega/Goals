@@ -302,6 +302,55 @@
   .leaveBtn:hover:not(:disabled) { background: rgba(239,68,68,0.06); }
 }
 
+.podiums { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+
+.podium {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.podiumTitle { font-size: 0.8rem; font-weight: 700; color: #475569; }
+
+.podiumEmpty { font-size: 0.82rem; color: #94a3b8; }
+
+.places { display: flex; flex-direction: column; gap: 6px; list-style: none; }
+
+.place { display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #334155; }
+
+.placeMedal {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.place[data-position="1"] .placeMedal { color: #b45309; background: rgba(251,191,36,0.22); }
+.place[data-position="2"] .placeMedal { color: #475569; background: rgba(148,163,184,0.22); }
+.place[data-position="3"] .placeMedal { color: #9a3412; background: rgba(234,88,12,0.15); }
+
+.placeName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.placeScore { flex-shrink: 0; font-weight: 700; color: var(--b600); }
+
+.showMore {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--b600);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 @media (max-width: 480px) {
   .member { gap: 10px; padding: 10px 12px; }
   .avatar { width: 28px; height: 28px; font-size: 0.78rem; }
