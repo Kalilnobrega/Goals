@@ -118,6 +118,22 @@
 
 .hint { font-size: 0.78rem; color: #94a3b8; }
 
+.clearLink {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--b600);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .clearLink:hover { text-decoration: underline; }
+}
+
 .typeGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -97,6 +97,8 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     });
   };
 
+  const clearDeadline = () => setForm(prev => ({ ...prev, deadline: '', cycleCount: '' }));
+
   const handleCycleCountChange = (e) => {
     const value = e.target.value;
     setForm(prev => {
@@ -381,6 +383,11 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             <span className={f.hint}>
               ≈ {form.cycleCount} ciclo{form.cycleCount !== '1' ? 's' : ''} até lá
             </span>
+          )}
+          {form.deadline && (
+            <button type="button" className={f.clearLink} onClick={clearDeadline}>
+              Remover prazo
+            </button>
           )}
         </div>
       </div>
