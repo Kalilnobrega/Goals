@@ -549,3 +549,77 @@ def test_challenge_without_target_ranks_by_total(client, auth_headers, ana):
     assert detail["unit"] == "ml"
     assert [m["goal_id"] for m in detail["members"]] == [ana_goal_id, goal["id"]]
     assert [m["current_value"] for m in detail["members"]] == [800, 500]
+
+
+def test_recurring_challenge_saves_top_three_of_each_cycle(client, db_session, auth_headers, ana, bruno):
+    _, ana_headers = ana
+    _, bruno_headers = bruno
+    carla_headers = headers_for(make_user(db_session, "Carla"))
+    dani_headers = headers_for(make_user(db_session, "Dani"))
+
+    goal = create_goal(
+        client,
+        auth_headers,
+        target_value=20,
+        unit="km",
+        is_recurring=True,
+        recurrence_interval_days=7,
+    )
+    group = share(client, auth_headers, goal["id"], "challenge")
+    for headers in (ana_headers, bruno_headers, carla_headers, dani_headers):
+        join(client, headers, invite(client, auth_headers, group["id"]))
+
+    old_start = datetime.now(timezone.utc) - timedelta(days=8)
+    values = {"Test User": 10, "Ana": 25, "Bruno": 5, "Carla": 15, "Dani": 0}
+    for copy in db_session.query(Goal).filter(Goal.group_id == group["id"]).all():
+        copy.cycle_start_date = old_start
+        if values[copy.owner.name]:
+            db_session.add(
+                GoalEntry(
+                    goal_id=copy.id,
+                    value=values[copy.owner.name],
+                    created_at=old_start + timedelta(days=1),
+                )
+            )
+    db_session.commit()
+
+    detail = client.get(f"/groups/{group['id']}", headers=auth_headers).json()
+    assert len(detail["podiums"]) == 1
+    podium = detail["podiums"][0]
+    assert podium["cycle_start"] is not None
+    assert [p["user_name"] for p in podium["places"]] == ["Ana", "Carla", "Test User"]
+    assert [p["value"] for p in podium["places"]] == [25, 15, 10]
+    assert [p["completed"] for p in podium["places"]] == [True, False, False]
+
+    again = client.get(f"/groups/{group['id']}", headers=ana_headers).json()
+    assert len(again["podiums"]) == 1
+
+
+def test_challenge_saves_final_top_three_when_it_ends(client, db_session, auth_headers, ana, bruno):
+    _, ana_headers = ana
+    bruno_user, bruno_headers = bruno
+    goal = create_goal(client, auth_headers, numeric_mode="sum", unit="páginas")
+    group = share(client, auth_headers, goal["id"], "challenge")
+    ana_goal_id = join(client, ana_headers, invite(client, auth_headers, group["id"]))
+    bruno_goal_id = join(client, bruno_headers, invite(client, auth_headers, group["id"]))
+
+    client.post(f"/goals/{goal['id']}/entries", json={"value": 30}, headers=auth_headers)
+    client.post(f"/goals/{ana_goal_id}/entries", json={"value": 50}, headers=ana_headers)
+    client.post(f"/goals/{bruno_goal_id}/entries", json={"value": 40}, headers=bruno_headers)
+
+    detail = client.get(f"/groups/{group['id']}", headers=auth_headers).json()
+    assert detail["podiums"] == []
+
+    for copy in db_session.query(Goal).filter(Goal.group_id == group["id"]).all():
+        copy.deadline = datetime.now(timezone.utc) - timedelta(days=2)
+    db_session.commit()
+
+    client.get("/goals/", headers=bruno_headers)
+    client.delete(f"/groups/{group['id']}/members/{bruno_user.id}", headers=bruno_headers)
+
+    detail = client.get(f"/groups/{group['id']}", headers=auth_headers).json()
+    assert len(detail["podiums"]) == 1
+    podium = detail["podiums"][0]
+    assert podium["cycle_start"] is None
+    assert [p["user_name"] for p in podium["places"]] == ["Ana", "Bruno", "Test User"]
+    assert [p["value"] for p in podium["places"]] == [50, 40, 30]

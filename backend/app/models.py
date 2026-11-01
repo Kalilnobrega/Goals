@@ -353,6 +353,9 @@ class GoalGroup(Base):
     invites = relationship(
         "GroupInvite", back_populates="group", cascade="all, delete-orphan"
     )
+    podiums = relationship(
+        "ChallengePodium", back_populates="group", cascade="all, delete-orphan"
+    )
 
 
 class GroupMember(Base):
@@ -377,6 +380,37 @@ class GroupInvite(Base):
     token = Column(String(64), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     group = relationship("GoalGroup", back_populates="invites")
+
+
+class ChallengePodium(Base):
+    __tablename__ = "challenge_podiums"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(ForeignKey("goal_groups.id"), nullable=False, index=True)
+    cycle_start = Column(DateTime(timezone=True), nullable=True)
+    cycle_end = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    group = relationship("GoalGroup", back_populates="podiums")
+    places = relationship(
+        "ChallengePlacement",
+        back_populates="podium",
+        cascade="all, delete-orphan",
+        order_by="ChallengePlacement.position",
+    )
+
+
+class ChallengePlacement(Base):
+    __tablename__ = "challenge_placements"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    podium_id = Column(ForeignKey("challenge_podiums.id"), nullable=False, index=True)
+    position = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=True)
+    user_name = Column(String, nullable=False)
+    value = Column(Float, nullable=True)
+    progress = Column(Float, nullable=True)
+    completed = Column(Boolean, nullable=False, default=False)
+    podium = relationship("ChallengePodium", back_populates="places")
 
 
 class RefreshToken(Base):

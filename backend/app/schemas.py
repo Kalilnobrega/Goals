@@ -401,6 +401,28 @@ class GroupMemberSchema(BaseModel):
     completed_at: datetime | None = None
 
 
+class ChallengePlacementSchema(BaseModel):
+    position: int
+    user_id: int | None = None
+    user_name: str
+    value: float | None = None
+    progress: float | None = None
+    completed: bool
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengePodiumSchema(BaseModel):
+    id: int
+    cycle_start: datetime | None = None
+    cycle_end: datetime | None = None
+    places: list[ChallengePlacementSchema]
+
+    class Config:
+        from_attributes = True
+
+
 class GroupResponseSchema(BaseModel):
     id: int
     kind: GroupKind
@@ -413,6 +435,7 @@ class GroupResponseSchema(BaseModel):
     unit: str | None = None
     member_limit: int
     members: list[GroupMemberSchema]
+    podiums: list[ChallengePodiumSchema] = []
 
 
 class GroupInviteSchema(BaseModel):

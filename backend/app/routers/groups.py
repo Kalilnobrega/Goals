@@ -35,6 +35,7 @@ from .tasks import (
     to_aware_utc,
     check_and_reset_recurring_goals,
     check_and_reset_recurring_tasks,
+    settle_challenge,
 )
 
 groups_router = APIRouter(prefix="/groups", tags=["groups"])
@@ -85,6 +86,8 @@ def group_detail(group: GoalGroup, user: User, session: Session) -> dict:
             if member.user_id != user.id:
                 check_and_reset_recurring_goals(member.user_id, session)
                 check_and_reset_recurring_tasks(member.user_id, session)
+        settle_challenge(group, session)
+        session.commit()
         goal = copies[user.id]
     else:
         goal = group.goals[0]
@@ -135,6 +138,13 @@ def group_detail(group: GoalGroup, user: User, session: Session) -> dict:
         "unit": goal.unit,
         "member_limit": MEMBER_LIMIT,
         "members": members,
+        "podiums": sorted(
+            group.podiums,
+            key=lambda podium: (
+                podium.cycle_start is not None,
+                -to_aware_utc(podium.cycle_start).timestamp() if podium.cycle_start else 0,
+            ),
+        ),
     }
 
 
@@ -356,6 +366,7 @@ async def remove_group_member(
                 detail="Você não tem permissão para remover essa pessoa.",
             )
 
+    settle_challenge(group, session)
     remove_member(group, target, session)
     session.commit()
 

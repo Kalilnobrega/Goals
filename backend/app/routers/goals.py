@@ -19,6 +19,7 @@ from app.models import (
     Task,
     GoalCycleLog,
     GoalEntry,
+    GroupKind,
 )
 from app.access import (
     member_goal_filter,
@@ -43,6 +44,7 @@ from .tasks import (
     undo_today_streak_if_inactive,
     refresh_goal_status,
     apply_order,
+    settle_challenge,
 )
 from app.dates import today_br, br_day_start_utc
 from .stats import numeric_summary
@@ -129,6 +131,15 @@ def mark_late(goals: list[Goal], session: Session):
                 if goal.is_numeric and not goal.has_target
                 else GoalStatus.LATE
             )
+            late = True
+        if (
+            goal.group
+            and goal.group.kind == GroupKind.CHALLENGE
+            and goal.deadline
+            and is_late(goal.deadline, now)
+            and not any(podium.cycle_start is None for podium in goal.group.podiums)
+        ):
+            settle_challenge(goal.group, session, now)
             late = True
 
     if late:

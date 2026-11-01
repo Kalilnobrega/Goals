@@ -21,6 +21,8 @@ from app.models import (
     GoalCycleLog,
     GoalGroup,
     GroupKind,
+    ChallengePodium,
+    ChallengePlacement,
 )
 from app.access import (
     member_goal_filter,
@@ -44,6 +46,9 @@ from app.dates import (
 from typing import List
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+PODIUM_SIZE = 3
+FAR_FUTURE = datetime.max.replace(tzinfo=timezone.utc)
 
 
 def to_aware_utc(dt):
@@ -99,6 +104,174 @@ def uncheck_goal_tasks(goal: Goal):
         task.status = False
 
 
+def close_goal_cycles(goal: Goal, now: datetime, session: Session) -> bool:
+    if not goal.cycle_start_date or not goal.recurrence_interval_days:
+        return False
+
+    interval = timedelta(days=goal.recurrence_interval_days)
+    deadline = to_aware_utc(goal.deadline) if goal.deadline else None
+    target = goal.recurrence_target or 1
+    cycle_start = to_aware_utc(goal.cycle_start_date)
+    cycle_end = cycle_start + interval
+
+    if now < cycle_end:
+        return False
+
+    while cycle_end <= now and (deadline is None or cycle_start < deadline):
+        if goal.is_numeric:
+            achieved_value = sum(
+                entry.value
+                for entry in goal.entries
+                if cycle_start <= to_aware_utc(entry.created_at) < cycle_end
+            )
+            log = GoalCycleLog(
+                target_count=0,
+                achieved_count=0,
+                target_value=goal.target_value,
+                achieved_value=achieved_value,
+                completed=(
+                    achieved_value >= goal.target_value
+                    if goal.has_target
+                    else achieved_value > 0
+                ),
+            )
+        else:
+            achieved = (
+                session.query(TaskCompletion)
+                .join(Task, Task.id == TaskCompletion.task_id)
+                .filter(
+                    Task.goals_id == goal.id,
+                    TaskCompletion.completed_at >= cycle_start,
+                    TaskCompletion.completed_at < cycle_end,
+                )
+                .count()
+            )
+            log = GoalCycleLog(
+                target_count=target,
+                achieved_count=achieved,
+                completed=achieved >= target,
+            )
+
+        log.cycle_start = cycle_start
+        log.cycle_end = cycle_end
+        goal.cycle_logs.append(log)
+
+        cycle_start = cycle_end
+        cycle_end = cycle_start + interval
+
+    if deadline and deadline <= now:
+        goal.is_recurring = False
+    else:
+        goal.cycle_start_date = cycle_start
+        uncheck_goal_tasks(goal)
+
+    return True
+
+
+def member_order(group: GoalGroup) -> dict[int, int]:
+    return {member.user_id: index for index, member in enumerate(group.members)}
+
+
+def cycle_place(goal: Goal, log: GoalCycleLog) -> dict:
+    numeric = log.achieved_value is not None
+    value = log.achieved_value if numeric else float(log.achieved_count)
+    target = log.target_value if numeric else log.target_count
+    return {
+        "goal": goal,
+        "value": value,
+        "progress": min(round(value / target * 100, 1), 100.0) if target else None,
+        "completed": log.completed,
+    }
+
+
+def save_podium(group: GoalGroup, rows: list[dict], cycle_start=None, cycle_end=None):
+    order = member_order(group)
+    ranked = sorted(
+        (row for row in rows if (row["score"] or 0) > 0),
+        key=lambda row: (
+            -row["score"],
+            row.get("finished_at") or FAR_FUTURE,
+            order.get(row["goal"].user_id, len(order)),
+        ),
+    )
+    podium = ChallengePodium(cycle_start=cycle_start, cycle_end=cycle_end)
+    for position, row in enumerate(ranked[:PODIUM_SIZE], start=1):
+        podium.places.append(
+            ChallengePlacement(
+                position=position,
+                user_id=row["goal"].user_id,
+                user_name=row["goal"].owner.name,
+                value=row["value"],
+                progress=row["progress"],
+                completed=row["completed"],
+            )
+        )
+    group.podiums.append(podium)
+
+
+def record_cycle_podiums(group: GoalGroup):
+    recorded = {
+        to_aware_utc(podium.cycle_start)
+        for podium in group.podiums
+        if podium.cycle_start is not None
+    }
+    cycles = {}
+    for goal in group.goals:
+        for log in goal.cycle_logs:
+            start = to_aware_utc(log.cycle_start)
+            if start in recorded:
+                continue
+            row = cycle_place(goal, log)
+            row["score"] = row["value"]
+            cycles.setdefault(start, (to_aware_utc(log.cycle_end), []))[1].append(row)
+
+    for start in sorted(cycles):
+        end, rows = cycles[start]
+        save_podium(group, rows, start, end)
+
+
+def record_final_podium(group: GoalGroup, now: datetime):
+    goals = group.goals
+    if not goals or any(podium.cycle_start is None for podium in group.podiums):
+        return
+    deadline = goals[0].deadline
+    if not deadline or not is_late(deadline, now):
+        return
+    if any(goal.is_recurring or goal.cycle_logs for goal in goals):
+        return
+
+    open_ended = goals[0].is_numeric and not goals[0].has_target
+    rows = []
+    for goal in goals:
+        progress = None if open_ended else goal.progress
+        rows.append(
+            {
+                "goal": goal,
+                "score": goal.current_value if open_ended else progress,
+                "finished_at": (
+                    to_aware_utc(goal.completed_at)
+                    if goal.completed_at and not open_ended
+                    else None
+                ),
+                "value": goal.current_value,
+                "progress": progress,
+                "completed": progress is not None and progress >= 100,
+            }
+        )
+    save_podium(group, rows)
+
+
+def settle_challenge(group: GoalGroup, session: Session, now: datetime | None = None):
+    if group.kind != GroupKind.CHALLENGE:
+        return
+    now = now or datetime.now(timezone.utc)
+    for goal in group.goals:
+        if goal.is_recurring:
+            close_goal_cycles(goal, now, session)
+    record_cycle_podiums(group)
+    record_final_podium(group, now)
+
+
 def check_and_reset_recurring_goals(user_id: int, session: Session):
     now = datetime.now(timezone.utc)
 
@@ -108,67 +281,13 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
         .all()
     )
 
+    challenges = {}
     for goal in recurring_goals:
-        if not goal.cycle_start_date or not goal.recurrence_interval_days:
-            continue
+        if close_goal_cycles(goal, now, session) and goal.group and goal.group.kind == GroupKind.CHALLENGE:
+            challenges[goal.group.id] = goal.group
 
-        interval = timedelta(days=goal.recurrence_interval_days)
-        deadline = to_aware_utc(goal.deadline) if goal.deadline else None
-        target = goal.recurrence_target or 1
-        cycle_start = to_aware_utc(goal.cycle_start_date)
-        cycle_end = cycle_start + interval
-
-        if now < cycle_end:
-            continue
-
-        while cycle_end <= now and (deadline is None or cycle_start < deadline):
-            if goal.is_numeric:
-                achieved_value = sum(
-                    entry.value
-                    for entry in goal.entries
-                    if cycle_start <= to_aware_utc(entry.created_at) < cycle_end
-                )
-                log = GoalCycleLog(
-                    target_count=0,
-                    achieved_count=0,
-                    target_value=goal.target_value,
-                    achieved_value=achieved_value,
-                    completed=(
-                        achieved_value >= goal.target_value
-                        if goal.has_target
-                        else achieved_value > 0
-                    ),
-                )
-            else:
-                achieved = (
-                    session.query(TaskCompletion)
-                    .join(Task, Task.id == TaskCompletion.task_id)
-                    .filter(
-                        Task.goals_id == goal.id,
-                        TaskCompletion.completed_at >= cycle_start,
-                        TaskCompletion.completed_at < cycle_end,
-                    )
-                    .count()
-                )
-                log = GoalCycleLog(
-                    target_count=target,
-                    achieved_count=achieved,
-                    completed=achieved >= target,
-                )
-
-            log.goal_id = goal.id
-            log.cycle_start = cycle_start
-            log.cycle_end = cycle_end
-            session.add(log)
-
-            cycle_start = cycle_end
-            cycle_end = cycle_start + interval
-
-        if deadline and deadline <= now:
-            goal.is_recurring = False
-        else:
-            goal.cycle_start_date = cycle_start
-            uncheck_goal_tasks(goal)
+    for group in challenges.values():
+        settle_challenge(group, session, now)
 
     session.commit()
 
