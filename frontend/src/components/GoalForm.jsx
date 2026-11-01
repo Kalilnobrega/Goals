@@ -81,7 +81,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
   const isNumeric = form.kind === 'numeric';
   const isMeasurement = isNumeric && form.numeric_mode === 'latest';
   const isOpenEnded = isNumeric && form.noTarget;
-  const canRecur = !isMeasurement && !isOpenEnded;
+  const canRecur = !isMeasurement;
 
   const set = (k) => (e) => setForm(prev => ({ ...prev, [k]: e.target.value }));
 
@@ -216,11 +216,10 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
               title: 'Recorrente',
               desc: 'Repetir uma atividade ao longo do tempo',
               active: form.is_recurring,
-              disabled: isEdit && (isMeasurement || isOpenEnded),
+              disabled: isEdit && isMeasurement,
               onClick: () => setForm(prev => ({
                 ...prev,
                 is_recurring: !prev.is_recurring,
-                noTarget: !prev.is_recurring ? false : prev.noTarget,
                 numeric_mode: !prev.is_recurring && !isEdit ? 'sum' : prev.numeric_mode,
               })),
             },
@@ -264,18 +263,18 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                 desc: 'Ex.: quilômetros corridos, dinheiro economizado',
               },
               {
+                key: 'open',
+                mode: 'sum',
+                noTarget: true,
+                title: 'Somar sem limite',
+                desc: 'Ex.: páginas lidas, horas de estudo. Sem valor alvo; em desafios, vence quem somar mais',
+              },
+              {
                 key: 'latest',
                 mode: 'latest',
                 noTarget: false,
                 title: 'Progresso atual',
                 desc: 'Ex.: peso atual, saldo guardado',
-              },
-              {
-                key: 'open',
-                mode: 'sum',
-                noTarget: true,
-                title: 'Somar sem limite',
-                desc: 'Ex.: copos de água. Em desafios, vence quem somar mais',
               },
             ].map(({ key, mode, noTarget, title, desc }) => {
               const active = form.numeric_mode === mode && form.noTarget === noTarget;
@@ -289,7 +288,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
                       ...prev,
                       numeric_mode: mode,
                       noTarget,
-                      is_recurring: mode === 'latest' || noTarget ? false : prev.is_recurring,
+                      is_recurring: mode === 'latest' ? false : prev.is_recurring,
                     }))}
                   />
                   <span className={f.measureText}>
@@ -348,7 +347,9 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
             <span className={f.hint}>
               {isMeasurement
                 ? 'Você poderá registrar novas medições ao longo do tempo.'
-                : 'Você poderá somar novos registros ao longo do tempo.'}
+                : isOpenEnded && form.is_recurring
+                  ? 'O total volta a zero a cada ciclo e fica salvo no histórico.'
+                  : 'Você poderá somar novos registros ao longo do tempo.'}
             </span>
           )}
         </div>

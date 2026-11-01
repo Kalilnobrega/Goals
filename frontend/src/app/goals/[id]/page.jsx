@@ -289,7 +289,9 @@ export default function GoalDetailPage() {
   const visibleEntries = showAllEntries ? entries : entries.slice(0, ENTRIES_PREVIEW);
 
   const cyclesCompleted = cycles.filter(c => c.completed).length;
-  const consistency = cycles.length > 0 ? Math.round((cyclesCompleted / cycles.length) * 100) : null;
+  const openEnded = Boolean(goal?.is_numeric && !hasTarget(goal));
+  const cycleTotal = cycles.reduce((sum, c) => sum + (c.achieved_value ?? 0), 0);
+  const consistency = !openEnded && cycles.length > 0 ? Math.round((cyclesCompleted / cycles.length) * 100) : null;
 
   if (loading) return (
     <>
@@ -433,7 +435,7 @@ export default function GoalDetailPage() {
             {goal.is_numeric && !hasTarget(goal) ? (
               <div className={styles.progressWrap}>
                 <div className={styles.progressInfo}>
-                  <span className={styles.progressLabel}>Total acumulado</span>
+                  <span className={styles.progressLabel}>{goal.is_recurring ? 'Total neste ciclo' : 'Total acumulado'}</span>
                   <span className={styles.progressPct}>{formatProgressValue(goal)}</span>
                 </div>
               </div>
@@ -525,6 +527,11 @@ export default function GoalDetailPage() {
                   {consistency}% consistência
                 </span>
               )}
+              {openEnded && cycles.length > 0 && (
+                <span className={styles.taskCount}>
+                  {formatValue(cycleTotal, goal.unit)} no total
+                </span>
+              )}
               <Link href="/stats" className={styles.seeStats}>
                 Ver todas as estatísticas <ArrowRight size={14} />
               </Link>
@@ -605,13 +612,17 @@ export default function GoalDetailPage() {
                 {cycles.map(c => (
                   <li key={c.id} className={`${styles.listItem} glass`}>
                     <span className={styles.cycleRange}>
-                      {c.completed
+                      {openEnded
+                        ? <RefreshCw size={16} />
+                        : c.completed
                         ? <CheckCircle2 size={16} className={styles.cycleDone} />
                         : <XCircle size={16} className={styles.cycleMissed} />}
                       {formatDeadline(c.cycle_start)} – {formatDeadline(c.cycle_end)}
                     </span>
-                    <span className={`${styles.cycleScore} ${c.completed ? styles.cycleDone : styles.cycleMissed}`}>
-                      {c.achieved_value !== null && c.achieved_value !== undefined
+                    <span className={`${styles.cycleScore} ${openEnded ? '' : c.completed ? styles.cycleDone : styles.cycleMissed}`}>
+                      {openEnded
+                        ? formatValue(c.achieved_value ?? 0, goal.unit)
+                        : c.achieved_value !== null && c.achieved_value !== undefined
                         ? `${formatValue(c.achieved_value)}/${formatValue(c.target_value, goal.unit)}`
                         : `${c.achieved_count}/${c.target_count}`}
                     </span>

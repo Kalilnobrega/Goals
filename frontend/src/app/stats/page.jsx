@@ -336,6 +336,8 @@ export default function StatsPage() {
                         <span className={styles.recurringMeta}>
                           {goal.total_cycles === 0
                             ? 'Nenhum ciclo fechado ainda'
+                            : !goal.has_target
+                            ? `${goal.completed_cycles} de ${goal.total_cycles} ciclo${goal.total_cycles !== 1 ? 's' : ''} com registro`
                             : `${goal.completed_cycles} de ${goal.total_cycles} ciclo${goal.total_cycles !== 1 ? 's' : ''} batido${goal.total_cycles !== 1 ? 's' : ''}`}
                         </span>
                       </div>
@@ -346,7 +348,7 @@ export default function StatsPage() {
                             <span
                               key={cycle.cycle_start}
                               className={`${styles.cycle} ${cycle.completed ? styles.cycleDone : styles.cycleMissed}`}
-                              title={`${formatDeadline(cycle.cycle_start)} – ${formatDeadline(cycle.cycle_end)}: ${formatValue(cycle.achieved)}/${formatValue(cycle.target, goal.unit)}`}
+                              title={`${formatDeadline(cycle.cycle_start)} – ${formatDeadline(cycle.cycle_end)}: ${cycle.target === null ? formatValue(cycle.achieved, goal.unit) : `${formatValue(cycle.achieved)}/${formatValue(cycle.target, goal.unit)}`}`}
                             >
                               {cycle.completed ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
                             </span>

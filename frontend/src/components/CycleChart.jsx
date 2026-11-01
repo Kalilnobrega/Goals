@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { formatValue, niceTicks } from '../lib/numeric';
+import { formatValue, niceTicks, hasTarget } from '../lib/numeric';
 import { formatDeadline, cycleNotStarted } from '../lib/date';
 import styles from './CycleChart.module.css';
 
@@ -14,6 +14,7 @@ function shortDate(iso) {
 }
 
 export function buildCycleBars(goal, cycles) {
+  const openEnded = goal.is_numeric && !hasTarget(goal);
   const closed = [...cycles]
     .sort((a, b) => new Date(a.cycle_start) - new Date(b.cycle_start))
     .slice(-MAX_CYCLES)
@@ -25,12 +26,12 @@ export function buildCycleBars(goal, cycles) {
         end: c.cycle_end,
         achieved: numeric ? c.achieved_value : c.achieved_count,
         target: numeric ? c.target_value : c.target_count,
-        state: c.completed ? 'done' : 'missed',
+        state: openEnded ? 'done' : c.completed ? 'done' : 'missed',
       };
     });
 
   if (goal.is_recurring && goal.cycle_start_date && goal.cycle_ends_at && !cycleNotStarted(goal)) {
-    const target = goal.is_numeric ? goal.target_value : goal.recurrence_target ?? 1;
+    const target = openEnded ? null : goal.is_numeric ? goal.target_value : goal.recurrence_target ?? 1;
     const achieved = goal.is_numeric ? goal.current_value ?? 0 : goal.current_cycle_progress ?? 0;
     closed.push({
       key: 'current',
@@ -38,7 +39,7 @@ export function buildCycleBars(goal, cycles) {
       end: goal.cycle_ends_at,
       achieved,
       target,
-      state: achieved >= target ? 'done' : 'current',
+      state: target !== null && achieved >= target ? 'done' : 'current',
       current: true,
     });
   }
@@ -58,7 +59,8 @@ export default function CycleChart({ goal, bars }) {
   }, []);
 
   const unit = goal.is_numeric ? goal.unit : null;
-  const ticks = niceTicks(0, Math.max(...bars.map(b => Math.max(b.achieved, b.target)), 1));
+  const openEnded = goal.is_numeric && !hasTarget(goal);
+  const ticks = niceTicks(0, Math.max(...bars.map(b => Math.max(b.achieved, b.target ?? 0)), 1));
   const yMax = ticks[ticks.length - 1];
   const plotW = Math.max(width - PAD.left - PAD.right, 1);
   const plotH = HEIGHT - PAD.top - PAD.bottom;
@@ -106,13 +108,15 @@ export default function CycleChart({ goal, bars }) {
                   data-state={bar.state}
                   data-active={i === active || undefined}
                 />
-                <line
-                  x1={x(i) - 3}
-                  x2={x(i) + barW + 3}
-                  y1={y(bar.target)}
-                  y2={y(bar.target)}
-                  className={styles.target}
-                />
+                {bar.target !== null && (
+                  <line
+                    x1={x(i) - 3}
+                    x2={x(i) + barW + 3}
+                    y1={y(bar.target)}
+                    y2={y(bar.target)}
+                    className={styles.target}
+                  />
+                )}
                 {(i % labelEvery === (bars.length - 1) % labelEvery) && (
                   <text x={x(i) + barW / 2} y={HEIGHT - 6} className={styles.axis} textAnchor="middle">
                     {bar.current ? 'atual' : shortDate(bar.start)}
@@ -129,22 +133,30 @@ export default function CycleChart({ goal, bars }) {
           className={styles.tooltip}
           style={{
             left: Math.min(Math.max(x(active) + barW / 2, 80), width - 80),
-            top: y(Math.max(activeBar.achieved, activeBar.target)),
+            top: y(Math.max(activeBar.achieved, activeBar.target ?? 0)),
           }}
         >
           <strong>
-            {formatValue(activeBar.achieved)} / {formatValue(activeBar.target, unit)}
-            {activeBar.current ? ' · ciclo atual' : activeBar.state === 'done' ? ' · batido' : ' · não batido'}
+            {activeBar.target === null
+              ? formatValue(activeBar.achieved, unit)
+              : `${formatValue(activeBar.achieved)} / ${formatValue(activeBar.target, unit)}`}
+            {activeBar.current ? ' · ciclo atual' : openEnded ? '' : activeBar.state === 'done' ? ' · batido' : ' · não batido'}
           </strong>
           <span>{formatDeadline(activeBar.start)} – {formatDeadline(activeBar.end)}</span>
         </div>
       )}
 
       <div className={styles.legend}>
-        <span><i data-state="done" /> Batido</span>
-        <span><i data-state="missed" /> Não batido</span>
+        {openEnded ? (
+          <span><i data-state="done" /> Total do ciclo</span>
+        ) : (
+          <>
+            <span><i data-state="done" /> Batido</span>
+            <span><i data-state="missed" /> Não batido</span>
+          </>
+        )}
         {bars.some(b => b.current) && <span><i data-state="current" /> Em andamento</span>}
-        <span><i className={styles.legendTarget} /> Meta do ciclo</span>
+        {!openEnded && <span><i className={styles.legendTarget} /> Meta do ciclo</span>}
       </div>
     </div>
   );
