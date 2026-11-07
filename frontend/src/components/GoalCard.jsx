@@ -16,6 +16,8 @@ const STATUS_META = {
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
 
+const stopEvent = (event) => event.stopPropagation();
+
 const RING_RADIUS = 18;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
@@ -226,7 +228,12 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
       </div>
 
       {menu && createPortal(
-        <>
+        <div
+          className={styles.menuLayer}
+          onClick={stopEvent}
+          onMouseDown={stopEvent}
+          onTouchStart={stopEvent}
+        >
           <div className={styles.menuBackdrop} onClick={() => setMenu(null)} />
           <div className={`${styles.menu} glass-strong`} role="menu" style={menu}>
             {canComplete && (
@@ -254,7 +261,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
               </button>
             )}
           </div>
-        </>,
+        </div>,
         document.body,
       )}
     </article>

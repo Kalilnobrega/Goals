@@ -468,6 +468,8 @@
 
 }
 
+.menuLayer { display: contents; }
+
 .menuBackdrop {
   position: fixed;
   inset: 0;
