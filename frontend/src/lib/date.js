@@ -14,6 +14,15 @@ export function formatDeadline(isoString) {
   return `${day}/${month}/${year}`;
 }
 
+export function formatShortDeadline(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const year = d.getUTCFullYear();
+  return year === new Date().getFullYear() ? `${day}/${month}` : `${day}/${month}/${String(year).slice(-2)}`;
+}
+
 export const WEEKDAYS = [
   { value: 0, short: 'Seg' },
   { value: 1, short: 'Ter' },

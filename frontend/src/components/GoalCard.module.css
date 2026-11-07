@@ -152,10 +152,17 @@
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
 }
 
-.progressFillComplete {
+.progressFill.toneComplete {
   background: linear-gradient(90deg, #4ade80, #16a34a);
   box-shadow: 0 0 10px rgba(22, 163, 74, 0.4);
 }
+
+.progressFill.toneLate {
+  background: linear-gradient(90deg, #f87171, #dc2626);
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.35);
+}
+
+.cardLate .progressBar { background: rgba(239, 68, 68, 0.12); }
 
 .progressLabel {
   font-size: 0.78rem;
@@ -165,7 +172,8 @@
   text-align: right;
 }
 
-.progressLabelComplete { color: #16a34a; }
+.progressLabel.toneComplete { color: #16a34a; }
+.progressLabel.toneLate     { color: #dc2626; }
 
 .meta {
   display: flex;
@@ -258,6 +266,211 @@
     background: rgba(239, 68, 68, 0.14);
     transform: scale(1.05);
   }
+}
+
+.cover,
+.btnMenu,
+.short,
+.statusIcon {
+  display: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 600px) {
+  .card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas:
+      "badges   controls"
+      "title    title"
+      "progress progress"
+      "meta     meta";
+    gap: 8px 4px;
+    padding: 10px 8px 14px 14px;
+    border-radius: 18px;
+    height: 100%;
+  }
+
+  .cover {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .topRow { display: contents; }
+
+  .badges {
+    grid-area: badges;
+    align-self: center;
+  }
+
+  .controls {
+    grid-area: controls;
+    align-self: center;
+    margin-right: -2px;
+  }
+
+  .statusBadge,
+  .badgeLabel,
+  .desc,
+  .btnPrimary,
+  .actions,
+  .metaItem:not(.metaShown) {
+    display: none;
+  }
+
+  .badge {
+    padding: 0;
+    background: none;
+    border: none;
+  }
+
+  .badges { gap: 8px; }
+
+  .title {
+    grid-area: title;
+    align-self: start;
+    font-size: 0.92rem;
+    line-height: 1.3;
+    padding-right: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .progressWrap { grid-area: progress; gap: 8px; padding-right: 6px; }
+  .progressBar { height: 5px; }
+  .progressLabel { font-size: 0.72rem; min-width: 28px; }
+
+  .meta {
+    grid-area: meta;
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .short { display: inline; }
+
+  .statusIcon { display: inline-flex; }
+
+  .long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .metaItem {
+    font-size: 0.74rem;
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .metaItem svg { flex-shrink: 0; }
+
+  .card:not(:has(.progressWrap)) .metaLead {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--blue-600);
+  }
+
+  .btnMenu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+
+  .btnMenu[aria-expanded="true"] {
+    background: rgba(59, 130, 246, 0.10);
+    color: var(--b600);
+  }
+}
+
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.menu {
+  position: fixed;
+  z-index: 91;
+  min-width: 160px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: var(--radius-md);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: fadeIn 0.15s ease both;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 7px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menuIcon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: var(--menu-color);
+  background: color-mix(in srgb, var(--menu-color) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--menu-color) 22%, transparent);
+}
+
+.menuComplete { --menu-color: #10b981; }
+.menuDelete   { --menu-color: #ef4444; }
+
+.menuItem:active { background: color-mix(in srgb, var(--menu-color) 8%, transparent); }
+
+@media (hover: hover) {
+  .menuItem:hover { background: color-mix(in srgb, var(--menu-color) 8%, transparent); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeUp {
