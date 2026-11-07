@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { CircleCheck, Repeat, TrendingUp } from 'lucide-react';
 import { formatDeadline } from '../lib/date';
+import SuperGoalIcon from './SuperGoalIcon';
 import f from '../styles/forms.module.css';
 
 const CYCLE_PRESETS = [
@@ -204,12 +205,23 @@ export default function GoalForm({ initial = {}, superGoals, onSubmit, onCancel,
       {superGoals?.length > 0 && (
         <div className={f.field}>
           <label className={f.label}>Supermeta</label>
-          <select className={f.select} value={form.super_goal_id} onChange={set('super_goal_id')}>
-            <option value="">Nenhuma</option>
-            {superGoals.map(sg => (
-              <option key={sg.id} value={sg.id}>{sg.title}</option>
-            ))}
-          </select>
+          <div className={f.optionRow}>
+            {[{ id: '', title: 'Nenhuma' }, ...superGoals].map(sg => {
+              const active = form.super_goal_id === String(sg.id);
+              return (
+                <button
+                  key={sg.id || 'none'}
+                  type="button"
+                  className={`${f.endOption} ${active ? f.endOptionActive : ''}`}
+                  aria-pressed={active}
+                  onClick={() => setForm(prev => ({ ...prev, super_goal_id: String(sg.id) }))}
+                >
+                  {sg.id !== '' && <SuperGoalIcon size={15} />}
+                  {sg.title}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

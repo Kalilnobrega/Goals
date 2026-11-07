@@ -28,7 +28,8 @@ import { celebrateGoal } from '../../../lib/celebrate';
 import {
   ArrowLeft, Plus, Pencil, Trash2,
   CheckCircle2, Circle, ListTodo, Calendar,
-  Target, RefreshCw, XCircle, History, TrendingUp, ArrowRight, Share2, Eye
+  Target, RefreshCw, XCircle, History, TrendingUp, ArrowRight, Share2, Eye,
+  CircleCheck, Repeat,
 } from 'lucide-react';import f from '../../../styles/forms.module.css';
 import styles from './page.module.css';
 
@@ -735,14 +736,28 @@ export default function GoalDetailPage() {
             </div>
 
             <div className={f.field}>
-              <label className={`${f.label} ${f.checkLabel}`}>
-                <input
-                  type="checkbox"
-                  checked={editTask?.is_recurring ?? false}
-                  onChange={e => setEditTask(t => ({ ...t, is_recurring: e.target.checked, end_of_goal: false }))}
-                />
-                É um hábito recorrente?
-              </label>
+              <label className={f.label}>Tipo de tarefa</label>
+              <div className={`${f.typeGrid} ${f.typeGridTwo}`}>
+                {[
+                  { recurring: false, icon: CircleCheck, title: 'Tarefa única', desc: 'Fazer uma vez e concluir' },
+                  { recurring: true,  icon: Repeat,      title: 'Hábito recorrente', desc: 'Repetir ao longo do tempo' },
+                ].map(({ recurring, icon: Icon, title, desc }) => {
+                  const active = (editTask?.is_recurring ?? false) === recurring;
+                  return (
+                    <button
+                      key={title}
+                      type="button"
+                      className={`${f.typeCard} ${active ? f.typeCardActive : ''}`}
+                      aria-pressed={active}
+                      onClick={() => setEditTask(t => ({ ...t, is_recurring: recurring, end_of_goal: recurring ? (t.max_recurrences == null) : false }))}
+                    >
+                      <Icon size={22} className={f.typeIcon} />
+                      <span className={f.typeTitle}>{title}</span>
+                      <span className={f.typeDesc}>{desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {editTask?.is_recurring && (
