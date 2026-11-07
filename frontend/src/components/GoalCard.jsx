@@ -2,8 +2,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, AlertTriangle, LogOut } from 'lucide-react';
+import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, LogOut } from 'lucide-react';
 import SuperGoalIcon from './SuperGoalIcon';
+import { useCardLink } from '../lib/useCardLink';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './GoalCard.module.css';
@@ -14,6 +15,9 @@ const STATUS_META = {
   completed: { label: 'Concluída',  color: '#10b981' },
   late:      { label: 'Atrasada',   color: '#ef4444' },
 };
+
+const RING_RADIUS = 18;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 const KIND_META = {
   collaborative: { label: 'Colaborativa', color: '#8b5cf6', icon: Users },
@@ -27,11 +31,11 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   const kind = KIND_META[goal.group_kind];
   const isLate = goal.status === 'late';
   const barTone = isLate ? styles.toneLate : (isCompleted || progress >= 100) ? styles.toneComplete : '';
-  const StatusIcon = isLate ? AlertTriangle : isCompleted ? CheckCircle2 : null;
   const canComplete = !isCompleted && goal.can_complete;
   const inSuperGoal = goal.super_goal_id != null;
   const hasActions = canComplete || goal.can_delete || onMoveToSuperGoal || (inSuperGoal && onRemoveFromSuperGoal);
   const [menu, setMenu] = useState(null);
+  const cardLink = useCardLink(`/goals/${goal.id}`, dragging);
   const menuButton = useRef(null);
 
   const shownMeta = [
@@ -39,12 +43,13 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
     goal.deadline && 'deadline',
     !goal.is_numeric && 'tasks',
     goal.group_kind && 'people',
-  ].filter(Boolean).slice(0, 2);
+  ].filter(Boolean).slice(0, 3);
   const metaClass = (key) => [
     styles.metaItem,
     shownMeta.includes(key) && styles.metaShown,
     shownMeta[0] === key && styles.metaLead,
   ].filter(Boolean).join(' ');
+  const cycleStart = cycleNotStarted(goal);
 
   const openMenu = () => {
     if (menu) return setMenu(null);
@@ -77,15 +82,9 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   }, [menu]);
 
   return (
-    <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`}>
-      <Link href={`/goals/${goal.id}`} className={styles.cover} aria-label={`Ver detalhes de ${goal.title}`} tabIndex={-1} />
+    <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`} {...cardLink} aria-label={goal.title}>
       <div className={styles.topRow}>
         <div className={styles.badges}>
-          {StatusIcon && (
-            <div className={`${styles.badge} ${styles.statusIcon}`} style={{ '--badge-color': meta.color }} title={meta.label}>
-              <StatusIcon size={12} strokeWidth={2.5} aria-label={meta.label} />
-            </div>
-          )}
           <div className={`${styles.badge} ${styles.statusBadge}`} style={{ '--badge-color': meta.color }}>
             <span className={styles.badgeDot} />
             {meta.label}
@@ -93,7 +92,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
           {kind && (
             <div className={styles.badge} style={{ '--badge-color': kind.color }} title={kind.label}>
               <kind.icon size={12} strokeWidth={2.5} />
-              <span className={styles.badgeLabel}>{kind.label}</span>
+              <span className={styles.kindLabel}>{kind.label}</span>
             </div>
           )}
         </div>
@@ -128,6 +127,23 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
         </div>
       )}
 
+      {!(goal.is_numeric && !hasTarget(goal)) && (
+        <div className={`${styles.ring} ${barTone}`} role="img" aria-label={`${progress}% concluído`}>
+          <svg viewBox="0 0 44 44" className={styles.ringSvg}>
+            <circle className={styles.ringTrack} cx="22" cy="22" r={RING_RADIUS} />
+            <circle
+              className={styles.ringFill}
+              cx="22"
+              cy="22"
+              r={RING_RADIUS}
+              strokeDasharray={RING_LENGTH}
+              strokeDashoffset={RING_LENGTH * (1 - Math.min(progress, 100) / 100)}
+            />
+          </svg>
+          <span className={styles.ringLabel}>{progress}<small>%</small></span>
+        </div>
+      )}
+
       <div className={styles.meta}>
         {goal.is_numeric ? (
           <span className={metaClass('numeric')}>
@@ -158,19 +174,28 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
         {goal.is_recurring && goal.is_numeric ? (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
-            {cycleNotStarted(goal) ? `Começa em ${formatDeadline(goal.cycle_start_date)}` : 'Por ciclo'}
+            <span className={styles.short} aria-hidden="true">{cycleStart ? formatShortDeadline(goal.cycle_start_date) : 'Ciclo'}</span>
+            <span className={styles.long}>{cycleStart ? `Começa em ${formatDeadline(goal.cycle_start_date)}` : 'Por ciclo'}</span>
           </span>
         ) : goal.is_recurring ? (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
-            {cycleNotStarted(goal)
-              ? `Começa em ${formatDeadline(goal.cycle_start_date)}`
-              : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1} neste ciclo`}
+            <span className={styles.short} aria-hidden="true">
+              {cycleStart
+                ? formatShortDeadline(goal.cycle_start_date)
+                : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1}`}
+            </span>
+            <span className={styles.long}>
+              {cycleStart
+                ? `Começa em ${formatDeadline(goal.cycle_start_date)}`
+                : `${goal.current_cycle_progress ?? 0}/${goal.recurrence_target ?? 1} neste ciclo`}
+            </span>
           </span>
         ) : goal.tasks?.some(t => t.is_recurring) && (
           <span className={styles.metaItem}>
             <RefreshCw size={13} />
-            Hábitos ativos
+            <span className={styles.short} aria-hidden="true">Hábitos</span>
+            <span className={styles.long}>Hábitos ativos</span>
           </span>
         )}
       </div>
