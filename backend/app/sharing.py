@@ -38,6 +38,12 @@ def remove_member(group: GoalGroup, member: GroupMember, session: Session):
 
     group.members.remove(member)
 
+    if group.kind == GroupKind.COLLABORATIVE:
+        for goal in group.goals:
+            for item in list(goal.super_goal_items):
+                if item.user_id == member.user_id:
+                    goal.super_goal_items.remove(item)
+
     if not group.members:
         if group.kind == GroupKind.COLLABORATIVE:
             for goal in list(group.goals):

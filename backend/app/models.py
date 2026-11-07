@@ -90,6 +90,9 @@ class Goal(Base):
         cascade="all, delete-orphan",
         order_by="GoalCycleLog.cycle_start.desc()",
     )
+    super_goal_items = relationship(
+        "SuperGoalItem", back_populates="goal", cascade="all, delete-orphan"
+    )
 
     @validates("status")
     def track_completion(self, key, value):
@@ -411,6 +414,31 @@ class ChallengePlacement(Base):
     progress = Column(Float, nullable=True)
     completed = Column(Boolean, nullable=False, default=False)
     podium = relationship("ChallengePodium", back_populates="places")
+
+
+class SuperGoal(Base):
+    __tablename__ = "super_goals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(60), nullable=False)
+    position = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    items = relationship(
+        "SuperGoalItem", back_populates="super_goal", cascade="all, delete-orphan"
+    )
+
+
+class SuperGoalItem(Base):
+    __tablename__ = "super_goal_items"
+    __table_args__ = (UniqueConstraint("user_id", "goal_id"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    super_goal_id = Column(ForeignKey("super_goals.id"), nullable=False, index=True)
+    goal_id = Column(ForeignKey("goals.id"), nullable=False, index=True)
+    user_id = Column(ForeignKey("users.id"), nullable=False)
+    super_goal = relationship("SuperGoal", back_populates="items")
+    goal = relationship("Goal", back_populates="super_goal_items")
 
 
 class RefreshToken(Base):

@@ -103,6 +103,7 @@ class GoalResponseSchema(BaseModel):
     is_mine: bool = False
     owner_name: str | None = None
     member_count: int | None = None
+    super_goal_id: int | None = None
 
     class Config:
         from_attributes = True
@@ -223,6 +224,41 @@ class TaskTodaySchema(TaskSchema):
 
 class GoogleTokenSchema(BaseModel):
     token: str
+
+
+class SuperGoalSchema(BaseModel):
+    title: str = Field(max_length=60)
+    goal_ids: list[int] = []
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dê um nome para a supermeta.")
+        return value
+
+
+class EditSuperGoalSchema(BaseModel):
+    title: str = Field(max_length=60)
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dê um nome para a supermeta.")
+        return value
+
+
+class SuperGoalGoalsSchema(BaseModel):
+    goal_ids: list[int] = Field(min_length=1)
+
+
+class SuperGoalResponseSchema(BaseModel):
+    id: int
+    title: str
+    goal_ids: list[int]
 
 
 class ReorderSchema(BaseModel):

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from app.models import (
+    SuperGoal,
     User,
     RefreshToken,
     Streak,
@@ -248,6 +249,10 @@ async def delete_me(
     )
     for member in memberships:
         remove_member(member.group, member, session)
+    for super_goal in (
+        session.query(SuperGoal).filter(SuperGoal.user_id == current_user.id).all()
+    ):
+        session.delete(super_goal)
     session.flush()
 
     for goal in session.query(Goal).filter(Goal.user_id == current_user.id).all():

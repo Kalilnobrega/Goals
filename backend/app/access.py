@@ -107,6 +107,10 @@ def annotate_goal(goal: Goal, perms: dict, user_id: int) -> Goal:
     goal.is_mine = goal.user_id == user_id
     goal.owner_name = goal.owner.name if goal.owner else None
     goal.member_count = len(goal.group.members) if goal.group else None
+    goal.super_goal_id = next(
+        (item.super_goal_id for item in goal.super_goal_items if item.user_id == user_id),
+        None,
+    )
     return goal
 
 
