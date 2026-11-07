@@ -504,11 +504,11 @@ def test_shared_goals_ordering_is_per_member(client, auth_headers, ana):
     own = create_goal(client, ana_headers)
     goal_id, _, _ = shared_setup(client, auth_headers, ana_headers, "collaborative")
 
-    assert [g["id"] for g in client.get("/goals/", headers=ana_headers).json()] == [own["id"], goal_id]
-
-    client.put("/goals/order", json={"ids": [goal_id, own["id"]]}, headers=ana_headers)
-
     assert [g["id"] for g in client.get("/goals/", headers=ana_headers).json()] == [goal_id, own["id"]]
+
+    client.put("/goals/order", json={"ids": [own["id"], goal_id]}, headers=ana_headers)
+
+    assert [g["id"] for g in client.get("/goals/", headers=ana_headers).json()] == [own["id"], goal_id]
     leader_goals = client.get("/goals/", headers=auth_headers).json()
     assert [g["id"] for g in leader_goals] == [goal_id]
 

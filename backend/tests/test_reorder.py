@@ -17,11 +17,20 @@ def task_titles(client, headers, goal_id):
     return [t["title"] for t in client.get(f"/tasks/goal/{goal_id}", headers=headers).json()]
 
 
-def test_new_goals_are_appended_in_creation_order(client, auth_headers):
+def test_new_goals_are_placed_on_top(client, auth_headers):
     for title in ["A", "B", "C"]:
         create_goal(client, auth_headers, title)
 
-    assert goal_titles(client, auth_headers) == ["A", "B", "C"]
+    assert goal_titles(client, auth_headers) == ["C", "B", "A"]
+
+
+def test_new_goal_goes_above_a_reordered_list(client, auth_headers):
+    a, b = (create_goal(client, auth_headers, t) for t in ["A", "B"])
+    client.put("/goals/order", json={"ids": [a["id"], b["id"]]}, headers=auth_headers)
+
+    create_goal(client, auth_headers, "C")
+
+    assert goal_titles(client, auth_headers) == ["C", "A", "B"]
 
 
 def test_reorder_goals(client, auth_headers):
@@ -34,7 +43,7 @@ def test_reorder_goals(client, auth_headers):
 
 
 def test_reorder_subset_keeps_other_goals_in_place(client, auth_headers):
-    a, b, c, d = (create_goal(client, auth_headers, t) for t in ["A", "B", "C", "D"])
+    d, c, b, a = (create_goal(client, auth_headers, t) for t in ["D", "C", "B", "A"])
 
     client.put("/goals/order", json={"ids": [d["id"], b["id"]]}, headers=auth_headers)
 

@@ -175,10 +175,10 @@ def sort_for_user(goals: list[Goal], user_id: int, session: Session) -> list[Goa
     return sorted(goals, key=lambda goal: (positions.get(goal.id, goal.position), goal.id))
 
 
-def next_goal_position(user_id: int, session: Session) -> int:
+def top_goal_position(user_id: int, session: Session) -> int:
     own = (
-        session.query(func.max(Goal.position)).filter(Goal.user_id == user_id).scalar()
+        session.query(func.min(Goal.position)).filter(Goal.user_id == user_id).scalar()
     )
-    shared = max(collaborative_positions(user_id, session).values(), default=None)
+    shared = min(collaborative_positions(user_id, session).values(), default=None)
     values = [value for value in (own, shared) if value is not None]
-    return max(values) + 1 if values else 0
+    return min(values) - 1 if values else 0

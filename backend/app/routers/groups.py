@@ -26,7 +26,7 @@ from app.access import (
     EDITOR_ROLES,
     MEMBER_LIMIT,
     find_member,
-    next_goal_position,
+    top_goal_position,
 )
 from app.sharing import remove_member, set_leader, copy_challenge_goal
 from .auth import get_current_user
@@ -236,7 +236,7 @@ async def accept_invite(
             detail=f"Essa meta já atingiu o limite de {MEMBER_LIMIT} participantes.",
         )
 
-    position = next_goal_position(current_user.id, session)
+    position = top_goal_position(current_user.id, session)
     template = leader_goal(group)
 
     group.members.append(

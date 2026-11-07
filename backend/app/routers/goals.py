@@ -30,7 +30,7 @@ from app.access import (
     is_collaborative,
     sort_for_user,
     collaborative_positions,
-    next_goal_position,
+    top_goal_position,
     find_member,
 )
 from app.sharing import delete_shared_goal
@@ -195,7 +195,7 @@ async def create_goal(
     session: Session = Depends(get_db),
 ):
     new_goal = Goal(
-        position=next_goal_position(current_user.id, session),
+        position=top_goal_position(current_user.id, session),
         title=goals_schema.title,
         description=goals_schema.description,
         deadline=goals_schema.deadline,

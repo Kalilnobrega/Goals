@@ -327,8 +327,8 @@ def test_stats_lists_goals_for_filter(client, auth_headers):
     stats = get_stats(client, auth_headers)
 
     assert stats["goals"] == [
-        {"id": first["id"], "title": "Primeira", "status": "open"},
         {"id": second["id"], "title": "Segunda", "status": "open"},
+        {"id": first["id"], "title": "Primeira", "status": "open"},
     ]
 
 
