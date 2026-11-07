@@ -53,7 +53,7 @@ class Goal(Base):
     __tablename__ = "goals"
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(ForeignKey("users.id"))
+    user_id = Column(ForeignKey("users.id"), index=True)
     title = Column(String(100), nullable=False)
     description = Column(String, nullable=True)
     status = Column(Enum(GoalStatus), default=GoalStatus.OPEN)
@@ -257,7 +257,7 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
-    goals_id = Column("goals_id", ForeignKey("goals.id"))
+    goals_id = Column("goals_id", ForeignKey("goals.id"), index=True)
     title = Column("title", String(50), nullable=False)
     status = Column("status", Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
@@ -290,7 +290,7 @@ class TaskCompletion(Base):
     __tablename__ = "task_completions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    task_id = Column(ForeignKey("tasks.id"), nullable=False)
+    task_id = Column(ForeignKey("tasks.id"), nullable=False, index=True)
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
     user_id = Column(ForeignKey("users.id"), nullable=True, index=True)
     task = relationship("Task", back_populates="completions")
@@ -301,7 +301,7 @@ class GoalCycleLog(Base):
     __tablename__ = "goal_cycle_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    goal_id = Column(ForeignKey("goals.id"), nullable=False)
+    goal_id = Column(ForeignKey("goals.id"), nullable=False, index=True)
     cycle_start = Column(DateTime(timezone=True), nullable=False)
     cycle_end = Column(DateTime(timezone=True), nullable=False)
     target_count = Column(Integer, nullable=False)
