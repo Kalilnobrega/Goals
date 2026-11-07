@@ -17,11 +17,55 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const cache = new Map();
+let cacheGeneration = 0;
+
+function clearCache() {
+  cache.clear();
+  cacheGeneration += 1;
+}
+
+function currentToken() {
+  return typeof window !== "undefined" ? getToken() : null;
+}
+
+export function peekCache(key) {
+  const entry = cache.get(key);
+  return entry && entry.token === currentToken() ? entry.data : undefined;
+}
+
+function cachedGet(key, url) {
+  const token = currentToken();
+  const entry = cache.get(key);
+  if (entry?.promise && entry.token === token) return entry.promise;
+
+  const generation = cacheGeneration;
+  const previous = entry?.token === token ? entry.data : undefined;
+  const promise = api
+    .get(url)
+    .then((r) => {
+      if (generation === cacheGeneration) cache.set(key, { token, data: r.data });
+      return r.data;
+    })
+    .catch((err) => {
+      if (generation === cacheGeneration) {
+        if (previous === undefined) cache.delete(key);
+        else cache.set(key, { token, data: previous });
+      }
+      throw err;
+    });
+  cache.set(key, { token, data: previous, promise });
+  return promise;
+}
+
 // Se o access token expirar (401), tenta renovar com o refresh token antes de deslogar
 let refreshPromise = null;
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    if (res.config?.method && res.config.method !== "get") clearCache();
+    return res;
+  },
   async (err) => {
     const originalRequest = err.config;
 
@@ -69,7 +113,7 @@ api.interceptors.response.use(
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
 export const googleAuth = (token) =>
   api.post("/auth/google", { token }).then((r) => r.data);
-export const getStreak = () => api.get("/auth/me/streak").then((r) => r.data);
+export const getStreak = () => cachedGet("streak", "/auth/me/streak");
 export const forgotPassword = (email) =>
   api.post("/auth/forgot-password", { email }).then((r) => r.data);
 export const resetPassword = (token, newPassword) =>
@@ -92,7 +136,9 @@ export const logout = (refreshToken) =>
 
 // ── Goals ──────────────────────────────────────────────
 export const getGoals = (status) =>
-  api.get("/goals/", { params: status ? { status } : {} }).then((r) => r.data);
+  status
+    ? api.get("/goals/", { params: { status } }).then((r) => r.data)
+    : cachedGet("goals", "/goals/");
 export const getGoal = (id) => api.get(`/goals/${id}`).then((r) => r.data);
 export const createGoal = (data) =>
   api.post("/goals/", data).then((r) => r.data);
@@ -113,8 +159,7 @@ export const addGoalEntry = (id, data) =>
 export const deleteGoalEntry = (id, entryId) =>
   api.delete(`/goals/${id}/entries/${entryId}`).then((r) => r.data);
 
-export const getSuperGoals = () =>
-  api.get("/super-goals/").then((r) => r.data);
+export const getSuperGoals = () => cachedGet("superGoals", "/super-goals/");
 export const getSuperGoal = (id) =>
   api.get(`/super-goals/${id}`).then((r) => r.data);
 export const createSuperGoal = (data) =>
@@ -131,7 +176,7 @@ export const removeGoalFromSuperGoal = (id, goalId) =>
   api.delete(`/super-goals/${id}/goals/${goalId}`).then((r) => r.data);
 
 // ── Tasks ──────────────────────────────────────────────
-export const getTodayTasks = () => api.get("/tasks/today").then((r) => r.data);
+export const getTodayTasks = () => cachedGet("today", "/tasks/today");
 export const getTasks = (goalId) =>
   api.get(`/tasks/goal/${goalId}`).then((r) => r.data);
 export const createTask = (goalId, data) =>

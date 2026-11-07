@@ -13,7 +13,7 @@ import { useConfirm } from '../../../../components/ConfirmDialog';
 import {
   getGoals, updateGoal, deleteGoal, reorderGoals,
   getSuperGoals, createSuperGoal, renameSuperGoal, deleteSuperGoal,
-  addGoalsToSuperGoal, removeGoalFromSuperGoal,
+  addGoalsToSuperGoal, removeGoalFromSuperGoal, peekCache,
 } from '../../../../lib/api';
 import { celebrateGoal } from '../../../../lib/celebrate';
 import { deleteGoalConfirm } from '../../../../lib/sharing';
@@ -26,9 +26,9 @@ export default function SuperGoalPage() {
   const superGoalId = Number(id);
   const router = useRouter();
   const confirmAction = useConfirm();
-  const [goals,      setGoals]      = useState([]);
-  const [superGoals, setSuperGoals] = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const [goals,      setGoals]      = useState(() => peekCache('goals') ?? []);
+  const [superGoals, setSuperGoals] = useState(() => peekCache('superGoals') ?? []);
+  const [loading,    setLoading]    = useState(() => !peekCache('goals') || !peekCache('superGoals'));
   const [notFound,   setNotFound]   = useState(false);
   const [error,      setError]      = useState('');
   const [modal,      setModal]      = useState(null);

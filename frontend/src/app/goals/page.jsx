@@ -14,6 +14,7 @@ import { SortableList, SortableItem, DragHandle, moveSubset } from '../../compon
 import {
   getGoals, createGoal, updateGoal, deleteGoal, reorderGoals,
   getSuperGoals, createSuperGoal, reorderSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal,
+  peekCache,
 } from '../../lib/api';
 import { celebrateGoal } from '../../lib/celebrate';
 import { deleteGoalConfirm } from '../../lib/sharing';
@@ -35,17 +36,20 @@ const EMPTY_BY_KIND = {
 };
 
 const PREFS_KEY = 'goals-page-prefs';
+let loadedPrefs = null;
 
 function readPrefs() {
   try {
     const prefs = JSON.parse(localStorage.getItem(PREFS_KEY));
-    return prefs && typeof prefs === 'object' ? prefs : null;
+    loadedPrefs = prefs && typeof prefs === 'object' ? prefs : null;
   } catch {
-    return null;
+    loadedPrefs = null;
   }
+  return loadedPrefs;
 }
 
 function savePrefs(prefs) {
+  loadedPrefs = prefs;
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
   } catch {}
@@ -57,16 +61,16 @@ const matchesKind = (goal, kind) =>
 export default function GoalsPage() {
   const router = useRouter();
   const confirmAction = useConfirm();
-  const [goals,      setGoals]      = useState([]);
-  const [superGoals, setSuperGoals] = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const [goals,      setGoals]      = useState(() => peekCache('goals') ?? []);
+  const [superGoals, setSuperGoals] = useState(() => peekCache('superGoals') ?? []);
+  const [loading,    setLoading]    = useState(() => !peekCache('goals') || !peekCache('superGoals'));
   const [modal,      setModal]      = useState(null);
   const [moving,     setMoving]     = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [search,     setSearch]     = useState('');
-  const [filter,     setFilter]     = useState('all');
+  const [filter,     setFilter]     = useState(() => loadedPrefs?.filter ?? 'all');
   const [error,      setError]      = useState('');
-  const [collapsed,  setCollapsed]  = useState({ completed: true });
+  const [collapsed,  setCollapsed]  = useState(() => loadedPrefs?.collapsed ?? { completed: true });
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInput = useRef(null);
 

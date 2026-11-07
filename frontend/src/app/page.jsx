@@ -7,7 +7,7 @@ import {
   Target, CheckCircle2, Clock, TrendingUp,
   ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle, Trophy
 } from 'lucide-react';
-import { getGoals, getTodayTasks, toggleTask, getStreak } from '../lib/api';
+import { getGoals, getTodayTasks, toggleTask, getStreak, peekCache } from '../lib/api';
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import { celebrateTask } from '../lib/celebrate';
@@ -15,12 +15,12 @@ import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
-  const [goals,   setGoals]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [goals,   setGoals]   = useState(() => peekCache('goals') ?? []);
+  const [loading, setLoading] = useState(() => !peekCache('goals') || !peekCache('today'));
   const [userName, setUserName] = useState('');
-  const [todayTasks, setTodayTasks] = useState([]);
+  const [todayTasks, setTodayTasks] = useState(() => peekCache('today') ?? []);
   const [toggling,   setToggling]   = useState({});
-  const [longestStreak, setLongestStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(() => peekCache('streak')?.longest_streak ?? 0);
   const { setLateCount, setStreak } = useLateGoals();
 
   const loadAll = async () => {
@@ -34,7 +34,6 @@ export default function DashboardPage() {
  
   useEffect(() => {
     setUserName(getUserName());
-    setLoading(true);
     loadAll().catch(() => {}).finally(() => setLoading(false));
   }, []);
  
