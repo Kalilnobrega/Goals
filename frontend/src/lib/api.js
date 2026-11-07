@@ -177,8 +177,7 @@ export const removeGoalFromSuperGoal = (id, goalId) =>
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTodayTasks = () => cachedGet("today", "/tasks/today");
-export const getTasks = (goalId) =>
-  api.get(`/tasks/goal/${goalId}`).then((r) => r.data);
+export const getTasks = (goalId) => cachedGet(`tasks:${goalId}`, `/tasks/goal/${goalId}`);
 export const createTask = (goalId, data) =>
   api.post(`/tasks/${goalId}`, data).then((r) => r.data);
 export const updateTask = (taskId, data) =>

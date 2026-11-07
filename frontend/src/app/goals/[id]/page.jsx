@@ -17,7 +17,7 @@ import {
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress,
   getGroup, createGroup,
-  getSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal,
+  getSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal, peekCache,
 } from '../../../lib/api';
 import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -48,6 +48,8 @@ function consistencyClass(value) {
   return styles.consistencyLow;
 }
 
+const goalFromCache = (id) => peekCache('goals')?.find(g => g.id === Number(id));
+
 export default function GoalDetailPage() {
   const { id } = useParams();
   const router  = useRouter();
@@ -55,8 +57,8 @@ export default function GoalDetailPage() {
 
   const { setStreak } = useLateGoals();
 
-  const [goal,       setGoal]       = useState(null);
-  const [tasks,      setTasks]      = useState([]);
+  const [goal,       setGoal]       = useState(() => goalFromCache(id) ?? null);
+  const [tasks,      setTasks]      = useState(() => peekCache(`tasks:${id}`) ?? []);
   const [cycles,     setCycles]     = useState([]);
   const [entries,    setEntries]    = useState([]);
   const [progressData, setProgressData] = useState(null);
@@ -64,7 +66,7 @@ export default function GoalDetailPage() {
   const [entryValue, setEntryValue] = useState('');
   const [entryNote,  setEntryNote]  = useState('');
   const [addingEntry, setAddingEntry] = useState(false);
-  const [loading,    setLoading]    = useState(true);
+  const [loading,    setLoading]    = useState(() => !(goalFromCache(id) && peekCache(`tasks:${id}`)));
   const [editModal,  setEditModal]  = useState(false);
   const [taskModal,  setTaskModal]  = useState(false);
   const [editTask,   setEditTask]   = useState(null);
@@ -98,8 +100,10 @@ export default function GoalDetailPage() {
   };
 
   useEffect(() => {
+    const known = goalFromCache(id);
     Promise.all([
-      getGoal(Number(id)).then(g => { setGoal(g); return Promise.all([loadProgress(g), loadGroup(g)]); }),
+      getGoal(Number(id)).then(g => { setGoal(g); return known ? null : Promise.all([loadProgress(g), loadGroup(g)]); }),
+      known && Promise.all([loadProgress(known), loadGroup(known)]),
       loadTasks(), loadCycles(), loadEntries(),
       getSuperGoals().then(setSuperGoals).catch(() => {}),
     ])
