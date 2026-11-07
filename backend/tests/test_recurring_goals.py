@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
+from app.routers.tasks import recurring_checks
 from app.models import Goal, Task, TaskCompletion
 
 
@@ -177,6 +178,7 @@ def move_cycle_back(db_session, goal_id, days=8):
     db_goal = db_session.query(Goal).filter(Goal.id == goal_id).first()
     db_goal.cycle_start_date = datetime.now(timezone.utc) - timedelta(days=days)
     db_session.commit()
+    recurring_checks.clear()
 
 
 def test_cycle_reset_unchecks_plain_tasks(client, auth_headers, db_session):

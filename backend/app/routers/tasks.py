@@ -272,8 +272,22 @@ def settle_challenge(group: GoalGroup, session: Session, now: datetime | None = 
     record_final_podium(group, now)
 
 
+RECURRING_CHECK_INTERVAL = timedelta(seconds=60)
+recurring_checks: dict[tuple[str, int], datetime] = {}
+
+
+def checked_recently(kind: str, user_id: int, now: datetime) -> bool:
+    last = recurring_checks.get((kind, user_id))
+    if last and now - last < RECURRING_CHECK_INTERVAL:
+        return True
+    recurring_checks[(kind, user_id)] = now
+    return False
+
+
 def check_and_reset_recurring_goals(user_id: int, session: Session):
     now = datetime.now(timezone.utc)
+    if checked_recently("goals", user_id, now):
+        return
 
     recurring_goals = (
         session.query(Goal)
@@ -294,6 +308,8 @@ def check_and_reset_recurring_goals(user_id: int, session: Session):
 
 def check_and_reset_recurring_tasks(user_id: int, session: Session):
     now = datetime.now(timezone.utc)
+    if checked_recently("tasks", user_id, now):
+        return
 
     recurring_tasks = (
         session.query(Task)

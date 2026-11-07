@@ -8,12 +8,18 @@ from app.database import Base, get_db
 import app.main as main_module
 from app.models import User
 from app.routers.auth import create_token
+from app.routers.tasks import recurring_checks
 import resend
 
 
 @pytest.fixture(autouse=True)
 def reset_rate_limits():
     main_module.limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_recurring_checks():
+    recurring_checks.clear()
 
 
 @pytest.fixture(autouse=True)

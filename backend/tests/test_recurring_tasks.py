@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 from app.models import Task
+from app.routers.tasks import recurring_checks
 
 
 def create_goal_with_recurring_task(client, auth_headers, interval_days=1):
@@ -75,3 +76,22 @@ def test_editing_task_keeps_limit_without_end_of_goal(client, auth_headers):
     response = client.put(f"/tasks/{task['id']}", json={"max_recurrences": 10}, headers=auth_headers)
 
     assert response.json()["max_recurrences"] == 10
+
+
+def test_recurring_checks_are_throttled_per_user(client, auth_headers, db_session):
+    _, task = create_goal_with_recurring_task(client, auth_headers, interval_days=1)
+    client.get("/tasks/today", headers=auth_headers)
+
+    db_task = db_session.query(Task).filter(Task.id == task["id"]).first()
+    db_task.last_reset_date = datetime.now(timezone.utc) - timedelta(days=2)
+    db_task.status = True
+    db_session.commit()
+
+    client.get("/tasks/today", headers=auth_headers)
+    db_session.refresh(db_task)
+    assert db_task.status is True
+
+    recurring_checks.clear()
+    client.get("/tasks/today", headers=auth_headers)
+    db_session.refresh(db_task)
+    assert db_task.status is False
