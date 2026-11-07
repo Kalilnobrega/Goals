@@ -57,3 +57,21 @@ def test_goal_page_resets_stale_recurring_task(client, auth_headers, db_session)
 
     tasks = client.get(f"/tasks/goal/{goal['id']}", headers=auth_headers).json()
     assert tasks[0]["status"] is False
+
+
+def test_editing_task_to_end_with_goal_clears_repetition_limit(client, auth_headers):
+    _, task = create_goal_with_recurring_task(client, auth_headers)
+    client.put(f"/tasks/{task['id']}", json={"max_recurrences": 10}, headers=auth_headers)
+
+    response = client.put(f"/tasks/{task['id']}", json={"end_of_goal": True}, headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["max_recurrences"] is None
+
+
+def test_editing_task_keeps_limit_without_end_of_goal(client, auth_headers):
+    _, task = create_goal_with_recurring_task(client, auth_headers)
+
+    response = client.put(f"/tasks/{task['id']}", json={"max_recurrences": 10}, headers=auth_headers)
+
+    assert response.json()["max_recurrences"] == 10

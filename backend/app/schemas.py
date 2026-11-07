@@ -169,6 +169,7 @@ class EditTaskSchema(BaseModel):
     recurrence_interval_days: int | None = None
     recurrence_weekdays: list[int] | None = None
     max_recurrences: int | None = None
+    end_of_goal: bool | None = None
 
     _check_weekdays = field_validator("recurrence_weekdays")(validate_weekdays)
 

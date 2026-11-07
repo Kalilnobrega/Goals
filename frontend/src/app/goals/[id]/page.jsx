@@ -268,7 +268,11 @@ export default function GoalDetailPage() {
   );
 
   const openEditTask = (task) => {
-    setEditTask({ ...task, repeat_mode: task.recurrence_weekdays?.length ? 'weekdays' : 'interval' });
+    setEditTask({
+      ...task,
+      repeat_mode: task.recurrence_weekdays?.length ? 'weekdays' : 'interval',
+      end_of_goal: task.max_recurrences == null,
+    });
     setTaskModal(true);
   };
 

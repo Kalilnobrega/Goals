@@ -711,7 +711,9 @@ async def edit_task(
             copy.recurrence_interval_days = task_schema.recurrence_interval_days
         if task_schema.recurrence_weekdays is not None:
             copy.recurrence_weekdays = task_schema.recurrence_weekdays or None
-        if task_schema.max_recurrences is not None:
+        if task_schema.end_of_goal:
+            copy.max_recurrences = None
+        elif task_schema.max_recurrences is not None:
             copy.max_recurrences = task_schema.max_recurrences
 
     session.commit()
