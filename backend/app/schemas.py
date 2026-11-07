@@ -500,3 +500,13 @@ class MemberRoleSchema(BaseModel):
 
 class TransferLeadershipSchema(BaseModel):
     user_id: int
+
+
+class GoalOverviewSchema(BaseModel):
+    goal: GoalResponseSchema
+    tasks: list[GoalTaskResponseSchema]
+    cycles: list[GoalCycleLogSchema]
+    entries: list[GoalEntryResponseSchema]
+    progress: StatsNumericGoalSchema | None = None
+    group: GroupResponseSchema | None = None
+    super_goals: list[SuperGoalResponseSchema]

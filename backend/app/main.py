@@ -59,6 +59,7 @@ from app.routers.tasks import tasks_router
 from app.routers.stats import stats_router
 from app.routers.groups import groups_router
 from app.routers.super_goals import super_goals_router
+from app.routers.overview import overview_router
 
 app.include_router(auth_router)
 app.include_router(home_router)
@@ -67,3 +68,4 @@ app.include_router(tasks_router)
 app.include_router(stats_router)
 app.include_router(groups_router)
 app.include_router(super_goals_router)
+app.include_router(overview_router)
