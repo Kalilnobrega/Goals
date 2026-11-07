@@ -113,6 +113,23 @@ export const addGoalEntry = (id, data) =>
 export const deleteGoalEntry = (id, entryId) =>
   api.delete(`/goals/${id}/entries/${entryId}`).then((r) => r.data);
 
+export const getSuperGoals = () =>
+  api.get("/super-goals/").then((r) => r.data);
+export const getSuperGoal = (id) =>
+  api.get(`/super-goals/${id}`).then((r) => r.data);
+export const createSuperGoal = (data) =>
+  api.post("/super-goals/", data).then((r) => r.data);
+export const renameSuperGoal = (id, title) =>
+  api.put(`/super-goals/${id}`, { title }).then((r) => r.data);
+export const deleteSuperGoal = (id) =>
+  api.delete(`/super-goals/${id}`).then((r) => r.data);
+export const reorderSuperGoals = (ids) =>
+  api.put("/super-goals/order", { ids }).then((r) => r.data);
+export const addGoalsToSuperGoal = (id, goalIds) =>
+  api.post(`/super-goals/${id}/goals`, { goal_ids: goalIds }).then((r) => r.data);
+export const removeGoalFromSuperGoal = (id, goalId) =>
+  api.delete(`/super-goals/${id}/goals/${goalId}`).then((r) => r.data);
+
 // ── Tasks ──────────────────────────────────────────────
 export const getTodayTasks = () => api.get("/tasks/today").then((r) => r.data);
 export const getTasks = (goalId) =>

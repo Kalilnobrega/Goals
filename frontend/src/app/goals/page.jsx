@@ -3,15 +3,22 @@ import { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
-import GoalCard from '../../components/GoalCard';
 import Modal from '../../components/Modal';
 import GoalForm from '../../components/GoalForm';
+import GoalSections, { CollapsibleSection } from '../../components/GoalSections';
+import SuperGoalTile from '../../components/SuperGoalTile';
+import SuperGoalForm from '../../components/SuperGoalForm';
+import SuperGoalPicker from '../../components/SuperGoalPicker';
+import SuperGoalIcon from '../../components/SuperGoalIcon';
 import { SortableList, SortableItem, DragHandle, moveSubset } from '../../components/Sortable';
-import { getGoals, createGoal, updateGoal, deleteGoal, reorderGoals } from '../../lib/api';
+import {
+  getGoals, createGoal, updateGoal, deleteGoal, reorderGoals,
+  getSuperGoals, createSuperGoal, reorderSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal,
+} from '../../lib/api';
 import { celebrateGoal } from '../../lib/celebrate';
 import { deleteGoalConfirm } from '../../lib/sharing';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { Plus, Search, ChevronDown, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import styles from './page.module.css';
 
 const KIND_FILTERS = [
@@ -19,12 +26,6 @@ const KIND_FILTERS = [
   { value: 'personal',      label: 'Pessoais',      color: '#3b82f6' },
   { value: 'collaborative', label: 'Colaborativas', color: '#8b5cf6' },
   { value: 'challenge',     label: 'Desafios',      color: '#d97706' },
-];
-
-const SECTIONS = [
-  { status: 'late',      label: 'Atrasadas',    color: '#ef4444' },
-  { status: 'open',      label: 'Em aberto',    color: '#3b82f6' },
-  { status: 'completed', label: 'Concluídas',   color: '#10b981' },
 ];
 
 const EMPTY_BY_KIND = {
@@ -56,32 +57,37 @@ const matchesKind = (goal, kind) =>
 export default function GoalsPage() {
   const router = useRouter();
   const confirmAction = useConfirm();
-  const [goals,   setGoals]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal,   setModal]   = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [search,  setSearch]  = useState('');
-  const [filter,  setFilter]  = useState('all');
-  const [error,   setError]   = useState('');
-  const [collapsed, setCollapsed] = useState({ completed: true });
-  const [closing,   setClosing]   = useState({});
+  const [goals,      setGoals]      = useState([]);
+  const [superGoals, setSuperGoals] = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [modal,      setModal]      = useState(null);
+  const [moving,     setMoving]     = useState(null);
+  const [saving,     setSaving]     = useState(false);
+  const [search,     setSearch]     = useState('');
+  const [filter,     setFilter]     = useState('all');
+  const [error,      setError]      = useState('');
+  const [collapsed,  setCollapsed]  = useState({ completed: true });
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInput = useRef(null);
 
-  const load = () => {
-    getGoals()
-      .then(setGoals)
-      .catch(() => setError('Erro ao carregar metas.'))
-      .finally(() => setLoading(false));
-  };
+  const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
+
+  const load = () =>
+    fetchAll()
+      .then(([goalList, superList]) => {
+        setGoals(goalList);
+        setSuperGoals(superList);
+      })
+      .catch(() => setError('Erro ao carregar metas.'));
 
   useEffect(() => {
-    getGoals()
-      .then(data => {
+    fetchAll()
+      .then(([goalList, superList]) => {
         const prefs = readPrefs();
         if (KIND_FILTERS.some(f => f.value === prefs?.filter)) setFilter(prefs.filter);
         if (prefs?.collapsed && typeof prefs.collapsed === 'object') setCollapsed(prefs.collapsed);
-        setGoals(data);
+        setGoals(goalList);
+        setSuperGoals(superList);
       })
       .catch(() => setError('Erro ao carregar metas.'))
       .finally(() => setLoading(false));
@@ -92,25 +98,10 @@ export default function GoalsPage() {
     savePrefs({ filter: value, collapsed });
   };
 
-  const setSectionCollapsed = (status, value) => {
-    const next = { ...collapsed, [status]: value };
+  const setSectionCollapsed = (key, value) => {
+    const next = { ...collapsed, [key]: value };
     setCollapsed(next);
     savePrefs({ filter, collapsed: next });
-  };
-
-  const toggleSection = (status) => {
-    if (closing[status]) return;
-    if (collapsed[status]) {
-      setSectionCollapsed(status, false);
-    } else {
-      setClosing(prev => ({ ...prev, [status]: true }));
-    }
-  };
-
-  const finishClosing = (status, event) => {
-    if (event.target !== event.currentTarget) return;
-    setClosing(prev => ({ ...prev, [status]: false }));
-    setSectionCollapsed(status, true);
   };
 
   const openSearch = () => {
@@ -123,13 +114,33 @@ export default function GoalsPage() {
     setSearchOpen(false);
   };
 
-  const handleCreate = async (data) => {
+  const closeModal = () => {
+    setModal(null);
+    setMoving(null);
+  };
+
+  const handleCreate = async ({ super_goal_id, ...data }) => {
     setSaving(true);
     try {
       const goal = await createGoal(data);
+      if (super_goal_id) await addGoalsToSuperGoal(super_goal_id, [goal.id]);
       router.push(`/goals/${goal.id}`);
     } catch {
       setError('Erro ao criar meta.');
+      setSaving(false);
+    }
+  };
+
+  const handleCreateSuperGoal = async (data) => {
+    setSaving(true);
+    try {
+      const superGoal = await createSuperGoal(data);
+      closeModal();
+      if (data.goal_ids.length === 0) router.push(`/goals/super/${superGoal.id}`);
+      else load();
+    } catch {
+      setError('Erro ao criar supermeta.');
+    } finally {
       setSaving(false);
     }
   };
@@ -150,10 +161,58 @@ export default function GoalsPage() {
     } catch { setError('Erro ao excluir meta.'); }
   };
 
+  const openMove = (goal) => {
+    setMoving(goal);
+    setModal('move');
+  };
+
+  const moveTo = async (superGoalId) => {
+    setSaving(true);
+    try {
+      await addGoalsToSuperGoal(superGoalId, [moving.id]);
+      closeModal();
+      load();
+    } catch {
+      setError('Erro ao mover meta.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const moveToNew = async (title) => {
+    setSaving(true);
+    try {
+      await createSuperGoal({ title, goal_ids: [moving.id] });
+      closeModal();
+      load();
+    } catch {
+      setError('Erro ao criar supermeta.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveFromSuperGoal = async (goal) => {
+    try {
+      await removeGoalFromSuperGoal(goal.super_goal_id, goal.id);
+      load();
+    } catch { setError('Erro ao tirar meta da supermeta.'); }
+  };
+
   const handleReorder = async (ids) => {
     setGoals(prev => moveSubset(prev, ids));
     try {
       await reorderGoals(ids);
+    } catch {
+      setError('Erro ao salvar a nova ordem.');
+      load();
+    }
+  };
+
+  const handleReorderSuperGoals = async (ids) => {
+    setSuperGoals(prev => moveSubset(prev, ids));
+    try {
+      await reorderSuperGoals(ids);
     } catch {
       setError('Erro ao salvar a nova ordem.');
       load();
@@ -169,9 +228,18 @@ export default function GoalsPage() {
     )
   );
 
-  const sections = SECTIONS
-    .map(section => ({ ...section, goals: filtered.filter(g => g.status === section.status) }))
-    .filter(section => section.goals.length > 0);
+  const looseGoals = query ? filtered : filtered.filter(g => g.super_goal_id == null);
+  const visibleSuperGoals = query ? [] : superGoals
+    .map(sg => ({ ...sg, goals: filtered.filter(g => g.super_goal_id === sg.id) }))
+    .filter(sg => filter === 'all' || sg.goals.length > 0);
+  const isEmpty = looseGoals.length === 0 && visibleSuperGoals.length === 0;
+
+  const cardProps = {
+    onDelete: handleDelete,
+    onComplete: handleComplete,
+    onMoveToSuperGoal: openMove,
+    onRemoveFromSuperGoal: handleRemoveFromSuperGoal,
+  };
 
   return (
     <>
@@ -190,9 +258,14 @@ export default function GoalsPage() {
               </p>
             </div>
           </div>
-          <button className={styles.btnNew} onClick={() => setModal(true)}>
-            <Plus size={16} /> Nova meta
-          </button>
+          <div className={styles.heroActions}>
+            <button className={styles.btnSuper} onClick={() => setModal('super')}>
+              <SuperGoalIcon size={16} /> <span>Supermeta</span>
+            </button>
+            <button className={styles.btnNew} onClick={() => setModal('goal')}>
+              <Plus size={16} /> Nova meta
+            </button>
+          </div>
         </div>
 
         <div className={`${styles.toolbar} ${searchOpen ? styles.toolbarSearching : ''} glass`}>
@@ -235,13 +308,13 @@ export default function GoalsPage() {
               <div key={i} className={`${styles.cardSkeleton} glass`} />
             ))}
           </div>
-        ) : sections.length === 0 ? (
+        ) : isEmpty ? (
           <div className={`${styles.empty} glass`}>
             {goals.length === 0 ? (
               <>
                 <p className={styles.emptyTitle}>Você ainda não tem metas.</p>
                 <p>Crie a primeira e comece a acompanhar seu progresso.</p>
-                <button className={styles.emptyBtn} onClick={() => setModal(true)}>
+                <button className={styles.emptyBtn} onClick={() => setModal('goal')}>
                   <Plus size={15} /> Criar primeira meta
                 </button>
               </>
@@ -257,7 +330,7 @@ export default function GoalsPage() {
                 <p>{EMPTY_BY_KIND[filter]?.hint}</p>
                 <div className={styles.emptyActions}>
                   {filter === 'personal' && (
-                    <button className={styles.emptyBtn} onClick={() => setModal(true)}>
+                    <button className={styles.emptyBtn} onClick={() => setModal('goal')}>
                       <Plus size={15} /> Nova meta
                     </button>
                   )}
@@ -267,60 +340,76 @@ export default function GoalsPage() {
             )}
           </div>
         ) : (
-          sections.map(section => {
-            const isOpen = search || !collapsed[section.status];
-            const isClosing = !search && closing[section.status];
-            return (
-              <section key={section.status} className={styles.section} style={{ '--section-color': section.color }}>
-                <button
-                  className={styles.sectionHeader}
-                  onClick={() => toggleSection(section.status)}
-                  aria-expanded={!!isOpen && !isClosing}
-                >
-                  <ChevronDown size={18} className={`${styles.chevron} ${isOpen && !isClosing ? '' : styles.chevronClosed}`} />
-                  <span className={styles.sectionTitle}>{section.label}</span>
-                  <span className={styles.sectionCount}>{section.goals.length}</span>
-                  <span className={styles.sectionLine} />
-                </button>
-                {isOpen && (
-                  <div
-                    className={`${styles.sectionBody} ${isClosing ? styles.sectionBodyClosing : ''}`}
-                    onAnimationEnd={isClosing ? (e) => finishClosing(section.status, e) : undefined}
-                  >
-                    <div className={styles.sectionInner}>
-                      <SortableList ids={section.goals.map(g => g.id)} onReorder={handleReorder} layout="grid">
-                        <div className={styles.grid}>
-                          {section.goals.map((g, i) => (
-                            <SortableItem key={g.id} id={g.id}>
-                              {({ itemProps, isDragging, handleProps }) => (
-                                <div {...itemProps} style={{ ...itemProps.style, animationDelay: `${Math.min(i, 8) * 50}ms` }}>
-                                  <GoalCard
-                                    goal={g}
-                                    onDelete={handleDelete}
-                                    onComplete={handleComplete}
-                                    dragging={isDragging}
-                                    dragHandle={<DragHandle handleProps={handleProps} />}
-                                  />
-                                </div>
-                              )}
-                            </SortableItem>
-                          ))}
-                        </div>
-                      </SortableList>
-                    </div>
+          <>
+            {visibleSuperGoals.length > 0 && (
+              <CollapsibleSection
+                label="Supermetas"
+                color="#4f46e5"
+                count={visibleSuperGoals.length}
+                open={!collapsed.super}
+                onToggle={(open) => setSectionCollapsed('super', !open)}
+              >
+                <SortableList ids={visibleSuperGoals.map(sg => sg.id)} onReorder={handleReorderSuperGoals} layout="grid">
+                  <div className={styles.grid}>
+                    {visibleSuperGoals.map(sg => (
+                      <SortableItem key={sg.id} id={sg.id}>
+                        {({ itemProps, isDragging, handleProps }) => (
+                          <div {...itemProps}>
+                            <SuperGoalTile
+                              superGoal={sg}
+                              goals={sg.goals}
+                              dragging={isDragging}
+                              dragHandle={<DragHandle handleProps={handleProps} />}
+                            />
+                          </div>
+                        )}
+                      </SortableItem>
+                    ))}
                   </div>
-                )}
-              </section>
-            );
-          })
+                </SortableList>
+              </CollapsibleSection>
+            )}
+            <GoalSections
+              goals={looseGoals}
+              collapsed={collapsed}
+              onCollapsedChange={setSectionCollapsed}
+              forceOpen={!!query}
+              onReorder={handleReorder}
+              cardProps={cardProps}
+            />
+          </>
         )}
 
-        <button className={styles.fab} onClick={() => setModal(true)} aria-label="Nova meta">
+        <button className={styles.fab} onClick={() => setModal('goal')} aria-label="Nova meta">
           <Plus size={24} />
         </button>
 
-        <Modal open={modal} onClose={() => setModal(false)} title="Nova meta">
-          <GoalForm onSubmit={handleCreate} onCancel={() => setModal(false)} loading={saving} />
+        <Modal open={modal === 'goal'} onClose={closeModal} title="Nova meta">
+          <GoalForm superGoals={superGoals} onSubmit={handleCreate} onCancel={closeModal} loading={saving} />
+        </Modal>
+
+        <Modal open={modal === 'super'} onClose={closeModal} title="Nova supermeta">
+          <SuperGoalForm
+            goals={goals}
+            superGoals={superGoals}
+            submitLabel="Criar supermeta"
+            onSubmit={handleCreateSuperGoal}
+            onCancel={closeModal}
+            loading={saving}
+          />
+        </Modal>
+
+        <Modal open={modal === 'move' && !!moving} onClose={closeModal} title="Mover para supermeta" size="sm">
+          {moving && (
+            <SuperGoalPicker
+              goal={moving}
+              goals={goals}
+              superGoals={superGoals}
+              onPick={moveTo}
+              onCreate={moveToNew}
+              loading={saving}
+            />
+          )}
         </Modal>
       </main>
     </>

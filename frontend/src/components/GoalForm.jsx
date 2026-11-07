@@ -43,7 +43,7 @@ function brDateOnly(isoString) {
   return new Date(isoString).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
-export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) {
+export default function GoalForm({ initial = {}, superGoals, onSubmit, onCancel, loading }) {
   const isEdit = !!initial.id;
   const initialInterval = initial.recurrence_interval_days || null;
   const initialIsPreset = initialInterval && CYCLE_PRESETS.some(p => p.value === String(initialInterval));
@@ -76,6 +76,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     target_value: initial.target_value ?? '',
     start_value: initial.start_value ?? '',
     unit: initial.unit || '',
+    super_goal_id: initial.super_goal_id ? String(initial.super_goal_id) : '',
   });
 
   const isNumeric = form.kind === 'numeric';
@@ -173,6 +174,7 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
     }
 
     if (isEdit) data.status = form.status;
+    if (superGoals) data.super_goal_id = form.super_goal_id ? Number(form.super_goal_id) : null;
     onSubmit(data);
   };
 
@@ -198,6 +200,18 @@ export default function GoalForm({ initial = {}, onSubmit, onCancel, loading }) 
           placeholder="Descreva sua meta..."
         />
       </div>
+
+      {superGoals?.length > 0 && (
+        <div className={f.field}>
+          <label className={f.label}>Supermeta</label>
+          <select className={f.select} value={form.super_goal_id} onChange={set('super_goal_id')}>
+            <option value="">Nenhuma</option>
+            {superGoals.map(sg => (
+              <option key={sg.id} value={sg.id}>{sg.title}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className={f.field}>
         <label className={f.label}>Tipo de meta</label>

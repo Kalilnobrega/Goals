@@ -269,10 +269,35 @@
 }
 
 .cover,
-.btnMenu,
 .short,
 .statusIcon {
   display: none;
+}
+
+.btnMenu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+@media (hover: hover) {
+  .btnMenu:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--blue-600);
+  }
+}
+
+.btnMenu[aria-expanded="true"] {
+  background: rgba(59, 130, 246, 0.10);
+  color: var(--b600);
 }
 
 .controls {
@@ -391,23 +416,6 @@
     color: var(--blue-600);
   }
 
-  .btnMenu {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 32px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: #94a3b8;
-    cursor: pointer;
-  }
-
-  .btnMenu[aria-expanded="true"] {
-    background: rgba(59, 130, 246, 0.10);
-    color: var(--b600);
-  }
 }
 
 .menuBackdrop {
@@ -460,7 +468,13 @@
 }
 
 .menuComplete { --menu-color: #10b981; }
+.menuSuper    { --menu-color: #4f46e5; }
+.menuNeutral  { --menu-color: #64748b; }
 .menuDelete   { --menu-color: #ef4444; }
+
+@media (min-width: 601px) {
+  .menuMobileOnly { display: none; }
+}
 
 .menuItem:active { background: color-mix(in srgb, var(--menu-color) 8%, transparent); }
 

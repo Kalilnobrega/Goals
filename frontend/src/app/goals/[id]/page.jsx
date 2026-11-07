@@ -16,7 +16,8 @@ import {
   getGoal, updateGoal, deleteGoal,
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress,
-  getGroup, createGroup
+  getGroup, createGroup,
+  getSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal,
 } from '../../../lib/api';
 import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -72,6 +73,7 @@ export default function GoalDetailPage() {
   const [error,      setError]      = useState('');
   const [group,      setGroup]      = useState(null);
   const [shareModal, setShareModal] = useState(false);
+  const [superGoals, setSuperGoals] = useState([]);
 
   const loadGroup = (current) => {
     if (!current?.group_id) {
@@ -98,16 +100,21 @@ export default function GoalDetailPage() {
     Promise.all([
       getGoal(Number(id)).then(g => { setGoal(g); return Promise.all([loadProgress(g), loadGroup(g)]); }),
       loadTasks(), loadCycles(), loadEntries(),
+      getSuperGoals().then(setSuperGoals).catch(() => {}),
     ])
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
   }, [id]);
 
   // PUT /goals/{id}
-  const handleUpdateGoal = async (data) => {
+  const handleUpdateGoal = async ({ super_goal_id, ...data }) => {
     setSaving(true);
     try {
       await updateGoal(id, { ...data, id: Number(id) });
+      if (super_goal_id !== undefined && super_goal_id !== (goal.super_goal_id ?? null)) {
+        if (super_goal_id) await addGoalsToSuperGoal(super_goal_id, [Number(id)]);
+        else await removeGoalFromSuperGoal(goal.super_goal_id, Number(id));
+      }
       const [updatedGoal] = await Promise.all([getGoal(Number(id)), loadCycles()]);
       setGoal(updatedGoal);
       await Promise.all([loadProgress(updatedGoal), loadGroup(updatedGoal)]);
@@ -694,6 +701,7 @@ export default function GoalDetailPage() {
         <Modal open={editModal} onClose={() => setEditModal(false)} title="Editar meta">
           <GoalForm
             initial={goal}
+            superGoals={superGoals}
             onSubmit={handleUpdateGoal}
             onCancel={() => setEditModal(false)}
             loading={saving}

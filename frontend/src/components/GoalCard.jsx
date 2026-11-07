@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, AlertTriangle } from 'lucide-react';
+import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, AlertTriangle, LogOut } from 'lucide-react';
+import SuperGoalIcon from './SuperGoalIcon';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './GoalCard.module.css';
@@ -19,7 +20,7 @@ const KIND_META = {
   challenge:     { label: 'Desafio',      color: '#d97706', icon: Trophy },
 };
 
-export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragging }) {
+export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal, onRemoveFromSuperGoal, dragHandle, dragging }) {
   const progress = typeof goal.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta = STATUS_META[goal.status] || STATUS_META.open;
   const isCompleted = goal.status === 'completed';
@@ -28,7 +29,8 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
   const barTone = isLate ? styles.toneLate : (isCompleted || progress >= 100) ? styles.toneComplete : '';
   const StatusIcon = isLate ? AlertTriangle : isCompleted ? CheckCircle2 : null;
   const canComplete = !isCompleted && goal.can_complete;
-  const hasActions = canComplete || goal.can_delete;
+  const inSuperGoal = goal.super_goal_id != null;
+  const hasActions = canComplete || goal.can_delete || onMoveToSuperGoal || (inSuperGoal && onRemoveFromSuperGoal);
   const [menu, setMenu] = useState(null);
   const menuButton = useRef(null);
 
@@ -47,7 +49,7 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
   const openMenu = () => {
     if (menu) return setMenu(null);
     const rect = menuButton.current.getBoundingClientRect();
-    const above = rect.bottom + 110 > window.innerHeight;
+    const above = rect.bottom + 200 > window.innerHeight;
     setMenu({
       right: window.innerWidth - rect.right,
       ...(above ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
@@ -56,8 +58,9 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
 
   const runAction = (action) => {
     setMenu(null);
-    action?.(goal.id);
+    action();
   };
+
 
   useEffect(() => {
     if (!menu) return;
@@ -202,13 +205,25 @@ export default function GoalCard({ goal, onDelete, onComplete, dragHandle, dragg
           <div className={styles.menuBackdrop} onClick={() => setMenu(null)} />
           <div className={`${styles.menu} glass-strong`} role="menu" style={menu}>
             {canComplete && (
-              <button role="menuitem" className={`${styles.menuItem} ${styles.menuComplete}`} onClick={() => runAction(onComplete)}>
+              <button role="menuitem" className={`${styles.menuItem} ${styles.menuComplete} ${styles.menuMobileOnly}`} onClick={() => runAction(() => onComplete?.(goal.id))}>
                 <span className={styles.menuIcon}><CheckCircle2 size={15} /></span>
                 Concluir
               </button>
             )}
+            {onMoveToSuperGoal && (
+              <button role="menuitem" className={`${styles.menuItem} ${styles.menuSuper}`} onClick={() => runAction(() => onMoveToSuperGoal(goal))}>
+                <span className={styles.menuIcon}><SuperGoalIcon size={15} /></span>
+                {inSuperGoal ? 'Trocar de supermeta' : 'Mover para supermeta'}
+              </button>
+            )}
+            {inSuperGoal && onRemoveFromSuperGoal && (
+              <button role="menuitem" className={`${styles.menuItem} ${styles.menuNeutral}`} onClick={() => runAction(() => onRemoveFromSuperGoal(goal))}>
+                <span className={styles.menuIcon}><LogOut size={15} /></span>
+                Tirar da supermeta
+              </button>
+            )}
             {goal.can_delete && (
-              <button role="menuitem" className={`${styles.menuItem} ${styles.menuDelete}`} onClick={() => runAction(onDelete)}>
+              <button role="menuitem" className={`${styles.menuItem} ${styles.menuDelete} ${styles.menuMobileOnly}`} onClick={() => runAction(() => onDelete?.(goal.id))}>
                 <span className={styles.menuIcon}><Trash2 size={15} /></span>
                 Excluir
               </button>
