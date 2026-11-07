@@ -140,6 +140,7 @@ export const getGoals = (status) =>
     ? api.get("/goals/", { params: { status } }).then((r) => r.data)
     : cachedGet("goals", "/goals/");
 export const getGoal = (id) => api.get(`/goals/${id}`).then((r) => r.data);
+export const getGoalOverview = (id) => cachedGet(`overview:${id}`, `/goals/${id}/overview`);
 export const createGoal = (data) =>
   api.post("/goals/", data).then((r) => r.data);
 export const updateGoal = (id, data) =>
@@ -177,7 +178,8 @@ export const removeGoalFromSuperGoal = (id, goalId) =>
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTodayTasks = () => cachedGet("today", "/tasks/today");
-export const getTasks = (goalId) => cachedGet(`tasks:${goalId}`, `/tasks/goal/${goalId}`);
+export const getTasks = (goalId) =>
+  api.get(`/tasks/goal/${goalId}`).then((r) => r.data);
 export const createTask = (goalId, data) =>
   api.post(`/tasks/${goalId}`, data).then((r) => r.data);
 export const updateTask = (taskId, data) =>

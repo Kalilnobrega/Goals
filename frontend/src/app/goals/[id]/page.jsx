@@ -17,7 +17,7 @@ import {
   getTasks, createTask, updateTask, deleteTask, toggleTask, getStreak, reorderTasks,
   getGoalCycles, getGoalEntries, addGoalEntry, deleteGoalEntry, getGoalProgress,
   getGroup, createGroup,
-  getSuperGoals, addGoalsToSuperGoal, removeGoalFromSuperGoal, peekCache,
+  getGoalOverview, addGoalsToSuperGoal, removeGoalFromSuperGoal, peekCache,
 } from '../../../lib/api';
 import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -48,7 +48,7 @@ function consistencyClass(value) {
   return styles.consistencyLow;
 }
 
-const goalFromCache = (id) => peekCache('goals')?.find(g => g.id === Number(id));
+const cachedOverview = (id) => peekCache(`overview:${Number(id)}`);
 
 export default function GoalDetailPage() {
   const { id } = useParams();
@@ -57,16 +57,16 @@ export default function GoalDetailPage() {
 
   const { setStreak } = useLateGoals();
 
-  const [goal,       setGoal]       = useState(() => goalFromCache(id) ?? null);
-  const [tasks,      setTasks]      = useState(() => peekCache(`tasks:${id}`) ?? []);
-  const [cycles,     setCycles]     = useState([]);
-  const [entries,    setEntries]    = useState([]);
-  const [progressData, setProgressData] = useState(null);
+  const [goal,       setGoal]       = useState(() => cachedOverview(id)?.goal ?? null);
+  const [tasks,      setTasks]      = useState(() => cachedOverview(id)?.tasks ?? []);
+  const [cycles,     setCycles]     = useState(() => cachedOverview(id)?.cycles ?? []);
+  const [entries,    setEntries]    = useState(() => cachedOverview(id)?.entries ?? []);
+  const [progressData, setProgressData] = useState(() => cachedOverview(id)?.progress ?? null);
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [entryValue, setEntryValue] = useState('');
   const [entryNote,  setEntryNote]  = useState('');
   const [addingEntry, setAddingEntry] = useState(false);
-  const [loading,    setLoading]    = useState(() => !(goalFromCache(id) && peekCache(`tasks:${id}`)));
+  const [loading,    setLoading]    = useState(() => !cachedOverview(id));
   const [editModal,  setEditModal]  = useState(false);
   const [taskModal,  setTaskModal]  = useState(false);
   const [editTask,   setEditTask]   = useState(null);
@@ -74,9 +74,9 @@ export default function GoalDetailPage() {
   const [newTask,      setNewTask]      = useState('');
   const [addingTask,   setAddingTask]   = useState(false);
   const [error,      setError]      = useState('');
-  const [group,      setGroup]      = useState(null);
+  const [group,      setGroup]      = useState(() => cachedOverview(id)?.group ?? null);
   const [shareModal, setShareModal] = useState(false);
-  const [superGoals, setSuperGoals] = useState([]);
+  const [superGoals, setSuperGoals] = useState(() => cachedOverview(id)?.super_goals ?? []);
 
   const loadGroup = (current) => {
     if (!current?.group_id) {
@@ -100,13 +100,16 @@ export default function GoalDetailPage() {
   };
 
   useEffect(() => {
-    const known = goalFromCache(id);
-    Promise.all([
-      getGoal(Number(id)).then(g => { setGoal(g); return known ? null : Promise.all([loadProgress(g), loadGroup(g)]); }),
-      known && Promise.all([loadProgress(known), loadGroup(known)]),
-      loadTasks(), loadCycles(), loadEntries(),
-      getSuperGoals().then(setSuperGoals).catch(() => {}),
-    ])
+    getGoalOverview(Number(id))
+      .then(data => {
+        setGoal(data.goal);
+        setTasks(data.tasks);
+        setCycles(data.cycles);
+        setEntries(data.entries);
+        setProgressData(data.progress);
+        setGroup(data.group);
+        setSuperGoals(data.super_goals);
+      })
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
   }, [id]);
