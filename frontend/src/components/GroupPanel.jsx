@@ -249,7 +249,7 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
                 </div>
                 {isChallenge && !group.has_target && (
                   <div className={styles.progressRow}>
-                    <span className={styles.progressPct}>{formatValue(member.current_value ?? 0, group.unit)}</span>
+                    <span className={styles.progressValue}>{formatValue(member.current_value ?? 0, group.unit)}</span>
                   </div>
                 )}
                 {isChallenge && group.has_target && (

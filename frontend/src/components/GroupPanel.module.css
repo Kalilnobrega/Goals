@@ -207,6 +207,13 @@
   color: var(--b600);
 }
 
+.progressValue {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--b600);
+  white-space: nowrap;
+}
+
 .menuWrap { position: relative; flex-shrink: 0; }
 
 .memberMenuOpen { position: relative; z-index: 5; }
@@ -337,7 +344,7 @@
 
 .placeName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.placeScore { flex-shrink: 0; font-weight: 700; color: var(--b600); }
+.placeScore { flex-shrink: 0; font-weight: 700; color: var(--b600); white-space: nowrap; }
 
 .showMore {
   align-self: flex-start;
