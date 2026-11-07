@@ -30,6 +30,7 @@ from app.access import (
     is_collaborative,
     sort_for_user,
     collaborative_positions,
+    GOAL_LIST_LOADERS,
     top_goal_position,
     find_member,
 )
@@ -242,7 +243,11 @@ async def list_goals(
     check_and_reset_recurring_goals(current_user.id, session)
     check_and_reset_recurring_tasks(current_user.id, session)
 
-    query = session.query(Goal).filter(member_goal_filter(current_user.id))
+    query = (
+        session.query(Goal)
+        .options(*GOAL_LIST_LOADERS)
+        .filter(member_goal_filter(current_user.id))
+    )
 
     if status is not None:
         query = query.filter(Goal.status == status)

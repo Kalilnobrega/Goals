@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 import uuid
 from app.schemas import (
     TaskSchema,
@@ -539,6 +539,7 @@ async def list_today_tasks(
 
     tasks = (
         session.query(Task)
+        .options(selectinload(Task.goal))
         .join(Goal)
         .filter(
             member_goal_filter(current_user.id),

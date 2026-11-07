@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import or_, and_, select, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.models import (
     Goal,
     Task,
@@ -14,6 +14,12 @@ from app.models import (
 )
 
 EDITOR_ROLES = (GroupRole.LEADER, GroupRole.MODERATOR)
+GOAL_LIST_LOADERS = (
+    selectinload(Goal.tasks),
+    selectinload(Goal.super_goal_items),
+    selectinload(Goal.owner),
+    selectinload(Goal.group).selectinload(GoalGroup.members),
+)
 MEMBER_LIMIT = 20
 
 
