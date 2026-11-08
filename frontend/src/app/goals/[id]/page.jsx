@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, ViewTransition, startTransition, addTransitionType } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useOpenAtTop } from '../../../lib/goalsScroll';
 import Link from 'next/link';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
@@ -60,6 +61,7 @@ const cachedGoal = (id) => cachedOverview(id)?.goal ?? peekCache('goals')?.find(
 
 export default function GoalDetailPage() {
   const { id } = useParams();
+  useOpenAtTop(id);
   const router  = useRouter();
   const confirmAction = useConfirm();
   const toast = useToast();
@@ -401,7 +403,7 @@ export default function GoalDetailPage() {
     <>
       <main className={styles.main}>
 
-        <button className={styles.backLink} onClick={() => router.push('/goals')}>
+        <button className={styles.backLink} onClick={() => router.push('/goals', { scroll: false })}>
           <ArrowLeft size={16} /> Todas as metas
         </button>
 

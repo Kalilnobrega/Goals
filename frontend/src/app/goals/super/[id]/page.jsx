@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, startTransition, addTransitionType, ViewTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useOpenAtTop } from '../../../../lib/goalsScroll';
 import { ArrowLeft, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import Modal from '../../../../components/Modal';
 import GoalSections from '../../../../components/GoalSections';
@@ -26,6 +27,7 @@ const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
 
 export default function SuperGoalPage() {
   const { id } = useParams();
+  useOpenAtTop(id);
   const superGoalId = Number(id);
   const router = useRouter();
   const confirmAction = useConfirm();
@@ -184,7 +186,7 @@ export default function SuperGoalPage() {
   return (
     <>
       <main className={styles.main}>
-        <button className={styles.backLink} onClick={() => router.push('/goals')}>
+        <button className={styles.backLink} onClick={() => router.push('/goals', { scroll: false })}>
           <ArrowLeft size={16} /> Todas as metas
         </button>
 
