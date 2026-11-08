@@ -112,8 +112,8 @@ export default function Navbar() {
   const streakValue = streak ?? 0;
 
   return (
-    <header className={styles.header} style={{ viewTransitionName: 'app-navbar' }}>
-      <nav className={`${styles.nav} glass`}>
+    <header className={styles.header}>
+      <nav className={`${styles.nav} glass`} style={{ viewTransitionName: 'app-navbar' }} data-navbar="">
         <Link href="/" className={styles.brand} transitionTypes={tabSlide('/')}>
           <span className={styles.brandIcon}><Target size={20} /></span>
           <span className={styles.brandName}>Goals</span>

@@ -166,6 +166,11 @@ body::after {
   z-index: 100;
 }
 
+html:active-view-transition [data-navbar] {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+}
+
 ::view-transition-old(app-navbar) {
   display: none;
 }
