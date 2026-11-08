@@ -105,16 +105,20 @@ Metas de progresso também podem ser **sem limite**, mostrando o total acumulado
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/metas.jpg" alt="Lista de metas"><p align="center"><b>Metas</b> — filtros, busca e status</p></td>
+    <td width="50%"><img src="docs/screenshots/metas.jpg" alt="Lista de metas"><p align="center"><b>Metas</b> — seções por status, supermetas e filtros por tipo</p></td>
+    <td width="50%"><img src="docs/screenshots/supermeta.jpg" alt="Supermeta"><p align="center"><b>Supermeta</b> — metas relacionadas reunidas</p></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/meta-progresso.jpg" alt="Meta de progresso"><p align="center"><b>Meta de progresso</b> — evolução e previsão</p></td>
-  </tr>
-  <tr>
     <td width="50%"><img src="docs/screenshots/desafio.jpg" alt="Desafio com ranking"><p align="center"><b>Desafio</b> — ranking entre participantes</p></td>
-    <td width="50%"><img src="docs/screenshots/colaborativa.jpg" alt="Meta colaborativa"><p align="center"><b>Meta colaborativa</b> — participantes e autoria</p></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/screenshots/colaborativa.jpg" alt="Meta colaborativa"><p align="center"><b>Meta colaborativa</b> — participantes e autoria</p></td>
     <td width="50%"><img src="docs/screenshots/estatisticas.jpg" alt="Estatísticas"><p align="center"><b>Estatísticas</b> — atividade, horários e sequências</p></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/convite.jpg" alt="Convite para meta"><p align="center"><b>Convite</b> — entrada em uma meta compartilhada</p></td>
+    <td width="50%"></td>
   </tr>
 </table>
 
