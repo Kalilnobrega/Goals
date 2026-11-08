@@ -190,12 +190,12 @@ body::after {
 }
 
 html[data-entry="right"] {
-  --enter-x: 120px;
+  --enter-x: 100px;
   --enter-y: 0px;
 }
 
 html[data-entry="left"] {
-  --enter-x: -120px;
+  --enter-x: -100px;
   --enter-y: 0px;
 }
 
