@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Check, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { Trash2, Pencil, RefreshCw } from 'lucide-react';
+import CheckMark from './CheckMark';
 import { celebrateTask } from '../lib/celebrate';
 import { DragHandle } from './Sortable';
 import { formatWeekdays } from '../lib/date';
@@ -8,6 +9,7 @@ import styles from './TaskItem.module.css';
 
 export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, canAct = true, canEdit = true, showAuthor = false }) {
   const [hovered, setHovered] = useState(false);
+  const [popping, setPopping] = useState(false);
   const done = task.status === true;
 
   const handleCheckClick = (e) => {
@@ -15,6 +17,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, c
     if (!done) {
       const rect = e.currentTarget.getBoundingClientRect();
       celebrateTask(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      setPopping(true);
     }
     onToggle?.(task.id);
   };
@@ -29,12 +32,13 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, c
       {sortable && <DragHandle handleProps={sortable.handleProps} className={styles.handle} />}
 
       <button
-        className={`${styles.check} ${done ? styles.checked : ''}`}
+        className={`${styles.check} ${done ? styles.checked : ''} ${popping ? styles.pop : ''}`}
         onClick={handleCheckClick}
+        onAnimationEnd={() => setPopping(false)}
         disabled={!canAct}
         aria-label={done ? 'Marcar como pendente' : 'Concluir tarefa'}
       >
-        {done && <Check size={11} strokeWidth={3} />}
+        <CheckMark checked={done} />
       </button>
 
       <div className={styles.labelWrap}>

@@ -312,15 +312,24 @@
   box-shadow: 0 2px 8px rgba(37,99,235,0.35);
 }
  
-.todaySpinner {
-  width: 10px; height: 10px;
-  border: 2px solid rgba(59,130,246,0.3);
-  border-top-color: var(--b500);
-  border-radius: 50%;
-  animation: spin .6s linear infinite;
+.todayPop {
+  animation: todayPop var(--dur-slow) var(--ease-spring);
 }
- 
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes todayPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+.todayStrike {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
+  transition: background-size var(--dur-slow) var(--ease-out);
+}
+
+.todayItemDone .todayStrike {
+  background-size: 100% 1.5px;
+}
  
 .todayInfo {
   flex: 1;
@@ -340,7 +349,6 @@
 }
  
 .todayItemDone .todayTitle {
-  text-decoration: line-through;
   color: #94a3b8;
 }
  

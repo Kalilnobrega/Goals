@@ -22,8 +22,18 @@
   .handle { margin: 0 -6px 0 -8px; }
   
   .done .label {
-    text-decoration: line-through;
     color: #94a3b8;
+    background-size: 100% 1.5px;
+  }
+
+  .pop {
+    animation: checkPop var(--dur-slow) var(--ease-spring);
+  }
+
+  @keyframes checkPop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.22); }
+    100% { transform: scale(1); }
   }
   
   .check {
@@ -62,7 +72,10 @@
   .label {
     font-size: 0.9rem;
     color: #334155;
-    transition: color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: color var(--dur-base) var(--ease-out), background-size var(--dur-slow) var(--ease-out);
   }
   
   .habit {

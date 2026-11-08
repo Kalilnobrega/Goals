@@ -1,64 +1,122 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore, ViewTransition, startTransition, addTransitionType } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import HeroCalendar from '../components/HeroCalendar';
 import {
   Target, CheckCircle2, Clock, TrendingUp,
-  ArrowRight, Plus, Sparkles, RefreshCw, Check, AlertTriangle, Trophy
+  ArrowRight, Plus, Sparkles, RefreshCw, AlertTriangle, Trophy
 } from 'lucide-react';
 import { getGoals, getTodayTasks, toggleTask, getStreak, peekCache } from '../lib/api';
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import { celebrateTask } from '../lib/celebrate';
+import CheckMark from '../components/CheckMark';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
+
+const TASK_SETTLE_MS = 450;
+
+const fetchHome = () => Promise.all([
+  getGoals(),
+  getTodayTasks(),
+  getStreak().catch(() => ({ current_streak: 0, longest_streak: 0 })),
+]);
+
+const subscribeToUserName = (onChange) => {
+  window.addEventListener('username-changed', onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    window.removeEventListener('username-changed', onChange);
+    window.removeEventListener('storage', onChange);
+  };
+};
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function DashboardPage() {
   const [goals,   setGoals]   = useState(() => peekCache('goals') ?? []);
   const [loading, setLoading] = useState(() => !peekCache('goals') || !peekCache('today'));
-  const [userName, setUserName] = useState('');
+  const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
   const [todayTasks, setTodayTasks] = useState(() => peekCache('today') ?? []);
-  const [toggling,   setToggling]   = useState({});
+  const [settling,   setSettling]   = useState({});
+  const [popping,    setPopping]    = useState(null);
   const [longestStreak, setLongestStreak] = useState(() => peekCache('streak')?.longest_streak ?? 0);
   const { setLateCount, setStreak } = useLateGoals();
 
-  const loadAll = async () => {
-    const [gs, today, streakData] = await Promise.all([getGoals(), getTodayTasks(),  getStreak().catch(() => ({ current_streak: 0, longest_streak: 0 }))]);
-    setGoals(gs);
-    setTodayTasks(today);
-    setLateCount(gs.filter(g => g.status === 'late').length);
-    setStreak(streakData.current_streak ?? 0);
-    setLongestStreak(streakData.longest_streak ?? 0);
-  };
- 
   useEffect(() => {
-    setUserName(getUserName());
-    loadAll().catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    fetchHome()
+      .then(([gs, today, streakData]) => {
+        setGoals(gs);
+        setTodayTasks(today);
+        setLateCount(gs.filter(g => g.status === 'late').length);
+        setStreak(streakData.current_streak ?? 0);
+        setLongestStreak(streakData.longest_streak ?? 0);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [setLateCount, setStreak]);
  
+  const settle = (id) => startTransition(() => {
+    addTransitionType('task-change');
+    setSettling(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  });
+
   const handleToggle = async (item, e) => {
+    if (item.id in settling) return;
     if (!item.status) {
       const rect = e.currentTarget.getBoundingClientRect();
       celebrateTask(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      setPopping(item.id);
     }
-    setToggling(prev => ({ ...prev, [item.id]: true }));
+    const minimumDelay = wait(TASK_SETTLE_MS);
+    setSettling(prev => ({ ...prev, [item.id]: item.status }));
+    setTodayTasks(prev => prev.map(t => (t.id === item.id ? { ...t, status: !t.status } : t)));
     try {
       await toggleTask(item.id);
-      setTodayTasks(prev =>
-        prev.map(t => t.id === item.id ? { ...t, status: !t.status } : t)
-      );
-
       getStreak()
         .then(s => {
           setStreak(s.current_streak ?? 0);
           setLongestStreak(s.longest_streak ?? 0);
         })
         .catch(() => {});
-    } catch {}
-    finally { setToggling(prev => ({ ...prev, [item.id]: false })); }
+    } catch {
+      setTodayTasks(prev => prev.map(t => (t.id === item.id ? { ...t, status: item.status } : t)));
+    }
+    await minimumDelay;
+    settle(item.id);
   };
- 
+
+  const renderTodayItem = (item) => (
+    <ViewTransition key={item.id} name={`today-${item.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
+      <div className={`${styles.todayItem} ${item.status ? styles.todayItemDone : ''}`}>
+        <button
+          className={`${styles.todayCheck} ${item.status ? styles.todayChecked : ''} ${popping === item.id ? styles.todayPop : ''}`}
+          onClick={(e) => handleToggle(item, e)}
+          onAnimationEnd={() => setPopping(null)}
+          aria-label={item.status ? 'Desmarcar tarefa' : 'Concluir tarefa'}
+        >
+          <CheckMark checked={item.status} size={13} />
+        </button>
+        <div className={styles.todayInfo}>
+          <span className={styles.todayTitle}><span className={styles.todayStrike}>{item.title}</span></span>
+          <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
+            {item.goal_title}
+          </Link>
+        </div>
+        {item.is_recurring && !item.status && (
+          <span className={styles.todayRecurring}>
+            <RefreshCw size={11} />
+            {item.recurrence_count}/{item.max_recurrences ?? '∞'}
+          </span>
+        )}
+      </div>
+    </ViewTransition>
+  );
+
   const total     = goals.length;
   const completed = goals.filter(g => g.status === 'completed').length;
   const open      = goals.filter(g => g.status === 'open').length;
@@ -81,8 +139,9 @@ export default function DashboardPage() {
     { label: 'Recorde de streak', value: longestStreak, icon: Trophy,  color: '#f59e0b' },
   ];
 
-  const todayPending = todayTasks.filter(i => i.status === false);
-  const todayDone    = todayTasks.filter(i => i.status === true);
+  const placedStatus = (i) => (i.id in settling ? settling[i.id] : i.status);
+  const todayPending = todayTasks.filter(i => placedStatus(i) === false);
+  const todayDone    = todayTasks.filter(i => placedStatus(i) === true);
 
   return (
     <>
@@ -213,33 +272,7 @@ export default function DashboardPage() {
           ) : (
             <div className={`${styles.todayCard} glass`}>
               {/* Pendentes */}
-              {todayPending.map(item => (
-                <div key={item.id} className={styles.todayItem}>
-                  <button
-                    className={styles.todayCheck}
-                    onClick={(e) => handleToggle(item, e)}
-                    disabled={toggling[item.id]}
-                    aria-label="Concluir tarefa"
-                  >
-                    {toggling[item.id]
-                      ? <span className={styles.todaySpinner} />
-                      : null
-                    }
-                  </button>
-                  <div className={styles.todayInfo}>
-                    <span className={styles.todayTitle}>{item.title}</span>
-                    <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
-                      {item.goal_title}
-                    </Link>
-                  </div>
-                  {item.is_recurring && (
-                    <span className={styles.todayRecurring}>
-                      <RefreshCw size={11} />
-                      {item.recurrence_count}/{item.max_recurrences ?? '∞'}
-                    </span>
-                  )}
-                </div>
-              ))}
+              {todayPending.map(renderTodayItem)}
  
               {/* Divisor se tiver concluídas */}
               {todayDone.length > 0 && todayPending.length > 0 && (
@@ -249,24 +282,7 @@ export default function DashboardPage() {
               )}
  
               {/* Concluídas */}
-              {todayDone.map(item => (
-                <div key={item.id} className={`${styles.todayItem} ${styles.todayItemDone}`}>
-                  <button
-                    className={`${styles.todayCheck} ${styles.todayChecked}`}
-                    onClick={(e) => handleToggle(item, e)}
-                    disabled={toggling[item.id]}
-                    aria-label="Desmarcar tarefa"
-                  >
-                    <Check size={11} strokeWidth={3} />
-                  </button>
-                  <div className={styles.todayInfo}>
-                    <span className={styles.todayTitle}>{item.title}</span>
-                    <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
-                      {item.goal_title}
-                    </Link>
-                  </div>
-                </div>
-              ))}
+              {todayDone.map(renderTodayItem)}
             </div>
           )}
         </section>
