@@ -1,0 +1,32 @@
+.swap {
+  display: grid;
+  gap: inherit;
+  min-width: 0;
+}
+
+.layer {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-width: 0;
+}
+
+.contentIn {
+  animation: contentIn var(--dur-slow) var(--ease-out) both;
+}
+
+.skeletonOut {
+  pointer-events: none;
+  animation: skeletonOut var(--dur-base) var(--ease-in) forwards;
+}
+
+@keyframes contentIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes skeletonOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

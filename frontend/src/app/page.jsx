@@ -14,6 +14,7 @@ import CheckMark from '../components/CheckMark';
 import CountUp from '../components/CountUp';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
+import SkeletonSwap from '../components/SkeletonSwap';
 
 const TASK_SETTLE_MS = 450;
 
@@ -181,12 +182,15 @@ export default function DashboardPage() {
               Ver estatísticas completas <ArrowRight size={14} />
             </Link>
           </div>
-          <div className={styles.stats}>
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonSwap loading={loading} skeleton={(
+            <div className={styles.stats}>
+              {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className={`${styles.statCard} glass ${styles.skeleton}`} />
-              ))
-            : stats.map((s, i) => (
+              ))}
+            </div>
+          )}>
+          <div className={styles.stats}>
+          {stats.map((s, i) => (
               <div
                 key={s.label}
                 className={`${styles.statCard} glass`}
@@ -200,9 +204,9 @@ export default function DashboardPage() {
                   <div className={styles.statLabel}>{s.label}</div>
                 </div>
               </div>
-            ))
-          }
+            ))}
           </div>
+          </SkeletonSwap>
         </section>
         {/* Banner metas atrasadas */}
         {!loading && lateGoals.length > 0 && (
@@ -257,13 +261,14 @@ export default function DashboardPage() {
             </div>
           </div>
  
-          {loading ? (
+          <SkeletonSwap loading={loading} skeleton={(
             <div className={`${styles.todayCard} glass`}>
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className={styles.todaySkeleton} />
               ))}
             </div>
-          ) : todayTasks.length === 0 ? (
+          )}>
+          {todayTasks.length === 0 ? (
             <div className={`${styles.todayEmpty} glass`}>
               <CheckCircle2 size={32} style={{ color: 'var(--b300)' }} />
               <p>Nenhuma tarefa pendente nas suas metas abertas!</p>
@@ -284,6 +289,7 @@ export default function DashboardPage() {
               {todayDone.map(renderTodayItem)}
             </div>
           )}
+          </SkeletonSwap>
         </section>
 
         {/* Metas recentes */}
@@ -295,13 +301,14 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {loading ? (
+          <SkeletonSwap loading={loading} skeleton={(
             <div className={styles.recentGrid}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className={`${styles.recentSkeleton} glass`} />
               ))}
             </div>
-          ) : recent.length === 0 ? (
+          )}>
+          {recent.length === 0 ? (
             <div className={`${styles.empty} glass`}>
               <Target size={36} style={{ color: 'var(--b300)' }} />
               <p>Nenhuma meta ainda.</p>
@@ -341,6 +348,7 @@ export default function DashboardPage() {
               })}
             </div>
           )}
+          </SkeletonSwap>
         </section>
       </main>
     </>

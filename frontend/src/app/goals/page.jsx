@@ -22,6 +22,7 @@ import { useToast } from '../../components/Toast';
 import { restoreSuperGoal, superGoalTitle } from '../../lib/superGoals';
 import { Plus, Search, X } from 'lucide-react';
 import styles from './page.module.css';
+import SkeletonSwap from '../../components/SkeletonSwap';
 
 const KIND_FILTERS = [
   { value: 'all',           label: 'Todas',         color: '#94a3b8' },
@@ -358,13 +359,14 @@ export default function GoalsPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {loading ? (
+        <SkeletonSwap loading={loading} skeleton={(
           <div className={styles.grid}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className={`${styles.cardSkeleton} glass`} />
             ))}
           </div>
-        ) : isEmpty ? (
+        )}>
+          {isEmpty ? (
           <div className={`${styles.empty} glass`}>
             {goals.length === 0 ? (
               <>
@@ -435,6 +437,7 @@ export default function GoalsPage() {
             />
           </>
         )}
+        </SkeletonSwap>
 
         <button className={styles.fab} onClick={() => setModal('goal')} aria-label="Nova meta">
           <Plus size={24} />

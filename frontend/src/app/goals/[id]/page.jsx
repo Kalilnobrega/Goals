@@ -541,10 +541,7 @@ export default function GoalDetailPage() {
         </div>
         </ViewTransition>
 
-        {loading ? (
-          <div className={`${styles.skeleton} ${styles.skeletonBody} glass`} />
-        ) : (
-        <>
+        <SkeletonSwap loading={loading} skeleton={<div className={`${styles.skeleton} ${styles.skeletonBody} glass`} />}>
         {group && (
           <GroupPanel
             group={group}
@@ -773,8 +770,7 @@ export default function GoalDetailPage() {
             </div>
           )}
         </div>
-        </>
-        )}
+        </SkeletonSwap>
 
         <Modal open={shareModal} onClose={() => setShareModal(false)} title="Compartilhar meta">
           <ShareGoalForm

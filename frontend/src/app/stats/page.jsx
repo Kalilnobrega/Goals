@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import CountUp from '../../components/CountUp';
+import SkeletonSwap from '../../components/SkeletonSwap';
 
 const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -213,16 +214,16 @@ export default function StatsPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {!stats && !error && (
-          <>
-            <div className={styles.tiles}>
-              {Array.from({ length: 6 }).map((_, i) => <div key={i} className={`${styles.skeleton} glass`} />)}
-            </div>
-            <div className={`${styles.skeleton} ${styles.skeletonTall} glass`} />
-          </>
-        )}
-
-        {stats && (
+        {(stats || !error) && (
+          <SkeletonSwap loading={!stats} skeleton={(
+            <>
+              <div className={styles.tiles}>
+                {Array.from({ length: 6 }).map((_, i) => <div key={i} className={`${styles.skeleton} glass`} />)}
+              </div>
+              <div className={`${styles.skeleton} ${styles.skeletonTall} glass`} />
+            </>
+          )}>
+          {stats && (
           <>
             <div className={styles.tiles}>
               <StatTile
@@ -366,6 +367,8 @@ export default function StatsPage() {
               )}
             </section>
           </>
+          )}
+          </SkeletonSwap>
         )}
       </main>
     </>

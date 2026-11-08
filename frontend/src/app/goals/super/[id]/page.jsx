@@ -233,13 +233,14 @@ export default function SuperGoalPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {loading ? (
+        <SkeletonSwap loading={loading} skeleton={(
           <div className={styles.grid}>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className={`${styles.cardSkeleton} glass`} />
             ))}
           </div>
-        ) : inside.length === 0 ? (
+        )}>
+          {inside.length === 0 ? (
           <div className={`${styles.empty} glass`}>
             <p className={styles.emptyTitle}>Nenhuma meta aqui ainda.</p>
             <p>Junte metas parecidas para encontrá-las mais rápido.</p>
@@ -256,6 +257,7 @@ export default function SuperGoalPage() {
             cardProps={cardProps}
           />
         )}
+        </SkeletonSwap>
 
         <Modal open={modal === 'add'} onClose={closeModal} title="Adicionar metas">
           <SuperGoalForm
