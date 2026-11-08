@@ -189,6 +189,10 @@ body::after {
   animation: vt-tab-in-left var(--dur-tab) var(--ease-tab) both;
 }
 
+.page-frame {
+  overflow-x: clip;
+}
+
 html[data-entry="right"] {
   --enter-x: 100px;
   --enter-y: 0px;

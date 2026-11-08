@@ -11,7 +11,7 @@ export default function Template({ children }) {
       exit={{ 'tab-forward': 'tab-out-left', 'tab-back': 'tab-out-right', default: 'none' }}
       default="none"
     >
-      {children}
+      <div className="page-frame">{children}</div>
     </ViewTransition>
   );
 }
