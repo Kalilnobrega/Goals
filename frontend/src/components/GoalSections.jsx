@@ -1,9 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useState, ViewTransition } from 'react';
 import { ChevronDown } from 'lucide-react';
 import GoalCard from './GoalCard';
 import { SortableList, SortableItem, DragHandle } from './Sortable';
 import styles from './GoalSections.module.css';
+
+const appeared = new Set();
+
+function SectionCard({ goal, ...props }) {
+  const [entering] = useState(() => {
+    const first = !appeared.has(goal.id);
+    appeared.add(goal.id);
+    return first;
+  });
+  return <GoalCard goal={goal} entering={entering} {...props} />;
+}
 
 export const STATUS_SECTIONS = [
   { status: 'late',      label: 'Atrasadas',  color: '#ef4444' },
@@ -57,6 +68,8 @@ export function CollapsibleSection({ label, color, count, open, locked, onToggle
 }
 
 export default function GoalSections({ goals, collapsed, onCollapsedChange, forceOpen, onReorder, cardProps }) {
+  useState(() => appeared.clear());
+
   const sections = STATUS_SECTIONS
     .map(section => ({ ...section, goals: goals.filter(g => g.status === section.status) }))
     .filter(section => section.goals.length > 0);
@@ -76,14 +89,23 @@ export default function GoalSections({ goals, collapsed, onCollapsedChange, forc
           {section.goals.map((g, i) => (
             <SortableItem key={g.id} id={g.id}>
               {({ itemProps, isDragging, handleProps }) => (
-                <div {...itemProps} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
-                  <GoalCard
-                    goal={g}
-                    dragging={isDragging}
-                    dragHandle={<DragHandle handleProps={handleProps} />}
-                    {...cardProps}
-                  />
-                </div>
+                <ViewTransition
+                  name={`goal-${g.id}`}
+                  share="goal-morph"
+                  update={{ 'goal-change': 'goal-move', default: 'none' }}
+                  enter={{ 'goal-change': 'goal-enter', default: 'none' }}
+                  exit={{ 'goal-change': 'goal-exit', default: 'none' }}
+                  default="none"
+                >
+                  <div {...itemProps} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
+                    <SectionCard
+                      goal={g}
+                      dragging={isDragging}
+                      dragHandle={<DragHandle handleProps={handleProps} />}
+                      {...cardProps}
+                    />
+                  </div>
+                </ViewTransition>
               )}
             </SortableItem>
           ))}

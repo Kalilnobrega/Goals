@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ViewTransition, startTransition, addTransitionType } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../../../components/Navbar';
@@ -21,6 +21,7 @@ import {
 } from '../../../lib/api';
 import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
+import { useToast } from '../../../components/Toast';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
 import { formatValue, formatProgressValue, hasTarget } from '../../../lib/numeric';
@@ -48,16 +49,21 @@ function consistencyClass(value) {
   return styles.consistencyLow;
 }
 
+const TASK_SETTLE_MS = 450;
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const cachedOverview = (id) => peekCache(`overview:${Number(id)}`);
+const cachedGoal = (id) => cachedOverview(id)?.goal ?? peekCache('goals')?.find(g => g.id === Number(id));
 
 export default function GoalDetailPage() {
   const { id } = useParams();
   const router  = useRouter();
   const confirmAction = useConfirm();
+  const toast = useToast();
 
   const { setStreak } = useLateGoals();
 
-  const [goal,       setGoal]       = useState(() => cachedOverview(id)?.goal ?? null);
+  const [goal,       setGoal]       = useState(() => cachedGoal(id) ?? null);
   const [tasks,      setTasks]      = useState(() => cachedOverview(id)?.tasks ?? []);
   const [cycles,     setCycles]     = useState(() => cachedOverview(id)?.cycles ?? []);
   const [entries,    setEntries]    = useState(() => cachedOverview(id)?.entries ?? []);
@@ -76,6 +82,7 @@ export default function GoalDetailPage() {
   const [error,      setError]      = useState('');
   const [group,      setGroup]      = useState(() => cachedOverview(id)?.group ?? null);
   const [shareModal, setShareModal] = useState(false);
+  const [settling,   setSettling]   = useState({});
   const [superGoals, setSuperGoals] = useState(() => cachedOverview(id)?.super_goals ?? []);
 
   const loadGroup = (current) => {
@@ -127,6 +134,7 @@ export default function GoalDetailPage() {
       setGoal(updatedGoal);
       await Promise.all([loadProgress(updatedGoal), loadGroup(updatedGoal)]);
       setEditModal(false);
+      toast('Meta salva');
     } catch { setError('Erro ao atualizar meta.'); }
     finally { setSaving(false); }
   };
@@ -151,16 +159,45 @@ export default function GoalDetailPage() {
   };
 
   // Toggle: PUT /tasks/{id}
+  const settleTask = (taskId) => startTransition(() => {
+    addTransitionType('task-change');
+    setSettling(prev => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+  });
+
   const handleToggleTask = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    const minimumDelay = wait(TASK_SETTLE_MS);
+    if (task) {
+      setSettling(prev => ({ ...prev, [taskId]: task.status }));
+      setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, status: !t.status } : t)));
+    }
     try {
       const prevProgress = goal?.progress ?? 0;
       await toggleTask(taskId);
-      const [, updatedGoal] = await Promise.all([loadTasks(), getGoal(Number(id)), loadCycles()]);
-      setGoal(updatedGoal);
+      const [freshTasks, updatedGoal] = await Promise.all([getTasks(Number(id)), getGoal(Number(id)), loadCycles()]);
+      await minimumDelay;
+      startTransition(() => {
+        addTransitionType('task-change');
+        setTasks(freshTasks);
+        setGoal(updatedGoal);
+        setSettling(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      });
       loadGroup(updatedGoal);
       if (prevProgress < 100 && updatedGoal.progress >= 100) celebrateGoal();
       getStreak().then(s => setStreak(s.current_streak ?? 0)).catch(() => {});
-    } catch (err) { setError(err?.response?.data?.detail || 'Erro ao atualizar tarefa.'); }
+    } catch (err) {
+      settleTask(taskId);
+      loadTasks();
+      setError(err?.response?.data?.detail || 'Erro ao atualizar tarefa.');
+    }
   };
 
   const refreshAfterEntryChange = async () => {
@@ -181,6 +218,7 @@ export default function GoalDetailPage() {
       setEntryValue('');
       setEntryNote('');
       await refreshAfterEntryChange();
+      toast('Registro adicionado');
     } catch (err) {
       setError(err?.response?.data?.detail || 'Erro ao registrar valor.');
     } finally { setAddingEntry(false); }
@@ -196,6 +234,7 @@ export default function GoalDetailPage() {
     try {
       await deleteGoalEntry(Number(id), entryId);
       await refreshAfterEntryChange();
+      toast('Registro excluído');
     } catch { setError('Erro ao excluir registro.'); }
   };
 
@@ -204,6 +243,7 @@ export default function GoalDetailPage() {
     try {
       await deleteTask(taskId);
       await Promise.all([loadTasks(), loadGoal()]);
+      toast('Tarefa excluída');
     } catch { setError('Erro ao excluir tarefa.'); }
   };
 
@@ -263,14 +303,22 @@ export default function GoalDetailPage() {
       <ul className={styles.taskList}>
         {items.map(t => (
           <SortableItem key={t.id} id={t.id}>
-            {(sortable) => <TaskItem {...taskItemProps(t)} sortable={sortable} />}
+            {(sortable) => (
+              <ViewTransition name={`task-${t.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
+                <TaskItem {...taskItemProps(t)} sortable={sortable} />
+              </ViewTransition>
+            )}
           </SortableItem>
         ))}
       </ul>
     </SortableList>
   ) : (
     <ul className={styles.taskList}>
-      {items.map(t => <TaskItem key={t.id} {...taskItemProps(t)} />)}
+      {items.map(t => (
+        <ViewTransition key={t.id} name={`task-${t.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
+          <TaskItem {...taskItemProps(t)} />
+        </ViewTransition>
+      ))}
     </ul>
   );
 
@@ -291,6 +339,7 @@ export default function GoalDetailPage() {
       setEditTask(null);
       setTaskModal(false);
       await Promise.all([loadTasks(), loadGoal()]);
+      toast('Tarefa salva');
     } catch { setError('Erro ao editar tarefa.'); }
     finally { setSaving(false); }
   };
@@ -300,8 +349,9 @@ export default function GoalDetailPage() {
   const meta     = goal ? (STATUS_META[goal.status] || STATUS_META.open) : null;
 
   // Separa pendentes / concluídas / hábitos
-  const pending   = tasks.filter(t => t.status === false);
-  const completed = tasks.filter(t => t.status === true);
+  const groupStatus = (t) => (t.id in settling ? settling[t.id] : t.status);
+  const pending   = tasks.filter(t => groupStatus(t) === false);
+  const completed = tasks.filter(t => groupStatus(t) === true);
   const habits    = tasks.filter(t => t.is_recurring);
 
   const cycleBars = goal ? buildCycleBars(goal, cycles) : [];
@@ -312,7 +362,7 @@ export default function GoalDetailPage() {
   const cycleTotal = cycles.reduce((sum, c) => sum + (c.achieved_value ?? 0), 0);
   const consistency = !openEnded && cycles.length > 0 ? Math.round((cyclesCompleted / cycles.length) * 100) : null;
 
-  if (loading) return (
+  if (loading && !goal) return (
     <>
       <Navbar />
       <main className={styles.main}>
@@ -361,6 +411,7 @@ export default function GoalDetailPage() {
         )}
 
         {/* Goal header card */}
+        <ViewTransition name={`goal-${goal.id}`} share="goal-morph" default="none">
         <div className={`${styles.goalCard} glass`}>
           {/* Faixa colorida no topo baseada no status */}
           <div
@@ -382,6 +433,13 @@ export default function GoalDetailPage() {
                         await updateGoal(id, { status: 'completed' });
                         await loadGoal();
                         celebrateGoal();
+                        toast({
+                          message: 'Meta concluída',
+                          action: {
+                            label: 'Desfazer',
+                            onClick: () => updateGoal(id, { status: 'open' }).then(loadGoal).catch(() => setError('Erro ao reabrir meta.')),
+                          },
+                        });
                       }
                       catch { setError('Erro ao concluir meta.'); }
                     }}
@@ -471,7 +529,12 @@ export default function GoalDetailPage() {
             )}
           </div>
         </div>
+        </ViewTransition>
 
+        {loading ? (
+          <div className={`${styles.skeleton} ${styles.skeletonBody} glass`} />
+        ) : (
+        <>
         {group && (
           <GroupPanel
             group={group}
@@ -700,6 +763,8 @@ export default function GoalDetailPage() {
             </div>
           )}
         </div>
+        </>
+        )}
 
         <Modal open={shareModal} onClose={() => setShareModal(false)} title="Compartilhar meta">
           <ShareGoalForm

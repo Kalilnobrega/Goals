@@ -7,6 +7,9 @@
   position: relative;
   overflow: hidden;
   transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+}
+
+.cardEntering {
   animation: fadeUp var(--dur-enter) var(--ease-out) var(--enter-delay, 0ms) both;
 }
 

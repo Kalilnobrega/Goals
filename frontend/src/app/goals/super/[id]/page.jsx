@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition, addTransitionType, ViewTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import Navbar from '../../../../components/Navbar';
@@ -10,6 +10,8 @@ import SuperGoalPicker from '../../../../components/SuperGoalPicker';
 import SuperGoalIcon from '../../../../components/SuperGoalIcon';
 import { moveSubset } from '../../../../components/Sortable';
 import { useConfirm } from '../../../../components/ConfirmDialog';
+import { useToast } from '../../../../components/Toast';
+import { restoreSuperGoal, superGoalTitle } from '../../../../lib/superGoals';
 import {
   getGoals, updateGoal, deleteGoal, reorderGoals,
   getSuperGoals, createSuperGoal, renameSuperGoal, deleteSuperGoal,
@@ -26,6 +28,7 @@ export default function SuperGoalPage() {
   const superGoalId = Number(id);
   const router = useRouter();
   const confirmAction = useConfirm();
+  const toast = useToast();
   const [goals,      setGoals]      = useState(() => peekCache('goals') ?? []);
   const [superGoals, setSuperGoals] = useState(() => peekCache('superGoals') ?? []);
   const [loading,    setLoading]    = useState(() => !peekCache('goals') || !peekCache('superGoals'));
@@ -41,8 +44,11 @@ export default function SuperGoalPage() {
   const load = () =>
     fetchAll()
       .then(([goalList, superList]) => {
-        setGoals(goalList);
-        setSuperGoals(superList);
+        startTransition(() => {
+          addTransitionType('goal-change');
+          setGoals(goalList);
+          setSuperGoals(superList);
+        });
       })
       .catch(() => setError('Erro ao carregar a supermeta.'));
 
@@ -66,12 +72,13 @@ export default function SuperGoalPage() {
     setMoving(null);
   };
 
-  const run = async (action, message) => {
+  const run = async (action, message, success) => {
     setSaving(true);
     try {
       await action();
       closeModal();
       await load();
+      if (success) toast(success);
     } catch {
       setError(message);
     } finally {
@@ -92,6 +99,7 @@ export default function SuperGoalPage() {
       await renameSuperGoal(superGoalId, title);
       setSuperGoals(prev => prev.map(sg => (sg.id === superGoalId ? { ...sg, title } : sg)));
       setEditing(false);
+      toast('Nome atualizado');
     } catch { setError('Erro ao renomear supermeta.'); }
   };
 
@@ -107,6 +115,7 @@ export default function SuperGoalPage() {
     if (!ok) return;
     try {
       await deleteSuperGoal(superGoalId);
+      toast(`Supermeta “${superGoal.title}” excluída`);
       router.push('/goals');
     } catch { setError('Erro ao excluir supermeta.'); }
   };
@@ -116,6 +125,13 @@ export default function SuperGoalPage() {
       await updateGoal(goalId, { status: 'completed' });
       load();
       celebrateGoal();
+      toast({
+        message: 'Meta concluída',
+        action: {
+          label: 'Desfazer',
+          onClick: () => updateGoal(goalId, { status: 'open' }).then(load).catch(() => setError('Erro ao reabrir meta.')),
+        },
+      });
     } catch { setError('Erro ao concluir meta.'); }
   };
 
@@ -124,6 +140,7 @@ export default function SuperGoalPage() {
     try {
       await deleteGoal(goalId);
       load();
+      toast('Meta excluída');
     } catch { setError('Erro ao excluir meta.'); }
   };
 
@@ -142,7 +159,10 @@ export default function SuperGoalPage() {
     onComplete: handleComplete,
     onMoveToSuperGoal: (goal) => { setMoving(goal); setModal('move'); },
     onRemoveFromSuperGoal: (goal) =>
-      run(() => removeGoalFromSuperGoal(superGoalId, goal.id), 'Erro ao tirar meta da supermeta.'),
+      run(() => removeGoalFromSuperGoal(superGoalId, goal.id), 'Erro ao tirar meta da supermeta.', {
+        message: `Removida de “${superGoal?.title}”`,
+        action: { label: 'Desfazer', onClick: () => addGoalsToSuperGoal(superGoalId, [goal.id]).then(load) },
+      }),
   };
 
   if (!loading && notFound) {
@@ -169,6 +189,7 @@ export default function SuperGoalPage() {
           <ArrowLeft size={16} /> Todas as metas
         </button>
 
+        <ViewTransition name={`super-${superGoalId}`} share="goal-morph" default="none">
         <div className={`${styles.hero} glass`}>
           <span className={styles.heroIcon}><SuperGoalIcon size={24} /></span>
           <div className={styles.heroText}>
@@ -203,6 +224,7 @@ export default function SuperGoalPage() {
             </div>
           )}
         </div>
+        </ViewTransition>
 
         {superGoal && (
           <button className={styles.btnAdd} onClick={() => setModal('add')}>
@@ -243,7 +265,11 @@ export default function SuperGoalPage() {
             superGoals={superGoals}
             currentSuperGoalId={superGoalId}
             submitLabel="Adicionar"
-            onSubmit={({ goal_ids }) => run(() => addGoalsToSuperGoal(superGoalId, goal_ids), 'Erro ao adicionar metas.')}
+            onSubmit={({ goal_ids }) => run(
+              () => addGoalsToSuperGoal(superGoalId, goal_ids),
+              'Erro ao adicionar metas.',
+              `${goal_ids.length} meta${goal_ids.length !== 1 ? 's' : ''} adicionada${goal_ids.length !== 1 ? 's' : ''}`,
+            )}
             onCancel={closeModal}
             loading={saving}
           />
@@ -255,8 +281,18 @@ export default function SuperGoalPage() {
               goal={moving}
               goals={goals}
               superGoals={superGoals}
-              onPick={(targetId) => run(() => addGoalsToSuperGoal(targetId, [moving.id]), 'Erro ao mover meta.')}
-              onCreate={(title) => run(() => createSuperGoal({ title, goal_ids: [moving.id] }), 'Erro ao criar supermeta.')}
+              onPick={(targetId) => {
+                const goal = moving;
+                run(() => addGoalsToSuperGoal(targetId, [goal.id]), 'Erro ao mover meta.', {
+                  message: `Movida para “${superGoalTitle(superGoals, targetId)}”`,
+                  action: { label: 'Desfazer', onClick: () => restoreSuperGoal(goal.id, goal.super_goal_id, targetId).then(load) },
+                });
+              }}
+              onCreate={(title) => run(
+                () => createSuperGoal({ title, goal_ids: [moving.id] }),
+                'Erro ao criar supermeta.',
+                `Movida para a nova supermeta “${title}”`,
+              )}
               loading={saving}
             />
           )}

@@ -1,4 +1,5 @@
 'use client';
+import { ViewTransition } from 'react';
 import SuperGoalIcon from './SuperGoalIcon';
 import { useCardLink } from '../lib/useCardLink';
 import { STATUS_SECTIONS } from './GoalSections';
@@ -18,6 +19,7 @@ export default function SuperGoalTile({ superGoal, goals, dragHandle, dragging }
     >
       <span className={styles.layerBack} aria-hidden="true" />
       <span className={styles.layerMid} aria-hidden="true" />
+      <ViewTransition name={`super-${superGoal.id}`} share="goal-morph" default="none">
       <div className={`${styles.tileBody} glass`}>
         <div className={styles.tileTop}>
           <span className={styles.iconBadge}><SuperGoalIcon size={18} strokeWidth={2.1} /></span>
@@ -44,6 +46,7 @@ export default function SuperGoalTile({ superGoal, goals, dragHandle, dragging }
           )}
         </div>
       </div>
+      </ViewTransition>
     </article>
   );
 }

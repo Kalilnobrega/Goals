@@ -142,7 +142,50 @@ body::after {
   outline-offset: 2px;
 }
 
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-group(.goal-morph),
+::view-transition-group(.goal-move),
+::view-transition-group(.task-move) {
+  animation-duration: var(--dur-slow);
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-image-pair(.goal-morph) {
+  animation-name: vt-soften;
+}
+
+::view-transition-old(.goal-exit) {
+  animation: vt-exit var(--dur-base) var(--ease-in) both;
+}
+
+::view-transition-new(.goal-enter) {
+  animation: vt-enter var(--dur-slow) var(--ease-out) both;
+}
+
+@keyframes vt-enter {
+  from { opacity: 0; transform: scale(0.94); }
+}
+
+@keyframes vt-soften {
+  35% { filter: blur(2px); }
+}
+
+@keyframes vt-exit {
+  to { opacity: 0; transform: scale(0.92); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms !important;
+  }
+
   *, *::before, *::after {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;

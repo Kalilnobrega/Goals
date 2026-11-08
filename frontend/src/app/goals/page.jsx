@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition, addTransitionType } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
@@ -19,6 +19,8 @@ import {
 import { celebrateGoal } from '../../lib/celebrate';
 import { deleteGoalConfirm } from '../../lib/sharing';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
+import { restoreSuperGoal, superGoalTitle } from '../../lib/superGoals';
 import { Plus, Search, X } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -61,6 +63,7 @@ const matchesKind = (goal, kind) =>
 export default function GoalsPage() {
   const router = useRouter();
   const confirmAction = useConfirm();
+  const toast = useToast();
   const [goals,      setGoals]      = useState(() => peekCache('goals') ?? []);
   const [superGoals, setSuperGoals] = useState(() => peekCache('superGoals') ?? []);
   const [loading,    setLoading]    = useState(() => !peekCache('goals') || !peekCache('superGoals'));
@@ -79,8 +82,11 @@ export default function GoalsPage() {
   const load = () =>
     fetchAll()
       .then(([goalList, superList]) => {
-        setGoals(goalList);
-        setSuperGoals(superList);
+        startTransition(() => {
+          addTransitionType('goal-change');
+          setGoals(goalList);
+          setSuperGoals(superList);
+        });
       })
       .catch(() => setError('Erro ao carregar metas.'));
 
@@ -98,7 +104,10 @@ export default function GoalsPage() {
   }, []);
 
   const changeFilter = (value) => {
-    setFilter(value);
+    startTransition(() => {
+      addTransitionType('goal-change');
+      setFilter(value);
+    });
     savePrefs({ filter: value, collapsed });
   };
 
@@ -140,6 +149,7 @@ export default function GoalsPage() {
     try {
       const superGoal = await createSuperGoal(data);
       closeModal();
+      toast(`Supermeta “${superGoal.title}” criada`);
       if (data.goal_ids.length === 0) router.push(`/goals/super/${superGoal.id}`);
       else load();
     } catch {
@@ -154,6 +164,13 @@ export default function GoalsPage() {
       await updateGoal(id, { status: 'completed' });
       load();
       celebrateGoal();
+      toast({
+        message: 'Meta concluída',
+        action: {
+          label: 'Desfazer',
+          onClick: () => updateGoal(id, { status: 'open' }).then(load).catch(() => setError('Erro ao reabrir meta.')),
+        },
+      });
     } catch { setError('Erro ao concluir meta.'); }
   };
 
@@ -162,6 +179,7 @@ export default function GoalsPage() {
     try {
       await deleteGoal(id);
       load();
+      toast('Meta excluída');
     } catch { setError('Erro ao excluir meta.'); }
   };
 
@@ -173,9 +191,17 @@ export default function GoalsPage() {
   const moveTo = async (superGoalId) => {
     setSaving(true);
     try {
-      await addGoalsToSuperGoal(superGoalId, [moving.id]);
+      const goal = moving;
+      await addGoalsToSuperGoal(superGoalId, [goal.id]);
       closeModal();
       load();
+      toast({
+        message: `Movida para “${superGoalTitle(superGoals, superGoalId)}”`,
+        action: {
+          label: 'Desfazer',
+          onClick: () => restoreSuperGoal(goal.id, goal.super_goal_id, superGoalId).then(load),
+        },
+      });
     } catch {
       setError('Erro ao mover meta.');
     } finally {
@@ -189,6 +215,7 @@ export default function GoalsPage() {
       await createSuperGoal({ title, goal_ids: [moving.id] });
       closeModal();
       load();
+      toast(`Movida para a nova supermeta “${title}”`);
     } catch {
       setError('Erro ao criar supermeta.');
     } finally {
@@ -200,6 +227,13 @@ export default function GoalsPage() {
     try {
       await removeGoalFromSuperGoal(goal.super_goal_id, goal.id);
       load();
+      toast({
+        message: `Removida de “${superGoalTitle(superGoals, goal.super_goal_id)}”`,
+        action: {
+          label: 'Desfazer',
+          onClick: () => addGoalsToSuperGoal(goal.super_goal_id, [goal.id]).then(load),
+        },
+      });
     } catch { setError('Erro ao tirar meta da supermeta.'); }
   };
 

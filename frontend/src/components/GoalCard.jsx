@@ -26,7 +26,7 @@ const KIND_META = {
   challenge:     { label: 'Desafio',      color: '#d97706', icon: Trophy },
 };
 
-export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal, onRemoveFromSuperGoal, dragHandle, dragging }) {
+export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal, onRemoveFromSuperGoal, dragHandle, dragging, entering = true }) {
   const progress = typeof goal.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta = STATUS_META[goal.status] || STATUS_META.open;
   const isCompleted = goal.status === 'completed';
@@ -94,7 +94,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   }, [menu]);
 
   return (
-    <article className={`${styles.card} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`} {...cardLink} aria-label={goal.title}>
+    <article className={`${styles.card} ${entering ? styles.cardEntering : ''} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`} {...cardLink} aria-label={goal.title}>
       <div className={styles.topRow}>
         <div className={styles.badges}>
           <div className={`${styles.badge} ${styles.statusBadge}`} style={{ '--badge-color': meta.color }}>
