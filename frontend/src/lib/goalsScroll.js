@@ -19,6 +19,9 @@ export function restoreGoalsScroll() {
 
   const card = href && document.querySelector(`[data-card-href="${href}"]`);
   if (!card) return;
+  card.dataset.revealed = '';
+  card.getAnimations().forEach(animation => animation.finish());
+
   const rect = card.getBoundingClientRect();
   if (rect.height === 0) return;
   if (rect.top >= NAVBAR_CLEARANCE && rect.bottom <= window.innerHeight - BOTTOM_CLEARANCE) return;
