@@ -9,7 +9,7 @@ import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
 import { useSwipeTabs } from '../lib/useSwipeTabs';
-import { announceTabSlide, isCoarsePointer, subscribeCoarsePointer } from '../lib/pageSlide';
+import { announceTabSlide, isCoarsePointer, leaveTab, subscribeCoarsePointer } from '../lib/pageSlide';
 
 const links = [
   { href: '/',      label: 'Início',       icon: House },
@@ -44,6 +44,7 @@ export default function Navbar() {
 
   const isCurrent = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const activeHref = pendingHref ?? links.find(l => isCurrent(l.href))?.href ?? null;
+  const scrollsOnEnter = (href) => !(href === '/goals' && pathname.startsWith('/goals/'));
   const currentIndex = links.findIndex(l => isCurrent(l.href));
   const tabSlide = (href) => {
     const target = links.findIndex(l => l.href === href);
@@ -52,11 +53,31 @@ export default function Navbar() {
   };
   const snapshotSlide = (href) => (coarse ? undefined : tabSlide(href));
 
+  const leaveTo = (href, scroll = true) => {
+    const types = tabSlide(href);
+    const navigate = () => {
+      announceTabSlide(types);
+      router.push(href, { scroll });
+    };
+    if (leaveTab(types, navigate)) setPendingHref(href);
+  };
+
+  const touchTabClick = (event, href, scroll) => {
+    if (!coarse || !tabSlide(href)) return false;
+    event.preventDefault();
+    leaveTo(href, scroll);
+    return true;
+  };
+
   const tabIndex = links.findIndex(l => l.href === pathname);
   useSwipeTabs(tabIndex !== -1, (step) => {
     const next = links[tabIndex + step];
     if (!next) return;
     prefetchTab(next.href);
+    if (coarse) {
+      leaveTo(next.href);
+      return;
+    }
     setPendingHref(next.href);
     announceTabSlide(tabSlide(next.href));
     router.push(next.href, { transitionTypes: snapshotSlide(next.href) });
@@ -118,7 +139,10 @@ export default function Navbar() {
   return (
     <header className={styles.header}>
       <nav className={`${styles.nav} glass`} style={{ viewTransitionName: 'app-navbar' }} data-navbar="">
-        <Link href="/" className={styles.brand} transitionTypes={snapshotSlide('/')} onClick={() => announceTabSlide(tabSlide('/'))}>
+        <Link href="/" className={styles.brand} transitionTypes={snapshotSlide('/')} onClick={(event) => {
+          if (touchTabClick(event, '/')) return;
+          announceTabSlide(tabSlide('/'));
+        }}>
           <span className={styles.brandIcon}><Target size={20} /></span>
           <span className={styles.brandName}>Goals</span>
         </Link>
@@ -132,13 +156,14 @@ export default function Navbar() {
               <li key={href}>
                 <Link
                   href={href}
-                  scroll={!(href === '/goals' && pathname.startsWith('/goals/'))}
+                  scroll={scrollsOnEnter(href)}
                   transitionTypes={snapshotSlide(href)}
                   data-href={href}
                   className={`${styles.link} ${active ? styles.active : ''}`}
                   aria-current={isCurrent(href) ? 'page' : undefined}
-                  onClick={() => {
+                  onClick={(event) => {
                     if (isCurrent(href)) return;
+                    if (touchTabClick(event, href, scrollsOnEnter(href))) return;
                     setPendingHref(href);
                     announceTabSlide(tabSlide(href));
                   }}

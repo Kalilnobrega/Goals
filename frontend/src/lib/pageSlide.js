@@ -4,9 +4,16 @@ const SIDE_ENTRY_MS = 1400;
 const ANNOUNCE_TTL_MS = 1500;
 const SLIDE_FALLBACK_MS = 1200;
 const COARSE_QUERY = '(pointer: coarse)';
+const REDUCED_QUERY = '(prefers-reduced-motion: reduce)';
+const EXIT_MS = 150;
+const EXIT_SHIFT_PX = 40;
+const EXIT_RESET_MS = 1500;
 
 let entryTimer = null;
 let announced = null;
+let exiting = false;
+
+const sideOf = (types) => (types?.[0] === 'tab-forward' ? 'right' : types?.[0] === 'tab-back' ? 'left' : null);
 
 export function subscribeCoarsePointer(onChange) {
   const query = window.matchMedia(COARSE_QUERY);
@@ -17,8 +24,30 @@ export function subscribeCoarsePointer(onChange) {
 export const isCoarsePointer = () => window.matchMedia(COARSE_QUERY).matches;
 
 export function announceTabSlide(types) {
-  const side = types?.[0] === 'tab-forward' ? 'right' : types?.[0] === 'tab-back' ? 'left' : null;
+  const side = sideOf(types);
   announced = side ? { side, at: performance.now() } : null;
+}
+
+export function leaveTab(types, navigate) {
+  if (exiting) return false;
+  const frame = document.querySelector('.page-frame');
+  const side = sideOf(types);
+  if (!frame || !side || window.matchMedia(REDUCED_QUERY).matches) {
+    navigate();
+    return true;
+  }
+  exiting = true;
+  const shift = side === 'right' ? -EXIT_SHIFT_PX : EXIT_SHIFT_PX;
+  const animation = frame.animate(
+    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${shift}px)` }],
+    { duration: EXIT_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+  );
+  setTimeout(() => { if (frame.isConnected) animation.cancel(); }, EXIT_RESET_MS);
+  animation.finished.catch(() => {}).then(() => {
+    exiting = false;
+    navigate();
+  });
+  return true;
 }
 
 function land(side) {
