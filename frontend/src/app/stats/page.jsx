@@ -46,7 +46,7 @@ function Delta({ period, label }) {
   );
 }
 
-const TILE_STAGGER_MS = 90;
+const TILE_STAGGER_MS = 45;
 
 function StatTile({ icon: Icon, label, value, hint, index }) {
   return (
