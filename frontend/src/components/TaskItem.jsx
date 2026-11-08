@@ -45,7 +45,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, c
       </button>
 
       <div className={styles.labelWrap}>
-        <span className={styles.label}>{task.title}</span>
+        <span className={styles.label}><span className={styles.strike}>{task.title}</span></span>
         {/* Hábito recorrente — usa recurrence_interval_days e recurrence_count */}
         {task.is_recurring && (
           <span className={styles.habit}>

@@ -29,6 +29,9 @@
   
   .done .label {
     color: #94a3b8;
+  }
+
+  .done .strike {
     background-size: 100% 1.5px;
   }
 
@@ -78,10 +81,14 @@
   .label {
     font-size: 0.9rem;
     color: #334155;
+    transition: color var(--dur-base) var(--ease-out);
+  }
+
+  .strike {
     background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
-    transition: color var(--dur-base) var(--ease-out), background-size var(--dur-slow) var(--ease-out);
+    transition: background-size var(--dur-slow) var(--ease-out);
   }
   
   .habit {
