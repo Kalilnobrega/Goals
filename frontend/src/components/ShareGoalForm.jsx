@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Users, Trophy } from 'lucide-react';
 import f from '../styles/forms.module.css';
+import { shakeInvalid } from '../lib/formMotion';
 
 const KINDS = [
   {
@@ -22,7 +23,7 @@ export default function ShareGoalForm({ onSubmit, onCancel, loading }) {
   const [kind, setKind] = useState('collaborative');
 
   return (
-    <form
+    <form onInvalidCapture={shakeInvalid}
       className={f.form}
       onSubmit={(e) => { e.preventDefault(); onSubmit(kind); }}
     >

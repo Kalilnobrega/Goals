@@ -33,6 +33,8 @@ import {
   CircleCheck, Repeat,
 } from 'lucide-react';import f from '../../../styles/forms.module.css';
 import styles from './page.module.css';
+import { shakeInvalid } from '../../../lib/formMotion';
+import SkeletonSwap from '../../../components/SkeletonSwap';
 
 // GoalStatus do backend: 'open' | 'completed' | 'paused' | 'late'
 const ENTRIES_PREVIEW = 5;
@@ -559,7 +561,7 @@ export default function GoalDetailPage() {
               <h2 className={styles.taskTitle}>Registrar progresso</h2>
             </div>
 
-            <form className={`${styles.addTask} glass`} onSubmit={handleAddEntry}>
+            <form onInvalidCapture={shakeInvalid} className={`${styles.addTask} glass`} onSubmit={handleAddEntry}>
               <input
                 type="number"
                 step="any"
@@ -731,7 +733,7 @@ export default function GoalDetailPage() {
           </div>
 
           {goal.can_edit && (
-            <form className={`${styles.addTask} glass`} onSubmit={handleAddTask}>
+            <form onInvalidCapture={shakeInvalid} className={`${styles.addTask} glass`} onSubmit={handleAddTask}>
               <input
                 className={styles.taskInput}
                 placeholder="Nova tarefa... (Enter para adicionar)"
@@ -795,7 +797,7 @@ export default function GoalDetailPage() {
 
         {/* Edit task modal */}
         <Modal open={taskModal} onClose={() => { setTaskModal(false); setEditTask(null); }} title="Editar tarefa">
-          <form
+          <form onInvalidCapture={shakeInvalid}
             className={f.form}
             onSubmit={(e) => {
               e.preventDefault();

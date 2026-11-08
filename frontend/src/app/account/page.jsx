@@ -7,6 +7,7 @@ import { getMe, updateName, changePassword, deleteAccount, logout } from '../../
 import { clearToken, getRefreshToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import forms from '../../styles/forms.module.css';
 import styles from './page.module.css';
+import { shakeInvalid } from '../../lib/formMotion';
 
 function errorMessage(err, fallback) {
   const detail = err.response?.data?.detail;
@@ -61,7 +62,7 @@ function NameCard({ me, onSaved }) {
   return (
     <section className={`${styles.card} glass`}>
       <CardHeader icon={UserRound} title="Perfil" sub={me.email} />
-      <form className={forms.form} onSubmit={handleSubmit}>
+      <form onInvalidCapture={shakeInvalid} className={forms.form} onSubmit={handleSubmit}>
         <div className={forms.field}>
           <label className={forms.label} htmlFor="name">Nome</label>
           <input
@@ -140,7 +141,7 @@ function PasswordCard({ me }) {
   return (
     <section className={`${styles.card} glass`}>
       <CardHeader icon={KeyRound} title="Senha" sub="Ao alterar, você será desconectado dos outros dispositivos" />
-      <form className={forms.form} onSubmit={handleSubmit}>
+      <form onInvalidCapture={shakeInvalid} className={forms.form} onSubmit={handleSubmit}>
         <div className={forms.field}>
           <label className={forms.label} htmlFor="current-password">Senha atual</label>
           <div className={styles.passwordWrap}>
@@ -272,7 +273,7 @@ function DeleteCard({ me }) {
       </div>
 
       <Modal open={open} onClose={close} title="Excluir conta">
-        <form className={forms.form} onSubmit={handleDelete}>
+        <form onInvalidCapture={shakeInvalid} className={forms.form} onSubmit={handleDelete}>
           <p className={styles.warning}>
             Essa ação não pode ser desfeita. Todas as suas metas, tarefas, registros e sequências serão apagados.
           </p>

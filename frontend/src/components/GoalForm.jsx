@@ -4,6 +4,7 @@ import { CircleCheck, Repeat, TrendingUp } from 'lucide-react';
 import { formatDeadline } from '../lib/date';
 import SuperGoalIcon from './SuperGoalIcon';
 import f from '../styles/forms.module.css';
+import { shakeInvalid } from '../lib/formMotion';
 
 const CYCLE_PRESETS = [
   { value: '1',  label: 'Dia'   },
@@ -180,7 +181,7 @@ export default function GoalForm({ initial = {}, superGoals, onSubmit, onCancel,
   };
 
   return (
-    <form className={f.form} onSubmit={handleSubmit}>
+    <form onInvalidCapture={shakeInvalid} className={f.form} onSubmit={handleSubmit}>
       <div className={f.field}>
         <label className={f.label}>Título *</label>
         <input

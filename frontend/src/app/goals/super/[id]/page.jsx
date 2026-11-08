@@ -19,6 +19,8 @@ import {
 import { celebrateGoal } from '../../../../lib/celebrate';
 import { deleteGoalConfirm } from '../../../../lib/sharing';
 import styles from './page.module.css';
+import { shakeInvalid } from '../../../../lib/formMotion';
+import SkeletonSwap from '../../../../components/SkeletonSwap';
 
 const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
 
@@ -192,7 +194,7 @@ export default function SuperGoalPage() {
           <div className={styles.heroText}>
             <span className={styles.eyebrow}>Supermeta</span>
             {editing ? (
-              <form className={styles.renameForm} onSubmit={saveRename}>
+              <form onInvalidCapture={shakeInvalid} className={styles.renameForm} onSubmit={saveRename}>
                 <input
                   className={styles.renameInput}
                   value={draft}

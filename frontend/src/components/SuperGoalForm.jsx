@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { STATUS_SECTIONS } from './GoalSections';
 import f from '../styles/forms.module.css';
 import styles from './SuperGoal.module.css';
+import { shakeInvalid } from '../lib/formMotion';
 
 const STATUS_COLOR = Object.fromEntries(STATUS_SECTIONS.map(s => [s.status, s.color]));
 
@@ -34,7 +35,7 @@ export default function SuperGoalForm({
   };
 
   return (
-    <form className={f.form} onSubmit={handleSubmit}>
+    <form onInvalidCapture={shakeInvalid} className={f.form} onSubmit={handleSubmit}>
       {showTitle && (
         <div className={f.field}>
           <label className={f.label}>Nome *</label>

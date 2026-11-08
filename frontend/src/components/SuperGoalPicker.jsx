@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import SuperGoalIcon from './SuperGoalIcon';
 import f from '../styles/forms.module.css';
 import styles from './SuperGoal.module.css';
+import { shakeInvalid } from '../lib/formMotion';
 
 export default function SuperGoalPicker({ goal, superGoals, goals, onPick, onCreate, loading }) {
   const [title, setTitle] = useState('');
@@ -41,7 +42,7 @@ export default function SuperGoalPicker({ goal, superGoals, goals, onPick, onCre
         </div>
       )}
 
-      <form className={f.field} onSubmit={handleCreate}>
+      <form onInvalidCapture={shakeInvalid} className={f.field} onSubmit={handleCreate}>
         <label className={f.label}>{superGoals.length ? 'Ou crie uma nova' : 'Crie sua primeira supermeta'}</label>
         <div className={styles.inlineCreate}>
           <input
