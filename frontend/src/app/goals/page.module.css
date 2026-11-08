@@ -17,7 +17,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  animation: fadeUp var(--dur-enter) var(--ease-out) both;
 }
 
 .heroLeft {

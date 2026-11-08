@@ -12,7 +12,6 @@
 .pageHero {
   border-radius: 22px;
   padding: 22px 28px;
-  animation: fadeUp var(--dur-enter) var(--ease-out) both;
 }
 
 .title {
