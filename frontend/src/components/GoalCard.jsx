@@ -37,6 +37,13 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   const inSuperGoal = goal.super_goal_id != null;
   const hasActions = canComplete || goal.can_delete || onMoveToSuperGoal || (inSuperGoal && onRemoveFromSuperGoal);
   const [menu, setMenu] = useState(null);
+  const [seenProgress, setSeenProgress] = useState(progress);
+  const [flash, setFlash] = useState(false);
+
+  if (progress !== seenProgress) {
+    setSeenProgress(progress);
+    if (seenProgress < 100 && progress >= 100) setFlash(true);
+  }
   const cardLink = useCardLink(`/goals/${goal.id}`, dragging);
   const menuButton = useRef(null);
 
@@ -131,7 +138,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
       )}
 
       {!(goal.is_numeric && !hasTarget(goal)) && (
-        <div className={styles.progressWrap}>
+        <div className={`${styles.progressWrap} ${flash ? styles.flash : ''}`} onAnimationEnd={(e) => e.target === e.currentTarget && setFlash(false)}>
           <div className={styles.progressBar}>
             <div className={`${styles.progressFill} ${barTone}`} style={{ width: `${progress}%` }} />
           </div>
@@ -140,7 +147,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
       )}
 
       {!(goal.is_numeric && !hasTarget(goal)) && (
-        <div className={`${styles.ring} ${barTone}`} role="img" aria-label={`${progress}% concluído`}>
+        <div className={`${styles.ring} ${barTone} ${flash ? styles.flash : ''}`} onAnimationEnd={(e) => e.target === e.currentTarget && setFlash(false)} role="img" aria-label={`${progress}% concluído`}>
           <svg viewBox="0 0 44 44" className={styles.ringSvg}>
             <circle className={styles.ringTrack} cx="22" cy="22" r={RING_RADIUS} />
             <circle

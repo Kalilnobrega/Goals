@@ -82,6 +82,8 @@ export default function GoalDetailPage() {
   const [error,      setError]      = useState('');
   const [group,      setGroup]      = useState(() => cachedOverview(id)?.group ?? null);
   const [shareModal, setShareModal] = useState(false);
+  const [seenProgress, setSeenProgress] = useState(null);
+  const [progressFlash, setProgressFlash] = useState(false);
   const [settling,   setSettling]   = useState({});
   const [superGoals, setSuperGoals] = useState(() => cachedOverview(id)?.super_goals ?? []);
 
@@ -345,6 +347,11 @@ export default function GoalDetailPage() {
   };
 
   // progress vem do @property serializado pelo GoalResponseSchema
+
+  if (goal && progress !== seenProgress) {
+    setSeenProgress(progress);
+    if (seenProgress !== null && seenProgress < 100 && progress >= 100) setProgressFlash(true);
+  }
   const progress = typeof goal?.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta     = goal ? (STATUS_META[goal.status] || STATUS_META.open) : null;
 
@@ -522,7 +529,10 @@ export default function GoalDetailPage() {
                   <span className={styles.progressLabel}>Progresso geral</span>
                   <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}>{progress}%</span>
                 </div>
-                <div className={styles.progressTrack}>
+                <div
+                  className={`${styles.progressTrack} ${progressFlash ? styles.progressFlash : ''}`}
+                  onAnimationEnd={(e) => e.target === e.currentTarget && setProgressFlash(false)}
+                >
                   <div className={`${styles.progressFill} ${progress >= 100 ? styles.progressFillComplete : ''}`} style={{ width: `${progress}%` }} />
                 </div>
               </div>
