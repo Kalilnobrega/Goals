@@ -61,6 +61,7 @@
   --dur-slow:     320ms;
   --dur-enter:    440ms;
   --dur-progress: 700ms;
+  --dur-tab:      520ms;
   --stagger:      45ms;
 }
 
@@ -158,6 +159,39 @@ body::after {
 ::view-transition-new(root) {
   animation: none;
 }
+
+::view-transition-group(app-navbar) {
+  animation: none;
+}
+
+::view-transition-old(app-navbar) {
+  display: none;
+}
+
+::view-transition-new(app-navbar) {
+  animation: none;
+}
+
+::view-transition-old(.tab-out-left) {
+  animation: vt-tab-out-left var(--dur-tab) var(--ease-in-out) both;
+}
+
+::view-transition-new(.tab-in-right) {
+  animation: vt-tab-in-right var(--dur-tab) var(--ease-in-out) both;
+}
+
+::view-transition-old(.tab-out-right) {
+  animation: vt-tab-out-right var(--dur-tab) var(--ease-in-out) both;
+}
+
+::view-transition-new(.tab-in-left) {
+  animation: vt-tab-in-left var(--dur-tab) var(--ease-in-out) both;
+}
+
+@keyframes vt-tab-out-left  { to   { transform: translateX(-100%); } }
+@keyframes vt-tab-in-right  { from { transform: translateX(100%); } }
+@keyframes vt-tab-out-right { to   { transform: translateX(100%); } }
+@keyframes vt-tab-in-left   { from { transform: translateX(-100%); } }
 
 
 ::view-transition-group(.goal-morph),

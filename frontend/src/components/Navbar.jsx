@@ -39,6 +39,12 @@ export default function Navbar() {
 
   const isCurrent = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const activeHref = pendingHref ?? links.find(l => isCurrent(l.href))?.href ?? null;
+  const currentIndex = links.findIndex(l => isCurrent(l.href));
+  const tabSlide = (href) => {
+    const target = links.findIndex(l => l.href === href);
+    if (currentIndex === -1 || target === currentIndex) return undefined;
+    return [target > currentIndex ? 'tab-forward' : 'tab-back'];
+  };
 
   useLayoutEffect(() => {
     const place = () => {
@@ -85,9 +91,9 @@ export default function Navbar() {
   const streakValue = streak ?? 0;
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} style={{ viewTransitionName: 'app-navbar' }}>
       <nav className={`${styles.nav} glass`}>
-        <Link href="/" className={styles.brand}>
+        <Link href="/" className={styles.brand} transitionTypes={tabSlide('/')}>
           <span className={styles.brandIcon}><Target size={20} /></span>
           <span className={styles.brandName}>Goals</span>
         </Link>
@@ -102,6 +108,7 @@ export default function Navbar() {
                 <Link
                   href={href}
                   scroll={!(href === '/goals' && pathname.startsWith('/goals/'))}
+                  transitionTypes={tabSlide(href)}
                   data-href={href}
                   className={`${styles.link} ${active ? styles.active : ''}`}
                   aria-current={isCurrent(href) ? 'page' : undefined}
