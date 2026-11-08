@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, LogOut } from 'lucide-react';
 import SuperGoalIcon from './SuperGoalIcon';
 import CountUp from './CountUp';
+import { useDropSettle } from '../lib/useDropSettle';
 import { useCardLink } from '../lib/useCardLink';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
@@ -39,6 +40,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   const inSuperGoal = goal.super_goal_id != null;
   const hasActions = canComplete || goal.can_delete || onMoveToSuperGoal || (inSuperGoal && onRemoveFromSuperGoal);
   const [menu, setMenu] = useState(null);
+  const [settling, endSettle] = useDropSettle(dragging);
   const [seenProgress, setSeenProgress] = useState(progress);
   const [flash, setFlash] = useState(false);
 
@@ -103,7 +105,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   }, [menu]);
 
   return (
-    <article className={`${styles.card} ${entering ? styles.cardEntering : ''} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} glass`} {...cardLink} aria-label={goal.title}>
+    <article className={`${styles.card} ${entering ? styles.cardEntering : ''} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} ${settling ? styles.cardSettling : ''} glass`} {...cardLink} onAnimationEnd={endSettle} aria-label={goal.title}>
       <div className={styles.topRow}>
         <div className={styles.badges}>
           <div className={`${styles.badge} ${styles.statusBadge}`} style={{ '--badge-color': meta.color }}>

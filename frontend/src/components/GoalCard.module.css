@@ -56,15 +56,25 @@
 }
 
 .cardDragging {
-  transform: scale(1.02);
-  box-shadow: var(--glass-shadow-lg);
+  transform: scale(1.04) rotate(-1.2deg);
+  box-shadow: 0 26px 50px -12px rgba(37, 99, 235, 0.35), 0 6px 16px rgba(37, 99, 235, 0.12);
   cursor: grabbing;
+}
+
+.cardSettling {
+  animation: dropSettle var(--dur-slow) var(--ease-spring);
+}
+
+.cardEntering.cardSettling {
+  animation:
+    fadeUp var(--dur-enter) var(--ease-out) var(--enter-delay, 0ms) both,
+    dropSettle var(--dur-slow) var(--ease-spring);
 }
 
 @media (hover: hover) {
   .cardDragging:hover {
-    transform: scale(1.02);
-    box-shadow: var(--glass-shadow-lg);
+    transform: scale(1.04) rotate(-1.2deg);
+    box-shadow: 0 26px 50px -12px rgba(37, 99, 235, 0.35), 0 6px 16px rgba(37, 99, 235, 0.12);
     cursor: grabbing;
   }
 }
@@ -611,4 +621,10 @@
 
 .ring.flash {
   animation: completeFlash 700ms var(--ease-spring);
+}
+
+@keyframes dropSettle {
+  0%   { transform: scale(1.04) rotate(-1.2deg); }
+  55%  { transform: scale(0.98) rotate(0.3deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }

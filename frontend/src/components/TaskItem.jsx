@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Trash2, Pencil, RefreshCw } from 'lucide-react';
 import CheckMark from './CheckMark';
+import { useDropSettle } from '../lib/useDropSettle';
 import { celebrateTask } from '../lib/celebrate';
 import { DragHandle } from './Sortable';
 import { formatWeekdays } from '../lib/date';
@@ -10,6 +11,7 @@ import styles from './TaskItem.module.css';
 export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, canAct = true, canEdit = true, showAuthor = false }) {
   const [hovered, setHovered] = useState(false);
   const [popping, setPopping] = useState(false);
+  const [settling, endSettle] = useDropSettle(Boolean(sortable?.isDragging));
   const done = task.status === true;
 
   const handleCheckClick = (e) => {
@@ -25,7 +27,8 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, c
   return (
     <li
       {...sortable?.itemProps}
-      className={`${styles.item} ${done ? styles.done : ''} ${sortable?.isDragging ? styles.dragging : ''}`}
+      className={`${styles.item} ${done ? styles.done : ''} ${sortable?.isDragging ? styles.dragging : ''} ${settling ? styles.settling : ''}`}
+      onAnimationEnd={endSettle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

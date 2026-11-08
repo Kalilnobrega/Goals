@@ -87,7 +87,7 @@ export function SortableList({ ids, onReorder, layout = 'list', children }) {
 export function SortableItem({ id, children }) {
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, transition: { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' } });
 
   return children({
     itemProps: {

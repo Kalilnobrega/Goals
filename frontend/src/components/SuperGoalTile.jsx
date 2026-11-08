@@ -2,18 +2,21 @@
 import { ViewTransition } from 'react';
 import SuperGoalIcon from './SuperGoalIcon';
 import { useCardLink } from '../lib/useCardLink';
+import { useDropSettle } from '../lib/useDropSettle';
 import { STATUS_SECTIONS } from './GoalSections';
 import styles from './SuperGoal.module.css';
 
 export default function SuperGoalTile({ superGoal, goals, dragHandle, dragging }) {
   const cardLink = useCardLink(`/goals/super/${superGoal.id}`, dragging);
+  const [settling, endSettle] = useDropSettle(dragging);
   const counts = STATUS_SECTIONS
     .map(section => ({ ...section, count: goals.filter(g => g.status === section.status).length }))
     .filter(section => section.count > 0);
 
   return (
     <article
-      className={`${styles.tile} ${dragging ? styles.tileDragging : ''}`}
+      className={`${styles.tile} ${dragging ? styles.tileDragging : ''} ${settling ? styles.tileSettling : ''}`}
+      onAnimationEnd={endSettle}
       {...cardLink}
       aria-label={`Supermeta ${superGoal.title}`}
     >
