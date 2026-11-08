@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 const MIN_DISTANCE = 60;
 const MAX_DURATION_MS = 700;
-const HORIZONTAL_RATIO = 1.5;
+const LOCK_DISTANCE = 10;
 const EDGE_GUARD = 24;
 const COOLDOWN_MS = 500;
 const IGNORE = 'input, textarea, select, [contenteditable="true"], [data-drag-handle], [role="dialog"], [data-no-swipe]';
@@ -41,17 +41,33 @@ export function useSwipeTabs(enabled, onSwipe) {
       if (touch.clientX < EDGE_GUARD || touch.clientX > window.innerWidth - EDGE_GUARD) return;
       const target = event.target instanceof Element ? event.target : null;
       if (!target || target.closest(IGNORE) || scrollsSideways(target)) return;
-      start = { x: touch.clientX, y: touch.clientY, at: performance.now() };
+      start = { x: touch.clientX, y: touch.clientY, at: performance.now(), axis: null };
+    };
+
+    const onMove = (event) => {
+      if (!start) return;
+      const touch = event.touches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (!start.axis) {
+        if (Math.hypot(dx, dy) < LOCK_DISTANCE) return;
+        start.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+      if (start.axis === 'y') {
+        start = null;
+        return;
+      }
+      if (event.cancelable) event.preventDefault();
     };
 
     const onEnd = (event) => {
       if (!start) return;
       const touch = event.changedTouches[0];
       const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
+      const horizontal = start.axis === 'x';
       const quick = performance.now() - start.at <= MAX_DURATION_MS;
       start = null;
-      if (!quick || Math.abs(dx) < MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * HORIZONTAL_RATIO) return;
+      if (!horizontal || !quick || Math.abs(dx) < MIN_DISTANCE) return;
       lastSwipeAt = performance.now();
       handler.current(dx < 0 ? 1 : -1);
     };
@@ -59,10 +75,12 @@ export function useSwipeTabs(enabled, onSwipe) {
     const onCancel = () => { start = null; };
 
     document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { passive: true });
     document.addEventListener('touchcancel', onCancel, { passive: true });
     return () => {
       document.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onCancel);
     };
