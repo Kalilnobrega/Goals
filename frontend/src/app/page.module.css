@@ -603,3 +603,19 @@
     .skeleton { height: 84px; }
     .recentGrid { grid-template-columns: 1fr; }
   }
+
+.todayEnter {
+  animation: todayIn var(--dur-enter) var(--ease-out) calc(var(--stagger) * var(--i, 0) + 80ms) both;
+}
+
+@keyframes todayIn {
+  from { opacity: 0; transform: translateX(-12px); }
+}
+
+.recentFill {
+  animation: recentFillIn var(--dur-progress) var(--ease-out) calc(var(--stagger) * var(--i, 0) + 160ms) both;
+}
+
+@keyframes recentFillIn {
+  from { width: 0; }
+}

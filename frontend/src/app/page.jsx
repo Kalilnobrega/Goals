@@ -34,6 +34,46 @@ const subscribeToUserName = (onChange) => {
 };
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+const todaySeen = new Set();
+
+function TodayItem({ item, index, popping, onToggle, onPopEnd }) {
+  const [entering] = useState(() => {
+    const first = !todaySeen.has(item.id);
+    todaySeen.add(item.id);
+    return first;
+  });
+
+  return (
+    <ViewTransition name={`today-${item.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
+      <div
+        className={`${styles.todayItem} ${item.status ? styles.todayItemDone : ''} ${entering ? styles.todayEnter : ''}`}
+        style={{ '--i': Math.min(index, 8) }}
+      >
+        <button
+          className={`${styles.todayCheck} ${item.status ? styles.todayChecked : ''} ${popping ? styles.todayPop : ''}`}
+          onClick={(e) => onToggle(item, e)}
+          onAnimationEnd={onPopEnd}
+          aria-label={item.status ? 'Desmarcar tarefa' : 'Concluir tarefa'}
+        >
+          <CheckMark checked={item.status} size={13} />
+        </button>
+        <div className={styles.todayInfo}>
+          <span className={styles.todayTitle}><span className={styles.todayStrike}>{item.title}</span></span>
+          <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
+            {item.goal_title}
+          </Link>
+        </div>
+        {item.is_recurring && !item.status && (
+          <span className={styles.todayRecurring}>
+            <RefreshCw size={11} />
+            {item.recurrence_count}/{item.max_recurrences ?? '∞'}
+          </span>
+        )}
+      </div>
+    </ViewTransition>
+  );
+}
+
 export default function DashboardPage() {
   const [goals,   setGoals]   = useState(() => peekCache('goals') ?? []);
   const [loading, setLoading] = useState(() => !peekCache('goals') || !peekCache('today'));
@@ -41,6 +81,7 @@ export default function DashboardPage() {
   const [todayTasks, setTodayTasks] = useState(() => peekCache('today') ?? []);
   const [settling,   setSettling]   = useState({});
   const [popping,    setPopping]    = useState(null);
+  useState(() => todaySeen.clear());
   const [longestStreak, setLongestStreak] = useState(() => peekCache('streak')?.longest_streak ?? 0);
   const { setLateCount, setStreak } = useLateGoals();
 
@@ -91,31 +132,15 @@ export default function DashboardPage() {
     settle(item.id);
   };
 
-  const renderTodayItem = (item) => (
-    <ViewTransition key={item.id} name={`today-${item.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
-      <div className={`${styles.todayItem} ${item.status ? styles.todayItemDone : ''}`}>
-        <button
-          className={`${styles.todayCheck} ${item.status ? styles.todayChecked : ''} ${popping === item.id ? styles.todayPop : ''}`}
-          onClick={(e) => handleToggle(item, e)}
-          onAnimationEnd={() => setPopping(null)}
-          aria-label={item.status ? 'Desmarcar tarefa' : 'Concluir tarefa'}
-        >
-          <CheckMark checked={item.status} size={13} />
-        </button>
-        <div className={styles.todayInfo}>
-          <span className={styles.todayTitle}><span className={styles.todayStrike}>{item.title}</span></span>
-          <Link href={`/goals/${item.goal_id}`} className={styles.todayGoal}>
-            {item.goal_title}
-          </Link>
-        </div>
-        {item.is_recurring && !item.status && (
-          <span className={styles.todayRecurring}>
-            <RefreshCw size={11} />
-            {item.recurrence_count}/{item.max_recurrences ?? '∞'}
-          </span>
-        )}
-      </div>
-    </ViewTransition>
+  const renderTodayItem = (item, index) => (
+    <TodayItem
+      key={item.id}
+      item={item}
+      index={index}
+      popping={popping === item.id}
+      onToggle={handleToggle}
+      onPopEnd={() => setPopping(null)}
+    />
   );
 
   const total     = goals.length;
@@ -326,7 +351,7 @@ export default function DashboardPage() {
                     key={g.id}
                     href={`/goals/${g.id}`}
                     className={`${styles.recentCard} glass`}
-                    style={{ animationDelay: `calc(var(--stagger) * ${i})` }}
+                    style={{ animationDelay: `calc(var(--stagger) * ${i})`, '--i': i }}
                   >
                     <div className={styles.recentDot} style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
                     <div className={styles.recentBody}>
@@ -338,7 +363,7 @@ export default function DashboardPage() {
                           <div className={styles.recentBar}>
                             <div className={`${styles.recentFill} ${progress >= 100 ? styles.recentFillComplete : ''}`} style={{ width: `${progress}%` }} />
                           </div>
-                          <span className={`${styles.recentPct} ${progress >= 100 ? styles.recentPctComplete : ''}`}>{progress}%</span>
+                          <span className={`${styles.recentPct} ${progress >= 100 ? styles.recentPctComplete : ''}`}><CountUp value={`${progress}%`} duration={700} /></span>
                         </>
                       )}
                     </div>
