@@ -1,0 +1,114 @@
+.region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 300;
+  width: min(440px, calc(100% - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  padding-top: 8px;
+  animation: slotIn var(--dur-slow) var(--ease-out) both;
+}
+
+.slotInner { min-height: 0; }
+
+.slotLeaving {
+  animation: slotOut var(--dur-base) var(--ease-in) forwards;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 14px;
+  border-radius: 16px;
+  animation: toastIn var(--dur-slow) var(--ease-spring) both;
+}
+
+.slotLeaving .toast {
+  animation: toastOut var(--dur-base) var(--ease-in) forwards;
+}
+
+.icon { flex-shrink: 0; color: var(--tone); }
+
+.success { --tone: #10b981; }
+.info    { --tone: var(--blue-500); }
+.danger  { --tone: #ef4444; }
+
+.message {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.35;
+}
+
+.action {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--blue-700);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .action:hover { background: rgba(59, 130, 246, 0.18); }
+}
+
+.close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .close:hover { background: rgba(100, 116, 139, 0.1); }
+}
+
+@keyframes slotIn {
+  from { grid-template-rows: 0fr; padding-top: 0; }
+  to   { grid-template-rows: 1fr; padding-top: 8px; }
+}
+
+@keyframes slotOut {
+  from { grid-template-rows: 1fr; padding-top: 8px; }
+  to   { grid-template-rows: 0fr; padding-top: 0; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+@media (max-width: 600px) {
+  .region { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+}
