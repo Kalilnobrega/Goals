@@ -312,3 +312,12 @@
   font-style: normal;
   color: #fbbf24;
 }
+
+.cellWave {
+  animation: cellIn var(--dur-slow) var(--ease-spring) calc(var(--w, 0) * 12ms + var(--d, 0) * 20ms) both;
+}
+
+@keyframes cellIn {
+  from { opacity: 0; scale: 0.4; }
+  to   { opacity: 1; scale: 1; }
+}

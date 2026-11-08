@@ -75,3 +75,33 @@
 .tooltip span {
   color: #cbd5e1;
 }
+
+.line {
+  stroke-dasharray: 1;
+  animation: lineDraw var(--dur-progress) var(--ease-out) both;
+}
+
+.area {
+  animation: areaIn var(--dur-progress) var(--ease-out) var(--dur-fast) both;
+}
+
+.dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dotIn var(--dur-slow) var(--ease-spring) var(--dur-progress) both;
+}
+
+@keyframes lineDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes areaIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dotIn {
+  from { scale: 0; }
+  to   { scale: 1; }
+}

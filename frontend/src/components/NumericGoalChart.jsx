@@ -88,7 +88,7 @@ export default function NumericGoalChart({ goal }) {
           </text>
 
           {area && <path d={area} className={styles.area} />}
-          <path d={path} className={styles.line} />
+          <path d={path} className={styles.line} pathLength="1" />
 
           {activePoint && (
             <line

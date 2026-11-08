@@ -53,3 +53,14 @@
 .tooltip span {
   color: #cbd5e1;
 }
+
+.bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: barGrow var(--dur-enter) var(--ease-out) calc(var(--i, 0) * 18ms) both;
+}
+
+@keyframes barGrow {
+  from { scale: 1 0; }
+  to   { scale: 1 1; }
+}

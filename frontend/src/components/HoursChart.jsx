@@ -54,6 +54,7 @@ export default function HoursChart({ hours }) {
                 <path
                   d={barPath(x, h)}
                   className={`${styles.bar} ${hour === peak && count > 0 ? styles.peak : ''} ${active === hour ? styles.active : ''}`}
+                  style={{ '--i': hour }}
                 />
               </g>
             );

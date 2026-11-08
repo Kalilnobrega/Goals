@@ -105,6 +105,7 @@ export default function CycleChart({ goal, bars }) {
                   height={height}
                   rx={Math.min(5, barW / 3)}
                   className={styles.bar}
+                  style={{ '--i': i }}
                   data-state={bar.state}
                   data-active={i === active || undefined}
                 />

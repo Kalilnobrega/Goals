@@ -171,7 +171,7 @@ export default function ActivityHeatmap({ days, goals = [] }) {
           </div>
           <div className={styles.cells}>
             {weeks.map((week, w) => (
-              <div key={w} className={styles.week}>
+              <div key={w} className={styles.week} style={{ '--w': w }}>
                 {Array.from({ length: 7 }).map((_, d) => {
                   const day = week[d];
                   if (!day) return <span key={d} className={styles.empty} />;
@@ -181,7 +181,8 @@ export default function ActivityHeatmap({ days, goals = [] }) {
                   return (
                     <span
                       key={d}
-                      className={styles.cell}
+                      className={`${styles.cell} ${styles.cellWave}`}
+                      style={{ '--d': d }}
                       data-level={level}
                       data-completed={day.completed_goals.length > 0 || undefined}
                       aria-label={`${date}: ${text}${completedNames.length ? ` · concluiu ${completedNames.join(', ')}` : ''}`}

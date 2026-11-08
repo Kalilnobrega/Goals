@@ -96,3 +96,14 @@
   border-radius: 0;
   border-top: 1.5px solid rgba(15, 23, 42, 0.55);
 }
+
+.bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: barGrow var(--dur-enter) var(--ease-out) calc(min(var(--i, 0), 20) * 30ms) both;
+}
+
+@keyframes barGrow {
+  from { scale: 1 0; }
+  to   { scale: 1 1; }
+}
