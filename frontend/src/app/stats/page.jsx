@@ -5,7 +5,7 @@ import ActivityHeatmap from '../../components/ActivityHeatmap';
 import NumericGoalChart from '../../components/NumericGoalChart';
 import GoalForecast from '../../components/GoalForecast';
 import HoursChart, { DAY_PERIODS } from '../../components/HoursChart';
-import { getStats } from '../../lib/api';
+import { getStats, peekCache } from '../../lib/api';
 import { formatValue } from '../../lib/numeric';
 import { formatDeadline } from '../../lib/date';
 import {
@@ -193,7 +193,7 @@ function NeglectedTasksCard({ tasks }) {
 }
 
 export default function StatsPage() {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState(() => peekCache('stats') ?? null);
   const [error, setError] = useState('');
 
   useEffect(() => {

@@ -201,7 +201,7 @@ export const toggleTask = (taskId) =>
   api.patch(`/tasks/${taskId}/toggle`).then((r) => r.data);
 
 // ── Stats ──────────────────────────────────────────────
-export const getStats = () => api.get("/stats/").then((r) => r.data);
+export const getStats = () => cachedGet("stats", "/stats/");
 
 // ── Groups ─────────────────────────────────────────────
 export const createGroup = (goalId, kind) =>

@@ -7,6 +7,7 @@ import { getUserName, saveUserName } from '../lib/auth';
 import { getMe, getStreak } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
+import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
 
 const links = [
   { href: '/',      label: 'Início',       icon: House },
@@ -87,6 +88,15 @@ export default function Navbar() {
       .catch(() => {});
   }, [setStreak]);
 
+  useEffect(() => {
+    if (!('requestIdleCallback' in window)) {
+      const timer = setTimeout(prefetchAllTabs, 600);
+      return () => clearTimeout(timer);
+    }
+    const idle = requestIdleCallback(prefetchAllTabs, { timeout: 1500 });
+    return () => cancelIdleCallback(idle);
+  }, [pathname]);
+
   const firstName = userName.split(' ')[0];
   const streakValue = streak ?? 0;
 
@@ -113,6 +123,9 @@ export default function Navbar() {
                   className={`${styles.link} ${active ? styles.active : ''}`}
                   aria-current={isCurrent(href) ? 'page' : undefined}
                   onClick={() => { if (!isCurrent(href)) setPendingHref(href); }}
+                  onPointerEnter={() => prefetchTab(href)}
+                  onPointerDown={() => prefetchTab(href)}
+                  onFocus={() => prefetchTab(href)}
                 >
                   <span className={styles.linkIconWrap}>
                     <Icon size={16} />
