@@ -21,6 +21,7 @@ import {
 import { deleteGoalConfirm } from '../../../lib/sharing';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../components/Toast';
+import CountUp from '../../../components/CountUp';
 import { useLateGoals } from '../../../lib/LateGoalsContext';
 import { formatDeadline, formatDateTime, WEEKDAYS, cycleNotStarted } from '../../../lib/date';
 import { formatValue, formatProgressValue, hasTarget } from '../../../lib/numeric';
@@ -49,6 +50,7 @@ function consistencyClass(value) {
 }
 
 const TASK_SETTLE_MS = 450;
+const PROGRESS_DURATION_MS = 700;
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const cachedOverview = (id) => peekCache(`overview:${Number(id)}`);
@@ -516,14 +518,14 @@ export default function GoalDetailPage() {
               <div className={styles.progressWrap}>
                 <div className={styles.progressInfo}>
                   <span className={styles.progressLabel}>{goal.is_recurring ? 'Total neste ciclo' : 'Total acumulado'}</span>
-                  <span className={styles.progressPct}>{formatProgressValue(goal)}</span>
+                  <span className={styles.progressPct}><CountUp value={formatProgressValue(goal)} duration={PROGRESS_DURATION_MS} /></span>
                 </div>
               </div>
             ) : (
               <div className={styles.progressWrap}>
                 <div className={styles.progressInfo}>
                   <span className={styles.progressLabel}>Progresso geral</span>
-                  <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}>{progress}%</span>
+                  <span className={`${styles.progressPct} ${progress >= 100 ? styles.progressPctComplete : ''}`}><CountUp value={`${progress}%`} duration={PROGRESS_DURATION_MS} /></span>
                 </div>
                 <div
                   className={`${styles.progressTrack} ${progressFlash ? styles.progressFlash : ''}`}
@@ -612,7 +614,7 @@ export default function GoalDetailPage() {
               <h2 className={styles.taskTitle}>Ciclos</h2>
               {consistency !== null && (
                 <span className={`${styles.taskCount} ${styles.consistency} ${consistencyClass(consistency)}`}>
-                  {consistency}% consistência
+                  <CountUp value={`${consistency}%`} duration={PROGRESS_DURATION_MS} /> consistência
                 </span>
               )}
               {openEnded && cycles.length > 0 && (
