@@ -11,6 +11,7 @@ import { getGoals, getTodayTasks, toggleTask, getStreak, peekCache } from '../li
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import { celebrateTask } from '../lib/celebrate';
+import CountUp from '../components/CountUp';
 import CheckMark from '../components/CheckMark';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
@@ -197,7 +198,7 @@ export default function DashboardPage() {
                   <s.icon size={20} />
                 </div>
                 <div>
-                  <div className={styles.statValue}>{s.value}</div>
+                  <div className={styles.statValue}><CountUp value={s.value} /></div>
                   <div className={styles.statLabel}>{s.label}</div>
                 </div>
               </div>

@@ -13,6 +13,7 @@ import {
   Activity, CalendarCheck, CalendarDays, Trophy, Sparkles, TrendingUp, TrendingDown, Minus,
   RefreshCw, Check, X, Clock, Flame, ListOrdered, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
+import CountUp from '../../components/CountUp';
 import styles from './page.module.css';
 
 const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
@@ -50,7 +51,7 @@ function StatTile({ icon: Icon, label, value, hint }) {
     <div className={`${styles.tile} glass`}>
       <span className={styles.tileIcon}><Icon size={16} /></span>
       <span className={styles.tileLabel}>{label}</span>
-      <span className={styles.tileValue}>{value}</span>
+      <span className={styles.tileValue}><CountUp value={value} /></span>
       {hint && <span className={styles.tileHint}>{hint}</span>}
     </div>
   );
