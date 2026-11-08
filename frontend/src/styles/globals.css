@@ -121,7 +121,7 @@ body::after {
 }
 
 /* ── Motion ─────────────────────────────────────── */
-:where(button, [role="button"], [role="link"]) {
+:where(a, button, [role="button"], [role="link"], label) {
   -webkit-tap-highlight-color: transparent;
 }
 
