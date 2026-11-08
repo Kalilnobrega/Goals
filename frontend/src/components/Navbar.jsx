@@ -9,6 +9,7 @@ import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
 import { useSwipeTabs } from '../lib/useSwipeTabs';
+import { announceTabSlide, isCoarsePointer, subscribeCoarsePointer } from '../lib/pageSlide';
 
 const links = [
   { href: '/',      label: 'Início',       icon: House },
@@ -29,6 +30,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
+  const coarse = useSyncExternalStore(subscribeCoarsePointer, isCoarsePointer, () => false);
   const { lateCount, streak, setStreak } = useLateGoals();
   const [pendingHref, setPendingHref] = useState(null);
   const [seenPath, setSeenPath] = useState(pathname);
@@ -48,6 +50,7 @@ export default function Navbar() {
     if (currentIndex === -1 || target === currentIndex) return undefined;
     return [target > currentIndex ? 'tab-forward' : 'tab-back'];
   };
+  const snapshotSlide = (href) => (coarse ? undefined : tabSlide(href));
 
   const tabIndex = links.findIndex(l => l.href === pathname);
   useSwipeTabs(tabIndex !== -1, (step) => {
@@ -55,7 +58,8 @@ export default function Navbar() {
     if (!next) return;
     prefetchTab(next.href);
     setPendingHref(next.href);
-    router.push(next.href, { transitionTypes: tabSlide(next.href) });
+    announceTabSlide(tabSlide(next.href));
+    router.push(next.href, { transitionTypes: snapshotSlide(next.href) });
   });
 
   useLayoutEffect(() => {
@@ -114,7 +118,7 @@ export default function Navbar() {
   return (
     <header className={styles.header}>
       <nav className={`${styles.nav} glass`} style={{ viewTransitionName: 'app-navbar' }} data-navbar="">
-        <Link href="/" className={styles.brand} transitionTypes={tabSlide('/')}>
+        <Link href="/" className={styles.brand} transitionTypes={snapshotSlide('/')} onClick={() => announceTabSlide(tabSlide('/'))}>
           <span className={styles.brandIcon}><Target size={20} /></span>
           <span className={styles.brandName}>Goals</span>
         </Link>
@@ -129,11 +133,15 @@ export default function Navbar() {
                 <Link
                   href={href}
                   scroll={!(href === '/goals' && pathname.startsWith('/goals/'))}
-                  transitionTypes={tabSlide(href)}
+                  transitionTypes={snapshotSlide(href)}
                   data-href={href}
                   className={`${styles.link} ${active ? styles.active : ''}`}
                   aria-current={isCurrent(href) ? 'page' : undefined}
-                  onClick={() => { if (!isCurrent(href)) setPendingHref(href); }}
+                  onClick={() => {
+                    if (isCurrent(href)) return;
+                    setPendingHref(href);
+                    announceTabSlide(tabSlide(href));
+                  }}
                   onPointerEnter={() => prefetchTab(href)}
                   onPointerDown={() => prefetchTab(href)}
                   onFocus={() => prefetchTab(href)}

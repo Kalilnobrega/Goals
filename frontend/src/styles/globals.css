@@ -195,8 +195,16 @@ html:active-view-transition [data-navbar] {
   animation: vt-tab-in-left var(--dur-tab) var(--ease-tab) both;
 }
 
-.page-frame {
+.page-clip {
   overflow-x: clip;
+}
+
+.page-slide-from-right {
+  animation: vt-tab-in-right var(--dur-tab) var(--ease-tab) both;
+}
+
+.page-slide-from-left {
+  animation: vt-tab-in-left var(--dur-tab) var(--ease-tab) both;
 }
 
 html[data-entry="right"] {
