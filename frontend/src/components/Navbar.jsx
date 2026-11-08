@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Target, House, ListChecks, ChartColumn, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../lib/auth';
@@ -8,6 +8,7 @@ import { getMe, getStreak } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
+import { useSwipeTabs } from '../lib/useSwipeTabs';
 
 const links = [
   { href: '/',      label: 'Início',       icon: House },
@@ -26,6 +27,7 @@ const subscribeToUserName = (onChange) => {
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
   const { lateCount, streak, setStreak } = useLateGoals();
   const [pendingHref, setPendingHref] = useState(null);
@@ -46,6 +48,15 @@ export default function Navbar() {
     if (currentIndex === -1 || target === currentIndex) return undefined;
     return [target > currentIndex ? 'tab-forward' : 'tab-back'];
   };
+
+  const tabIndex = links.findIndex(l => l.href === pathname);
+  useSwipeTabs(tabIndex !== -1, (step) => {
+    const next = links[tabIndex + step];
+    if (!next) return;
+    prefetchTab(next.href);
+    setPendingHref(next.href);
+    router.push(next.href, { transitionTypes: tabSlide(next.href) });
+  });
 
   useLayoutEffect(() => {
     const place = () => {
