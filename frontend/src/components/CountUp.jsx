@@ -18,11 +18,30 @@ const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
   const parsed = parse(value);
   const target = parsed?.target;
+  const isNumber = target !== undefined;
   const [shown, setShown] = useState(0);
+  const [visible, setVisible] = useState(false);
   const shownRef = useRef(0);
+  const spanRef = useRef(null);
 
   useEffect(() => {
-    if (target === undefined) return;
+    const el = spanRef.current;
+    if (!el || !('IntersectionObserver' in window)) {
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) {
+        setVisible(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '0px 0px -6% 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [isNumber]);
+
+  useEffect(() => {
+    if (target === undefined || !visible) return;
     const from = shownRef.current;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let frame;
@@ -39,12 +58,12 @@ export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
 
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, duration]);
+  }, [target, duration, visible]);
 
   if (!parsed) return value;
 
   return (
-    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <span ref={spanRef} style={{ fontVariantNumeric: 'tabular-nums' }}>
       {parsed.prefix}{formatter.format(shown)}{parsed.suffix}
     </span>
   );

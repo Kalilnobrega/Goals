@@ -208,6 +208,20 @@ body::after {
   }
 }
 
+[data-reveal]:not([data-revealed]),
+[data-reveal]:not([data-revealed]) * {
+  animation-play-state: paused !important;
+}
+
+[data-reveal="up"] {
+  animation: reveal-up var(--dur-enter) var(--ease-out) var(--reveal-delay, 0ms) both;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Glass utility ──────────────────────────────── */
 .glass {
   background: var(--glass-bg);
