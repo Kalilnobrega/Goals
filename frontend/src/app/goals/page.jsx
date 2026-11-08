@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, startTransition, addTransitionType } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, startTransition, addTransitionType } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
@@ -75,6 +75,23 @@ export default function GoalsPage() {
   const [error,      setError]      = useState('');
   const [collapsed,  setCollapsed]  = useState(() => loadedPrefs?.collapsed ?? { completed: true });
   const [searchOpen, setSearchOpen] = useState(false);
+  const filtersRef = useRef(null);
+  const indicatorRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const place = () => {
+      const active = filtersRef.current?.querySelector(`[data-filter="${filter}"]`);
+      const indicator = indicatorRef.current;
+      if (!active || !indicator) return;
+      indicator.style.width = `${active.offsetWidth}px`;
+      indicator.style.height = `${active.offsetHeight}px`;
+      indicator.style.transform = `translate(${active.offsetLeft}px, ${active.offsetTop}px)`;
+      if (!indicator.dataset.ready) requestAnimationFrame(() => { indicator.dataset.ready = 'true'; });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [filter, searchOpen]);
   const searchInput = useRef(null);
 
   const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
@@ -324,8 +341,11 @@ export default function GoalsPage() {
             <Search size={17} />
           </button>
           <div className={styles.divider} />
-          <div className={styles.filters}>
+          <div className={styles.filters} ref={filtersRef}>
+            <span className={styles.filterIndicator} ref={indicatorRef} aria-hidden="true" />
             {KIND_FILTERS.map(f => (
+                data-filter={f.value}
+                aria-pressed={filter === f.value}
               <button
                 key={f.value}
                 className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`}
