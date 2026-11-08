@@ -5,6 +5,7 @@ const MIN_DISTANCE = 60;
 const MAX_DURATION_MS = 700;
 const HORIZONTAL_RATIO = 1.5;
 const EDGE_GUARD = 24;
+const COOLDOWN_MS = 500;
 const IGNORE = 'input, textarea, select, [contenteditable="true"], [data-drag-handle], [role="dialog"], [data-no-swipe]';
 
 function scrollsSideways(el) {
@@ -26,10 +27,16 @@ export function useSwipeTabs(enabled, onSwipe) {
   useEffect(() => {
     if (!enabled) return;
     let start = null;
+    let lastSwipeAt = -Infinity;
+
+    const busy = () =>
+      performance.now() - lastSwipeAt < COOLDOWN_MS
+      || Boolean(document.activeViewTransition)
+      || 'sliding' in document.documentElement.dataset;
 
     const onStart = (event) => {
       start = null;
-      if (event.touches.length !== 1 || document.querySelector('[role="dialog"]')) return;
+      if (event.touches.length !== 1 || busy() || document.querySelector('[role="dialog"]')) return;
       const touch = event.touches[0];
       if (touch.clientX < EDGE_GUARD || touch.clientX > window.innerWidth - EDGE_GUARD) return;
       const target = event.target instanceof Element ? event.target : null;
@@ -45,6 +52,7 @@ export function useSwipeTabs(enabled, onSwipe) {
       const quick = performance.now() - start.at <= MAX_DURATION_MS;
       start = null;
       if (!quick || Math.abs(dx) < MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * HORIZONTAL_RATIO) return;
+      lastSwipeAt = performance.now();
       handler.current(dx < 0 ? 1 : -1);
     };
 
