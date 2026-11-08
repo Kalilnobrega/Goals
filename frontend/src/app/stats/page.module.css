@@ -46,7 +46,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  animation: fadeUp var(--dur-enter) var(--ease-out) both;
+  animation: fadeUp var(--dur-enter) var(--ease-out) var(--tile-delay, 0ms) both;
 }
 
 .tileIcon {

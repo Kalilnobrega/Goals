@@ -46,12 +46,14 @@ function Delta({ period, label }) {
   );
 }
 
-function StatTile({ icon: Icon, label, value, hint }) {
+const TILE_STAGGER_MS = 90;
+
+function StatTile({ icon: Icon, label, value, hint, index }) {
   return (
-    <div className={`${styles.tile} glass`}>
+    <div className={`${styles.tile} glass`} style={{ '--tile-delay': `${index * TILE_STAGGER_MS}ms` }}>
       <span className={styles.tileIcon}><Icon size={16} /></span>
       <span className={styles.tileLabel}>{label}</span>
-      <span className={styles.tileValue}><CountUp value={value} /></span>
+      <span className={styles.tileValue}><CountUp value={value} delay={index * TILE_STAGGER_MS} /></span>
       {hint && <span className={styles.tileHint}>{hint}</span>}
     </div>
   );
@@ -229,35 +231,41 @@ export default function StatsPage() {
               <StatTile
                 icon={CalendarDays}
                 label="Últimos 7 dias"
+                index={0}
                 value={stats.periods.week.current}
                 hint={<Delta period={stats.periods.week} label="7 dias anteriores" />}
               />
               <StatTile
                 icon={CalendarDays}
                 label="Últimos 30 dias"
+                index={1}
                 value={stats.periods.month.current}
                 hint={<Delta period={stats.periods.month} label="30 dias anteriores" />}
               />
               <StatTile
                 icon={Activity}
                 label="Atividades no ano"
+                index={2}
                 value={summary.total_activities}
                 hint={`em ${summary.active_days} de ${stats.days.length} dias`}
               />
               <StatTile
                 icon={CalendarCheck}
                 label="Dias ativos"
+                index={3}
                 value={`${Math.round((summary.active_days / stats.days.length) * 100)}%`}
                 hint="dos dias do último ano"
               />
               <StatTile
                 icon={Sparkles}
                 label="Dia mais produtivo"
+                index={4}
                 value={summary.best_weekday !== null ? WEEKDAY_NAMES[summary.best_weekday] : '—'}
               />
               <StatTile
                 icon={Trophy}
                 label="Metas concluídas"
+                index={5}
                 value={summary.goals_completed}
                 hint={`${summary.goals_open} em aberto · ${summary.goals_late} atrasada${summary.goals_late !== 1 ? 's' : ''}`}
               />

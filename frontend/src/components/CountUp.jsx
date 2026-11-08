@@ -16,7 +16,7 @@ function parse(value) {
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
+export default function CountUp({ value, duration = DEFAULT_DURATION_MS, delay = 0 }) {
   const parsed = parse(value);
   const target = parsed?.target;
   const isNumber = target !== undefined;
@@ -61,9 +61,12 @@ export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
       if (progress < 1) frame = requestAnimationFrame(step);
     };
 
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [target, duration, visible]);
+    const timer = setTimeout(() => { frame = requestAnimationFrame(step); }, delay);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [target, duration, delay, visible]);
 
   if (!parsed) return value;
 
