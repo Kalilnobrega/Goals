@@ -77,22 +77,22 @@
 }
 
 .line {
-  stroke-dasharray: 1;
-  animation: lineDraw var(--dur-progress) var(--ease-out) both;
+  stroke-dasharray: var(--line-length, 0);
+  animation: lineDraw 1200ms var(--ease-in-out) both;
 }
 
 .area {
-  animation: areaIn var(--dur-progress) var(--ease-out) var(--dur-fast) both;
+  animation: areaIn 800ms var(--ease-out) 450ms both;
 }
 
 .dot {
   transform-box: fill-box;
   transform-origin: center;
-  animation: dotIn var(--dur-slow) var(--ease-spring) var(--dur-progress) both;
+  animation: dotIn var(--dur-slow) var(--ease-spring) 1150ms both;
 }
 
 @keyframes lineDraw {
-  from { stroke-dashoffset: 1; }
+  from { stroke-dashoffset: var(--line-length, 0); }
   to   { stroke-dashoffset: 0; }
 }
 

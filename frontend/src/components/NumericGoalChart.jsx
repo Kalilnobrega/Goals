@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { formatValue, niceTicks } from '../lib/numeric';
 import styles from './NumericGoalChart.module.css';
 
@@ -12,6 +12,7 @@ function shortDate(date) {
 
 export default function NumericGoalChart({ goal }) {
   const ref = useRef(null);
+  const lineRef = useRef(null);
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState(null);
 
@@ -43,6 +44,11 @@ export default function NumericGoalChart({ goal }) {
   const area = points.length > 1
     ? `${path} L${x(points[points.length - 1].time)},${PAD.top + plotH} L${x(first)},${PAD.top + plotH} Z`
     : '';
+
+  useLayoutEffect(() => {
+    const line = lineRef.current;
+    if (line) line.style.setProperty('--line-length', `${line.getTotalLength()}`);
+  }, [path]);
 
   const handleMove = event => {
     const rect = ref.current.getBoundingClientRect();
@@ -87,8 +93,8 @@ export default function NumericGoalChart({ goal }) {
             meta {formatValue(goal.target_value, goal.unit)}
           </text>
 
-          {area && <path d={area} className={styles.area} />}
-          <path d={path} className={styles.line} pathLength="1" />
+          {area && <path key={`area-${points.length}`} d={area} className={styles.area} />}
+          <path key={`line-${points.length}`} ref={lineRef} d={path} className={styles.line} />
 
           {activePoint && (
             <line
