@@ -66,20 +66,32 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { 
+html {
   scroll-behavior: smooth;
-  scrollbar-gutter: stable; 
+  scrollbar-gutter: stable;
+  background: #dbeafe;
 }
 
 body {
   font-family: var(--font-body);
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 30%, #ffffff 55%, #bfdbfe 80%, #dbeafe 100%);
-  background-attachment: fixed;
+  background: transparent;
   min-height: 100vh;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   overflow-y: scroll;
+}
+
+.app-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 30%, #ffffff 55%, #bfdbfe 80%, #dbeafe 100%);
 }
 
 /* Animated background orbs */

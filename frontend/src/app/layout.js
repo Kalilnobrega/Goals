@@ -14,6 +14,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body>
+        <div className="app-backdrop" aria-hidden="true" />
         <GoogleOAuthProvider clientId="513218395859-ptvh881sg8jl1lq9k7d86jkf9pauh4th.apps.googleusercontent.com">
           <LateGoalsProvider>
             <ToastProvider>
