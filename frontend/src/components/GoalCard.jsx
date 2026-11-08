@@ -7,6 +7,7 @@ import SuperGoalIcon from './SuperGoalIcon';
 import CountUp from './CountUp';
 import { useDropSettle } from '../lib/useDropSettle';
 import { useCardLink } from '../lib/useCardLink';
+import { prepareMorph } from '../lib/goalMorph';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './GoalCard.module.css';
@@ -224,7 +225,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
       </div>
 
       <div className={styles.actions}>
-        <Link href={`/goals/${goal.id}`} className={styles.btnPrimary}>
+        <Link href={`/goals/${goal.id}`} className={styles.btnPrimary} onClick={(e) => prepareMorph(e.currentTarget)}>
           Ver detalhes <ArrowRight size={14} />
         </Link>
         {canComplete && (

@@ -1,7 +1,10 @@
 'use client';
-import { ViewTransition } from 'react';
+import { ViewTransition, useLayoutEffect } from 'react';
+import { holdUntilLanded } from '../lib/pageSlide';
 
 export default function Template({ children }) {
+  useLayoutEffect(holdUntilLanded, []);
+
   return (
     <ViewTransition
       enter={{ 'tab-forward': 'tab-in-right', 'tab-back': 'tab-in-left', default: 'none' }}

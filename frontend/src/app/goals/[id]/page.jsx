@@ -2,6 +2,7 @@
 import { useState, useEffect, ViewTransition, startTransition, addTransitionType } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useOpenAtTop } from '../../../lib/goalsScroll';
+import { useMorphHeader } from '../../../lib/goalMorph';
 import Link from 'next/link';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
@@ -62,6 +63,7 @@ const cachedGoal = (id) => cachedOverview(id)?.goal ?? peekCache('goals')?.find(
 export default function GoalDetailPage() {
   const { id } = useParams();
   useOpenAtTop(`/goals/${id}`);
+  useMorphHeader(`goal-${id}`);
   const router  = useRouter();
   const confirmAction = useConfirm();
   const toast = useToast();
@@ -403,7 +405,7 @@ export default function GoalDetailPage() {
     <>
       <main className={styles.main}>
 
-        <button className={styles.backLink} onClick={() => router.push('/goals', { scroll: false })}>
+        <button className={styles.backLink} data-goals-link="" onClick={() => router.push('/goals', { scroll: false })}>
           <ArrowLeft size={16} /> Todas as metas
         </button>
 
@@ -423,7 +425,7 @@ export default function GoalDetailPage() {
 
         {/* Goal header card */}
         <ViewTransition name={`goal-${goal.id}`} share="goal-morph" default="none">
-        <div className={`${styles.goalCard} glass`}>
+        <div className={`${styles.goalCard} glass`} data-morph={`goal-${goal.id}`}>
           {/* Faixa colorida no topo baseada no status */}
           <div
             className={styles.goalBanner}

@@ -97,7 +97,7 @@ export default function GoalSections({ goals, collapsed, onCollapsedChange, forc
                   exit={{ 'goal-change': 'goal-exit', default: 'none' }}
                   default="none"
                 >
-                  <div {...itemProps} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
+                  <div {...itemProps} data-morph={`goal-${g.id}`} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
                     <SectionCard
                       goal={g}
                       dragging={isDragging}

@@ -1,4 +1,5 @@
 import { useLayoutEffect } from 'react';
+import { landMorph } from './goalMorph';
 
 const NAVBAR_CLEARANCE = 88;
 const BOTTOM_CLEARANCE = 16;
@@ -21,6 +22,7 @@ export function restoreGoalsScroll() {
   if (!card) return;
   card.dataset.revealed = '';
   card.getAnimations().forEach(animation => animation.finish());
+  landMorph(card);
 
   const rect = card.getBoundingClientRect();
   if (rect.height === 0) return;

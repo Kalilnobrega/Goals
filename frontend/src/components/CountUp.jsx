@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { whenLanded } from '../lib/pageSlide';
 
 const DEFAULT_DURATION_MS = 900;
 const NUMBER_PATTERN = /^(\D*?)(-?\d[\d.]*)(\D*)$/;
@@ -30,14 +31,18 @@ export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
       const frame = requestAnimationFrame(() => setVisible(true));
       return () => cancelAnimationFrame(frame);
     }
+    let release = () => {};
     const io = new IntersectionObserver((entries) => {
       if (entries.some(e => e.isIntersecting)) {
-        setVisible(true);
         io.disconnect();
+        release = whenLanded(() => setVisible(true));
       }
     }, { rootMargin: '0px 0px -6% 0px' });
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      release();
+    };
   }, [isNumber]);
 
   useEffect(() => {

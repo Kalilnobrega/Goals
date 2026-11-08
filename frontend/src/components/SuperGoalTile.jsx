@@ -24,7 +24,7 @@ export default function SuperGoalTile({ superGoal, goals, dragHandle, dragging }
       <span className={styles.layerBack} aria-hidden="true" />
       <span className={styles.layerMid} aria-hidden="true" />
       <ViewTransition name={`super-${superGoal.id}`} share="goal-morph" default="none">
-      <div className={`${styles.tileBody} glass`}>
+      <div className={`${styles.tileBody} glass`} data-morph={`super-${superGoal.id}`}>
         <div className={styles.tileTop}>
           <span className={styles.iconBadge}><SuperGoalIcon size={18} strokeWidth={2.1} /></span>
           <div className={styles.tileControls}>{dragHandle}</div>

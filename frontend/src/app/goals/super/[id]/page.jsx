@@ -2,6 +2,7 @@
 import { useState, useEffect, startTransition, addTransitionType, ViewTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useOpenAtTop } from '../../../../lib/goalsScroll';
+import { useMorphHeader } from '../../../../lib/goalMorph';
 import { ArrowLeft, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import Modal from '../../../../components/Modal';
 import GoalSections from '../../../../components/GoalSections';
@@ -28,6 +29,7 @@ const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
 export default function SuperGoalPage() {
   const { id } = useParams();
   useOpenAtTop(`/goals/super/${id}`);
+  useMorphHeader(`super-${id}`);
   const superGoalId = Number(id);
   const router = useRouter();
   const confirmAction = useConfirm();
@@ -186,12 +188,12 @@ export default function SuperGoalPage() {
   return (
     <>
       <main className={styles.main}>
-        <button className={styles.backLink} onClick={() => router.push('/goals', { scroll: false })}>
+        <button className={styles.backLink} data-goals-link="" onClick={() => router.push('/goals', { scroll: false })}>
           <ArrowLeft size={16} /> Todas as metas
         </button>
 
         <ViewTransition name={`super-${superGoalId}`} share="goal-morph" default="none">
-        <div className={`${styles.hero} glass`}>
+        <div className={`${styles.hero} glass`} data-morph={`super-${superGoalId}`}>
           <span className={styles.heroIcon}><SuperGoalIcon size={24} /></span>
           <div className={styles.heroText}>
             <span className={styles.eyebrow}>Supermeta</span>

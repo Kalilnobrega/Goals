@@ -242,6 +242,8 @@ body::after {
   }
 }
 
+html[data-sliding] main,
+html[data-sliding] main *,
 [data-reveal]:not([data-revealed]),
 [data-reveal]:not([data-revealed]) * {
   animation-play-state: paused !important;
