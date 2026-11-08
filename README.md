@@ -32,7 +32,9 @@
 
 O **Goals** é uma aplicação web para gerenciar objetivos pessoais. Mais do que uma lista de tarefas, ele entende **como** cada meta é alcançada: concluindo etapas, repetindo um hábito por ciclos ou acompanhando um número até um alvo.
 
-O progresso é calculado automaticamente, hábitos recorrentes são reiniciados no horário de Brasília, a sequência de dias ativos (streak) é mantida sozinha e uma página de estatísticas mostra padrões de produtividade ao longo do ano. Metas também podem ser compartilhadas, de forma colaborativa ou como desafio entre amigos.
+O progresso é calculado automaticamente, hábitos recorrentes são reiniciados no horário de Brasília, a sequência de dias ativos (streak) é mantida sozinha e uma página de estatísticas mostra padrões de produtividade ao longo do ano. Metas podem ser agrupadas em supermetas e compartilhadas, de forma colaborativa ou como desafio entre amigos.
+
+A interface foi pensada para parecer um app nativo: as abas deslizam entre si, os cards se transformam na página da meta ao serem abertos e cada elemento entra com animação, tanto no computador quanto no celular.
 
 ## Funcionalidades
 
@@ -44,12 +46,20 @@ O progresso é calculado automaticamente, hábitos recorrentes são reiniciados 
 | **Recorrente** | Repetir uma atividade a cada ciclo (dia, semana, mês ou personalizado) | "Ler 2 livros por mês" |
 | **Progresso** | Acompanhar um valor numérico, somando registros ou medindo o valor atual | "Economizar R$ 10.000", "Chegar a 78 kg" |
 
+Metas de progresso também podem ser **sem limite**, mostrando o total acumulado em vez de um percentual, e combinadas com recorrência para registrar o total de cada ciclo.
+
+### Organização
+
+- Metas agrupadas em seções recolhíveis por status (atrasadas, em aberto e concluídas), com busca e filtro por tipo: pessoais, colaborativas e desafios.
+- **Supermetas** para reunir várias metas relacionadas, com página própria e progresso combinado.
+- Reordenação por arrastar e soltar de metas, supermetas e tarefas, inclusive no celular.
+- As preferências de filtro e de seções recolhidas ficam salvas.
+
 ### Tarefas e hábitos
 
 - Tarefas simples ou **hábitos recorrentes**, a cada N dias ou em dias específicos da semana.
 - Limite de repetições ou "até o prazo da meta", com contagem automática de ocorrências.
 - Reinício automático dos hábitos a cada janela de tempo, no fuso de Brasília.
-- Reordenação por arrastar e soltar, inclusive no celular.
 
 ### Metas compartilhadas
 
@@ -57,6 +67,7 @@ O progresso é calculado automaticamente, hábitos recorrentes são reiniciados 
 - **Desafio:** cada participante recebe uma cópia da meta, com progresso individual e **ranking**.
 - Convites por link com validade de 7 dias e limite de 20 participantes.
 - Cargos de **líder**, **moderador** e **membro**, com transferência de liderança.
+- **Pódio** com os 3 primeiros de cada ciclo e o resultado final quando o desafio termina.
 - Ao sair de um desafio, a cópia vira uma meta pessoal, sem perder o histórico.
 
 ### Acompanhamento
@@ -72,6 +83,15 @@ O progresso é calculado automaticamente, hábitos recorrentes são reiniciados 
 - Horários e dia da semana mais produtivos.
 - Maiores sequências, tarefas mais concluídas e hábitos que estão ficando para trás.
 - Gráficos de evolução das metas de progresso.
+
+### Experiência
+
+- Troca de abas com a página inteira deslizando para o lado, e por gesto de deslizar o dedo no celular.
+- Cards que se transformam no cabeçalho da meta ao abrir e voltam para o lugar ao fechar, mantendo a posição da lista.
+- Elementos que entram em sequência ao aparecer na tela, números que contam até o valor e gráficos que se desenham.
+- Dados das páginas guardados em cache e buscados antecipadamente, para que tudo abra sem telas de carregamento.
+- Avisos com opção de desfazer e confirmações no visual do app.
+- Layout próprio para celular, com cards compactos e anéis de progresso.
 
 ### Conta e segurança
 
@@ -124,6 +144,7 @@ O progresso é calculado automaticamente, hábitos recorrentes são reiniciados 
 - [Next.js 16](https://nextjs.org/) (App Router) e React 19
 - CSS Modules com visual em *glassmorphism*
 - dnd-kit para arrastar e soltar
+- View Transitions do React para as transições entre páginas
 - Axios, com renovação automática do token
 - Lucide para ícones
 - Login com Google via `@react-oauth/google`
@@ -140,7 +161,7 @@ Goals/
 │   │   ├── access.py        # Permissões de metas pessoais e compartilhadas
 │   │   ├── sharing.py       # Regras de grupos: sair, liderança, cópias
 │   │   ├── dates.py         # Datas no fuso de Brasília
-│   │   └── routers/         # auth, goals, tasks, groups, stats
+│   │   └── routers/         # auth, goals, overview, tasks, groups, super_goals, stats
 │   ├── alembic/             # Migrações do banco
 │   └── tests/               # Testes automatizados
 ├── frontend/
@@ -158,6 +179,7 @@ Algumas decisões de projeto:
 - **Ciclos registrados.** Ao fim de cada ciclo de uma meta recorrente, o resultado é salvo em `goal_cycle_logs`, o que alimenta o histórico e a consistência.
 - **Permissões centralizadas.** Todo acesso a metas passa por `access.py`, que define quem pode ver, agir, editar e excluir conforme o tipo de meta e o cargo no grupo.
 - **Desafios por cópia.** Cada participante de um desafio tem uma meta própria, e as edições do líder são sincronizadas entre as cópias. Assim, todo o cálculo de progresso existente é reaproveitado.
+- **Uma requisição por página de meta.** O endpoint `/goals/{id}/overview` devolve meta, tarefas, ciclos, registros, grupo e supermetas de uma vez, e o frontend guarda o resultado em cache para reabrir a página instantaneamente.
 
 ## Como rodar localmente
 
@@ -242,7 +264,7 @@ O app fica em http://localhost:3000.
 
 ## Testes
 
-O backend tem uma suíte de testes com banco SQLite em memória, cobrindo autenticação, metas numéricas e recorrentes, hábitos, streak, estatísticas, reordenação e metas compartilhadas.
+O backend tem uma suíte de testes com banco SQLite em memória, cobrindo autenticação, metas numéricas e recorrentes, hábitos, streak, estatísticas, reordenação, metas compartilhadas, supermetas e a visão geral da meta.
 
 ```bash
 cd backend
@@ -283,6 +305,7 @@ A documentação completa e interativa está disponível em `/docs`. Todas as ro
 | `POST` | `/goals/` | Cria uma meta |
 | `PUT` | `/goals/order` | Salva a ordem das metas |
 | `GET` | `/goals/{id}` | Detalha uma meta |
+| `GET` | `/goals/{id}/overview` | Tudo o que a página da meta precisa em uma requisição |
 | `PUT` | `/goals/{id}` | Edita uma meta |
 | `DELETE` | `/goals/{id}` | Exclui uma meta |
 | `GET` | `/goals/{id}/cycles` | Histórico de ciclos de uma meta recorrente |
@@ -325,6 +348,22 @@ A documentação completa e interativa está disponível em `/docs`. Todas as ro
 </details>
 
 <details>
+<summary><b>Supermetas</b> — <code>/super-goals</code></summary>
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/super-goals/` | Lista as supermetas |
+| `POST` | `/super-goals/` | Cria uma supermeta |
+| `PUT` | `/super-goals/order` | Salva a ordem das supermetas |
+| `GET` | `/super-goals/{id}` | Detalha uma supermeta |
+| `PUT` | `/super-goals/{id}` | Edita uma supermeta |
+| `DELETE` | `/super-goals/{id}` | Exclui uma supermeta |
+| `POST` | `/super-goals/{id}/goals` | Adiciona metas à supermeta |
+| `DELETE` | `/super-goals/{id}/goals/{goal_id}` | Remove uma meta da supermeta |
+
+</details>
+
+<details>
 <summary><b>Estatísticas</b> — <code>/stats</code></summary>
 
 | Método | Rota | Descrição |
@@ -335,10 +374,8 @@ A documentação completa e interativa está disponível em `/docs`. Todas as ro
 
 ## Deploy
 
-O projeto está preparado para o [Railway](https://railway.com/):
-
-- **Backend:** o `backend/railway.json` executa `alembic upgrade head` antes de cada deploy e sobe a API com Uvicorn.
-- **Frontend:** o `frontend/Procfile` inicia o Next.js na porta definida pela plataforma, depois do `npm run build`.
+- **Backend no [Railway](https://railway.com/):** o `backend/railway.json` executa `alembic upgrade head` antes de cada deploy e sobe a API com Uvicorn.
+- **Frontend na [Vercel](https://vercel.com/):** importe a pasta `frontend` como projeto Next.js e defina `NEXT_PUBLIC_API_URL` com o endereço da API.
 
 Em produção, configure `DATABASE_URL` com um PostgreSQL gerenciado e `FRONTEND_URL` com o domínio do frontend, para liberar o CORS e gerar os links dos e-mails corretamente.
 
