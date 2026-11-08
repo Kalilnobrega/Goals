@@ -77,7 +77,7 @@ function HoursCard({ hours }) {
   const peak = hours.indexOf(Math.max(...hours));
 
   return (
-    <section className={`${styles.card} glass`}>
+    <section className={`${styles.card} glass`} data-reveal="up">
       <CardHeader icon={Clock} title="Horário de produção" />
       {total === 0 ? (
         <p className={styles.cardEmpty}>Conclua tarefas para descobrir seu melhor horário.</p>
@@ -105,7 +105,7 @@ function HoursCard({ hours }) {
 function StreaksCard({ streaks, lastDay }) {
   const longest = streaks.top[0]?.length || 1;
   return (
-    <section className={`${styles.card} glass`}>
+    <section className={`${styles.card} glass`} data-reveal="up">
       <CardHeader icon={Flame} title="Maiores sequências" hint="no último ano" />
       {streaks.top.length === 0 ? (
         <p className={styles.cardEmpty}>Nenhuma sequência ainda. Conclua uma tarefa hoje para começar.</p>
@@ -144,7 +144,7 @@ function StreaksCard({ streaks, lastDay }) {
 function TopTasksCard({ tasks }) {
   const max = tasks[0]?.count || 1;
   return (
-    <section className={`${styles.card} glass`}>
+    <section className={`${styles.card} glass`} data-reveal="up">
       <CardHeader icon={ListOrdered} title="Tarefas mais concluídas" hint="no último ano" />
       {tasks.length === 0 ? (
         <p className={styles.cardEmpty}>Nenhuma tarefa concluída ainda.</p>
@@ -168,7 +168,7 @@ function TopTasksCard({ tasks }) {
 
 function NeglectedTasksCard({ tasks }) {
   return (
-    <section className={`${styles.card} glass`}>
+    <section className={`${styles.card} glass`} data-reveal="up">
       <CardHeader icon={AlertTriangle} title="Precisam de atenção" hint="recorrentes feitas menos de 70% das vezes" />
       {tasks.length === 0 ? (
         <p className={`${styles.cardEmpty} ${styles.allGood}`}>
@@ -263,7 +263,7 @@ export default function StatsPage() {
               />
             </div>
 
-            <section className={`${styles.card} glass`}>
+            <section className={`${styles.card} glass`} data-reveal="up">
               <CardHeader icon={Activity} title="Atividade" hint="tarefas, registros de progresso e metas concluídas por dia" />
               <ActivityHeatmap days={stats.days} goals={stats.goals} />
             </section>
@@ -278,7 +278,7 @@ export default function StatsPage() {
               <NeglectedTasksCard tasks={stats.neglected_tasks} />
             </div>
 
-            <section className={styles.section}>
+            <section className={styles.section} data-reveal="up">
               <div className={styles.sectionHeader}>
                 <TrendingUp size={16} className={styles.cardIcon} />
                 <h2 className={styles.cardTitle}>Evolução das metas de progresso</h2>
@@ -315,7 +315,7 @@ export default function StatsPage() {
               )}
             </section>
 
-            <section className={styles.section}>
+            <section className={styles.section} data-reveal="up">
               <div className={styles.sectionHeader}>
                 <RefreshCw size={16} className={styles.cardIcon} />
                 <h2 className={styles.cardTitle}>Consistência das metas recorrentes</h2>

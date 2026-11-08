@@ -75,7 +75,7 @@ export default function CycleChart({ goal, bars }) {
   const activeBar = active !== null ? bars[active] : null;
 
   return (
-    <div className={styles.chart} ref={ref}>
+    <div className={styles.chart} data-reveal="" ref={ref}>
       {width > 0 && (
         <svg width={width} height={HEIGHT} role="img" aria-label={`Ciclos de ${goal.title}`} onMouseLeave={() => setActive(null)}>
           {ticks.map(t => (

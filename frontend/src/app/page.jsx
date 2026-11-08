@@ -175,7 +175,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Stats */}
-        <section className={styles.section}>
+        <section className={styles.section} data-reveal="">
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Resumo</h2>
             <Link href="/stats" className={styles.seeAll}>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Tarefas de hoje ──────────────────────── */}
-        <section className={styles.section}>
+        <section className={styles.section} data-reveal="up">
           <div className={styles.sectionHead}>
             <div className={styles.sectionTitleRow}>
               <h2 className={styles.sectionTitle}>Tarefas de hoje</h2>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Metas recentes */}
-        <section className={styles.section}>
+        <section className={styles.section} data-reveal="">
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Metas recentes</h2>
             <Link href="/goals" className={styles.seeAll}>

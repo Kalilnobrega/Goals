@@ -17,6 +17,7 @@ export default function SuperGoalTile({ superGoal, goals, dragHandle, dragging }
     <article
       className={`${styles.tile} ${dragging ? styles.tileDragging : ''} ${settling ? styles.tileSettling : ''}`}
       onAnimationEnd={endSettle}
+      data-reveal=""
       {...cardLink}
       aria-label={`Supermeta ${superGoal.title}`}
     >

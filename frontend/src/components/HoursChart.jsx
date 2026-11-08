@@ -41,7 +41,7 @@ export default function HoursChart({ hours }) {
   };
 
   return (
-    <div className={styles.chart} ref={ref} onMouseLeave={() => setActive(null)}>
+    <div className={styles.chart} data-reveal="" ref={ref} onMouseLeave={() => setActive(null)}>
       {width > 0 && (
         <svg width={width} height={HEIGHT} role="img" aria-label="Atividades por hora do dia">
           <line x1={PAD.left} x2={width - PAD.right} y1={baseline} y2={baseline} className={styles.baseline} />

@@ -552,7 +552,7 @@ export default function GoalDetailPage() {
         )}
 
         {goal.is_numeric && goal.can_act && (
-          <div className={styles.tasksSection}>
+          <div className={styles.tasksSection} data-reveal="">
             <div className={styles.taskHeader}>
               <Plus size={16} />
               <h2 className={styles.taskTitle}>Registrar progresso</h2>
@@ -587,7 +587,7 @@ export default function GoalDetailPage() {
         )}
 
         {progressData && (
-          <div className={styles.tasksSection}>
+          <div className={styles.tasksSection} data-reveal="">
             <div className={styles.taskHeader}>
               <TrendingUp size={16} />
               <h2 className={styles.taskTitle}>Evolução</h2>
@@ -607,7 +607,7 @@ export default function GoalDetailPage() {
         )}
 
         {cycleBars.length > 0 && (
-          <div className={styles.tasksSection}>
+          <div className={styles.tasksSection} data-reveal="">
             <div className={styles.taskHeader}>
               <RefreshCw size={16} />
               <h2 className={styles.taskTitle}>Ciclos</h2>
@@ -632,7 +632,7 @@ export default function GoalDetailPage() {
         )}
 
         {goal.is_numeric && (
-          <div className={styles.tasksSection}>
+          <div className={styles.tasksSection} data-reveal="">
             <div className={styles.taskHeader}>
               <Target size={16} />
               <h2 className={styles.taskTitle}>Registros</h2>
@@ -684,7 +684,7 @@ export default function GoalDetailPage() {
         )}
 
         {(goal.is_recurring || cycles.length > 0) && (
-          <div className={styles.tasksSection}>
+          <div className={styles.tasksSection} data-reveal="">
             <div className={styles.taskHeader}>
               <History size={16} />
               <h2 className={styles.taskTitle}>Histórico de ciclos</h2>
@@ -723,7 +723,7 @@ export default function GoalDetailPage() {
         )}
 
         {/* Tasks */}
-        <div className={styles.tasksSection}>
+        <div className={styles.tasksSection} data-reveal="">
           <div className={styles.taskHeader}>
             <h2 className={styles.taskTitle}>Tarefas</h2>
             <span className={styles.taskCount}>{tasks.length}</span>

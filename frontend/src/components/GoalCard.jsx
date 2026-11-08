@@ -105,7 +105,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   }, [menu]);
 
   return (
-    <article className={`${styles.card} ${entering ? styles.cardEntering : ''} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} ${settling ? styles.cardSettling : ''} glass`} {...cardLink} onAnimationEnd={endSettle} aria-label={goal.title}>
+    <article className={`${styles.card} ${entering ? styles.cardEntering : ''} ${isCompleted ? '' : goal.status === 'late' ? styles.cardLate : ''} ${dragging ? styles.cardDragging : ''} ${settling ? styles.cardSettling : ''} glass`} {...cardLink} onAnimationEnd={endSettle} aria-label={goal.title} data-reveal="">
       <div className={styles.topRow}>
         <div className={styles.badges}>
           <div className={`${styles.badge} ${styles.statusBadge}`} style={{ '--badge-color': meta.color }}>

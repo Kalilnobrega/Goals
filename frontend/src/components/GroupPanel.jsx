@@ -190,7 +190,7 @@ export default function GroupPanel({ group, goalId, onChange, onLeft }) {
   };
 
   return (
-    <section className={styles.section}>
+    <section className={styles.section} data-reveal="up">
       <div className={styles.header}>
         {isChallenge ? <Trophy size={16} className={styles.headerIcon} /> : <Users size={16} className={styles.headerIcon} />}
         <h2 className={styles.title}>{isChallenge ? 'Ranking do desafio' : 'Participantes'}</h2>

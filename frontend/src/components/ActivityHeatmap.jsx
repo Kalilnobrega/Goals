@@ -110,7 +110,7 @@ export default function ActivityHeatmap({ days, goals = [] }) {
   ), [visibleDays]);
 
   return (
-    <div className={styles.wrap} onMouseLeave={() => setHover(null)}>
+    <div className={styles.wrap} data-reveal="" onMouseLeave={() => setHover(null)}>
       {goalOptions.length > 0 && (
         <div className={styles.toolbar}>
           <div className={styles.filterGroup}>

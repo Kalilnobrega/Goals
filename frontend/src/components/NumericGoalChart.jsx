@@ -58,7 +58,7 @@ export default function NumericGoalChart({ goal }) {
   const targetY = y(goal.target_value);
 
   return (
-    <div className={styles.chart} ref={ref}>
+    <div className={styles.chart} data-reveal="" ref={ref}>
       {width > 0 && (
         <svg
           width={width}
