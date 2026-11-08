@@ -49,7 +49,7 @@ export function CollapsibleSection({ label, color, count, open, locked, onToggle
 
   return (
     <section className={styles.section} style={{ '--section-color': color }}>
-      <button className={styles.sectionHeader} onClick={toggle} aria-expanded={expanded}>
+      <button className={styles.sectionHeader} onClick={toggle} aria-expanded={expanded} data-reveal="up">
         <ChevronDown size={18} className={`${styles.chevron} ${expanded ? '' : styles.chevronClosed}`} />
         <span className={styles.sectionTitle}>{label}</span>
         <span className={styles.sectionCount}>{count}</span>

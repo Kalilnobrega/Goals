@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 const PENDING = '[data-reveal]:not([data-revealed])';
 const STAGGER_MS = 45;
-const MAX_STAGGER_STEPS = 6;
+const MAX_STAGGER_STEPS = 12;
 
 export default function RevealObserver() {
   useEffect(() => {
