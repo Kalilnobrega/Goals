@@ -30,5 +30,5 @@ export function useCardLink(href, dragging) {
     if (event.key === 'Enter') router.push(href);
   };
 
-  return { role: 'link', tabIndex: 0, onClick, onKeyDown };
+  return { role: 'link', tabIndex: 0, onClick, onKeyDown, 'data-card-href': href };
 }

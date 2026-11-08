@@ -27,7 +27,7 @@ const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
 
 export default function SuperGoalPage() {
   const { id } = useParams();
-  useOpenAtTop(id);
+  useOpenAtTop(`/goals/super/${id}`);
   const superGoalId = Number(id);
   const router = useRouter();
   const confirmAction = useConfirm();

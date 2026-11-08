@@ -23,7 +23,7 @@ import { restoreSuperGoal, superGoalTitle } from '../../lib/superGoals';
 import { Plus, Search, X } from 'lucide-react';
 import styles from './page.module.css';
 import SkeletonSwap from '../../components/SkeletonSwap';
-import { rememberGoalsScroll, takeGoalsScroll } from '../../lib/goalsScroll';
+import { rememberGoalsScroll, restoreGoalsScroll } from '../../lib/goalsScroll';
 
 const KIND_FILTERS = [
   { value: 'all',           label: 'Todas',         color: '#94a3b8' },
@@ -81,8 +81,7 @@ export default function GoalsPage() {
   const indicatorRef = useRef(null);
 
   useLayoutEffect(() => {
-    const y = takeGoalsScroll();
-    if (y) window.scrollTo({ top: y, behavior: 'instant' });
+    restoreGoalsScroll();
     return rememberGoalsScroll;
   }, []);
 

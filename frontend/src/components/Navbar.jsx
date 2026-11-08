@@ -101,6 +101,7 @@ export default function Navbar() {
               <li key={href}>
                 <Link
                   href={href}
+                  scroll={!(href === '/goals' && pathname.startsWith('/goals/'))}
                   data-href={href}
                   className={`${styles.link} ${active ? styles.active : ''}`}
                   aria-current={isCurrent(href) ? 'page' : undefined}

@@ -61,7 +61,7 @@ const cachedGoal = (id) => cachedOverview(id)?.goal ?? peekCache('goals')?.find(
 
 export default function GoalDetailPage() {
   const { id } = useParams();
-  useOpenAtTop(id);
+  useOpenAtTop(`/goals/${id}`);
   const router  = useRouter();
   const confirmAction = useConfirm();
   const toast = useToast();
