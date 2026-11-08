@@ -69,7 +69,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: #475569;
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -94,6 +94,7 @@
   height: 4px;
   border-radius: 50%;
   background: var(--blue-500);
+  animation: pillIn var(--dur-slow) var(--ease-spring) both;
 }
 
 .linkIconWrap {
@@ -140,7 +141,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: #2a2f36;
-  transition: all 0.3s;
+  transition: all var(--dur-slow) var(--ease-out);
 }
  
 .streakChipActive {
@@ -198,7 +199,7 @@
 
 .userChip {
   text-decoration: none;
-  transition: background .2s, border-color .2s;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .userChipActive {
@@ -230,4 +231,9 @@
 @media (max-width: 420px) {
   .brandIcon { width: 32px; height: 32px; }
   .streakChip { padding: 6px 9px; }
+}
+
+@keyframes pillIn {
+  from { opacity: 0; transform: translateX(-50%) scale(0); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }

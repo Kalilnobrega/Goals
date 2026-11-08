@@ -63,7 +63,7 @@
   outline: 1px solid rgba(15, 23, 42, 0.04);
   outline-offset: -1px;
   cursor: pointer;
-  transition: transform 0.12s;
+  transition: transform var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -138,7 +138,7 @@
   font-weight: 500;
   color: #334155;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -179,7 +179,7 @@
 .filterChevron {
   flex-shrink: 0;
   color: #94a3b8;
-  transition: transform 0.2s;
+  transition: transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -208,7 +208,7 @@
   background: rgba(148, 163, 184, 0.15);
   color: #64748b;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {

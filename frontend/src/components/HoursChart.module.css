@@ -16,7 +16,7 @@
 
 .bar {
   fill: var(--blue-300);
-  transition: fill 0.15s;
+  transition: fill var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   cursor: pointer;
 }
 

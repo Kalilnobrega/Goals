@@ -6,7 +6,7 @@
     border-radius: 12px;
     background: rgba(255,255,255,0.5);
     border: 1px solid rgba(255,255,255,0.7);
-    transition: background 0.2s;
+    transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
     list-style: none;
   }
   
@@ -38,7 +38,7 @@
     align-items: center;
     justify-content: center;
     color: white;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   @media (hover: hover) {
@@ -62,7 +62,7 @@
   .label {
     font-size: 0.9rem;
     color: #334155;
-    transition: color 0.2s;
+    transition: color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   .habit {
@@ -88,7 +88,7 @@
     display: flex;
     gap: 4px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   .visible { opacity: 1; }
@@ -110,7 +110,7 @@
     background: rgba(59,130,246,0.08);
     color: #64748b;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   @media (hover: hover) {

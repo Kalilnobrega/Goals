@@ -53,18 +53,28 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   ].filter(Boolean).join(' ');
   const cycleStart = cycleNotStarted(goal);
 
+  const closeMenu = () => setMenu(current => current && { ...current, closing: true });
+
   const openMenu = () => {
-    if (menu) return setMenu(null);
+    if (menu && !menu.closing) return closeMenu();
     const rect = menuButton.current.getBoundingClientRect();
     const above = rect.bottom + 200 > window.innerHeight;
     setMenu({
-      right: window.innerWidth - rect.right,
-      ...(above ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+      above,
+      closing: false,
+      style: {
+        right: window.innerWidth - rect.right,
+        ...(above ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+      },
     });
   };
 
+  const finishMenuAnimation = (event) => {
+    if (event.target === event.currentTarget && menu?.closing) setMenu(null);
+  };
+
   const runAction = (action) => {
-    setMenu(null);
+    closeMenu();
     action();
   };
 
@@ -72,7 +82,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
-    const onKey = (e) => e.key === 'Escape' && close();
+    const onKey = (e) => e.key === 'Escape' && setMenu(current => current && { ...current, closing: true });
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
     window.addEventListener('keydown', onKey);
@@ -107,7 +117,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
               onClick={openMenu}
               aria-label="Mais ações"
               aria-haspopup="menu"
-              aria-expanded={!!menu}
+              aria-expanded={!!menu && !menu.closing}
             >
               <MoreVertical size={18} />
             </button>
@@ -234,8 +244,13 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
           onMouseDown={stopEvent}
           onTouchStart={stopEvent}
         >
-          <div className={styles.menuBackdrop} onClick={() => setMenu(null)} />
-          <div className={`${styles.menu} glass-strong`} role="menu" style={menu}>
+          {!menu.closing && <div className={styles.menuBackdrop} onClick={closeMenu} />}
+          <div
+            className={`${styles.menu} ${menu.above ? styles.menuAbove : ''} ${menu.closing ? styles.menuClosing : ''} glass-strong`}
+            role="menu"
+            style={menu.style}
+            onAnimationEnd={finishMenuAnimation}
+          >
             {canComplete && (
               <button role="menuitem" className={`${styles.menuItem} ${styles.menuComplete} ${styles.menuMobileOnly}`} onClick={() => runAction(() => onComplete?.(goal.id))}>
                 <span className={styles.menuIcon}><CheckCircle2 size={15} /></span>

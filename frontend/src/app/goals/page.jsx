@@ -355,10 +355,10 @@ export default function GoalsPage() {
               >
                 <SortableList ids={visibleSuperGoals.map(sg => sg.id)} onReorder={handleReorderSuperGoals} layout="grid">
                   <div className={styles.grid}>
-                    {visibleSuperGoals.map(sg => (
+                    {visibleSuperGoals.map((sg, i) => (
                       <SortableItem key={sg.id} id={sg.id}>
                         {({ itemProps, isDragging, handleProps }) => (
-                          <div {...itemProps}>
+                          <div {...itemProps} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
                             <SuperGoalTile
                               superGoal={sg}
                               goals={sg.goals}

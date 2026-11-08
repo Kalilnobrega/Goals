@@ -6,8 +6,8 @@
   gap: 14px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  animation: fadeUp 0.4s ease both;
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+  animation: fadeUp var(--dur-enter) var(--ease-out) var(--enter-delay, 0ms) both;
 }
 
 .cardLate {
@@ -148,8 +148,9 @@
   height: 100%;
   background: linear-gradient(90deg, var(--blue-400), var(--blue-600));
   border-radius: 99px;
-  transition: width 0.6s ease;
+  transition: width var(--dur-progress) var(--ease-out);
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  animation: barIn var(--dur-progress) var(--ease-out) both;
 }
 
 .progressFill.toneComplete {
@@ -214,7 +215,7 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
@@ -237,7 +238,7 @@
   background: rgba(16, 185, 129, 0.07);
   color: #10b981;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: background var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -258,7 +259,7 @@
   background: rgba(239, 68, 68, 0.07);
   color: #ef4444;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: background var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -284,7 +285,7 @@
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -405,7 +406,8 @@
     stroke: currentColor;
     stroke-width: 4.5;
     stroke-linecap: round;
-    transition: stroke-dashoffset 0.6s ease;
+    transition: stroke-dashoffset var(--dur-progress) var(--ease-out);
+    animation: ringIn var(--dur-progress) var(--ease-out) both;
     filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 45%, transparent));
   }
 
@@ -486,7 +488,25 @@
   gap: 2px;
   border-radius: var(--radius-md);
   -webkit-backdrop-filter: var(--glass-blur);
-  animation: fadeIn 0.15s ease both;
+  transform-origin: top right;
+  animation: menuIn var(--dur-base) var(--ease-spring) both;
+}
+
+.menuAbove { transform-origin: bottom right; }
+
+.menuClosing {
+  pointer-events: none;
+  animation: menuOut var(--dur-fast) var(--ease-in) forwards;
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes menuOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
 }
 
 .menuItem {
@@ -503,7 +523,7 @@
   color: #1e293b;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .menuIcon {
@@ -553,11 +573,19 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes barIn {
+  from { width: 0; }
+}
+
+@keyframes ringIn {
+  from { stroke-dashoffset: 113.1; }
 }

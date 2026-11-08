@@ -2,7 +2,7 @@
   position: relative;
   height: 100%;
   padding-top: 8px;
-  animation: fadeUp 0.4s ease both;
+  animation: fadeUp var(--dur-enter) var(--ease-out) var(--enter-delay, 0ms) both;
 }
 
 .layerBack,
@@ -43,7 +43,7 @@
   background:
     radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.14), transparent 60%),
     var(--glass-bg) !important;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -186,7 +186,7 @@
   font-family: var(--font-body);
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .pickItem:disabled { cursor: default; }
@@ -210,7 +210,7 @@
   border-radius: 6px;
   border: 1.5px solid rgba(100, 116, 139, 0.4);
   color: white;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .pickItemActive .pickCheck {
@@ -265,7 +265,7 @@
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 

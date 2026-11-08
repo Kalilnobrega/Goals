@@ -40,7 +40,7 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(37,99,235,0.25);
-  transition: opacity 0.2s;
+  transition: opacity var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .inviteBtn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -194,7 +194,8 @@
   height: 100%;
   border-radius: 99px;
   background: linear-gradient(90deg, var(--blue-400), var(--blue-600));
-  transition: width 0.4s ease;
+  transition: width var(--dur-progress) var(--ease-out);
+  animation: barIn var(--dur-progress) var(--ease-out) both;
 }
 
 .progressDone { background: linear-gradient(90deg, #34d399, #059669); }
@@ -277,7 +278,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .iconBtn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -361,4 +362,8 @@
 @media (max-width: 480px) {
   .member { gap: 10px; padding: 10px 12px; }
   .avatar { width: 28px; height: 28px; font-size: 0.78rem; }
+}
+
+@keyframes barIn {
+  from { width: 0; }
 }

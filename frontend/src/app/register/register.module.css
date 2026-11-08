@@ -17,7 +17,7 @@
     color: var(--b600);
     text-decoration: none;
     padding: 6px 2px;
-    transition: gap .2s;
+    transition: gap var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
     width: fit-content;
   }
   @media (hover: hover) {
@@ -85,7 +85,7 @@
     flex: 1;
     height: 4px;
     border-radius: 99px;
-    transition: background .3s;
+    transition: background var(--dur-slow) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   .strengthLabel {
@@ -93,7 +93,7 @@
     font-weight: 600;
     min-width: 52px;
     text-align: right;
-    transition: color .3s;
+    transition: color var(--dur-slow) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   /* ── Input error state ────────────────────────── */

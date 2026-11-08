@@ -14,7 +14,7 @@
   align-items: center;
   gap: 12px;
   text-align: center;
-  animation: fadeUp 0.4s ease both;
+  animation: fadeUp var(--dur-enter) var(--ease-out) both;
 }
 
 .skeleton { height: 360px; }
@@ -76,7 +76,7 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .primaryBtn {
@@ -105,6 +105,6 @@
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }

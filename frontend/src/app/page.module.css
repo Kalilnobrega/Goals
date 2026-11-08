@@ -87,7 +87,7 @@
     font-size: 0.9rem;
     border-radius: 14px;
     text-decoration: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
   
@@ -108,7 +108,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    animation: fadeUp 0.4s ease both;
+    animation: fadeUp var(--dur-enter) var(--ease-out) both;
   }
   
   .statIcon {
@@ -158,7 +158,7 @@
   backdrop-filter: blur(12px);
   border: 1px solid rgba(239,68,68,0.25);
   box-shadow: 0 4px 20px rgba(239,68,68,0.08);
-  animation: fadeUp 0.4s ease both;
+  animation: fadeUp var(--dur-enter) var(--ease-out) both;
 }
  
 .lateBannerLeft {
@@ -208,7 +208,7 @@
   color: #ef4444;
   font-weight: 600;
   text-decoration: none;
-  transition: opacity 0.2s;
+  transition: opacity var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
  
 @media (hover: hover) {
@@ -224,7 +224,7 @@
   font-weight: 600;
   color: #dc2626;
   text-decoration: none;
-  transition: gap 0.2s;
+  transition: gap var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
  
 @media (hover: hover) {
@@ -277,7 +277,7 @@
   gap: 12px;
   padding: 11px 14px;
   border-radius: 13px;
-  transition: background 0.2s;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
  
 @media (hover: hover) {
@@ -298,7 +298,7 @@
   align-items: center;
   justify-content: center;
   color: white;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
  
 @media (hover: hover) {
@@ -349,7 +349,7 @@
   color: #94a3b8;
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s;
+  transition: color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -434,7 +434,7 @@
     font-weight: 600;
     color: var(--blue-600);
     text-decoration: none;
-    transition: gap 0.2s;
+    transition: gap var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   @media (hover: hover) {
@@ -455,8 +455,8 @@
     padding: 16px 18px;
     border-radius: var(--radius-lg);
     text-decoration: none;
-    transition: transform 0.2s, box-shadow 0.2s;
-    animation: fadeUp 0.4s ease both;
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+    animation: fadeUp var(--dur-enter) var(--ease-out) both;
   }
   
   @media (hover: hover) {
@@ -498,7 +498,7 @@
     height: 100%;
     background: linear-gradient(90deg, var(--blue-400), var(--blue-600));
     border-radius: 99px;
-    transition: width 0.5s ease;
+    transition: width var(--dur-progress) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   .recentFillComplete {
@@ -516,7 +516,7 @@
   .recentArrow {
     color: #cbd5e1;
     flex-shrink: 0;
-    transition: color 0.2s;
+    transition: color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   }
   
   @media (hover: hover) {
@@ -559,9 +559,9 @@
   
   /* ── Animations ───────────────────────────────── */
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(18px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
   
   @keyframes shimmer {
     from { background-position: 200% 0; }

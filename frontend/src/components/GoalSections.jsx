@@ -13,18 +13,27 @@ export const STATUS_SECTIONS = [
 
 export function CollapsibleSection({ label, color, count, open, locked, onToggle, children }) {
   const [closing, setClosing] = useState(false);
+  const [opening, setOpening] = useState(false);
   const expanded = open && !closing;
 
   const toggle = () => {
     if (locked || closing) return;
-    if (open) setClosing(true);
-    else onToggle(true);
+    if (open) {
+      setOpening(false);
+      setClosing(true);
+    } else {
+      setOpening(true);
+      onToggle(true);
+    }
   };
 
-  const finishClosing = (event) => {
+  const finishAnimation = (event) => {
     if (event.target !== event.currentTarget) return;
-    setClosing(false);
-    onToggle(false);
+    if (closing) {
+      setClosing(false);
+      onToggle(false);
+    }
+    setOpening(false);
   };
 
   return (
@@ -37,8 +46,8 @@ export function CollapsibleSection({ label, color, count, open, locked, onToggle
       </button>
       {open && (
         <div
-          className={`${styles.sectionBody} ${closing ? styles.sectionBodyClosing : ''}`}
-          onAnimationEnd={closing ? finishClosing : undefined}
+          className={`${styles.sectionBody} ${closing ? styles.sectionBodyClosing : opening ? styles.sectionBodyOpening : ''}`}
+          onAnimationEnd={closing || opening ? finishAnimation : undefined}
         >
           <div className={styles.sectionInner}>{children}</div>
         </div>
@@ -67,7 +76,7 @@ export default function GoalSections({ goals, collapsed, onCollapsedChange, forc
           {section.goals.map((g, i) => (
             <SortableItem key={g.id} id={g.id}>
               {({ itemProps, isDragging, handleProps }) => (
-                <div {...itemProps} style={{ ...itemProps.style, animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+                <div {...itemProps} style={{ ...itemProps.style, '--enter-delay': `calc(var(--stagger) * ${Math.min(i, 8)})` }}>
                   <GoalCard
                     goal={g}
                     dragging={isDragging}

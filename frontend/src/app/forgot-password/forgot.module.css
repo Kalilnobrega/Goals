@@ -17,7 +17,7 @@
   color: var(--b600);
   text-decoration: none;
   padding: 6px 2px;
-  transition: gap .2s;
+  transition: gap var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   width: fit-content;
 }
 @media (hover: hover) {
@@ -104,7 +104,7 @@
   border-radius: 14px;
   text-decoration: none;
   box-shadow: 0 6px 20px rgba(37,99,235,.30);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   margin-top: 4px;
 }
 @media (hover: hover) {

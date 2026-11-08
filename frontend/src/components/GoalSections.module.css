@@ -51,7 +51,7 @@
 
 .chevron {
   color: #94a3b8;
-  transition: transform 0.25s ease;
+  transition: transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 .chevronClosed { transform: rotate(-90deg); }
@@ -68,19 +68,24 @@
 
 .sectionInner { min-height: 0; }
 
+.sectionBodyOpening {
+  overflow: hidden;
+  animation: sectionOpen var(--dur-slow) var(--ease-out) both;
+}
+
 .sectionBodyClosing {
   overflow: hidden;
-  animation: sectionClose 0.22s ease forwards;
+  animation: sectionClose var(--dur-base) var(--ease-in-out) forwards;
+}
+
+@keyframes sectionOpen {
+  from { grid-template-rows: 0fr; opacity: 0; padding-top: 0; }
+  to   { grid-template-rows: 1fr; opacity: 1; padding-top: 10px; }
 }
 
 @keyframes sectionClose {
   from { grid-template-rows: 1fr; opacity: 1; padding-top: 10px; }
   to   { grid-template-rows: 0fr; opacity: 0; padding-top: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sectionBodyClosing { animation-duration: 1ms; }
-  .chevron { transition: none; }
 }
 
 .grid {

@@ -1,6 +1,11 @@
 .form { display: flex; flex-direction: column; gap: 16px; }
 
-.field { display: flex; flex-direction: column; gap: 6px; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fieldIn var(--dur-base) var(--ease-out) both;
+}
 
 .label {
   font-size: 0.82rem;
@@ -21,7 +26,7 @@
   font-family: var(--font-body);
   font-size: 0.9rem;
   color: #0f172a;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   outline: none;
 }
 
@@ -53,7 +58,7 @@
   font-weight: 500;
   color: #475569;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -90,7 +95,7 @@
   font-weight: 500;
   color: #64748b;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -107,7 +112,7 @@
   font-weight: 600;
   color: white;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
@@ -155,7 +160,7 @@
   text-align: left;
   color: #475569;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -194,7 +199,7 @@
   border: 1px solid rgba(59, 130, 246, 0.2);
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
@@ -239,3 +244,7 @@
 
 .dayOption { padding: 8px 12px; }
 
+@keyframes fieldIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

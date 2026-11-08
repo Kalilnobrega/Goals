@@ -132,7 +132,7 @@ export default function DashboardPage() {
               <div
                 key={s.label}
                 className={`${styles.statCard} glass`}
-                style={{ animationDelay: `${i * 80}ms` }}
+                style={{ animationDelay: `calc(var(--stagger) * ${i})` }}
               >
                 <div className={styles.statIcon} style={{ '--icon-color': s.color }}>
                   <s.icon size={20} />
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                     key={g.id}
                     href={`/goals/${g.id}`}
                     className={`${styles.recentCard} glass`}
-                    style={{ animationDelay: `${i * 60}ms` }}
+                    style={{ animationDelay: `calc(var(--stagger) * ${i})` }}
                   >
                     <div className={styles.recentDot} style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
                     <div className={styles.recentBody}>

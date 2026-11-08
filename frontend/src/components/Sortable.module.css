@@ -12,7 +12,7 @@
   color: #94a3b8;
   cursor: grab;
   touch-action: none;
-  transition: background 0.2s, color 0.2s;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {

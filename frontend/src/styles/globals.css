@@ -49,6 +49,19 @@
   --radius-lg:  20px;
   --radius-xl:  28px;
   --radius-2xl: 36px;
+
+  /* Motion */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --dur-instant:  90ms;
+  --dur-fast:     160ms;
+  --dur-base:     220ms;
+  --dur-slow:     320ms;
+  --dur-enter:    440ms;
+  --dur-progress: 700ms;
+  --stagger:      45ms;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -105,6 +118,39 @@ body::after {
 @keyframes drift2 {
   from { transform: translate(0, 0) scale(1); }
   to   { transform: translate(80px, -60px) scale(1.2); }
+}
+
+/* ── Motion ─────────────────────────────────────── */
+:where(button, [role="button"], [role="link"]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button:not(:disabled), [role="button"]):active {
+  scale: 0.97;
+}
+
+:where([role="link"]):active {
+  scale: 0.985;
+}
+
+:where(button, [role="button"], [role="link"]) {
+  transition: scale var(--dur-fast) var(--ease-out);
+}
+
+:where(a, button, [role="button"], [role="link"]):focus-visible {
+  outline: 2px solid var(--blue-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Glass utility ──────────────────────────────── */
