@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
-import TaskItem from '../../../components/TaskItem';
+import TaskItem, { resetTaskEntrance } from '../../../components/TaskItem';
 import NumericGoalChart from '../../../components/NumericGoalChart';
 import GoalForecast from '../../../components/GoalForecast';
 import CycleChart, { buildCycleBars } from '../../../components/CycleChart';
@@ -72,6 +72,7 @@ export default function GoalDetailPage() {
   const [entries,    setEntries]    = useState(() => cachedOverview(id)?.entries ?? []);
   const [progressData, setProgressData] = useState(() => cachedOverview(id)?.progress ?? null);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  useState(() => resetTaskEntrance());
   const [entryValue, setEntryValue] = useState('');
   const [entryNote,  setEntryNote]  = useState('');
   const [addingEntry, setAddingEntry] = useState(false);
@@ -293,8 +294,9 @@ export default function GoalDetailPage() {
     router.push('/goals');
   };
 
-  const taskItemProps = (t) => ({
+  const taskItemProps = (t, index) => ({
     task: t,
+    index,
     onToggle: handleToggleTask,
     onDelete: handleDeleteTask,
     onEdit: openEditTask,
@@ -306,11 +308,11 @@ export default function GoalDetailPage() {
   const renderTaskGroup = (items) => goal.can_edit ? (
     <SortableList ids={items.map(t => t.id)} onReorder={handleReorderTasks}>
       <ul className={styles.taskList}>
-        {items.map(t => (
+        {items.map((t, i) => (
           <SortableItem key={t.id} id={t.id}>
             {(sortable) => (
               <ViewTransition name={`task-${t.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
-                <TaskItem {...taskItemProps(t)} sortable={sortable} />
+                <TaskItem {...taskItemProps(t, i)} sortable={sortable} />
               </ViewTransition>
             )}
           </SortableItem>
@@ -319,9 +321,9 @@ export default function GoalDetailPage() {
     </SortableList>
   ) : (
     <ul className={styles.taskList}>
-      {items.map(t => (
+      {items.map((t, i) => (
         <ViewTransition key={t.id} name={`task-${t.id}`} share="task-move" update={{ 'task-change': 'task-move', default: 'none' }} default="none">
-          <TaskItem {...taskItemProps(t)} />
+          <TaskItem {...taskItemProps(t, i)} />
         </ViewTransition>
       ))}
     </ul>
@@ -646,8 +648,8 @@ export default function GoalDetailPage() {
               </div>
             ) : (
               <ul className={styles.taskList}>
-                {visibleEntries.map(entry => (
-                  <li key={entry.id} className={`${styles.listItem} glass`}>
+                {visibleEntries.map((entry, i) => (
+                  <li key={entry.id} className={`${styles.listItem} ${styles.listEnter} glass`} style={{ '--i': Math.min(i, 8) }}>
                     <span className={styles.entryText}>
                       <strong className={styles.entryValue}>
                         {goal.numeric_mode === 'sum' && entry.value > 0 ? '+' : ''}
@@ -698,8 +700,8 @@ export default function GoalDetailPage() {
               </div>
             ) : (
               <ul className={styles.taskList}>
-                {cycles.map(c => (
-                  <li key={c.id} className={`${styles.listItem} glass`}>
+                {cycles.map((c, i) => (
+                  <li key={c.id} className={`${styles.listItem} ${styles.listEnter} glass`} style={{ '--i': Math.min(i, 8) }}>
                     <span className={styles.cycleRange}>
                       {openEnded
                         ? <RefreshCw size={16} />

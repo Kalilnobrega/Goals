@@ -8,7 +8,18 @@ import { DragHandle } from './Sortable';
 import { formatWeekdays } from '../lib/date';
 import styles from './TaskItem.module.css';
 
-export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, canAct = true, canEdit = true, showAuthor = false }) {
+const seenTasks = new Set();
+
+export function resetTaskEntrance() {
+  seenTasks.clear();
+}
+
+export default function TaskItem({ task, index = 0, onToggle, onDelete, onEdit, sortable, canAct = true, canEdit = true, showAuthor = false }) {
+  const [entering, setEntering] = useState(() => {
+    const first = !seenTasks.has(task.id);
+    seenTasks.add(task.id);
+    return first;
+  });
   const [hovered, setHovered] = useState(false);
   const [popping, setPopping] = useState(false);
   const [settling, endSettle] = useDropSettle(Boolean(sortable?.isDragging));
@@ -27,8 +38,12 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, sortable, c
   return (
     <li
       {...sortable?.itemProps}
-      className={`${styles.item} ${done ? styles.done : ''} ${sortable?.isDragging ? styles.dragging : ''} ${settling ? styles.settling : ''}`}
-      onAnimationEnd={endSettle}
+      className={`${styles.item} ${done ? styles.done : ''} ${entering ? styles.enter : ''} ${sortable?.isDragging ? styles.dragging : ''} ${settling ? styles.settling : ''}`}
+      style={{ ...sortable?.itemProps?.style, '--i': Math.min(index, 8) }}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) setEntering(false);
+        endSettle(e);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

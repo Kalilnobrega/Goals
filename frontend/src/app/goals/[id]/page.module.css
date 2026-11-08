@@ -597,3 +597,11 @@
 @keyframes progressFillIn {
   from { width: 0; }
 }
+
+.listEnter {
+  animation: listIn var(--dur-enter) var(--ease-out) calc(var(--stagger) * var(--i, 0) + 80ms) both;
+}
+
+@keyframes listIn {
+  from { opacity: 0; transform: translateX(-12px); }
+}
