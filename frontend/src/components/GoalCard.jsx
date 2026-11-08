@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, LogOut } from 'lucide-react';
 import SuperGoalIcon from './SuperGoalIcon';
+import CountUp from './CountUp';
 import { useCardLink } from '../lib/useCardLink';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
@@ -19,6 +20,7 @@ const STATUS_META = {
 const stopEvent = (event) => event.stopPropagation();
 
 const RING_RADIUS = 18;
+const RING_DURATION_MS = 700;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 const KIND_META = {
@@ -142,7 +144,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
           <div className={styles.progressBar}>
             <div className={`${styles.progressFill} ${barTone}`} style={{ width: `${progress}%` }} />
           </div>
-          <span className={`${styles.progressLabel} ${barTone}`}>{progress}%</span>
+          <span className={`${styles.progressLabel} ${barTone}`}><CountUp value={`${progress}%`} duration={RING_DURATION_MS} /></span>
         </div>
       )}
 
@@ -159,7 +161,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
               strokeDashoffset={RING_LENGTH * (1 - Math.min(progress, 100) / 100)}
             />
           </svg>
-          <span className={styles.ringLabel}>{progress}<small>%</small></span>
+          <span className={styles.ringLabel}><CountUp value={progress} duration={RING_DURATION_MS} /><small>%</small></span>
         </div>
       )}
 

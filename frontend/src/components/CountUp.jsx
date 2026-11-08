@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
-const DURATION_MS = 900;
+const DEFAULT_DURATION_MS = 900;
 const NUMBER_PATTERN = /^(\D*?)(-?\d[\d.]*)(\D*)$/;
 const formatter = new Intl.NumberFormat('pt-BR');
 
@@ -15,7 +15,7 @@ function parse(value) {
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-export default function CountUp({ value }) {
+export default function CountUp({ value, duration = DEFAULT_DURATION_MS }) {
   const parsed = parse(value);
   const target = parsed?.target;
   const [shown, setShown] = useState(0);
@@ -30,7 +30,7 @@ export default function CountUp({ value }) {
 
     const step = (now) => {
       startedAt ??= now;
-      const progress = reduce ? 1 : Math.min((now - startedAt) / DURATION_MS, 1);
+      const progress = reduce ? 1 : Math.min((now - startedAt) / duration, 1);
       const next = Math.round(from + (target - from) * easeOutCubic(progress));
       shownRef.current = next;
       setShown(next);
@@ -39,7 +39,7 @@ export default function CountUp({ value }) {
 
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target]);
+  }, [target, duration]);
 
   if (!parsed) return value;
 
