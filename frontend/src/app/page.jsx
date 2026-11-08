@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useSyncExternalStore, ViewTransition, startTransition, addTransitionType } from 'react';
 import Link from 'next/link';
-import Navbar from '../components/Navbar';
 import HeroCalendar from '../components/HeroCalendar';
 import {
   Target, CheckCircle2, Clock, TrendingUp,
@@ -11,8 +10,8 @@ import { getGoals, getTodayTasks, toggleTask, getStreak, peekCache } from '../li
 import { getUserName } from '../lib/auth';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import { celebrateTask } from '../lib/celebrate';
-import CountUp from '../components/CountUp';
 import CheckMark from '../components/CheckMark';
+import CountUp from '../components/CountUp';
 import { formatProgressValue, hasTarget } from '../lib/numeric';
 import styles from './page.module.css';
 
@@ -146,7 +145,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
 
         {/* Hero */}

@@ -2,7 +2,6 @@
 import { useState, useEffect, ViewTransition, startTransition, addTransitionType } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '../../../components/Navbar';
 import Modal from '../../../components/Modal';
 import GoalForm from '../../../components/GoalForm';
 import TaskItem from '../../../components/TaskItem';
@@ -82,9 +81,9 @@ export default function GoalDetailPage() {
   const [error,      setError]      = useState('');
   const [group,      setGroup]      = useState(() => cachedOverview(id)?.group ?? null);
   const [shareModal, setShareModal] = useState(false);
+  const [settling,   setSettling]   = useState({});
   const [seenProgress, setSeenProgress] = useState(null);
   const [progressFlash, setProgressFlash] = useState(false);
-  const [settling,   setSettling]   = useState({});
   const [superGoals, setSuperGoals] = useState(() => cachedOverview(id)?.super_goals ?? []);
 
   const loadGroup = (current) => {
@@ -347,12 +346,12 @@ export default function GoalDetailPage() {
   };
 
   // progress vem do @property serializado pelo GoalResponseSchema
+  const progress = typeof goal?.progress === 'number' ? Math.round(goal.progress) : 0;
 
   if (goal && progress !== seenProgress) {
     setSeenProgress(progress);
     if (seenProgress !== null && seenProgress < 100 && progress >= 100) setProgressFlash(true);
   }
-  const progress = typeof goal?.progress === 'number' ? Math.round(goal.progress) : 0;
   const meta     = goal ? (STATUS_META[goal.status] || STATUS_META.open) : null;
 
   // Separa pendentes / concluídas / hábitos
@@ -371,7 +370,6 @@ export default function GoalDetailPage() {
 
   if (loading && !goal) return (
     <>
-      <Navbar />
       <main className={styles.main}>
         <div className={`${styles.skeleton} ${styles.skeletonHeader} glass`} />
         <div className={`${styles.skeleton} ${styles.skeletonBody} glass`} />
@@ -381,7 +379,6 @@ export default function GoalDetailPage() {
 
   if (!goal) return (
     <>
-      <Navbar />
       <main className={styles.main}>
         <div className={`${styles.notFound} glass`}>
           <Target size={40} />
@@ -396,7 +393,6 @@ export default function GoalDetailPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
 
         <button className={styles.backLink} onClick={() => router.push('/goals')}>

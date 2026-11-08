@@ -144,9 +144,9 @@ body::after {
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: var(--dur-base);
-  animation-timing-function: var(--ease-out);
+  animation: none;
 }
+
 
 ::view-transition-group(.goal-morph),
 ::view-transition-group(.goal-move),

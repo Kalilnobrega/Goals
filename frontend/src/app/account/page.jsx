@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2, LogOut } from 'lucide-react';
-import Navbar from '../../components/Navbar';
 import Modal from '../../components/Modal';
 import { getMe, updateName, changePassword, deleteAccount, logout } from '../../lib/api';
 import { clearToken, getRefreshToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
@@ -332,7 +331,6 @@ export default function AccountPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
         <div className={`${styles.pageHero} glass`}>
           <h1 className={styles.title}>Minha conta</h1>

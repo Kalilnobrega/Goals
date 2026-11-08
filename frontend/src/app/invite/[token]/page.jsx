@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '../../../components/Navbar';
 import { previewInvite, acceptInvite } from '../../../lib/api';
 import { Users, Trophy, ArrowRight, Link2Off } from 'lucide-react';
 import styles from './page.module.css';
@@ -53,7 +52,6 @@ export default function InvitePage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
         {loading ? (
           <div className={`${styles.card} ${styles.skeleton} glass`} />

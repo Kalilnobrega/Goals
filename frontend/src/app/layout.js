@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import { LateGoalsProvider } from "../lib/LateGoalsContext";
 import { ConfirmProvider } from "../components/ConfirmDialog";
 import { ToastProvider } from "../components/Toast";
+import AppNavbar from "../components/AppNavbar";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 export const metadata = {
@@ -16,7 +17,10 @@ export default function RootLayout({ children }) {
         <GoogleOAuthProvider clientId="513218395859-ptvh881sg8jl1lq9k7d86jkf9pauh4th.apps.googleusercontent.com">
           <LateGoalsProvider>
             <ToastProvider>
-              <ConfirmProvider>{children}</ConfirmProvider>
+              <ConfirmProvider>
+                <AppNavbar />
+                {children}
+              </ConfirmProvider>
             </ToastProvider>
           </LateGoalsProvider>
         </GoogleOAuthProvider>

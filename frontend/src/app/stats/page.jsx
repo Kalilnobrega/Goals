@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
 import ActivityHeatmap from '../../components/ActivityHeatmap';
 import NumericGoalChart from '../../components/NumericGoalChart';
 import GoalForecast from '../../components/GoalForecast';
@@ -13,8 +12,8 @@ import {
   Activity, CalendarCheck, CalendarDays, Trophy, Sparkles, TrendingUp, TrendingDown, Minus,
   RefreshCw, Check, X, Clock, Flame, ListOrdered, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
-import CountUp from '../../components/CountUp';
 import styles from './page.module.css';
+import CountUp from '../../components/CountUp';
 
 const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -204,7 +203,6 @@ export default function StatsPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
         <div className={`${styles.pageHero} glass`}>
           <div>

@@ -2,7 +2,6 @@
 import { useState, useEffect, startTransition, addTransitionType, ViewTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Pencil, Trash2, Plus, Check, X } from 'lucide-react';
-import Navbar from '../../../../components/Navbar';
 import Modal from '../../../../components/Modal';
 import GoalSections from '../../../../components/GoalSections';
 import SuperGoalForm from '../../../../components/SuperGoalForm';
@@ -168,7 +167,6 @@ export default function SuperGoalPage() {
   if (!loading && notFound) {
     return (
       <>
-        <Navbar />
         <main className={styles.main}>
           <div className={`${styles.empty} glass`}>
             <p className={styles.emptyTitle}>Supermeta não encontrada.</p>
@@ -183,7 +181,6 @@ export default function SuperGoalPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
         <button className={styles.backLink} onClick={() => router.push('/goals')}>
           <ArrowLeft size={16} /> Todas as metas

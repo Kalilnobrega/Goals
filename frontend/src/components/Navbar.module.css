@@ -51,11 +51,41 @@
 }
 
 .links {
+  position: relative;
   list-style: none;
   display: flex;
   align-items: center;
   gap: 4px;
 }
+
+.indicator {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 32px;
+  margin-top: -16px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.10);
+  pointer-events: none;
+}
+
+.indicator::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--blue-500);
+}
+
+.indicator[data-ready] {
+  transition: transform var(--dur-slow) var(--ease-spring), width var(--dur-slow) var(--ease-spring), opacity var(--dur-base) var(--ease-out);
+}
+
+.indicator[data-hidden] { opacity: 0; }
 
 .link {
   position: relative;
@@ -70,10 +100,11 @@
   font-weight: 500;
   color: #475569;
   transition: color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+  z-index: 1;
 }
 
 @media (hover: hover) {
-  .link:hover {
+  .link:not(.active):hover {
     color: var(--blue-600);
     background: rgba(59, 130, 246, 0.08);
   }
@@ -81,20 +112,27 @@
 
 .active {
   color: var(--blue-600);
-  background: rgba(59, 130, 246, 0.10);
   font-weight: 600;
 }
 
-.activePill {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--blue-500);
-  animation: pillIn var(--dur-slow) var(--ease-spring) both;
+.fireWrap {
+  display: inline-flex;
+  transform-origin: bottom center;
+}
+
+.firePop {
+  animation: firePop var(--dur-enter) var(--ease-spring);
+}
+
+.streakNumber {
+  display: inline-flex;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.numberIn {
+  display: inline-block;
+  animation: numberIn var(--dur-slow) var(--ease-spring) both;
 }
 
 .linkIconWrap {
@@ -233,7 +271,14 @@
   .streakChip { padding: 6px 9px; }
 }
 
-@keyframes pillIn {
-  from { opacity: 0; transform: translateX(-50%) scale(0); }
-  to   { opacity: 1; transform: translateX(-50%) scale(1); }
+@keyframes firePop {
+  0%   { transform: scale(1) rotate(0deg); }
+  35%  { transform: scale(1.45) rotate(-8deg); }
+  65%  { transform: scale(0.92) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes numberIn {
+  from { opacity: 0; transform: translateY(70%); }
+  to   { opacity: 1; transform: translateY(0); }
 }

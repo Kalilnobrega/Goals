@@ -2,7 +2,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, startTransition, addTransitionType } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import Navbar from '../../components/Navbar';
 import Modal from '../../components/Modal';
 import GoalForm from '../../components/GoalForm';
 import GoalSections, { CollapsibleSection } from '../../components/GoalSections';
@@ -75,6 +74,7 @@ export default function GoalsPage() {
   const [error,      setError]      = useState('');
   const [collapsed,  setCollapsed]  = useState(() => loadedPrefs?.collapsed ?? { completed: true });
   const [searchOpen, setSearchOpen] = useState(false);
+  const searchInput = useRef(null);
   const filtersRef = useRef(null);
   const indicatorRef = useRef(null);
 
@@ -92,7 +92,6 @@ export default function GoalsPage() {
     window.addEventListener('resize', place);
     return () => window.removeEventListener('resize', place);
   }, [filter, searchOpen]);
-  const searchInput = useRef(null);
 
   const fetchAll = () => Promise.all([getGoals(), getSuperGoals()]);
 
@@ -298,7 +297,6 @@ export default function GoalsPage() {
 
   return (
     <>
-      <Navbar />
       <main className={styles.main}>
 
         <div className={`${styles.pageHero} glass`}>
@@ -344,10 +342,10 @@ export default function GoalsPage() {
           <div className={styles.filters} ref={filtersRef}>
             <span className={styles.filterIndicator} ref={indicatorRef} aria-hidden="true" />
             {KIND_FILTERS.map(f => (
-                data-filter={f.value}
-                aria-pressed={filter === f.value}
               <button
                 key={f.value}
+                data-filter={f.value}
+                aria-pressed={filter === f.value}
                 className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`}
                 onClick={() => changeFilter(f.value)}
               >
