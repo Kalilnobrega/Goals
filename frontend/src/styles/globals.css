@@ -163,6 +163,7 @@ body::after {
 
 ::view-transition-group(app-navbar) {
   animation: none;
+  z-index: 100;
 }
 
 ::view-transition-old(app-navbar) {
