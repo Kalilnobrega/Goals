@@ -189,6 +189,16 @@ body::after {
   animation: vt-tab-in-left var(--dur-tab) var(--ease-tab) both;
 }
 
+html[data-entry="right"] {
+  --enter-x: 40px;
+  --enter-y: 0px;
+}
+
+html[data-entry="left"] {
+  --enter-x: -40px;
+  --enter-y: 0px;
+}
+
 @keyframes vt-tab-out-left  { to   { transform: translateX(-100%); } }
 @keyframes vt-tab-in-right  { from { transform: translateX(100%); } }
 @keyframes vt-tab-out-right { to   { transform: translateX(100%); } }
@@ -255,8 +265,8 @@ html[data-sliding] main *,
 }
 
 @keyframes reveal-up {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translate(var(--enter-x, 0px), var(--enter-y, 18px)); }
+  to   { opacity: 1; transform: translate(0, 0); }
 }
 
 /* ── Glass utility ──────────────────────────────── */
