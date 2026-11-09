@@ -117,11 +117,12 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
     };
   }, [goal]);
 
+  const showTasks = !goal.is_numeric || goal.total_tasks > 0;
   const shownMeta = [
     goal.is_numeric && 'numeric',
     goal.deadline && 'deadline',
-    !goal.is_numeric && 'tasks',
     goal.group_kind && 'people',
+    showTasks && 'tasks',
   ].filter(Boolean).slice(0, 3);
   const metaClass = (key) => [
     styles.metaItem,
@@ -235,7 +236,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
       )}
 
       <div className={styles.meta} ref={metaRef}>
-        {goal.is_numeric ? (
+        {goal.is_numeric && (
           <span className={metaClass('numeric')}>
             <Target size={13} />
             {hasTarget(goal) ? (
@@ -253,7 +254,8 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
               </span>
             )}
           </span>
-        ) : (
+        )}
+        {showTasks && (
           <span className={metaClass('tasks')}>
             <ListTodo size={13} />
             <span className={styles.short} aria-hidden="true">{goal.total_tasks ?? 0}</span>
