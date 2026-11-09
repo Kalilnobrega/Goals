@@ -215,6 +215,8 @@
 
 .unit:first-child { margin: 0 2px 0 0; }
 
+.unitLoose { font-size: 0.9em; }
+
 .actions {
   display: flex;
   align-items: center;

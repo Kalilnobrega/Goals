@@ -232,12 +232,20 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
         {goal.is_numeric ? (
           <span className={metaClass('numeric')}>
             <Target size={13} />
-            <span className={styles.numeric}>
-              {goal.unit === 'R$' && <small className={styles.unit}>R$</small>}
-              {formatValue(goal.current_value ?? 0)}
-              {hasTarget(goal) && <><span className={styles.slash}>/</span><wbr />{formatValue(goal.target_value)}</>}
-              {goal.unit && goal.unit !== 'R$' && <small className={styles.unit}>{goal.unit}</small>}
-            </span>
+            {hasTarget(goal) ? (
+              <span className={styles.numeric}>
+                {goal.unit === 'R$' && <small className={styles.unit}>R$</small>}
+                {formatValue(goal.current_value ?? 0)}
+                <span className={styles.slash}>/</span><wbr />{formatValue(goal.target_value)}
+                {goal.unit && goal.unit !== 'R$' && <small className={styles.unit}>{goal.unit}</small>}
+              </span>
+            ) : (
+              <span>
+                {goal.unit === 'R$' && <><small className={styles.unitLoose}>R$</small>{' '}</>}
+                {formatValue(goal.current_value ?? 0)}
+                {goal.unit && goal.unit !== 'R$' && <>{' '}<small className={styles.unitLoose}>{goal.unit}</small></>}
+              </span>
+            )}
           </span>
         ) : (
           <span className={metaClass('tasks')}>
