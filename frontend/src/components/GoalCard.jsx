@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Trash2, ArrowRight, Calendar, ListTodo, RefreshCw, CheckCircle2, Target, Users, Trophy, MoreVertical, LogOut } from 'lucide-react';
@@ -9,7 +9,7 @@ import { useDropSettle } from '../lib/useDropSettle';
 import { useCardLink } from '../lib/useCardLink';
 import { prepareMorph } from '../lib/goalMorph';
 import { formatDeadline, formatShortDeadline, cycleNotStarted } from '../lib/date';
-import { formatProgressValue, hasTarget } from '../lib/numeric';
+import { formatValue, hasTarget } from '../lib/numeric';
 import styles from './GoalCard.module.css';
 
 // Status do backend: 'open' | 'completed' | 'late'
@@ -51,6 +51,65 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
   }
   const cardLink = useCardLink(`/goals/${goal.id}`, dragging);
   const menuButton = useRef(null);
+  const metaRef = useRef(null);
+  const titleRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    const text = el?.firstChild?.firstChild;
+    const dots = el?.lastChild;
+    if (!text || !dots) return;
+    const chars = Array.from(goal.title);
+    let active = true;
+    const fits = () => el.scrollHeight <= el.clientHeight + 1;
+    const fit = () => {
+      if (!active) return;
+      text.nodeValue = goal.title;
+      dots.hidden = true;
+      if (getComputedStyle(el).maxHeight === 'none' || fits()) return;
+      dots.hidden = false;
+      let low = 0;
+      let high = chars.length;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        text.nodeValue = chars.slice(0, mid).join('').trimEnd();
+        if (fits()) low = mid;
+        else high = mid - 1;
+      }
+      text.nodeValue = chars.slice(0, low).join('').trimEnd();
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    document.fonts?.ready.then(fit);
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [goal.title]);
+
+  useLayoutEffect(() => {
+    const el = metaRef.current;
+    if (!el) return;
+    let active = true;
+    const fit = () => {
+      if (!active) return;
+      el.removeAttribute('data-wrap');
+      if (getComputedStyle(el).flexDirection !== 'column') return;
+      const texts = el.querySelectorAll(`.${styles.metaShown} > span:not(.${styles.long})`);
+      if ([...texts].some(text => text.offsetParent && text.scrollWidth > text.clientWidth + 1)) {
+        el.setAttribute('data-wrap', '');
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    document.fonts?.ready.then(fit);
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [goal]);
 
   const shownMeta = [
     goal.is_numeric && 'numeric',
@@ -62,6 +121,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
     styles.metaItem,
     shownMeta.includes(key) && styles.metaShown,
     shownMeta[0] === key && styles.metaLead,
+    shownMeta.length === 3 && shownMeta[2] === key && styles.metaThird,
   ].filter(Boolean).join(' ');
   const cycleStart = cycleNotStarted(goal);
 
@@ -137,7 +197,7 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
         </div>
       </div>
 
-      <h3 className={styles.title}>{goal.title}</h3>
+      <h3 className={styles.title} ref={titleRef}><span>{goal.title}</span><small className={styles.titleMore} hidden aria-hidden="true">…</small></h3>
       {goal.description && (
         <p className={styles.desc}>{goal.description}</p>
       )}
@@ -168,11 +228,16 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
         </div>
       )}
 
-      <div className={styles.meta}>
+      <div className={styles.meta} ref={metaRef}>
         {goal.is_numeric ? (
           <span className={metaClass('numeric')}>
             <Target size={13} />
-            {formatProgressValue(goal)}
+            <span className={styles.numeric}>
+              {goal.unit === 'R$' && <small className={styles.unit}>R$</small>}
+              {formatValue(goal.current_value ?? 0)}
+              {hasTarget(goal) && <><span className={styles.slash}>/</span><wbr />{formatValue(goal.target_value)}</>}
+              {goal.unit && goal.unit !== 'R$' && <small className={styles.unit}>{goal.unit}</small>}
+            </span>
           </span>
         ) : (
           <span className={metaClass('tasks')}>
