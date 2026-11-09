@@ -76,6 +76,7 @@ export default function GoalDetailPage() {
   const [entries,    setEntries]    = useState(() => cachedOverview(id)?.entries ?? []);
   const [progressData, setProgressData] = useState(() => cachedOverview(id)?.progress ?? null);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showAllCycles, setShowAllCycles] = useState(false);
   useState(() => resetTaskEntrance());
   const [entryValue, setEntryValue] = useState('');
   const [entryNote,  setEntryNote]  = useState('');
@@ -372,6 +373,7 @@ export default function GoalDetailPage() {
 
   const cycleBars = goal ? buildCycleBars(goal, cycles) : [];
   const visibleEntries = showAllEntries ? entries : entries.slice(0, ENTRIES_PREVIEW);
+  const visibleCycles = showAllCycles ? cycles : cycles.slice(0, ENTRIES_PREVIEW);
 
   const cyclesCompleted = cycles.filter(c => c.completed).length;
   const openEnded = Boolean(goal?.is_numeric && !hasTarget(goal));
@@ -704,7 +706,7 @@ export default function GoalDetailPage() {
               </div>
             ) : (
               <ul className={styles.taskList}>
-                {cycles.map((c, i) => (
+                {visibleCycles.map((c, i) => (
                   <li key={c.id} className={`${styles.listItem} ${styles.listEnter} glass`} style={{ '--i': Math.min(i, 8) }}>
                     <span className={styles.cycleRange}>
                       {openEnded
@@ -724,6 +726,12 @@ export default function GoalDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {cycles.length > ENTRIES_PREVIEW && (
+              <button type="button" className={styles.showMore} onClick={() => setShowAllCycles(v => !v)}>
+                {showAllCycles ? 'Mostrar menos' : `Ver todos os ${cycles.length} ciclos`}
+              </button>
             )}
           </div>
         )}
