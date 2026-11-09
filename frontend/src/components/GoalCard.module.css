@@ -505,7 +505,7 @@
 
   .meta:not([data-wrap]) wbr { display: none; }
 
-  .meta[data-wrap] .metaThird { display: none; }
+  .meta[data-drop] .metaThird { display: none; }
 
   .meta[data-wrap] .metaItem {
     align-items: flex-start;

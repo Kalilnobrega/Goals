@@ -95,11 +95,17 @@ export default function GoalCard({ goal, onDelete, onComplete, onMoveToSuperGoal
     const fit = () => {
       if (!active) return;
       el.removeAttribute('data-wrap');
+      el.removeAttribute('data-drop');
       if (getComputedStyle(el).flexDirection !== 'column') return;
       const texts = el.querySelectorAll(`.${styles.metaShown} > span:not(.${styles.long})`);
-      if ([...texts].some(text => text.offsetParent && text.scrollWidth > text.clientWidth + 1)) {
-        el.setAttribute('data-wrap', '');
-      }
+      if (![...texts].some(text => text.offsetParent && text.scrollWidth > text.clientWidth + 1)) return;
+      el.setAttribute('data-wrap', '');
+      const card = el.parentElement;
+      const cardStyle = getComputedStyle(card);
+      const title = titleRef.current;
+      const top = title ? title.offsetTop + title.offsetHeight + parseFloat(cardStyle.rowGap) : 0;
+      const bottom = card.clientHeight - parseFloat(cardStyle.paddingBottom);
+      if (el.offsetTop < top - 1 || el.offsetTop + el.offsetHeight > bottom + 1) el.setAttribute('data-drop', '');
     };
     fit();
     const observer = new ResizeObserver(fit);
