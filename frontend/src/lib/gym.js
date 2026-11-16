@@ -40,3 +40,17 @@ export function apiError(err, fallback) {
   }
   return fallback;
 }
+
+export const repsLabel = (min, max) => (max && max !== min ? `${min}–${max}` : `${min}`);
+
+export const prescription = (item) => `${item.target_sets} × ${repsLabel(item.reps_min, item.reps_max)}`;
+
+export function workoutMuscles(workout) {
+  const counts = new Map();
+  workout.exercises.forEach(({ exercise }) => {
+    counts.set(exercise.muscle_group, (counts.get(exercise.muscle_group) ?? 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([group]) => muscleLabel(group));
+}
+
+export const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;

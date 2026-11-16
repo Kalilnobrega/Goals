@@ -229,3 +229,11 @@ export const updateExercise = (id, data) =>
   api.patch(`/fitness/exercises/${id}`, data).then((r) => r.data);
 export const deleteExercise = (id) =>
   api.delete(`/fitness/exercises/${id}`).then((r) => r.data);
+export const getWorkouts = () => cachedGet("fitnessWorkouts", "/fitness/workouts");
+export const getWorkout = (id) => cachedGet(`fitnessWorkout:${id}`, `/fitness/workouts/${id}`);
+export const createWorkout = (data) =>
+  api.post("/fitness/workouts", data).then((r) => r.data);
+export const updateWorkout = (id, data) =>
+  api.put(`/fitness/workouts/${id}`, data).then((r) => r.data);
+export const deleteWorkout = (id) =>
+  api.delete(`/fitness/workouts/${id}`).then((r) => r.data);

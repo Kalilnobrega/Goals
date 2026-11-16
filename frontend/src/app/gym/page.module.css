@@ -1,7 +1,11 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
+}
+
+.page > header {
+  margin-bottom: 12px;
 }
 
 .kicker {
