@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric, Index, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -48,5 +48,74 @@ class WorkoutExercise(Base):
     target_sets = Column(Integer, nullable=False)
     reps_min = Column(Integer, nullable=False)
     reps_max = Column(Integer, nullable=True)
+    rest_seconds = Column(Integer, nullable=True)
 
     exercise = relationship("Exercise", lazy="joined")
+
+
+class WorkoutSession(Base):
+    __tablename__ = "fitness_sessions"
+    __table_args__ = (
+        Index(
+            "ix_fitness_sessions_one_active",
+            "user_id",
+            unique=True,
+            sqlite_where=text("status = 'in_progress'"),
+            postgresql_where=text("status = 'in_progress'"),
+        ),
+        Index("ix_fitness_sessions_user_started", "user_id", "started_at"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    workout_id = Column(ForeignKey("fitness_workouts.id", ondelete="SET NULL"), nullable=True, index=True)
+    name = Column(String(60), nullable=False)
+    status = Column(String(20), nullable=False, default="in_progress")
+    started_at = Column(DateTime(timezone=True), nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    exercises = relationship(
+        "SessionExercise",
+        order_by="SessionExercise.position",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class SessionExercise(Base):
+    __tablename__ = "fitness_session_exercises"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(ForeignKey("fitness_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="SET NULL"), nullable=True, index=True)
+    workout_exercise_id = Column(
+        ForeignKey("fitness_workout_exercises.id", ondelete="SET NULL"), nullable=True
+    )
+    exercise_name = Column(String(60), nullable=False)
+    muscle_group = Column(String(20), nullable=False)
+    equipment = Column(String(20), nullable=False)
+    position = Column(Integer, nullable=False)
+    target_sets = Column(Integer, nullable=True)
+    reps_min = Column(Integer, nullable=True)
+    reps_max = Column(Integer, nullable=True)
+    rest_seconds = Column(Integer, nullable=True)
+
+    sets = relationship(
+        "SetEntry",
+        order_by="SetEntry.position",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class SetEntry(Base):
+    __tablename__ = "fitness_sets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_exercise_id = Column(
+        ForeignKey("fitness_session_exercises.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position = Column(Integer, nullable=False)
+    weight_kg = Column(Numeric(6, 2), nullable=False)
+    reps = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)

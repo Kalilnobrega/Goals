@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, Workout, WorkoutExercise
+from app.fitness_models import Exercise, Workout, WorkoutExercise, SessionExercise
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
@@ -108,6 +108,9 @@ def delete_exercise(
             status_code=409,
             detail=f"Esse exercício está {noun} {listed}. Tire ele de lá antes de excluir.",
         )
+    session.query(SessionExercise).filter(SessionExercise.exercise_id == exercise.id).update(
+        {SessionExercise.exercise_id: None}, synchronize_session=False
+    )
     session.delete(exercise)
     session.commit()
     return {"message": "Exercício excluído"}
@@ -141,6 +144,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
             target_sets=item.target_sets,
             reps_min=item.reps_min,
             reps_max=item.reps_max,
+            rest_seconds=item.rest_seconds,
         )
         for index, item in enumerate(data.exercises)
     ]

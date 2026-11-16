@@ -73,9 +73,12 @@ class WorkoutExerciseSchema(BaseModel):
     target_sets: int = Field(ge=1, le=20)
     reps_min: int = Field(ge=1, le=100)
     reps_max: int | None = Field(default=None, ge=1, le=100)
+    rest_seconds: int | None = Field(default=None, ge=0, le=900)
 
     @model_validator(mode="after")
     def reps_range(self):
+        if self.rest_seconds == 0:
+            self.rest_seconds = None
         if self.reps_max is not None:
             if self.reps_max < self.reps_min:
                 raise ValueError("O máximo de repetições não pode ser menor que o mínimo.")
@@ -111,6 +114,7 @@ class WorkoutExerciseResponseSchema(BaseModel):
     target_sets: int
     reps_min: int
     reps_max: int | None
+    rest_seconds: int | None
 
 
 class WorkoutResponseSchema(BaseModel):
@@ -121,3 +125,71 @@ class WorkoutResponseSchema(BaseModel):
     description: str | None
     exercises: list[WorkoutExerciseResponseSchema]
     updated_at: datetime | None
+
+
+class StartSessionSchema(BaseModel):
+    workout_id: int | None = None
+
+
+class AddSessionExerciseSchema(BaseModel):
+    exercise_id: int
+
+
+class EditSessionExerciseSchema(BaseModel):
+    exercise_id: int | None = None
+    rest_seconds: int | None = Field(default=None, ge=0, le=900)
+
+
+class SetSchema(BaseModel):
+    weight_kg: float = Field(ge=0, le=1000)
+    reps: int = Field(ge=1, le=1000)
+
+
+class EditSetSchema(BaseModel):
+    weight_kg: float | None = Field(default=None, ge=0, le=1000)
+    reps: int | None = Field(default=None, ge=1, le=1000)
+
+
+class FinishSessionSchema(BaseModel):
+    completed_at: datetime | None = None
+
+
+class SetResponseSchema(BaseModel):
+    id: int
+    position: int
+    weight_kg: float
+    reps: int
+    created_at: datetime
+
+
+class PreviousSetSchema(BaseModel):
+    weight_kg: float
+    reps: int
+
+
+class SessionExerciseResponseSchema(BaseModel):
+    id: int
+    exercise_id: int | None
+    exercise_name: str
+    muscle_group: str
+    equipment: str
+    target_sets: int | None
+    reps_min: int | None
+    reps_max: int | None
+    rest_seconds: int | None
+    sets: list[SetResponseSchema]
+    previous: list[PreviousSetSchema]
+    previous_at: datetime | None
+
+
+class SessionResponseSchema(BaseModel):
+    id: int
+    workout_id: int | None
+    name: str
+    status: str
+    started_at: datetime
+    completed_at: datetime | None
+    last_activity_at: datetime
+    total_sets: int
+    volume_kg: float
+    exercises: list[SessionExerciseResponseSchema]

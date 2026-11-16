@@ -123,6 +123,7 @@ def upgrade() -> None:
         sa.Column('target_sets', sa.Integer(), nullable=False),
         sa.Column('reps_min', sa.Integer(), nullable=False),
         sa.Column('reps_max', sa.Integer(), nullable=True),
+        sa.Column('rest_seconds', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['workout_id'], ['fitness_workouts.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['exercise_id'], ['fitness_exercises.id']),
         sa.PrimaryKeyConstraint('id'),
@@ -131,8 +132,81 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_fitness_workout_exercises_workout_id'), ['workout_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_fitness_workout_exercises_exercise_id'), ['exercise_id'], unique=False)
 
+    op.create_table(
+        'fitness_sessions',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('workout_id', sa.Integer(), nullable=True),
+        sa.Column('name', sa.String(length=60), nullable=False),
+        sa.Column('status', sa.String(length=20), nullable=False),
+        sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['workout_id'], ['fitness_workouts.id'], ondelete='SET NULL'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_sessions', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_sessions_workout_id'), ['workout_id'], unique=False)
+        batch_op.create_index('ix_fitness_sessions_user_started', ['user_id', 'started_at'], unique=False)
+        batch_op.create_index(
+            'ix_fitness_sessions_one_active',
+            ['user_id'],
+            unique=True,
+            sqlite_where=sa.text("status = 'in_progress'"),
+            postgresql_where=sa.text("status = 'in_progress'"),
+        )
+
+    op.create_table(
+        'fitness_session_exercises',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('session_id', sa.Integer(), nullable=False),
+        sa.Column('exercise_id', sa.Integer(), nullable=True),
+        sa.Column('workout_exercise_id', sa.Integer(), nullable=True),
+        sa.Column('exercise_name', sa.String(length=60), nullable=False),
+        sa.Column('muscle_group', sa.String(length=20), nullable=False),
+        sa.Column('equipment', sa.String(length=20), nullable=False),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.Column('target_sets', sa.Integer(), nullable=True),
+        sa.Column('reps_min', sa.Integer(), nullable=True),
+        sa.Column('reps_max', sa.Integer(), nullable=True),
+        sa.Column('rest_seconds', sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(['session_id'], ['fitness_sessions.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['exercise_id'], ['fitness_exercises.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['workout_exercise_id'], ['fitness_workout_exercises.id'], ondelete='SET NULL'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_session_exercises', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_session_exercises_session_id'), ['session_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_fitness_session_exercises_exercise_id'), ['exercise_id'], unique=False)
+
+    op.create_table(
+        'fitness_sets',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('session_exercise_id', sa.Integer(), nullable=False),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.Column('weight_kg', sa.Numeric(precision=6, scale=2), nullable=False),
+        sa.Column('reps', sa.Integer(), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(['session_exercise_id'], ['fitness_session_exercises.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_sets', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_sets_session_exercise_id'), ['session_exercise_id'], unique=False)
+
 
 def downgrade() -> None:
+    with op.batch_alter_table('fitness_sets', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_sets_session_exercise_id'))
+    op.drop_table('fitness_sets')
+    with op.batch_alter_table('fitness_session_exercises', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_session_exercises_exercise_id'))
+        batch_op.drop_index(batch_op.f('ix_fitness_session_exercises_session_id'))
+    op.drop_table('fitness_session_exercises')
+    with op.batch_alter_table('fitness_sessions', schema=None) as batch_op:
+        batch_op.drop_index('ix_fitness_sessions_one_active')
+        batch_op.drop_index('ix_fitness_sessions_user_started')
+        batch_op.drop_index(batch_op.f('ix_fitness_sessions_workout_id'))
+    op.drop_table('fitness_sessions')
     with op.batch_alter_table('fitness_workout_exercises', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_workout_exercises_exercise_id'))
         batch_op.drop_index(batch_op.f('ix_fitness_workout_exercises_workout_id'))
