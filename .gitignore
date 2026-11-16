@@ -3,11 +3,12 @@
 venv/
 env/
 
-# Cache do Pyrthon
+# Cache do Python
 __pycache__/
 *.pyc
-*pyo
-*pyd
+*.pyo
+*.pyd
+.pytest_cache/
 
 # Banco SQLite
 *.db
@@ -26,10 +27,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Arquivos do alembic
-alembic/versions/*.pyc
-
-# Arquivos temporarios 
+# Arquivos temporarios
 *.swp
 
 # Variáveis de ambiente
