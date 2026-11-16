@@ -100,8 +100,46 @@ def upgrade() -> None:
         ],
     )
 
+    op.create_table(
+        'fitness_workouts',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=60), nullable=False),
+        sa.Column('description', sa.String(length=300), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_workouts', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_workouts_user_id'), ['user_id'], unique=False)
+
+    op.create_table(
+        'fitness_workout_exercises',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('workout_id', sa.Integer(), nullable=False),
+        sa.Column('exercise_id', sa.Integer(), nullable=False),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.Column('target_sets', sa.Integer(), nullable=False),
+        sa.Column('reps_min', sa.Integer(), nullable=False),
+        sa.Column('reps_max', sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(['workout_id'], ['fitness_workouts.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['exercise_id'], ['fitness_exercises.id']),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_workout_exercises', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_workout_exercises_workout_id'), ['workout_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_fitness_workout_exercises_exercise_id'), ['exercise_id'], unique=False)
+
 
 def downgrade() -> None:
+    with op.batch_alter_table('fitness_workout_exercises', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_workout_exercises_exercise_id'))
+        batch_op.drop_index(batch_op.f('ix_fitness_workout_exercises_workout_id'))
+    op.drop_table('fitness_workout_exercises')
+    with op.batch_alter_table('fitness_workouts', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_workouts_user_id'))
+    op.drop_table('fitness_workouts')
     with op.batch_alter_table('fitness_exercises', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_exercises_user_id'))
     op.drop_table('fitness_exercises')

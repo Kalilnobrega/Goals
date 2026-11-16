@@ -1,5 +1,6 @@
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 MuscleGroup = Literal[
@@ -28,10 +29,10 @@ Equipment = Literal[
 ]
 
 
-def clean_name(value: str) -> str:
+def clean_name(value: str, message: str = "Dê um nome para o exercício.") -> str:
     value = " ".join(value.split())
     if not value:
-        raise ValueError("Dê um nome para o exercício.")
+        raise ValueError(message)
     return value
 
 
@@ -65,3 +66,58 @@ class ExerciseResponseSchema(BaseModel):
     muscle_group: str
     equipment: str
     is_custom: bool
+
+
+class WorkoutExerciseSchema(BaseModel):
+    exercise_id: int
+    target_sets: int = Field(ge=1, le=20)
+    reps_min: int = Field(ge=1, le=100)
+    reps_max: int | None = Field(default=None, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def reps_range(self):
+        if self.reps_max is not None:
+            if self.reps_max < self.reps_min:
+                raise ValueError("O máximo de repetições não pode ser menor que o mínimo.")
+            if self.reps_max == self.reps_min:
+                self.reps_max = None
+        return self
+
+
+class WorkoutSchema(BaseModel):
+    name: str = Field(max_length=60)
+    description: str | None = Field(default=None, max_length=300)
+    exercises: list[WorkoutExerciseSchema] = Field(default_factory=list, max_length=40)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        return clean_name(value, "Dê um nome para a ficha.")
+
+    @field_validator("description")
+    @classmethod
+    def description_blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class WorkoutExerciseResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    exercise: ExerciseResponseSchema
+    target_sets: int
+    reps_min: int
+    reps_max: int | None
+
+
+class WorkoutResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str | None
+    exercises: list[WorkoutExerciseResponseSchema]
+    updated_at: datetime | None

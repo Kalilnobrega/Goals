@@ -4,8 +4,14 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise
-from app.fitness_schemas import ExerciseSchema, EditExerciseSchema, ExerciseResponseSchema
+from app.fitness_models import Exercise, Workout, WorkoutExercise
+from app.fitness_schemas import (
+    ExerciseSchema,
+    EditExerciseSchema,
+    ExerciseResponseSchema,
+    WorkoutSchema,
+    WorkoutResponseSchema,
+)
 from .auth import get_current_user
 
 fitness_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -86,6 +92,125 @@ def delete_exercise(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    session.delete(get_own_exercise(exercise_id, user, session))
+    exercise = get_own_exercise(exercise_id, user, session)
+    used_in = [
+        name
+        for (name,) in session.query(Workout.name)
+        .join(WorkoutExercise, WorkoutExercise.workout_id == Workout.id)
+        .filter(WorkoutExercise.exercise_id == exercise.id)
+        .distinct()
+        .order_by(Workout.name)
+    ]
+    if used_in:
+        listed = ", ".join(used_in)
+        noun = "na ficha" if len(used_in) == 1 else "nas fichas"
+        raise HTTPException(
+            status_code=409,
+            detail=f"Esse exercício está {noun} {listed}. Tire ele de lá antes de excluir.",
+        )
+    session.delete(exercise)
     session.commit()
     return {"message": "Exercício excluído"}
+
+
+def get_own_workout(workout_id: int, user: User, session: Session) -> Workout:
+    workout = (
+        session.query(Workout)
+        .filter(Workout.id == workout_id, Workout.user_id == user.id)
+        .first()
+    )
+    if not workout:
+        raise HTTPException(status_code=404, detail="Ficha não encontrada")
+    return workout
+
+
+def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -> list[WorkoutExercise]:
+    ids = {item.exercise_id for item in data.exercises}
+    found = {
+        exercise_id
+        for (exercise_id,) in visible_exercises(user, session)
+        .filter(Exercise.id.in_(ids))
+        .with_entities(Exercise.id)
+    } if ids else set()
+    if ids - found:
+        raise HTTPException(status_code=400, detail="Algum exercício da ficha não foi encontrado.")
+    return [
+        WorkoutExercise(
+            exercise_id=item.exercise_id,
+            position=index,
+            target_sets=item.target_sets,
+            reps_min=item.reps_min,
+            reps_max=item.reps_max,
+        )
+        for index, item in enumerate(data.exercises)
+    ]
+
+
+@fitness_router.get("/workouts", response_model=List[WorkoutResponseSchema])
+def list_workouts(
+    user: User = Depends(get_current_user), session: Session = Depends(get_db)
+):
+    return (
+        session.query(Workout)
+        .filter(Workout.user_id == user.id)
+        .order_by(Workout.updated_at.desc(), Workout.id.desc())
+        .all()
+    )
+
+
+@fitness_router.get("/workouts/{workout_id}", response_model=WorkoutResponseSchema)
+def get_workout(
+    workout_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    return get_own_workout(workout_id, user, session)
+
+
+@fitness_router.post("/workouts", response_model=WorkoutResponseSchema)
+def create_workout(
+    data: WorkoutSchema,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    workout = Workout(
+        user_id=user.id,
+        name=data.name,
+        description=data.description,
+        exercises=build_workout_exercises(data, user, session),
+    )
+    session.add(workout)
+    session.commit()
+    session.refresh(workout)
+    return workout
+
+
+@fitness_router.put("/workouts/{workout_id}", response_model=WorkoutResponseSchema)
+def replace_workout(
+    workout_id: int,
+    data: WorkoutSchema,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    workout = get_own_workout(workout_id, user, session)
+    items = build_workout_exercises(data, user, session)
+    workout.name = data.name
+    workout.description = data.description
+    workout.exercises.clear()
+    session.flush()
+    workout.exercises.extend(items)
+    workout.updated_at = func.now()
+    session.commit()
+    session.refresh(workout)
+    return workout
+
+
+@fitness_router.delete("/workouts/{workout_id}")
+def delete_workout(
+    workout_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    session.delete(get_own_workout(workout_id, user, session))
+    session.commit()
+    return {"message": "Ficha excluída"}
