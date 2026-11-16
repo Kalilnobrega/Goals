@@ -45,17 +45,17 @@
   height: 56px;
   border: none;
   border-radius: 18px;
-  background: var(--gym-surface-2);
-  color: var(--gym-faint);
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  box-shadow: var(--gym-accent-glow);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  cursor: pointer;
 }
 
-.start small {
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: 0.8rem;
+.start:disabled {
+  opacity: 0.6;
 }
 
 .state {

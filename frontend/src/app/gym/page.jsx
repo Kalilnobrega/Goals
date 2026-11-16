@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { ClipboardList, Library, ChevronRight } from 'lucide-react';
 import { getUserName } from '../../lib/auth';
+import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import styles from './page.module.css';
 
 const subscribeToUserName = (onChange) => {
@@ -23,8 +24,10 @@ export default function GymHomePage() {
       <header>
         <p className={styles.kicker}>GymGoals</p>
         <h1 className={styles.title}>{firstName ? `Bora treinar, ${firstName}.` : 'Bora treinar.'}</h1>
-        <p className={styles.subtitle}>Monte suas fichas com os exercícios da biblioteca. O registro dos treinos chega em seguida.</p>
+        <p className={styles.subtitle}>Escolha uma ficha e registre cada série na hora. O histórico e a evolução chegam em seguida.</p>
       </header>
+
+      <ActiveSessionBanner />
 
       <Link href="/gym/workouts" className={styles.card}>
         <span className={styles.cardIcon}><ClipboardList size={22} /></span>

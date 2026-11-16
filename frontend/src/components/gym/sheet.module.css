@@ -1,0 +1,148 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.text {
+  color: var(--gym-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.text strong {
+  color: var(--gym-text);
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primary,
+.secondary,
+.danger {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 16px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.primary {
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.secondary {
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+}
+
+.danger {
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  background: rgba(255, 107, 107, 0.08);
+  color: var(--gym-danger);
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.option {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option small {
+  display: block;
+  color: var(--gym-muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+.option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.optionDanger {
+  color: var(--gym-danger);
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.chip {
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: var(--gym-accent);
+  border-color: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.statLabel {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}

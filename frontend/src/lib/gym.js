@@ -54,3 +54,61 @@ export function workoutMuscles(workout) {
 }
 
 export const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+
+const kgFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+const volumeFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+
+export const formatKg = (value) => kgFormat.format(value);
+
+export const formatVolume = (value) => `${volumeFormat.format(value)} kg`;
+
+export function parseKg(text) {
+  const clean = String(text).trim().replace(',', '.');
+  if (!clean || !/^\d+(\.\d{0,2})?$/.test(clean)) return null;
+  const value = Number(clean);
+  return value <= 1000 ? value : null;
+}
+
+export const kgInput = (value) => (value === null || value === undefined ? '' : formatKg(value).replace(/\./g, ''));
+
+export const cleanKgInput = (text) => text.replace(/\./g, ',').replace(/[^\d,]/g, '').replace(/,(?=.*,)/g, '').slice(0, 7);
+
+export const REST_OPTIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
+
+export function formatRest(seconds) {
+  if (!seconds) return 'Sem descanso';
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (!minutes) return `${rest}s`;
+  return rest ? `${minutes}min${String(rest).padStart(2, '0')}` : `${minutes}min`;
+}
+
+export function formatClock(totalSeconds) {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const mm = h ? String(m).padStart(2, '0') : String(m);
+  return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
+}
+
+export function formatDuration(ms) {
+  const minutes = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!h) return `${m}min`;
+  return m ? `${h}h ${String(m).padStart(2, '0')}min` : `${h}h`;
+}
+
+const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
+const longDateFormat = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+const timeFormat = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+export const formatShortDate = (iso) => dateFormat.format(new Date(iso));
+export const formatLongDate = (iso) => longDateFormat.format(new Date(iso));
+export const formatTime = (iso) => timeFormat.format(new Date(iso));
+
+export const sessionTarget = (item) =>
+  item.target_sets ? `${item.target_sets} × ${repsLabel(item.reps_min, item.reps_max)}` : null;
+
+export const FORGOTTEN_AFTER_MS = 4 * 60 * 60 * 1000;

@@ -1,14 +1,17 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, ChevronRight, ClipboardList } from 'lucide-react';
+import { Plus, Play, ClipboardList, Zap } from 'lucide-react';
 import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural } from '../../../lib/gym';
+import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
+import useStartSession from '../../../components/gym/useStartSession';
 import styles from './page.module.css';
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
+  const { begin, starting, sheet } = useStartSession();
 
   const fetchWorkouts = useCallback(() => {
     setLoadError(false);
@@ -32,6 +35,8 @@ export default function WorkoutsPage() {
           <Plus size={18} strokeWidth={2.4} /> Nova ficha
         </Link>
       </header>
+
+      <ActiveSessionBanner />
 
       {loadError && !workouts && (
         <div className={styles.state}>
@@ -62,8 +67,8 @@ export default function WorkoutsPage() {
           {workouts.map(workout => {
             const muscles = workoutMuscles(workout);
             return (
-              <li key={workout.id}>
-                <Link href={`/gym/workouts/${workout.id}`} className={styles.card}>
+              <li key={workout.id} className={styles.card}>
+                <Link href={`/gym/workouts/${workout.id}`} className={styles.cardLink}>
                   <span className={styles.cardMain}>
                     <span className={styles.cardName}>{workout.name}</span>
                     <span className={styles.cardMeta}>
@@ -86,13 +91,29 @@ export default function WorkoutsPage() {
                       </span>
                     )}
                   </span>
-                  <ChevronRight size={20} className={styles.chevron} aria-hidden="true" />
                 </Link>
+                <button
+                  type="button"
+                  className={styles.play}
+                  onClick={() => begin(workout.id)}
+                  disabled={starting}
+                  aria-label={`Iniciar ${workout.name}`}
+                >
+                  <Play size={20} fill="currentColor" />
+                </button>
               </li>
             );
           })}
         </ul>
       )}
+
+      {workouts && (
+        <button type="button" className={styles.free} onClick={() => begin(null)} disabled={starting}>
+          <Zap size={18} /> Começar treino livre
+        </button>
+      )}
+
+      {sheet}
 
       <Link href="/gym/workouts/new" className={styles.fab} aria-label="Nova ficha">
         <Plus size={26} strokeWidth={2.4} />

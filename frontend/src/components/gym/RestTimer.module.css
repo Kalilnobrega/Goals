@@ -1,0 +1,130 @@
+.timer {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--gym-tabbar-h) + 12px + env(safe-area-inset-bottom));
+  z-index: 45;
+  max-width: 560px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: rise var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes rise {
+  from { transform: translateY(16px); opacity: 0; }
+}
+
+.bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--gym-accent-soft);
+  transition: transform 1s linear;
+}
+
+.done {
+  border-color: var(--gym-accent);
+}
+
+.done .bar {
+  background: var(--gym-accent);
+  opacity: 0.18;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 16px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  color: var(--gym-accent);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.exercise {
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clock {
+  min-width: 64px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.adjust,
+.close {
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 12px;
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adjust {
+  width: 44px;
+}
+
+.stop {
+  width: 44px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 12px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  cursor: pointer;
+}
+
+.close {
+  width: 40px;
+  background: transparent;
+  color: var(--gym-muted);
+}
+
+@media (min-width: 768px) {
+  .timer {
+    bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer {
+    animation: none;
+  }
+
+  .bar {
+    transition: none;
+  }
+}

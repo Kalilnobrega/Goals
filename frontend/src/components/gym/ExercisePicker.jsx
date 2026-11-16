@@ -7,7 +7,7 @@ import styles from './ExercisePicker.module.css';
 
 const FILTERS = [{ value: 'all', label: 'Todos' }, ...MUSCLE_GROUPS];
 
-export default function ExercisePicker({ exercises, loadError, onRetry, onConfirm }) {
+export default function ExercisePicker({ exercises, loadError, onRetry, onConfirm, single = false }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState([]);
@@ -22,6 +22,7 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
   }, [exercises, query, filter]);
 
   const toggle = (exercise) => {
+    if (single) return onConfirm([exercise]);
     setSelected(list => (list.some(e => e.id === exercise.id)
       ? list.filter(e => e.id !== exercise.id)
       : [...list, exercise]));
@@ -106,16 +107,18 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
         })}
       </ul>
 
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={styles.confirm}
-          disabled={selected.length === 0}
-          onClick={() => onConfirm(selected)}
-        >
-          {selected.length ? `Adicionar ${plural(selected.length, 'exercício', 'exercícios')}` : 'Selecione exercícios'}
-        </button>
-      </div>
+      {!single && (
+        <div className={styles.footer}>
+          <button
+            type="button"
+            className={styles.confirm}
+            disabled={selected.length === 0}
+            onClick={() => onConfirm(selected)}
+          >
+            {selected.length ? `Adicionar ${plural(selected.length, 'exercício', 'exercícios')}` : 'Selecione exercícios'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

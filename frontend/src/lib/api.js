@@ -237,3 +237,23 @@ export const updateWorkout = (id, data) =>
   api.put(`/fitness/workouts/${id}`, data).then((r) => r.data);
 export const deleteWorkout = (id) =>
   api.delete(`/fitness/workouts/${id}`).then((r) => r.data);
+export const getActiveSession = () => api.get("/fitness/sessions/active").then((r) => r.data);
+export const getSession = (id) => api.get(`/fitness/sessions/${id}`).then((r) => r.data);
+export const startSession = (workoutId) =>
+  api.post("/fitness/sessions", { workout_id: workoutId ?? null }).then((r) => r.data);
+export const finishSession = (id, completedAt) =>
+  api.post(`/fitness/sessions/${id}/finish`, { completed_at: completedAt ?? null }).then((r) => r.data);
+export const deleteSession = (id) =>
+  api.delete(`/fitness/sessions/${id}`).then((r) => r.data);
+export const addSessionExercise = (sessionId, exerciseId) =>
+  api.post(`/fitness/sessions/${sessionId}/exercises`, { exercise_id: exerciseId }).then((r) => r.data);
+export const updateSessionExercise = (id, data) =>
+  api.patch(`/fitness/session-exercises/${id}`, data).then((r) => r.data);
+export const removeSessionExercise = (id) =>
+  api.delete(`/fitness/session-exercises/${id}`).then((r) => r.data);
+export const addSet = (itemId, data) =>
+  api.post(`/fitness/session-exercises/${itemId}/sets`, data).then((r) => r.data);
+export const updateSet = (id, data) =>
+  api.patch(`/fitness/sets/${id}`, data).then((r) => r.data);
+export const deleteSet = (id) =>
+  api.delete(`/fitness/sets/${id}`).then((r) => r.data);

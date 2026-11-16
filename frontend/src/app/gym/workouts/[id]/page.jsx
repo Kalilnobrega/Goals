@@ -8,6 +8,7 @@ import { apiError } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import WorkoutEditor from '../../../../components/gym/WorkoutEditor';
+import useStartSession from '../../../../components/gym/useStartSession';
 import styles from '../editor.module.css';
 
 export default function WorkoutPage() {
@@ -17,6 +18,7 @@ export default function WorkoutPage() {
   const confirmAction = useConfirm();
   const [workout, setWorkout] = useState(() => peekCache(`fitnessWorkout:${id}`) ?? null);
   const [status, setStatus] = useState('loading');
+  const { begin, starting, sheet } = useStartSession();
 
   const fetchWorkout = useCallback(() => {
     setStatus('loading');
@@ -90,12 +92,13 @@ export default function WorkoutPage() {
 
       {ready && (
         <>
-          <button type="button" className={styles.start} disabled title="O registro de treinos chega na próxima etapa">
-            <Play size={18} /> Iniciar treino <small>em breve</small>
+          <button type="button" className={styles.start} onClick={() => begin(workout.id)} disabled={starting}>
+            <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Iniciar treino'}
           </button>
           <WorkoutEditor key={workout.id} initial={workout} onSubmit={save} onDelete={remove} />
         </>
       )}
+      {sheet}
     </div>
   );
 }

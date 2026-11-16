@@ -1,0 +1,379 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface);
+}
+
+.complete {
+  border-color: rgba(198, 244, 50, 0.35);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.index {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.complete .index {
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: var(--gym-muted);
+  font-size: 0.84rem;
+}
+
+.target {
+  color: var(--gym-accent);
+  font-weight: 500;
+}
+
+.restChip {
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.menu {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  margin-right: -6px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.previous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--gym-bg);
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.previous > span:first-child {
+  margin-right: 2px;
+}
+
+.previousSet {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setRow {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: none;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.setIndex {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--gym-surface-3);
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.setValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.setValue small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--gym-muted);
+}
+
+.bodyweight {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.82rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.setTimes {
+  color: var(--gym-faint);
+}
+
+.setDone {
+  margin-left: auto;
+  color: var(--gym-accent);
+}
+
+.editRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-accent);
+  background: var(--gym-surface-2);
+}
+
+.editHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gym-muted);
+  font-size: 0.88rem;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+}
+
+.editDelete,
+.editCancel,
+.editSave {
+  height: 46px;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editDelete {
+  width: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  background: rgba(255, 107, 107, 0.08);
+  color: var(--gym-danger);
+}
+
+.editCancel {
+  flex: 1;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+}
+
+.editSave {
+  flex: 1;
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.newSet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.inputGroup {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-bg);
+  overflow: hidden;
+}
+
+.inputGroup:focus-within {
+  border-color: var(--gym-accent);
+}
+
+.step {
+  width: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.step:active {
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  line-height: 1.1;
+  text-align: center;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.input::placeholder {
+  color: var(--gym-faint);
+}
+
+.unit {
+  color: var(--gym-faint);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.newActions {
+  display: flex;
+  gap: 8px;
+}
+
+.log {
+  flex: 1;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 16px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-instant) var(--ease-out);
+}
+
+.log:active {
+  transform: scale(0.98);
+}
+
+.log:disabled {
+  opacity: 0.6;
+}
+
+.rest {
+  height: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.88rem;
+}

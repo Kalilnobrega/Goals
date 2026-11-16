@@ -148,24 +148,73 @@
 
 .card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px;
+  align-items: flex-start;
   border-radius: 20px;
   background: var(--gym-surface);
   border: 1px solid var(--gym-border);
-  color: var(--gym-text);
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .card:hover {
   border-color: var(--gym-border-strong);
 }
 
-.card:active {
+.cardLink {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  padding: 18px 8px 18px 18px;
+  border-radius: 20px;
+  color: var(--gym-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cardLink:active {
   background: var(--gym-surface-2);
+}
+
+.play {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  margin: 14px 14px 0 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-instant) var(--ease-out);
+}
+
+.play:active {
+  transform: scale(0.94);
+}
+
+.play:disabled {
+  opacity: 0.6;
+}
+
+.free {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  border-radius: 16px;
+  border: 1px dashed var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.free:hover {
+  border-color: var(--gym-accent);
 }
 
 .cardMain {
@@ -224,11 +273,6 @@
 .previewMore {
   color: var(--gym-faint);
   font-size: 0.85rem;
-}
-
-.chevron {
-  flex-shrink: 0;
-  color: var(--gym-faint);
 }
 
 @media (min-width: 768px) {

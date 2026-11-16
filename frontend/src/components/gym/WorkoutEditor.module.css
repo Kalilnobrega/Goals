@@ -308,6 +308,24 @@
   border-color: var(--gym-accent);
 }
 
+.restSelect {
+  height: 44px;
+  min-width: 96px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 500;
+  color-scheme: dark;
+  outline: none;
+}
+
+.restSelect:focus {
+  border-color: var(--gym-accent);
+}
+
 .repsSep {
   color: var(--gym-muted);
   font-size: 0.88rem;

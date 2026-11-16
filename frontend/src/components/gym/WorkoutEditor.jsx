@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { muscleLabel, equipmentLabel, plural } from '../../lib/gym';
+import { muscleLabel, equipmentLabel, plural, REST_OPTIONS, formatRest } from '../../lib/gym';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import GymSheet from './GymSheet';
 import ExercisePicker from './ExercisePicker';
@@ -17,6 +17,7 @@ const toItem = (row) => ({
   target_sets: row.target_sets,
   reps_min: String(row.reps_min),
   reps_max: row.reps_max ? String(row.reps_max) : '',
+  rest_seconds: row.rest_seconds ?? null,
 });
 
 const toPayload = (name, description, items) => ({
@@ -27,6 +28,7 @@ const toPayload = (name, description, items) => ({
     target_sets: item.target_sets,
     reps_min: Number(item.reps_min),
     reps_max: item.reps_max ? Number(item.reps_max) : null,
+    rest_seconds: item.rest_seconds,
   })),
 });
 
@@ -88,7 +90,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), exercise, target_sets: 3, reps_min: '10', reps_max: '' })),
+      ...selected.map(exercise => ({ key: newKey(), exercise, target_sets: 3, reps_min: '10', reps_max: '', rest_seconds: null })),
     ]);
     setPickerOpen(false);
     setError('');
@@ -235,6 +237,19 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                             />
                           </div>
                         </div>
+                        <label className={styles.target}>
+                          <span className={styles.targetLabel}>Descanso</span>
+                          <select
+                            className={styles.restSelect}
+                            value={item.rest_seconds ?? ''}
+                            onChange={e => updateItem(item.key, { rest_seconds: e.target.value ? Number(e.target.value) : null })}
+                          >
+                            <option value="">—</option>
+                            {REST_OPTIONS.map(seconds => (
+                              <option key={seconds} value={seconds}>{formatRest(seconds)}</option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
                     </li>
                   )}

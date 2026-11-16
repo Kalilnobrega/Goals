@@ -1,0 +1,212 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 80px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gym-accent);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gym-accent);
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+.more {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-right: -8px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.headerStats {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.clock {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.headerMeta {
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 44px 20px;
+  border-radius: 22px;
+  border: 1px dashed var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-faint);
+  font: inherit;
+  cursor: pointer;
+}
+
+.emptyTitle {
+  margin-top: 4px;
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.emptyText {
+  color: var(--gym-muted);
+  font-size: 0.92rem;
+}
+
+.add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px dashed var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.finish {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  margin-top: 8px;
+  border-radius: 18px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.doneHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.trophy {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 6px;
+  border-radius: 18px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  box-shadow: var(--gym-accent-glow);
+}
+
+.kicker {
+  color: var(--gym-accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+  border-radius: 20px;
+  border: 1px dashed var(--gym-border-strong);
+}
+
+.stateAction {
+  color: var(--gym-accent);
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.skeletonHeader {
+  height: 96px;
+  border-radius: 18px;
+  background: var(--gym-surface);
+}
+
+.skeletonCard {
+  height: 220px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
