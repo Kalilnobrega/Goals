@@ -1,0 +1,101 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  animation: fadeIn var(--dur-base) var(--ease-out) both;
+}
+
+.overlayClosing {
+  pointer-events: none;
+  animation: fadeOut var(--dur-fast) var(--ease-in) forwards;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: sheetUp var(--dur-slow) var(--ease-out) both;
+}
+
+.sheetClosing {
+  animation: sheetDown var(--dur-fast) var(--ease-in) forwards;
+}
+
+.grip {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gym-surface-3);
+  margin: 10px auto 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px 4px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gym-text);
+}
+
+.close {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 12px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.body {
+  overflow-y: auto;
+  padding: 12px 20px 24px;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .sheet {
+    border-radius: 24px;
+    border-bottom: 1px solid var(--gym-border);
+  }
+
+  .grip {
+    display: none;
+  }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheetDown { from { transform: none; } to { transform: translateY(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .sheet, .overlayClosing, .sheetClosing {
+    animation-duration: 1ms;
+  }
+}

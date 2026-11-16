@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 
-const ROUTES_WITHOUT_NAVBAR = ['/login', '/register', '/forgot-password', '/verify-email'];
+const ROUTES_WITHOUT_NAVBAR = ['/login', '/register', '/forgot-password', '/verify-email', '/gym', '/apps'];
 
 export default function AppNavbar() {
   const pathname = usePathname();

@@ -220,3 +220,12 @@ export const transferLeadership = (groupId, userId) =>
   api.post(`/groups/${groupId}/transfer`, { user_id: userId }).then((r) => r.data);
 export const removeMember = (groupId, userId) =>
   api.delete(`/groups/${groupId}/members/${userId}`).then((r) => r.data);
+
+// ── GymGoals ───────────────────────────────────────────
+export const getExercises = () => cachedGet("fitnessExercises", "/fitness/exercises");
+export const createExercise = (data) =>
+  api.post("/fitness/exercises", data).then((r) => r.data);
+export const updateExercise = (id, data) =>
+  api.patch(`/fitness/exercises/${id}`, data).then((r) => r.data);
+export const deleteExercise = (id) =>
+  api.delete(`/fitness/exercises/${id}`).then((r) => r.data);
