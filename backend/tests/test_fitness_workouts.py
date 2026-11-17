@@ -7,7 +7,7 @@ from tests.test_shared_goals import make_user, headers_for
 def library(db_session):
     exercises = [
         Exercise(slug="supino-reto", name="Supino reto", muscle_group="chest", equipment="barbell"),
-        Exercise(slug="leg-press", name="Leg press", muscle_group="legs", equipment="machine"),
+        Exercise(slug="leg-press", name="Leg press", muscle_group="quads", equipment="machine"),
         Exercise(slug="rosca-direta", name="Rosca direta", muscle_group="biceps", equipment="barbell"),
     ]
     db_session.add_all(exercises)

@@ -41,7 +41,7 @@ def test_progress_exercises_lists_trained_exercises(client, library, ana):
     assert by_name["Supino reto"]["best_weight_kg"] == 70
     assert by_name["Supino reto"]["max_reps"] == 10
     assert by_name["Leg press"]["sessions"] == 1
-    assert by_name["Leg press"]["muscle_group"] == "legs"
+    assert by_name["Leg press"]["muscle_group"] == "quads"
 
 
 def test_progress_exercises_is_empty_without_completed_sessions(client, library, ana):

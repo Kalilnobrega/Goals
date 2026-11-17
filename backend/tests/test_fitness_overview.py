@@ -106,7 +106,7 @@ def test_overview_suggests_the_workout_done_longest_ago(client, library, ana, db
     assert suggestion["id"] == first["id"]
     assert suggestion["name"] == "Treino A"
     assert suggestion["exercise_count"] == 2
-    assert suggestion["muscle_groups"] == ["chest", "legs"]
+    assert suggestion["muscle_groups"] == ["chest", "quads"]
     assert suggestion["last_done_at"] is not None
 
 

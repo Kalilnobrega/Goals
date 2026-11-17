@@ -87,8 +87,8 @@ def test_stats_muscle_groups(client, library, ana, db_session):
     assert muscles["chest"]["previous_sets"] == 1
     assert muscles["chest"]["days_since"] == 1
     assert sum(muscles["chest"]["series"]) == 3
-    assert muscles["legs"]["volume_kg"] == 1000
-    assert muscles["legs"]["sessions"] == 1
+    assert muscles["quads"]["volume_kg"] == 1000
+    assert muscles["quads"]["sessions"] == 1
 
 
 def test_stats_lists_neglected_groups_trained_before_the_period(client, library, ana, db_session):
@@ -98,8 +98,8 @@ def test_stats_lists_neglected_groups_trained_before_the_period(client, library,
     train(client, headers, db_session, workout["id"], [[(60, 10)]], at(3))
 
     muscles = {m["muscle_group"]: m for m in stats(client, headers, "4w")["muscles"]}
-    assert muscles["legs"]["sets"] == 0
-    assert muscles["legs"]["days_since"] == 50
+    assert muscles["quads"]["sets"] == 0
+    assert muscles["quads"]["days_since"] == 50
 
 
 def test_stats_progressions_declines_and_records(client, library, ana, db_session):

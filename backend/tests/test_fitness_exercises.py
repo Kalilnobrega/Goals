@@ -7,7 +7,7 @@ from tests.test_shared_goals import make_user, headers_for
 def library(db_session):
     exercises = [
         Exercise(slug="supino-reto", name="Supino reto", muscle_group="chest", equipment="barbell"),
-        Exercise(slug="leg-press", name="Leg press", muscle_group="legs", equipment="machine"),
+        Exercise(slug="leg-press", name="Leg press", muscle_group="quads", equipment="machine"),
     ]
     db_session.add_all(exercises)
     db_session.commit()
@@ -123,6 +123,7 @@ def test_library_exercises_cannot_be_changed(client, library, ana):
     [
         {"name": "   ", "muscle_group": "back", "equipment": "cable"},
         {"name": "Remada", "muscle_group": "costas", "equipment": "cable"},
+        {"name": "Agachamento", "muscle_group": "legs", "equipment": "barbell"},
         {"name": "Remada", "muscle_group": "back", "equipment": "trator"},
         {"name": "x" * 61, "muscle_group": "back", "equipment": "cable"},
     ],
@@ -155,3 +156,10 @@ def test_duplicate_names_are_rejected(client, library, ana, bruno):
     assert client.patch(
         f"/fitness/exercises/{first['id']}", json={"name": "Remada Máquina"}, headers=ana_headers
     ).status_code == 200
+
+
+@pytest.mark.parametrize("group", ["quads", "hamstrings", "calves", "adductors"])
+def test_leg_muscle_groups_are_split(client, ana, group):
+    _, headers = ana
+    created = create_exercise(client, headers, name=f"Exercício {group}", muscle_group=group, equipment="machine")
+    assert created["muscle_group"] == group

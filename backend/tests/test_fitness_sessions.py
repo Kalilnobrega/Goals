@@ -8,7 +8,7 @@ from tests.test_shared_goals import make_user, headers_for
 def library(db_session):
     exercises = [
         Exercise(slug="supino-reto", name="Supino reto", muscle_group="chest", equipment="barbell"),
-        Exercise(slug="leg-press", name="Leg press", muscle_group="legs", equipment="machine"),
+        Exercise(slug="leg-press", name="Leg press", muscle_group="quads", equipment="machine"),
         Exercise(slug="rosca-direta", name="Rosca direta", muscle_group="biceps", equipment="barbell"),
     ]
     db_session.add_all(exercises)
@@ -481,7 +481,7 @@ def test_history_totals_skip_exercises_without_sets(client, library, ana):
     assert item["exercise_count"] == 2
     assert item["total_sets"] == 3
     assert item["volume_kg"] == 60 * 10 + 100 * 12 + 62.5 * 8
-    assert item["muscle_groups"] == ["chest", "legs"]
+    assert item["muscle_groups"] == ["chest", "quads"]
     assert item["completed_at"] >= item["started_at"]
 
 
