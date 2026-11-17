@@ -1,0 +1,18 @@
+{
+  "id": "/gym",
+  "name": "GymGoals",
+  "short_name": "GymGoals",
+  "description": "Organize seus treinos, registre suas cargas e acompanhe sua evolução.",
+  "lang": "pt-BR",
+  "start_url": "/gym",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1013",
+  "theme_color": "#0e1013",
+  "icons": [
+    { "src": "/icons/gym-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/gym-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/gym-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -9,6 +9,26 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 export const metadata = {
   title: "Goals — Gerencie suas metas",
   description: "Acompanhe suas metas e tarefas com clareza e foco.",
+  applicationName: "Goals",
+  manifest: "/goals.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Goals",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/icons/goals-apple-180.png",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#dbeafe",
 };
 
 export default function RootLayout({ children }) {
