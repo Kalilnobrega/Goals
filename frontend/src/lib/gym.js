@@ -122,3 +122,22 @@ export const sessionTarget = (item) =>
   item.target_sets ? `${item.target_sets} × ${repsLabel(item.reps_min, item.reps_max)}` : null;
 
 export const FORGOTTEN_AFTER_MS = 4 * 60 * 60 * 1000;
+
+export const parseDay = (iso) => {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+export const todayIso = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+export const formatDay = (iso) => dateFormat.format(parseDay(iso));
+export const formatLongDay = (iso) => longDateFormat.format(parseDay(iso));
+
+export function formatDelta(value, unit = 'kg') {
+  const rounded = Math.round(value * 10) / 10;
+  if (!rounded) return `0 ${unit}`;
+  return `${rounded > 0 ? '+' : '−'}${formatKg(Math.abs(rounded))} ${unit}`;
+}

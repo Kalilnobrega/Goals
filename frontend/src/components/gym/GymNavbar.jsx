@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, Library, History, ArrowLeftRight } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, Library, History, TrendingUp, ArrowLeftRight } from 'lucide-react';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -9,6 +9,7 @@ const links = [
   { href: '/gym/workouts', label: 'Treinos', icon: ClipboardList },
   { href: '/gym/exercises', label: 'Exercícios', icon: Library },
   { href: '/gym/history', label: 'Histórico', icon: History },
+  { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
 ];
 
 export default function GymNavbar() {

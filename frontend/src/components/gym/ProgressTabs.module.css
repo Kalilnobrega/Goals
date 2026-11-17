@@ -1,0 +1,27 @@
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.tab {
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--gym-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.92rem;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.active {
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+}

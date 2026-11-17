@@ -1,0 +1,91 @@
+.chart {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  border-radius: 14px;
+  touch-action: pan-y;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chart:focus-visible {
+  box-shadow: 0 0 0 2px var(--gym-accent);
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--gym-border);
+  stroke-width: 1;
+}
+
+.axis {
+  font-size: 10.5px;
+  fill: var(--gym-faint);
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.area {
+  fill: var(--gym-accent-soft);
+}
+
+.line {
+  fill: none;
+  stroke: var(--gym-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--gym-accent);
+  stroke: var(--gym-surface);
+  stroke-width: 2;
+  transition: r var(--dur-fast) var(--ease-out);
+}
+
+.dotActive {
+  stroke: var(--gym-text);
+}
+
+.crosshair {
+  stroke: var(--gym-border-strong);
+  stroke-width: 1;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--gym-surface-3);
+  border: 1px solid var(--gym-border-strong);
+  color: var(--gym-text);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.tooltip strong {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltip span {
+  color: var(--gym-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    transition: none;
+  }
+}

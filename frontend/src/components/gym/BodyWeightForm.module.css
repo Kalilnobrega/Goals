@@ -1,0 +1,128 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.label small {
+  color: var(--gym-faint);
+  font-weight: 400;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 1rem;
+  color-scheme: dark;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.input::placeholder {
+  color: var(--gym-faint);
+}
+
+.input:focus {
+  border-color: var(--gym-accent);
+}
+
+.weightWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.weight {
+  padding-right: 40px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  position: absolute;
+  right: 14px;
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.88rem;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.save {
+  flex: 1;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 16px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.delete {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 16px;
+  background: rgba(255, 107, 107, 0.08);
+  color: var(--gym-danger);
+  cursor: pointer;
+}
+
+.save:disabled,
+.delete:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

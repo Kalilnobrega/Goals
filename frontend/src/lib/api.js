@@ -264,3 +264,13 @@ export const updateSet = (id, data) =>
   api.patch(`/fitness/sets/${id}`, data).then((r) => r.data);
 export const deleteSet = (id) =>
   api.delete(`/fitness/sets/${id}`).then((r) => r.data);
+export const getProgressExercises = () => cachedGet("fitnessProgress", "/fitness/progress/exercises");
+export const getExerciseProgress = (id) =>
+  cachedGet(`fitnessProgress:${id}`, `/fitness/exercises/${id}/progress`);
+export const getBodyWeights = () => cachedGet("fitnessBodyWeight", "/fitness/body-weight");
+export const logBodyWeight = (data) =>
+  api.post("/fitness/body-weight", data).then((r) => r.data);
+export const updateBodyWeight = (id, data) =>
+  api.patch(`/fitness/body-weight/${id}`, data).then((r) => r.data);
+export const deleteBodyWeight = (id) =>
+  api.delete(`/fitness/body-weight/${id}`).then((r) => r.data);
