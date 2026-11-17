@@ -350,3 +350,135 @@ class CalendarSchema(BaseModel):
     total_sessions: int
     days_trained: int
     days: list[CalendarDaySchema]
+
+
+class StatsTotalsSchema(BaseModel):
+    sessions: int
+    minutes: int
+    sets: int
+    reps: int
+    volume_kg: float
+    active_days: int
+    avg_minutes: int
+    per_week: float
+
+
+class StatsBucketSchema(BaseModel):
+    start: date
+    sessions: int
+    sets: int
+    volume_kg: float
+    minutes: int
+
+
+class StatsDayPartSchema(BaseModel):
+    part: str
+    sessions: int
+
+
+class StatsConsistencySchema(BaseModel):
+    current_week_streak: int
+    best_week_streak: int
+    weekdays: list[int]
+    day_parts: list[StatsDayPartSchema]
+
+
+class StatsMuscleSchema(BaseModel):
+    muscle_group: str
+    sets: int
+    volume_kg: float
+    sessions: int
+    share: float
+    previous_sets: int
+    last_trained_on: date | None
+    days_since: int | None
+    series: list[int]
+
+
+class StatsExerciseUsageSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    sessions: int
+    sets: int
+    volume_kg: float
+
+
+class StatsProgressionSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    metric: str
+    first_kg: float
+    last_kg: float
+    change_kg: float
+    change_pct: float
+    sessions: int
+
+
+class StatsRecordSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    weight_kg: float
+    reps: int
+    previous_kg: float
+    session_id: int
+    date: date
+
+
+class StatsWorkoutSchema(BaseModel):
+    workout_id: int | None
+    name: str
+    sessions: int
+    avg_minutes: int
+    avg_volume_kg: float
+    volume_change_pct: float | None
+    last_done_on: date
+
+
+class StatsSessionRefSchema(BaseModel):
+    session_id: int
+    name: str
+    date: date
+    value: float
+
+
+class StatsHeaviestSetSchema(BaseModel):
+    session_id: int
+    name: str
+    date: date
+    weight_kg: float
+    reps: int
+
+
+class StatsAllTimeRecordsSchema(BaseModel):
+    biggest_volume: StatsSessionRefSchema
+    longest: StatsSessionRefSchema
+    most_sets: StatsSessionRefSchema
+    heaviest_set: StatsHeaviestSetSchema | None
+
+
+class StatsAllTimeSchema(BaseModel):
+    sessions: int
+    volume_kg: float
+    minutes: int
+    first_session_on: date | None
+    records: StatsAllTimeRecordsSchema | None
+
+
+class StatsSchema(BaseModel):
+    period: str
+    start: date
+    end: date
+    bucket: str
+    summary: StatsTotalsSchema
+    previous: StatsTotalsSchema | None
+    timeline: list[StatsBucketSchema]
+    consistency: StatsConsistencySchema
+    muscles: list[StatsMuscleSchema]
+    most_done: list[StatsExerciseUsageSchema]
+    progressions: list[StatsProgressionSchema]
+    declines: list[StatsProgressionSchema]
+    records: list[StatsRecordSchema]
+    workouts: list[StatsWorkoutSchema]
+    all_time: StatsAllTimeSchema
