@@ -186,6 +186,24 @@ class SessionExerciseResponseSchema(BaseModel):
     previous_at: datetime | None
 
 
+class SessionHistoryItemSchema(BaseModel):
+    id: int
+    workout_id: int | None
+    name: str
+    started_at: datetime
+    completed_at: datetime
+    exercise_count: int
+    total_sets: int
+    volume_kg: float
+    muscle_groups: list[str]
+
+
+class SessionHistorySchema(BaseModel):
+    items: list[SessionHistoryItemSchema]
+    total: int
+    has_more: bool
+
+
 class SessionResponseSchema(BaseModel):
     id: int
     workout_id: int | None

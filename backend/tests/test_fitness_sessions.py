@@ -431,3 +431,95 @@ def test_cannot_add_foreign_custom_exercise(client, ana, bruno):
         f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": secret["id"]}, headers=ana_headers
     )
     assert response.status_code == 404
+
+
+def completed_session(client, headers, library, sets, workout_id=None):
+    session = start(client, headers, workout_id)
+    if workout_id is None:
+        session = client.post(
+            f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": library["rosca-direta"]}, headers=headers
+        ).json()
+    items = session["exercises"]
+    for index, (weight, reps) in enumerate(sets):
+        log_set(client, headers, items[index % len(items)]["id"], weight, reps)
+    assert finish(client, headers, session["id"]).status_code == 200
+    return session
+
+
+def history(client, headers, **params):
+    response = client.get("/fitness/sessions", params=params, headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_history_requires_authentication(client):
+    assert client.get("/fitness/sessions").status_code == 401
+
+
+def test_history_lists_completed_sessions_newest_first(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    first = completed_session(client, headers, library, [(60, 10)], workout["id"])
+    second = completed_session(client, headers, library, [(20, 12)])
+    start(client, headers, workout["id"])
+
+    data = history(client, headers)
+    assert [item["id"] for item in data["items"]] == [second["id"], first["id"]]
+    assert data["total"] == 2
+    assert data["has_more"] is False
+    assert data["items"][1]["name"] == "Treino A"
+    assert data["items"][0]["name"] == "Treino livre"
+    assert data["items"][0]["workout_id"] is None
+
+
+def test_history_totals_skip_exercises_without_sets(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    completed_session(client, headers, library, [(60, 10), (100, 12), (62.5, 8)], workout["id"])
+
+    item = history(client, headers)["items"][0]
+    assert item["exercise_count"] == 2
+    assert item["total_sets"] == 3
+    assert item["volume_kg"] == 60 * 10 + 100 * 12 + 62.5 * 8
+    assert item["muscle_groups"] == ["chest", "legs"]
+    assert item["completed_at"] >= item["started_at"]
+
+
+def test_history_paginates(client, library, ana):
+    _, headers = ana
+    ids = [completed_session(client, headers, library, [(10, 10)])["id"] for _ in range(5)]
+
+    page = history(client, headers, limit=2)
+    assert [item["id"] for item in page["items"]] == ids[::-1][:2]
+    assert page["total"] == 5
+    assert page["has_more"] is True
+
+    last = history(client, headers, limit=2, offset=4)
+    assert [item["id"] for item in last["items"]] == [ids[0]]
+    assert last["has_more"] is False
+
+
+@pytest.mark.parametrize("params", [{"limit": 0}, {"limit": 51}, {"offset": -1}])
+def test_history_rejects_bad_pagination(client, ana, params):
+    _, headers = ana
+    assert client.get("/fitness/sessions", params=params, headers=headers).status_code == 422
+
+
+def test_history_is_private(client, library, ana, bruno):
+    _, ana_headers = ana
+    _, bruno_headers = bruno
+    completed_session(client, ana_headers, library, [(60, 10)])
+    data = history(client, bruno_headers)
+    assert data == {"items": [], "total": 0, "has_more": False}
+
+
+def test_history_keeps_sessions_after_workout_is_deleted(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    completed_session(client, headers, library, [(60, 10)], workout["id"])
+    assert client.delete(f"/fitness/workouts/{workout['id']}", headers=headers).status_code == 200
+
+    item = history(client, headers)["items"][0]
+    assert item["name"] == "Treino A"
+    assert item["workout_id"] is None
+    assert item["total_sets"] == 1

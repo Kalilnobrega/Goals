@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, Workout, WorkoutExercise, SessionExercise
+from app.fitness_models import Exercise, Workout, WorkoutExercise, WorkoutSession, SessionExercise
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
@@ -215,6 +215,15 @@ def delete_workout(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ):
-    session.delete(get_own_workout(workout_id, user, session))
+    workout = get_own_workout(workout_id, user, session)
+    session.query(WorkoutSession).filter(WorkoutSession.workout_id == workout.id).update(
+        {WorkoutSession.workout_id: None}, synchronize_session=False
+    )
+    planned_ids = [item.id for item in workout.exercises]
+    if planned_ids:
+        session.query(SessionExercise).filter(SessionExercise.workout_exercise_id.in_(planned_ids)).update(
+            {SessionExercise.workout_exercise_id: None}, synchronize_session=False
+        )
+    session.delete(workout)
     session.commit()
     return {"message": "Ficha excluída"}

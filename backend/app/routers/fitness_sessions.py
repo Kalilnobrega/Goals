@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.fitness_schemas import (
     EditSetSchema,
     FinishSessionSchema,
     SessionResponseSchema,
+    SessionHistorySchema,
     SetResponseSchema,
 )
 from .auth import get_current_user
@@ -200,6 +202,74 @@ def commit_session(workout_session: WorkoutSession, db: Session) -> dict:
     db.commit()
     db.refresh(workout_session)
     return serialize_session(workout_session, db)
+
+
+def muscle_groups_by_session(session_ids: list[int], db: Session) -> dict[int, list[str]]:
+    rows = (
+        db.query(SessionExercise.session_id, SessionExercise.muscle_group, func.count(SetEntry.id))
+        .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        .filter(SessionExercise.session_id.in_(session_ids))
+        .group_by(SessionExercise.session_id, SessionExercise.muscle_group)
+        .all()
+    )
+    groups: dict[int, list[tuple[int, str]]] = {}
+    for session_id, muscle_group, count in rows:
+        groups.setdefault(session_id, []).append((count, muscle_group))
+    return {
+        session_id: [group for _, group in sorted(items, key=lambda pair: (-pair[0], pair[1]))]
+        for session_id, items in groups.items()
+    }
+
+
+@fitness_sessions_router.get("/sessions", response_model=SessionHistorySchema)
+def list_sessions(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    stats = (
+        db.query(
+            SessionExercise.session_id.label("session_id"),
+            func.count(func.distinct(SessionExercise.id)).label("exercise_count"),
+            func.count(SetEntry.id).label("total_sets"),
+            func.sum(SetEntry.weight_kg * SetEntry.reps).label("volume"),
+        )
+        .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        .group_by(SessionExercise.session_id)
+        .subquery()
+    )
+    completed = db.query(WorkoutSession).filter(
+        WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED
+    )
+    rows = (
+        completed.with_entities(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume)
+        .outerjoin(stats, stats.c.session_id == WorkoutSession.id)
+        .order_by(WorkoutSession.completed_at.desc(), WorkoutSession.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    muscles = muscle_groups_by_session([row[0].id for row in rows], db) if rows else {}
+    total = completed.count()
+    return {
+        "items": [
+            {
+                "id": workout_session.id,
+                "workout_id": workout_session.workout_id,
+                "name": workout_session.name,
+                "started_at": aware(workout_session.started_at),
+                "completed_at": aware(workout_session.completed_at),
+                "exercise_count": exercise_count or 0,
+                "total_sets": total_sets or 0,
+                "volume_kg": float(volume or 0),
+                "muscle_groups": muscles.get(workout_session.id, []),
+            }
+            for workout_session, exercise_count, total_sets, volume in rows
+        ],
+        "total": total,
+        "has_more": offset + len(rows) < total,
+    }
 
 
 @fitness_sessions_router.get("/sessions/active", response_model=SessionResponseSchema | None)
