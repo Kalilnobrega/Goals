@@ -207,3 +207,33 @@ def test_calendar_rejects_invalid_months(client, ana):
     _, headers = ana
     assert client.get("/fitness/calendar", params={"month": "2026-13"}, headers=headers).status_code == 400
     assert client.get("/fitness/calendar", params={"month": "março"}, headers=headers).status_code == 422
+
+
+def test_week_endpoint_returns_any_week(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    today = today_br()
+    monday = today - timedelta(days=today.weekday())
+    last_monday = monday - timedelta(days=7)
+    session = train(client, headers, workout["id"], [(60, 10), (60, 8)])
+    move_session(db_session, session["id"], br_day_start_utc(last_monday + timedelta(days=2)) + timedelta(hours=9), minutes=50)
+
+    previous = client.get("/fitness/week", params={"start": (last_monday + timedelta(days=4)).isoformat()}, headers=headers).json()
+    assert previous["start"] == last_monday.isoformat()
+    assert previous["sessions"] == 1
+    assert previous["sets"] == 2
+    assert previous["minutes"] == 50
+    assert previous["days"][2]["trained"][0]["id"] == session["id"]
+    assert previous["first_session_on"] == (last_monday + timedelta(days=2)).isoformat()
+    assert previous["has_plan"] is False
+
+    current = client.get("/fitness/week", headers=headers).json()
+    assert current["start"] == monday.isoformat()
+    assert current["sessions"] == 0
+    assert current["today"] == today.isoformat()
+
+
+def test_week_endpoint_is_private_and_validates(client, ana):
+    _, headers = ana
+    assert client.get("/fitness/week").status_code == 401
+    assert client.get("/fitness/week", params={"start": "ontem"}, headers=headers).status_code == 422

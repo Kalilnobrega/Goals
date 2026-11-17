@@ -365,6 +365,7 @@ class OverviewSchema(BaseModel):
     week: OverviewWeekSchema
     total_sessions: int
     last_session: SessionHistoryItemSchema | None
+    first_session_on: date | None = None
     suggested_workout: OverviewWorkoutSchema | None
     workout_count: int
     body_weight: OverviewBodyWeightSchema | None
@@ -556,3 +557,10 @@ class PlanResponseSchema(BaseModel):
     is_active: bool
     days: list[PlanDayResponseSchema]
     updated_at: datetime | None
+
+
+class WeekSchema(OverviewWeekSchema):
+    start: date
+    today: date
+    has_plan: bool
+    first_session_on: date | None

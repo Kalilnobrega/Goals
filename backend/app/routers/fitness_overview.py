@@ -6,7 +6,7 @@ from app.database import get_db
 from app.dates import today_br, to_br_date, br_day_start_utc
 from app.models import User
 from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, Plan
-from app.fitness_schemas import OverviewSchema, CalendarSchema
+from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
 from .fitness_plans import active_plan, workout_muscles
@@ -43,8 +43,8 @@ def planned_by_weekday(plan: Plan | None) -> dict[int, list]:
     return planned
 
 
-def week_summary(user: User, db: Session, today, plan: Plan | None) -> dict:
-    monday = today - timedelta(days=today.weekday())
+def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date | None = None) -> dict:
+    monday = monday or today - timedelta(days=today.weekday())
     planned = planned_by_weekday(plan)
     stats = session_stats(db)
     rows = (
@@ -57,6 +57,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None) -> dict:
             WorkoutSession.user_id == user.id,
             WorkoutSession.status == COMPLETED,
             WorkoutSession.started_at >= br_day_start_utc(monday),
+            WorkoutSession.started_at < br_day_start_utc(monday + timedelta(days=7)),
         )
         .all()
     )
@@ -231,9 +232,38 @@ def get_overview(user: User = Depends(get_current_user), db: Session = Depends(g
             .scalar()
         ),
         "last_session": last_session(user, db),
+        "first_session_on": first_session_on(user, db),
         "suggested_workout": suggestion,
         "workout_count": workout_count,
         "body_weight": body_weight_summary(user, db),
+    }
+
+
+def first_session_on(user: User, db: Session) -> date | None:
+    first_started = (
+        db.query(func.min(WorkoutSession.started_at))
+        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+        .scalar()
+    )
+    return to_br_date(first_started) if first_started else None
+
+
+@fitness_overview_router.get("/week", response_model=WeekSchema)
+def get_week(
+    start: date | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    today = today_br()
+    day = start or today
+    monday = day - timedelta(days=day.weekday())
+    plan = active_plan(user, db)
+    return {
+        **week_summary(user, db, today, plan, monday),
+        "start": monday,
+        "today": today,
+        "has_plan": plan is not None,
+        "first_session_on": first_session_on(user, db),
     }
 
 
