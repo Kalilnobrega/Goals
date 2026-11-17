@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, Minus, Plus, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import {
   muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
@@ -110,6 +110,94 @@ function NewSet({ item, onLogSet, onStartRest }) {
   );
 }
 
+const REVEAL = 88;
+
+function SwipeToDelete({ onDelete, children }) {
+  const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const gesture = useRef(null);
+  const rowRef = useRef(null);
+
+  const down = (event) => {
+    if (removing) return;
+    gesture.current = { x: event.clientX, y: event.clientY, base: offset, axis: null, id: event.pointerId };
+  };
+
+  const move = (event) => {
+    const g = gesture.current;
+    if (!g) return;
+    const dx = event.clientX - g.x;
+    const dy = event.clientY - g.y;
+    if (!g.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (g.axis === 'y') {
+        gesture.current = null;
+        return;
+      }
+      event.currentTarget.setPointerCapture(g.id);
+      setDragging(true);
+    }
+    const width = rowRef.current.offsetWidth;
+    setOffset(Math.min(0, Math.max(g.base + dx, -width)));
+  };
+
+  const remove = async () => {
+    setRemoving(true);
+    setOffset(-rowRef.current.offsetWidth);
+    const ok = await onDelete();
+    if (!ok) {
+      setRemoving(false);
+      setOffset(0);
+    }
+  };
+
+  const up = () => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g?.axis) return;
+    setDragging(false);
+    const width = rowRef.current.offsetWidth;
+    if (offset < -width * 0.55) remove();
+    else setOffset(offset < -REVEAL / 2 ? -REVEAL : 0);
+  };
+
+  const captureClick = (event) => {
+    if (dragging || offset !== 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!dragging) setOffset(0);
+    }
+  };
+
+  return (
+    <li ref={rowRef} className={`${styles.swipe} ${removing ? styles.swipeRemoving : ''}`}>
+      <button
+        type="button"
+        className={styles.swipeAction}
+        onClick={remove}
+        tabIndex={offset ? 0 : -1}
+        aria-hidden={!offset}
+        style={{ width: Math.max(-offset, REVEAL), visibility: offset ? 'visible' : 'hidden' }}
+      >
+        <Trash2 size={18} /> <span>Excluir</span>
+      </button>
+      <div
+        className={styles.swipeFront}
+        style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : undefined }}
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onClickCapture={captureClick}
+      >
+        {children}
+      </div>
+    </li>
+  );
+}
+
 function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   const [weight, setWeight] = useState(kgInput(entry.weight_kg));
   const [reps, setReps] = useState(String(entry.reps));
@@ -118,7 +206,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
 
   if (!editing) {
     return (
-      <li>
+      <SwipeToDelete onDelete={() => onDelete(entry)}>
         <button type="button" className={styles.setRow} onClick={onEdit} aria-label={`Editar série ${entry.position}`}>
           <span className={styles.setIndex}>{entry.position}</span>
           <span className={styles.setValue}>
@@ -128,7 +216,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
           <Check size={18} className={styles.setDone} aria-hidden="true" />
         </button>
-      </li>
+      </SwipeToDelete>
     );
   }
 

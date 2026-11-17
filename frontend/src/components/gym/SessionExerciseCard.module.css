@@ -126,6 +126,43 @@
   gap: 6px;
 }
 
+.swipe {
+  position: relative;
+  display: grid;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.swipeRemoving {
+  opacity: 0;
+}
+
+.swipeAction {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 18px;
+  border: none;
+  background: var(--gym-danger);
+  color: #1a0505;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.swipeFront {
+  position: relative;
+  touch-action: pan-y;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
 .setRow {
   width: 100%;
   min-height: 48px;
@@ -376,4 +413,11 @@
 .error {
   color: var(--gym-danger);
   font-size: 0.88rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe,
+  .swipeFront {
+    transition: none;
+  }
 }

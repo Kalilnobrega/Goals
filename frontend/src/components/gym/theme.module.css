@@ -1,0 +1,19 @@
+.theme {
+  --gym-bg: #0e1013;
+  --gym-surface: #171a1e;
+  --gym-surface-2: #1f2328;
+  --gym-surface-3: #2a2f35;
+  --gym-border: rgba(255, 255, 255, 0.07);
+  --gym-border-strong: rgba(255, 255, 255, 0.14);
+  --gym-text: #f4f5f2;
+  --gym-muted: #9aa1a9;
+  --gym-faint: #757c85;
+  --gym-accent: #c6f432;
+  --gym-accent-soft: rgba(198, 244, 50, 0.12);
+  --gym-accent-ink: #11140a;
+  --gym-accent-glow: 0 10px 30px rgba(198, 244, 50, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --gym-header-bg: rgba(14, 16, 19, 0.82);
+  --gym-tabbar-bg: rgba(20, 23, 27, 0.92);
+  --gym-danger: #ff6b6b;
+  --gym-tabbar-h: 68px;
+}

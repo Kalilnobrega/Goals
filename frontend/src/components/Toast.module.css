@@ -112,3 +112,53 @@
 @media (max-width: 600px) {
   .region { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
 }
+
+.gym .toast {
+  background: var(--gym-surface-3);
+  border: 1px solid var(--gym-border-strong);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.gym .message {
+  color: var(--gym-text);
+}
+
+.gym .success {
+  --tone: var(--gym-accent);
+}
+
+.gym .danger {
+  --tone: var(--gym-danger);
+}
+
+.gym .action {
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.gym .close {
+  color: var(--gym-muted);
+}
+
+@media (hover: hover) {
+  .gym .action:hover {
+    background: var(--gym-accent);
+    opacity: 0.9;
+  }
+
+  .gym .close:hover {
+    background: var(--gym-surface-2);
+  }
+}
+
+@media (max-width: 767px) {
+  .region.gym {
+    bottom: calc(68px + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.region.gymSession {
+  bottom: calc(76px + 12px + env(safe-area-inset-bottom, 0px));
+}

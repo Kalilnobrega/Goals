@@ -166,6 +166,10 @@ export default function SessionPage() {
         ...it,
         sets: it.sets.filter(e => e.id !== entry.id).map((e, i) => ({ ...e, position: i + 1 })),
       })));
+      toast({
+        message: `Série ${entry.position} de ${item.exercise_name} excluída`,
+        action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps }) },
+      });
       return true;
     } catch (err) {
       return fail(err, 'Não foi possível excluir a série.');

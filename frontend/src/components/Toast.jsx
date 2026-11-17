@@ -1,6 +1,8 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePathname } from 'next/navigation';
+import gymTheme from './gym/theme.module.css';
 import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
 import styles from './Toast.module.css';
 
@@ -49,6 +51,13 @@ function ToastItem({ toast, onDismiss, onRemove }) {
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const nextId = useRef(0);
+  const pathname = usePathname();
+  const gym = pathname === '/gym' || pathname.startsWith('/gym/');
+  const regionClass = [
+    styles.region,
+    gym ? `${gymTheme.theme} ${styles.gym}` : '',
+    pathname.startsWith('/gym/session/') ? styles.gymSession : '',
+  ].join(' ');
 
   const dismiss = useCallback((id) => {
     setToasts(prev => prev.map(t => (t.id === id ? { ...t, leaving: true } : t)));
@@ -73,7 +82,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={show}>
       {children}
       {toasts.length > 0 && createPortal(
-        <div className={styles.region} role="status" aria-live="polite">
+        <div className={regionClass} role="status" aria-live="polite">
           {toasts.map(toast => (
             <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} onRemove={remove} />
           ))}
