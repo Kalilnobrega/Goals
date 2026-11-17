@@ -261,7 +261,7 @@ export default function SessionPage() {
         <SessionSummary session={session} />
         <div className={s.actions}>
           <Link href="/gym" className={s.primary}>Voltar ao início</Link>
-          <Link href="/gym/workouts" className={s.secondary}>Ver fichas</Link>
+          <Link href="/gym/history" className={s.secondary}>Ver histórico</Link>
         </div>
       </div>
     );

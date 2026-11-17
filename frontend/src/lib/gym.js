@@ -104,6 +104,16 @@ const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-
 const longDateFormat = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 const timeFormat = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+const monthFormat = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+const weekdayFormat = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' });
+
+export const formatMonth = (iso) => monthFormat.format(new Date(iso)).replace(/^./, c => c.toUpperCase());
+export const formatWeekday = (iso) => weekdayFormat.format(new Date(iso)).replace('.', '');
+export const monthKey = (iso) => {
+  const date = new Date(iso);
+  return `${date.getFullYear()}-${date.getMonth()}`;
+};
+
 export const formatShortDate = (iso) => dateFormat.format(new Date(iso));
 export const formatLongDate = (iso) => longDateFormat.format(new Date(iso));
 export const formatTime = (iso) => timeFormat.format(new Date(iso));
