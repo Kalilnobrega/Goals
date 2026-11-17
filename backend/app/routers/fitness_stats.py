@@ -151,6 +151,40 @@ def muscle_stats(period: list[dict], previous: list[dict], everything: list[dict
     return sorted(items, key=lambda item: (-item["sets"], item["days_since"] if item["days_since"] is not None else 10**6))
 
 
+def weight_records(everything: list[dict], include) -> list[dict]:
+    best: dict = {}
+    records = []
+    for s in sorted(everything, key=lambda s: s["completed_at"]):
+        for e in s["exercises"]:
+            key = e["exercise_id"] or e["name"]
+            if e["top_weight"] <= 0:
+                continue
+            previous_best = best.get(key)
+            if previous_best is not None and e["top_weight"] > previous_best and include(s):
+                records.append({
+                    "exercise_id": e["exercise_id"],
+                    "name": e["name"],
+                    "weight_kg": e["top_weight"],
+                    "reps": e["top_reps"],
+                    "previous_kg": previous_best,
+                    "session_id": s["id"],
+                    "date": s["day"],
+                })
+            best[key] = max(previous_best or 0, e["top_weight"])
+    records.sort(key=lambda r: (r["date"], r["weight_kg"]), reverse=True)
+    return records
+
+
+def completed_facts(user, db) -> list[dict]:
+    return [
+        session_facts(s)
+        for s in db.query(WorkoutSession)
+        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+        .order_by(WorkoutSession.started_at)
+        .all()
+    ]
+
+
 def exercise_stats(period: list[dict], everything: list[dict]):
     usage: dict[tuple, dict] = {}
     timeline: dict[tuple, list] = defaultdict(list)
@@ -193,26 +227,7 @@ def exercise_stats(period: list[dict], everything: list[dict]):
     drops = sorted([p for p in progressions if p["change_kg"] < 0], key=lambda p: p["change_pct"])[:3]
 
     period_ids = {s["id"] for s in period}
-    best: dict = {}
-    records = []
-    for s in sorted(everything, key=lambda s: s["completed_at"]):
-        for e in s["exercises"]:
-            key = e["exercise_id"] or e["name"]
-            if e["top_weight"] <= 0:
-                continue
-            previous_best = best.get(key)
-            if previous_best is not None and e["top_weight"] > previous_best and s["id"] in period_ids:
-                records.append({
-                    "exercise_id": e["exercise_id"],
-                    "name": e["name"],
-                    "weight_kg": e["top_weight"],
-                    "reps": e["top_reps"],
-                    "previous_kg": previous_best,
-                    "session_id": s["id"],
-                    "date": s["day"],
-                })
-            best[key] = max(previous_best or 0, e["top_weight"])
-    records.sort(key=lambda r: (r["date"], r["weight_kg"]), reverse=True)
+    records = weight_records(everything, lambda s: s["id"] in period_ids)
     return most_done, gains, drops, records[:10]
 
 
@@ -269,13 +284,7 @@ def get_stats(
     db: Session = Depends(get_db),
 ):
     today = today_br()
-    everything = [
-        session_facts(s)
-        for s in db.query(WorkoutSession)
-        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
-        .order_by(WorkoutSession.started_at)
-        .all()
-    ]
+    everything = completed_facts(user, db)
     first_day = everything[0]["day"] if everything else today
     if period == "all":
         start = first_day

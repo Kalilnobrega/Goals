@@ -330,11 +330,35 @@ class OverviewWorkoutSchema(BaseModel):
     last_done_at: datetime | None
 
 
+class OverviewWeightPointSchema(BaseModel):
+    measured_on: date
+    weight_kg: float
+
+
 class OverviewBodyWeightSchema(BaseModel):
     weight_kg: float
     measured_on: date
     change_kg: float | None
     previous_on: date | None
+    recent: list[OverviewWeightPointSchema] = []
+
+
+class OverviewRecordSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    weight_kg: float
+    reps: int
+    previous_kg: float
+    session_id: int
+    date: date
+
+
+class OverviewMuscleSchema(BaseModel):
+    muscle_group: str
+    done_sets: int
+    planned_sets: int | None
+    last_trained_on: date | None
+    days_since: int | None
 
 
 class OverviewPlanTodaySchema(BaseModel):
@@ -369,6 +393,8 @@ class OverviewSchema(BaseModel):
     suggested_workout: OverviewWorkoutSchema | None
     workout_count: int
     body_weight: OverviewBodyWeightSchema | None
+    muscles_week: list[OverviewMuscleSchema] = []
+    recent_records: list[OverviewRecordSchema] = []
 
 
 class CalendarSessionSchema(BaseModel):

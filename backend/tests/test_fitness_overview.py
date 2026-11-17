@@ -116,6 +116,7 @@ def test_overview_body_weight_change(client, ana):
     client.post("/fitness/body-weight", json={"weight_kg": 80}, headers=headers)
     assert overview(client, headers)["body_weight"] == {
         "weight_kg": 80.0, "measured_on": today.isoformat(), "change_kg": None, "previous_on": None,
+        "recent": [{"measured_on": today.isoformat(), "weight_kg": 80.0}],
     }
 
     earlier = (today - timedelta(days=7)).isoformat()
@@ -124,6 +125,7 @@ def test_overview_body_weight_change(client, ana):
     assert body["weight_kg"] == 80.0
     assert body["change_kg"] == -1.5
     assert body["previous_on"] == earlier
+    assert [p["weight_kg"] for p in body["recent"]] == [81.5, 80.0]
 
 
 def test_overview_is_private(client, library, ana, bruno):
@@ -237,3 +239,52 @@ def test_week_endpoint_is_private_and_validates(client, ana):
     _, headers = ana
     assert client.get("/fitness/week").status_code == 401
     assert client.get("/fitness/week", params={"start": "ontem"}, headers=headers).status_code == 422
+
+
+def test_overview_muscles_week_against_plan(client, library, ana, db_session):
+    _, headers = ana
+    today = today_br()
+    workout = make_workout(client, headers, library)
+    client.post(
+        "/fitness/plans",
+        json={"name": "Treino 1", "days": [{"weekday": today.weekday(), "workout_id": workout["id"]}]},
+        headers=headers,
+    )
+    train(client, headers, workout["id"], [(60, 10), (60, 10)])
+    old = make_workout(client, headers, library, name="Braço")
+    client.put(
+        f"/fitness/workouts/{old['id']}",
+        json={"name": "Braço", "exercises": [{"exercise_id": library["rosca-direta"], "target_sets": 3, "reps_min": 10}]},
+        headers=headers,
+    )
+    arm = train(client, headers, old["id"], [(20, 10)])
+    move_session(db_session, arm["id"], datetime.now(timezone.utc) - timedelta(days=10))
+
+    muscles = {m["muscle_group"]: m for m in overview(client, headers)["muscles_week"]}
+    assert muscles["chest"]["done_sets"] == 2
+    assert muscles["chest"]["planned_sets"] == 3
+    assert muscles["chest"]["days_since"] == 0
+    assert muscles["quads"]["planned_sets"] == 4
+    assert muscles["quads"]["done_sets"] == 0
+    assert muscles["biceps"]["planned_sets"] == 0
+    assert muscles["biceps"]["days_since"] == 10
+
+
+def test_overview_muscles_week_without_plan(client, library, ana):
+    _, headers = ana
+    train(client, headers, make_workout(client, headers, library)["id"], [(60, 10)])
+    muscles = overview(client, headers)["muscles_week"]
+    assert [(m["muscle_group"], m["done_sets"], m["planned_sets"]) for m in muscles] == [("chest", 1, None)]
+
+
+def test_overview_recent_records(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    old = train(client, headers, workout["id"], [(60, 10)])
+    move_session(db_session, old["id"], datetime.now(timezone.utc) - timedelta(days=30))
+    middle = train(client, headers, workout["id"], [(70, 8)])
+    move_session(db_session, middle["id"], datetime.now(timezone.utc) - timedelta(days=20))
+    train(client, headers, workout["id"], [(75, 6)])
+
+    records = overview(client, headers)["recent_records"]
+    assert [(r["name"], r["weight_kg"], r["previous_kg"]) for r in records] == [("Supino reto", 75.0, 70.0)]

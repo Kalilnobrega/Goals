@@ -10,6 +10,7 @@ from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
 from .fitness_plans import active_plan, workout_muscles
+from .fitness_stats import completed_facts, weight_records
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -144,6 +145,35 @@ def suggested_workout(user: User, db: Session) -> tuple[dict | None, int]:
     }, len(workouts)
 
 
+def muscles_week(plan: Plan | None, everything: list[dict], today: date) -> list[dict]:
+    monday = today - timedelta(days=today.weekday())
+    done: dict[str, int] = {}
+    last: dict[str, date] = {}
+    for s in everything:
+        for e in s["exercises"]:
+            group = e["muscle_group"]
+            last[group] = max(last.get(group, s["day"]), s["day"])
+            if monday <= s["day"] <= today:
+                done[group] = done.get(group, 0) + e["sets"]
+    planned: dict[str, int] = {}
+    for day in plan.days if plan else []:
+        for item in day.workout.exercises:
+            group = item.exercise.muscle_group
+            planned[group] = planned.get(group, 0) + item.target_sets
+    groups = set(planned) | set(done) | {g for g, d in last.items() if (today - d).days >= 7}
+    items = [
+        {
+            "muscle_group": group,
+            "done_sets": done.get(group, 0),
+            "planned_sets": planned.get(group, 0) if plan else None,
+            "last_trained_on": last.get(group),
+            "days_since": (today - last[group]).days if group in last else None,
+        }
+        for group in groups
+    ]
+    return sorted(items, key=lambda i: (-(i["planned_sets"] or 0), -i["done_sets"], -(i["days_since"] or 0), i["muscle_group"]))
+
+
 def body_weight_summary(user: User, db: Session) -> dict | None:
     entries = (
         db.query(BodyWeightEntry)
@@ -154,6 +184,14 @@ def body_weight_summary(user: User, db: Session) -> dict | None:
     )
     if not entries:
         return None
+    since = today_br() - timedelta(days=90)
+    recent = (
+        db.query(BodyWeightEntry)
+        .filter(BodyWeightEntry.user_id == user.id, BodyWeightEntry.measured_on >= since)
+        .order_by(BodyWeightEntry.measured_on.desc())
+        .limit(30)
+        .all()
+    )
     latest = entries[0]
     previous = entries[1] if len(entries) > 1 else None
     return {
@@ -161,6 +199,10 @@ def body_weight_summary(user: User, db: Session) -> dict | None:
         "measured_on": latest.measured_on,
         "change_kg": round(float(latest.weight_kg - previous.weight_kg), 2) if previous else None,
         "previous_on": previous.measured_on if previous else None,
+        "recent": [
+            {"measured_on": entry.measured_on, "weight_kg": float(entry.weight_kg)}
+            for entry in reversed(recent)
+        ],
     }
 
 
@@ -212,6 +254,7 @@ def get_overview(user: User = Depends(get_current_user), db: Session = Depends(g
     today = today_br()
     suggestion, workout_count = suggested_workout(user, db)
     plan = active_plan(user, db)
+    everything = completed_facts(user, db)
     week = week_summary(user, db, today, plan)
     plan_info = plan_summary(plan, week, today)
     if plan_info and plan_info["today"]:
@@ -236,6 +279,8 @@ def get_overview(user: User = Depends(get_current_user), db: Session = Depends(g
         "suggested_workout": suggestion,
         "workout_count": workout_count,
         "body_weight": body_weight_summary(user, db),
+        "muscles_week": muscles_week(plan, everything, today),
+        "recent_records": weight_records(everything, lambda s: s["day"] >= today - timedelta(days=13))[:3],
     }
 
 
