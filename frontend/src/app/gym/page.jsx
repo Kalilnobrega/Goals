@@ -13,6 +13,9 @@ import {
 import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../components/gym/useStartSession';
 import WeekPicker from '../../components/gym/WeekPicker';
+import MusclesWeek from '../../components/gym/MusclesWeek';
+import RecentRecords from '../../components/gym/RecentRecords';
+import Sparkline from '../../components/gym/Sparkline';
 import GymSheet from '../../components/gym/GymSheet';
 import sheetStyles from '../../components/gym/sheet.module.css';
 import styles from './page.module.css';
@@ -452,6 +455,9 @@ function BodyWeight({ body }) {
           <span className={styles.tileMeta}>{formatDelta(body.change_kg)} desde {formatDay(body.previous_on)}</span>
         )}
       </span>
+      {body.recent.length > 1 && (
+        <Sparkline values={body.recent.map(point => point.weight_kg)} relative className={styles.tileSpark} />
+      )}
       <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
     </Link>
   );
@@ -507,6 +513,10 @@ export default function GymHomePage() {
             : <NextWorkout data={data} begin={begin} starting={starting} />}
 
           <Week data={data} />
+
+          <MusclesWeek muscles={data.muscles_week} hasPlan={!!data.plan} />
+
+          <RecentRecords records={data.recent_records} />
 
           <BodyWeight body={data.body_weight} />
         </>

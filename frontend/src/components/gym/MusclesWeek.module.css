@@ -1,0 +1,134 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.hint {
+  margin-left: auto;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.countDone {
+  color: var(--gym-accent);
+}
+
+.since {
+  min-width: 64px;
+  text-align: right;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.sinceStale {
+  color: #fbbf4a;
+}
+
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: rgba(198, 244, 50, 0.55);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.fillDone {
+  background: var(--gym-accent);
+}
+
+.fillFree {
+  background: var(--gym-muted);
+}
+
+.note {
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+}
+
+.more {
+  height: 40px;
+  border: 1px solid var(--gym-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

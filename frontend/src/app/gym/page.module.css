@@ -657,6 +657,12 @@
   font-size: 0.85rem;
 }
 
+.tileSpark {
+  flex-shrink: 0;
+  width: 64px;
+  height: 24px;
+}
+
 .chevron {
   flex-shrink: 0;
   color: var(--gym-faint);
