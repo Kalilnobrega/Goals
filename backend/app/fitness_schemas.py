@@ -304,6 +304,7 @@ class OverviewPlannedSchema(BaseModel):
 class OverviewDaySessionSchema(BaseModel):
     id: int
     name: str
+    workout_id: int | None = None
 
 
 class OverviewDaySchema(BaseModel):

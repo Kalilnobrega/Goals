@@ -161,7 +161,7 @@ def test_overview_shows_todays_plan(client, ana, split):
     assert data["suggested_workout"]["id"] == split["Lower A"]
     week_today = next(d for d in data["week"]["days"] if d["date"] == today.isoformat())
     assert [p["done"] for p in week_today["planned"]] == [True, False]
-    assert week_today["trained"] == [{"id": session["id"], "name": "Upper A"}]
+    assert week_today["trained"] == [{"id": session["id"], "name": "Upper A", "workout_id": split["Upper A"]}]
 
 
 def test_overview_without_plan_or_on_rest_day(client, ana, split):
@@ -173,3 +173,16 @@ def test_overview_without_plan_or_on_rest_day(client, ana, split):
     plan = client.get("/fitness/overview", headers=headers).json()["plan"]
     assert plan["today"] == []
     assert plan["next"]["workouts"] == ["Upper A"]
+
+
+def test_overview_shows_a_different_workout_trained_on_a_planned_day(client, ana, split):
+    _, headers = ana
+    today = today_br()
+    create_plan(client, headers, days=[(today.weekday(), split["Upper A"])])
+    session = start(client, headers, split["Upper B"])
+    log_set(client, headers, session["exercises"][0]["id"], 60, 10)
+    finish(client, headers, session["id"])
+
+    day = next(d for d in client.get("/fitness/overview", headers=headers).json()["week"]["days"] if d["date"] == today.isoformat())
+    assert day["planned"] == [{"workout_id": split["Upper A"], "name": "Upper A", "done": False}]
+    assert day["trained"] == [{"id": session["id"], "name": "Upper B", "workout_id": split["Upper B"]}]

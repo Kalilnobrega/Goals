@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
-  Play, Plus, Zap, Scale, ChevronRight, ChevronDown, History, TrendingUp, ClipboardList, Flame, CalendarDays, Check, Moon,
+  Play, Plus, Zap, Scale, ChevronRight, ChevronDown, History, TrendingUp, ClipboardList, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
 } from 'lucide-react';
 import { getUserName } from '../../lib/auth';
 import { getFitnessOverview, peekCache } from '../../lib/api';
@@ -210,7 +210,9 @@ function Week({ data }) {
           const trained = day.sessions > 0;
           const planned = day.planned.map(p => p.name).join(' + ');
           const rest = !!data.plan && !planned;
-          const label = `${WEEKDAY_NAMES[index]}, ${formatDay(day.date)}: ${trained ? plural(day.sessions, 'treino', 'treinos') : future ? 'ainda não chegou' : 'sem treino'}${planned ? `. Plano: ${planned}` : rest ? '. Descanso no plano' : ''}`;
+          const swapped = !!data.plan && trained && !day.planned.some(p => p.done);
+          const actual = day.trained.map(t => t.name).join(' + ');
+          const label = `${WEEKDAY_NAMES[index]}, ${formatDay(day.date)}: ${trained ? plural(day.sessions, 'treino', 'treinos') : future ? 'ainda não chegou' : 'sem treino'}${swapped ? `. Planejado: ${planned || 'descanso'}, feito: ${actual}` : planned ? `. Plano: ${planned}` : rest ? '. Descanso no plano' : ''}`;
           return (
             <li key={day.date} className={styles.day}>
               <DayTarget
@@ -225,9 +227,16 @@ function Week({ data }) {
               >
                 {day.sessions > 1 ? day.sessions : rest && !trained ? <Moon size={14} /> : ''}
               </span>
-              {data.plan && (
+              {data.plan && !swapped && (
                 <span className={`${styles.dayPlan} ${rest ? styles.dayPlanRest : ''}`} aria-hidden="true">
                   {planned || 'Descanso'}
+                </span>
+              )}
+              {swapped && (
+                <span className={styles.daySwap} aria-hidden="true">
+                  <s className={styles.daySwapFrom}>{planned || 'Descanso'}</s>
+                  <ArrowLeftRight size={11} className={styles.daySwapIcon} />
+                  <span className={styles.daySwapTo}>{actual}</span>
                 </span>
               )}
               </DayTarget>

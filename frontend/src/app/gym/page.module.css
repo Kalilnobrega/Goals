@@ -367,6 +367,41 @@
   font-weight: 500;
 }
 
+.daySwap {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.daySwapFrom,
+.daySwapTo {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.5rem, 2.3vw, 0.62rem);
+}
+
+.daySwapFrom {
+  color: var(--gym-faint);
+  font-weight: 500;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.daySwapIcon {
+  color: var(--gym-accent);
+}
+
+.daySwapTo {
+  color: var(--gym-text);
+  font-weight: 700;
+}
+
 .dayRest {
   color: var(--gym-muted);
 }

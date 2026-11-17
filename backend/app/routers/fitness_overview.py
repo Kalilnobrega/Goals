@@ -72,7 +72,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None) -> dict:
             continue
         per_day[day] += 1
         done[day].add(workout_id)
-        trained[day].append({"id": session_id, "name": name})
+        trained[day].append({"id": session_id, "name": name, "workout_id": workout_id})
         sets += total_sets or 0
         volume += float(session_volume or 0)
         seconds += (aware(completed_at) - aware(started_at)).total_seconds()
