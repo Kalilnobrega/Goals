@@ -160,3 +160,17 @@ export function daysAgo(iso, today) {
 export const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 export const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 export const weekdayOf = (iso) => (parseDay(iso).getDay() + 6) % 7;
+
+export const toIso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+export const mondayOf = (iso) => {
+  const date = parseDay(iso);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return toIso(date);
+};
+
+export const addDays = (iso, days) => {
+  const date = parseDay(iso);
+  date.setDate(date.getDate() + days);
+  return toIso(date);
+};

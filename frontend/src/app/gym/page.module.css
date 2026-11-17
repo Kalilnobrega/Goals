@@ -193,6 +193,7 @@
 }
 
 .panel {
+  touch-action: pan-y;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -204,7 +205,7 @@
 
 .panelHeader {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
@@ -216,22 +217,62 @@
   font-weight: 700;
 }
 
-.panelSide {
+.weekTitleWrap {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.calendarToggle {
-  height: 36px;
-  display: inline-flex;
+.weekRange {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.weekNav {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
+}
+
+.weekSide {
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px 0 12px;
+}
+
+.weekArrow {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--gym-border);
   border-radius: 12px;
   background: var(--gym-surface-2);
   color: var(--gym-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.weekArrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.weekPick,
+.weekToday {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 500;
@@ -239,21 +280,76 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.calendarToggle:hover {
-  border-color: var(--gym-border-strong);
+.weekPick {
+  height: 40px;
+  min-width: 0;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
 }
 
-.calendarOpen {
-  border-color: var(--gym-accent);
+.weekPick svg {
+  color: var(--gym-accent);
 }
 
-.toggleChevron {
+.weekToday {
+  padding: 0 12px;
+  font-size: 0.8rem;
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-weight: 700;
+}
+
+.weekBodyLoading {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.daySlot {
+  width: 100%;
+  height: 2.6rem;
+  display: flex;
+  justify-content: center;
+}
+
+.weekError {
+  padding: 24px 0;
   color: var(--gym-muted);
-  transition: transform var(--dur-fast) var(--ease-out);
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-.calendarOpen .toggleChevron {
-  transform: rotate(180deg);
+.weekError button {
+  border: none;
+  background: none;
+  color: var(--gym-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weekBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slideNext {
+  animation: weekFromRight var(--dur-base) var(--ease-out) both;
+}
+
+.slidePrev {
+  animation: weekFromLeft var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes weekFromRight {
+  from { opacity: 0; transform: translateX(24px); }
+}
+
+@keyframes weekFromLeft {
+  from { opacity: 0; transform: translateX(-24px); }
 }
 
 .badge {
@@ -612,7 +708,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton,
-  .skeletonHero {
+  .skeletonHero,
+  .slideNext,
+  .slidePrev {
     animation: none;
   }
+}
+
+.weekTitleWrap .panelTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

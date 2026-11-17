@@ -1,18 +1,18 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Play, Plus, Zap, Scale, ChevronRight, ChevronDown, History, TrendingUp, ClipboardList, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
+  Play, Plus, Zap, Scale, ChevronLeft, ChevronRight, History, TrendingUp, ClipboardList, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
 } from 'lucide-react';
 import { getUserName } from '../../lib/auth';
-import { getFitnessOverview, peekCache } from '../../lib/api';
+import { getFitnessOverview, getWeek, peekCache } from '../../lib/api';
 import {
-  daysAgo, formatDay, formatDelta, formatDuration, formatKg, formatVolume, muscleLabel, plural, weekdayOf,
+  addDays, daysAgo, formatDay, formatDelta, formatDuration, formatKg, formatVolume, mondayOf, muscleLabel, plural, weekdayOf,
 } from '../../lib/gym';
 import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../components/gym/useStartSession';
-import TrainingCalendar from '../../components/gym/TrainingCalendar';
+import WeekPicker from '../../components/gym/WeekPicker';
 import GymSheet from '../../components/gym/GymSheet';
 import sheetStyles from '../../components/gym/sheet.module.css';
 import styles from './page.module.css';
@@ -176,95 +176,192 @@ function dayTargets(day, future) {
   ];
 }
 
+function weekTitle(start, current) {
+  const diff = Math.round((new Date(`${start}T12:00`) - new Date(`${current}T12:00`)) / (7 * 86400000));
+  if (diff === 0) return 'Esta semana';
+  if (diff === -1) return 'Semana passada';
+  if (diff === 1) return 'Próxima semana';
+  return `Semana de ${formatDay(start)}`;
+}
+
 function Week({ data }) {
   const router = useRouter();
   const [chosen, setChosen] = useState(null);
+  const [picking, setPicking] = useState(false);
   const closeChosen = useCallback(() => setChosen(null), []);
-  const { week, today } = data;
-  const trainedDays = week.days.filter(day => day.sessions > 0).length;
-  const [expanded, setExpanded] = useState(false);
+  const closePicking = useCallback(() => setPicking(false), []);
+  const { today } = data;
+  const current = data.week.days[0].date;
+  const [start, setStart] = useState(current);
+  const [previous, setPrevious] = useState(current);
+  const [direction, setDirection] = useState(null);
+  const [weeks, setWeeks] = useState({});
+  const [failed, setFailed] = useState(false);
+  const swipe = useRef(null);
+
+  const minStart = data.first_session_on && mondayOf(data.first_session_on) < current ? mondayOf(data.first_session_on) : current;
+  const maxStart = data.plan ? addDays(current, 28) : current;
+  const weekAt = (key) => (key === current ? data.week : weeks[key] ?? null);
+  const week = weekAt(start);
+  const shown = week ?? weekAt(previous);
+  const loading = !week;
+  const planActive = !!data.plan;
+
+  useEffect(() => {
+    let active = true;
+    const wanted = [start, addDays(start, -7), addDays(start, 7)]
+      .filter(key => key !== current && key >= minStart && key <= maxStart && !weeks[key]);
+    wanted.forEach(key => {
+      getWeek(key)
+        .then(result => { if (active) setWeeks(all => ({ ...all, [key]: result })); })
+        .catch(() => { if (active && key === start) setFailed(true); });
+    });
+    return () => { active = false; };
+  }, [start, current, minStart, maxStart, weeks]);
+
+  const goTo = (next) => {
+    const target = next < minStart ? minStart : next > maxStart ? maxStart : next;
+    if (target === start) return;
+    setDirection(target > start ? 'next' : 'prev');
+    setFailed(false);
+    if (week) setPrevious(start);
+    setStart(target);
+  };
+
+  const onPointerDown = (event) => {
+    swipe.current = event.target.closest('[role="dialog"]') ? null : { x: event.clientX, y: event.clientY, moved: false };
+  };
+
+  const onPointerUp = (event) => {
+    const s = swipe.current;
+    if (!s) return;
+    const dx = event.clientX - s.x;
+    const dy = event.clientY - s.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      s.moved = true;
+      goTo(addDays(start, dx < 0 ? 7 : -7));
+    }
+  };
+
+  const onClickCapture = (event) => {
+    if (swipe.current?.moved) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    swipe.current = null;
+  };
+
+  const trainedDays = shown ? shown.days.filter(day => day.sessions > 0).length : 0;
 
   return (
-    <section className={styles.panel} aria-labelledby="week-title">
+    <section
+      className={styles.panel}
+      aria-labelledby="week-title"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onClickCapture={onClickCapture}
+    >
       <div className={styles.panelHeader}>
-        <h2 id="week-title" className={styles.panelTitle}>Esta semana</h2>
-        <div className={styles.panelSide}>
+        <div className={styles.weekTitleWrap}>
+          <h2 id="week-title" className={styles.panelTitle} aria-live="polite">{weekTitle(start, current)}</h2>
+          <span className={styles.weekRange}>{formatDay(start)} – {formatDay(addDays(start, 6))}</span>
+        </div>
+        <div className={styles.weekSide}>
           {trainedDays > 0 && (
             <span className={styles.badge}><Flame size={14} aria-hidden="true" /> {plural(trainedDays, 'dia', 'dias')}</span>
           )}
-          <button
-            type="button"
-            className={`${styles.calendarToggle} ${expanded ? styles.calendarOpen : ''}`}
-            onClick={() => setExpanded(open => !open)}
-            aria-expanded={expanded}
-            aria-controls="training-calendar"
-          >
-            <CalendarDays size={16} /> Calendário <ChevronDown size={16} className={styles.toggleChevron} />
-          </button>
+          {start !== current && (
+            <button type="button" className={styles.weekToday} onClick={() => goTo(current)} aria-label="Voltar para a semana atual">
+              Atual
+            </button>
+          )}
         </div>
       </div>
 
-      <ol className={styles.days}>
-        {week.days.map((day, index) => {
-          const future = day.date > today;
-          const trained = day.sessions > 0;
-          const planned = day.planned.map(p => p.name).join(' + ');
-          const rest = !!data.plan && !planned;
-          const swapped = !!data.plan && trained && !day.planned.some(p => p.done);
-          const actual = day.trained.map(t => t.name).join(' + ');
-          const label = `${WEEKDAY_NAMES[index]}, ${formatDay(day.date)}: ${trained ? plural(day.sessions, 'treino', 'treinos') : future ? 'ainda não chegou' : 'sem treino'}${swapped ? `. Planejado: ${planned || 'descanso'}, feito: ${actual}` : planned ? `. Plano: ${planned}` : rest ? '. Descanso no plano' : ''}`;
-          return (
-            <li key={day.date} className={styles.day}>
-              <DayTarget
-                targets={dayTargets(day, future)}
-                label={label}
-                onOpen={targets => (targets.length === 1 ? router.push(targets[0].href) : setChosen({ index, day, targets }))}
-              >
-              <span className={styles.dayLabel} aria-hidden="true">{WEEKDAYS[index]}</span>
-              <span
-                aria-hidden="true"
-                className={`${styles.dayDot} ${trained ? styles.dayTrained : ''} ${planned && !trained ? styles.dayPlanned : ''} ${rest && !trained ? styles.dayRest : ''} ${day.date === today ? styles.dayToday : ''} ${future ? styles.dayFuture : ''}`}
-              >
-                {day.sessions > 1 ? day.sessions : rest && !trained ? <Moon size={14} /> : ''}
-              </span>
-              {data.plan && !swapped && (
-                <span className={`${styles.dayPlan} ${rest ? styles.dayPlanRest : ''}`} aria-hidden="true">
-                  {planned || 'Descanso'}
-                </span>
-              )}
-              {swapped && (
-                <span className={styles.daySwap} aria-hidden="true">
-                  <s className={styles.daySwapFrom}>{planned || 'Descanso'}</s>
-                  <ArrowLeftRight size={11} className={styles.daySwapIcon} />
-                  <span className={styles.daySwapTo}>{actual}</span>
-                </span>
-              )}
-              </DayTarget>
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className={styles.stats}>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>{week.sessions}</span>
-          <span className={styles.statLabel}>{week.sessions === 1 ? 'Treino' : 'Treinos'}</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>{week.sets}</span>
-          <span className={styles.statLabel}>Séries</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>{week.minutes ? formatDuration(week.minutes * 60000) : '0min'}</span>
-          <span className={styles.statLabel}>Tempo</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>{formatVolume(week.volume_kg)}</span>
-          <span className={styles.statLabel}>Volume</span>
-        </div>
+      <div className={styles.weekNav}>
+        <button type="button" className={styles.weekArrow} onClick={() => goTo(addDays(start, -7))} disabled={start <= minStart} aria-label="Semana anterior">
+          <ChevronLeft size={20} />
+        </button>
+        <button type="button" className={styles.weekPick} onClick={() => setPicking(true)}>
+          <CalendarDays size={16} /> Escolher semana
+        </button>
+        <button type="button" className={styles.weekArrow} onClick={() => goTo(addDays(start, 7))} disabled={start >= maxStart} aria-label="Próxima semana">
+          <ChevronRight size={20} />
+        </button>
       </div>
 
-      {expanded && <TrainingCalendar id="training-calendar" today={today} />}
+      {loading && failed && (
+        <p className={styles.weekError}>Não foi possível carregar essa semana. <button type="button" onClick={() => { setFailed(false); setWeeks(all => ({ ...all })); }}>Tentar de novo</button></p>
+      )}
+
+      {shown && !(loading && failed) && (
+        <div
+          key={loading ? 'loading' : start}
+          className={`${styles.weekBody} ${loading ? styles.weekBodyLoading : direction === 'next' ? styles.slideNext : direction === 'prev' ? styles.slidePrev : ''}`}
+          aria-busy={loading}
+        >
+          <ol className={styles.days}>
+            {shown.days.map((day, index) => {
+              const future = day.date > today;
+              const trained = day.sessions > 0;
+              const planned = day.planned.map(p => p.name).join(' + ');
+              const rest = planActive && !planned;
+              const swapped = planActive && trained && !day.planned.some(p => p.done);
+              const actual = day.trained.map(t => t.name).join(' + ');
+              const label = `${WEEKDAY_NAMES[index]}, ${formatDay(day.date)}: ${trained ? plural(day.sessions, 'treino', 'treinos') : future ? 'ainda não chegou' : 'sem treino'}${swapped ? `. Planejado: ${planned || 'descanso'}, feito: ${actual}` : planned ? `. Plano: ${planned}` : rest ? '. Descanso no plano' : ''}`;
+              return (
+                <li key={day.date} className={styles.day}>
+                  <DayTarget
+                    targets={dayTargets(day, future)}
+                    label={label}
+                    onOpen={targets => (targets.length === 1 ? router.push(targets[0].href) : setChosen({ index, day, targets }))}
+                  >
+                    <span className={styles.dayLabel} aria-hidden="true">{WEEKDAYS[index]}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`${styles.dayDot} ${trained ? styles.dayTrained : ''} ${planned && !trained ? styles.dayPlanned : ''} ${rest && !trained ? styles.dayRest : ''} ${day.date === today ? styles.dayToday : ''} ${future ? styles.dayFuture : ''}`}
+                    >
+                      {day.sessions > 1 ? day.sessions : rest && !trained ? <Moon size={14} /> : ''}
+                    </span>
+                    {planActive && (
+                      <span className={styles.daySlot} aria-hidden="true">
+                        {swapped ? (
+                          <span className={styles.daySwap}>
+                            <s className={styles.daySwapFrom}>{planned || 'Descanso'}</s>
+                            <ArrowLeftRight size={11} className={styles.daySwapIcon} />
+                            <span className={styles.daySwapTo}>{actual}</span>
+                          </span>
+                        ) : (
+                          <span className={`${styles.dayPlan} ${rest ? styles.dayPlanRest : ''}`}>{planned || 'Descanso'}</span>
+                        )}
+                      </span>
+                    )}
+                  </DayTarget>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className={styles.stats}>
+            <div className={styles.stat}>
+              <span className={styles.statValue}>{shown.sessions}</span>
+              <span className={styles.statLabel}>{shown.sessions === 1 ? 'Treino' : 'Treinos'}</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statValue}>{shown.sets}</span>
+              <span className={styles.statLabel}>Séries</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statValue}>{shown.minutes ? formatDuration(shown.minutes * 60000) : '0min'}</span>
+              <span className={styles.statLabel}>Tempo</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statValue}>{formatVolume(shown.volume_kg)}</span>
+              <span className={styles.statLabel}>Volume</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <GymSheet
         open={!!chosen}
@@ -280,6 +377,21 @@ function Week({ data }) {
               </Link>
             ))}
           </div>
+        )}
+      </GymSheet>
+
+      <GymSheet open={picking} onClose={closePicking} title="Escolher semana">
+        {picking && (
+          <WeekPicker
+            today={today}
+            selected={start}
+            minMonth={minStart.slice(0, 7)}
+            maxMonth={addDays(maxStart, 6).slice(0, 7)}
+            onPick={(picked) => {
+              setPicking(false);
+              goTo(mondayOf(picked));
+            }}
+          />
         )}
       </GymSheet>
     </section>
