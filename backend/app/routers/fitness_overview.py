@@ -5,10 +5,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br, to_br_date, br_day_start_utc
 from app.models import User
-from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry
+from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, Plan
 from app.fitness_schemas import OverviewSchema, CalendarSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
+from .fitness_plans import active_plan, workout_muscles
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -35,11 +36,22 @@ def active_summary(user: User, db: Session) -> dict | None:
     }
 
 
-def week_summary(user: User, db: Session, today) -> dict:
+def planned_by_weekday(plan: Plan | None) -> dict[int, list]:
+    planned: dict[int, list] = {}
+    for day in plan.days if plan else []:
+        planned.setdefault(day.weekday, []).append(day.workout)
+    return planned
+
+
+def week_summary(user: User, db: Session, today, plan: Plan | None) -> dict:
     monday = today - timedelta(days=today.weekday())
+    planned = planned_by_weekday(plan)
     stats = session_stats(db)
     rows = (
-        db.query(WorkoutSession.started_at, WorkoutSession.completed_at, stats.c.total_sets, stats.c.volume)
+        db.query(
+            WorkoutSession.started_at, WorkoutSession.completed_at, stats.c.total_sets, stats.c.volume,
+            WorkoutSession.workout_id, WorkoutSession.id, WorkoutSession.name,
+        )
         .outerjoin(stats, stats.c.session_id == WorkoutSession.id)
         .filter(
             WorkoutSession.user_id == user.id,
@@ -49,19 +61,34 @@ def week_summary(user: User, db: Session, today) -> dict:
         .all()
     )
     per_day = {monday + timedelta(days=offset): 0 for offset in range(7)}
+    done: dict[date, set] = {day: set() for day in per_day}
+    trained: dict[date, list] = {day: [] for day in per_day}
     sets = 0
     volume = 0.0
     seconds = 0.0
-    for started_at, completed_at, total_sets, session_volume in rows:
+    for started_at, completed_at, total_sets, session_volume, workout_id, session_id, name in sorted(rows, key=lambda r: r[0]):
         day = to_br_date(started_at)
         if day not in per_day:
             continue
         per_day[day] += 1
+        done[day].add(workout_id)
+        trained[day].append({"id": session_id, "name": name})
         sets += total_sets or 0
         volume += float(session_volume or 0)
         seconds += (aware(completed_at) - aware(started_at)).total_seconds()
     return {
-        "days": [{"date": day, "sessions": count} for day, count in per_day.items()],
+        "days": [
+            {
+                "date": day,
+                "sessions": count,
+                "trained": trained[day],
+                "planned": [
+                    {"workout_id": workout.id, "name": workout.name, "done": workout.id in done[day]}
+                    for workout in planned.get(day.weekday(), [])
+                ],
+            }
+            for day, count in per_day.items()
+        ],
         "sessions": sum(per_day.values()),
         "sets": sets,
         "volume_kg": volume,
@@ -136,14 +163,68 @@ def body_weight_summary(user: User, db: Session) -> dict | None:
     }
 
 
+def last_done_map(user: User, db: Session, workout_ids: list[int]) -> dict:
+    return dict(
+        db.query(WorkoutSession.workout_id, func.max(WorkoutSession.started_at))
+        .filter(
+            WorkoutSession.user_id == user.id,
+            WorkoutSession.status == COMPLETED,
+            WorkoutSession.workout_id.in_(workout_ids),
+        )
+        .group_by(WorkoutSession.workout_id)
+        .all()
+    )
+
+
+def plan_summary(plan: Plan | None, week: dict, today: date) -> dict | None:
+    if not plan:
+        return None
+    planned = planned_by_weekday(plan)
+    today_entry = next(day for day in week["days"] if day["date"] == today)
+    done_today = {item["workout_id"] for item in today_entry["planned"] if item["done"]}
+    upcoming = None
+    for offset in range(1, 8):
+        day = today + timedelta(days=offset)
+        if planned.get(day.weekday()):
+            upcoming = {"date": day, "workouts": [workout.name for workout in planned[day.weekday()]]}
+            break
+    return {
+        "id": plan.id,
+        "name": plan.name,
+        "today": [
+            {
+                "workout_id": workout.id,
+                "name": workout.name,
+                "exercise_count": len(workout.exercises),
+                "muscle_groups": workout_muscles(workout),
+                "last_done_at": None,
+                "done": workout.id in done_today,
+            }
+            for workout in planned.get(today.weekday(), [])
+        ],
+        "next": upcoming,
+    }
+
+
 @fitness_overview_router.get("/overview", response_model=OverviewSchema)
 def get_overview(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     today = today_br()
     suggestion, workout_count = suggested_workout(user, db)
+    plan = active_plan(user, db)
+    week = week_summary(user, db, today, plan)
+    plan_info = plan_summary(plan, week, today)
+    if plan_info and plan_info["today"]:
+        last_done = last_done_map(user, db, [w["workout_id"] for w in plan_info["today"]])
+        for item in plan_info["today"]:
+            item["last_done_at"] = aware(last_done.get(item["workout_id"]))
+        pending_today = [w for w in plan_info["today"] if not w["done"]]
+        if pending_today:
+            suggestion = {**pending_today[0], "id": pending_today[0]["workout_id"]}
     return {
         "today": today,
         "active_session": active_summary(user, db),
-        "week": week_summary(user, db, today),
+        "plan": plan_info,
+        "week": week,
         "total_sessions": (
             db.query(func.count(WorkoutSession.id))
             .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)

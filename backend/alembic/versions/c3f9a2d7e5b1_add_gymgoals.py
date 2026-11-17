@@ -211,7 +211,52 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_fitness_body_weights_user_id'), ['user_id'], unique=False)
 
 
+    op.create_table(
+        'fitness_plans',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=60), nullable=False),
+        sa.Column('is_active', sa.Boolean(), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_plans', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_plans_user_id'), ['user_id'], unique=False)
+        batch_op.create_index(
+            'ix_fitness_plans_one_active',
+            ['user_id'],
+            unique=True,
+            sqlite_where=sa.text('is_active'),
+            postgresql_where=sa.text('is_active'),
+        )
+
+    op.create_table(
+        'fitness_plan_days',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('plan_id', sa.Integer(), nullable=False),
+        sa.Column('workout_id', sa.Integer(), nullable=False),
+        sa.Column('weekday', sa.Integer(), nullable=False),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['plan_id'], ['fitness_plans.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['workout_id'], ['fitness_workouts.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('fitness_plan_days', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_plan_days_plan_id'), ['plan_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_fitness_plan_days_workout_id'), ['workout_id'], unique=False)
+
+
 def downgrade() -> None:
+    with op.batch_alter_table('fitness_plan_days', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_plan_days_workout_id'))
+        batch_op.drop_index(batch_op.f('ix_fitness_plan_days_plan_id'))
+    op.drop_table('fitness_plan_days')
+    with op.batch_alter_table('fitness_plans', schema=None) as batch_op:
+        batch_op.drop_index('ix_fitness_plans_one_active')
+        batch_op.drop_index(batch_op.f('ix_fitness_plans_user_id'))
+    op.drop_table('fitness_plans')
     with op.batch_alter_table('fitness_body_weights', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_body_weights_user_id'))
     op.drop_table('fitness_body_weights')

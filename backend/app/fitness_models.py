@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -135,3 +135,42 @@ class BodyWeightEntry(Base):
     weight_kg = Column(Numeric(5, 2), nullable=False)
     note = Column(String(140), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Plan(Base):
+    __tablename__ = "fitness_plans"
+    __table_args__ = (
+        Index(
+            "ix_fitness_plans_one_active",
+            "user_id",
+            unique=True,
+            sqlite_where=text("is_active"),
+            postgresql_where=text("is_active"),
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(60), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    days = relationship(
+        "PlanDay",
+        order_by="(PlanDay.weekday, PlanDay.position)",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class PlanDay(Base):
+    __tablename__ = "fitness_plan_days"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    plan_id = Column(ForeignKey("fitness_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    workout_id = Column(ForeignKey("fitness_workouts.id", ondelete="CASCADE"), nullable=False, index=True)
+    weekday = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False)
+
+    workout = relationship("Workout", lazy="joined")

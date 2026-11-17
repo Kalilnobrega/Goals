@@ -295,9 +295,22 @@ class OverviewActiveSchema(BaseModel):
     total_sets: int
 
 
+class OverviewPlannedSchema(BaseModel):
+    workout_id: int
+    name: str
+    done: bool
+
+
+class OverviewDaySessionSchema(BaseModel):
+    id: int
+    name: str
+
+
 class OverviewDaySchema(BaseModel):
     date: date
     sessions: int
+    trained: list[OverviewDaySessionSchema] = []
+    planned: list[OverviewPlannedSchema] = []
 
 
 class OverviewWeekSchema(BaseModel):
@@ -323,9 +336,31 @@ class OverviewBodyWeightSchema(BaseModel):
     previous_on: date | None
 
 
+class OverviewPlanTodaySchema(BaseModel):
+    workout_id: int
+    name: str
+    exercise_count: int
+    muscle_groups: list[str]
+    last_done_at: datetime | None
+    done: bool
+
+
+class OverviewPlanNextSchema(BaseModel):
+    date: date
+    workouts: list[str]
+
+
+class OverviewPlanSchema(BaseModel):
+    id: int
+    name: str
+    today: list[OverviewPlanTodaySchema]
+    next: OverviewPlanNextSchema | None
+
+
 class OverviewSchema(BaseModel):
     today: date
     active_session: OverviewActiveSchema | None
+    plan: OverviewPlanSchema | None = None
     week: OverviewWeekSchema
     total_sessions: int
     last_session: SessionHistoryItemSchema | None
@@ -487,3 +522,35 @@ class StatsSchema(BaseModel):
     records: list[StatsRecordSchema]
     workouts: list[StatsWorkoutSchema]
     all_time: StatsAllTimeSchema
+
+
+class PlanDaySchema(BaseModel):
+    weekday: int = Field(ge=0, le=6)
+    workout_id: int
+
+
+class PlanSchema(BaseModel):
+    name: str = Field(max_length=60)
+    days: list[PlanDaySchema] = Field(default_factory=list, max_length=28)
+    is_active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        return clean_name(value, "Dê um nome para o plano.")
+
+
+class PlanDayResponseSchema(BaseModel):
+    weekday: int
+    workout_id: int
+    workout_name: str
+    exercise_count: int
+    muscle_groups: list[str]
+
+
+class PlanResponseSchema(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+    days: list[PlanDayResponseSchema]
+    updated_at: datetime | None
