@@ -1,32 +1,57 @@
 'use client';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, Library, History, TrendingUp, LayoutGrid } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, History, TrendingUp, LayoutGrid } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
 import styles from './GymNavbar.module.css';
 
 const links = [
   { href: '/gym', label: 'Início', icon: House },
-  { href: '/gym/workouts', label: 'Treinos', icon: ClipboardList },
-  { href: '/gym/exercises', label: 'Exercícios', icon: Library },
+  { href: '/gym/workouts', label: 'Treinos', icon: ClipboardList, also: ['/gym/exercises'] },
   { href: '/gym/history', label: 'Histórico', icon: History },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
 ];
 
 export default function GymNavbar() {
   const pathname = usePathname();
+  const [hidden, setHidden] = useState(false);
+
   useEffect(() => {
     saveLastApp('gym');
   }, []);
 
+  useEffect(() => {
+    let last = window.scrollY;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      if (y < 64) setHidden(false);
+      else if (y > last + 8) setHidden(true);
+      else if (y < last - 8) setHidden(false);
+      if (Math.abs(y - last) > 8) last = y;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
   if (pathname.startsWith('/gym/session/')) return null;
 
-  const isCurrent = (href) => (href === '/gym' ? pathname === '/gym' : pathname.startsWith(href));
+  const isCurrent = (href) => {
+    if (href === '/gym') return pathname === '/gym';
+    return [href, ...(links.find(l => l.href === href)?.also ?? [])].some(path => pathname.startsWith(path));
+  };
 
   return (
     <>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${hidden ? styles.headerHidden : ''}`}>
         <div className={styles.headerInner}>
           <Link href="/gym" className={styles.brand}>
             <span className={styles.brandMark}><Dumbbell size={18} strokeWidth={2.4} /></span>

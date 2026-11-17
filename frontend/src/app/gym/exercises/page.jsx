@@ -7,6 +7,7 @@ import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
 import ExerciseForm from '../../../components/gym/ExerciseForm';
+import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import styles from './page.module.css';
 
 const FILTERS = [{ value: 'all', label: 'Todos' }, { value: 'mine', label: 'Meus' }, ...MUSCLE_GROUPS];
@@ -103,6 +104,8 @@ export default function ExercisesPage() {
           <Plus size={18} strokeWidth={2.4} /> Novo exercício
         </button>
       </header>
+
+      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
 
       <div className={styles.searchBox}>
         <Search size={18} className={styles.searchIcon} aria-hidden="true" />

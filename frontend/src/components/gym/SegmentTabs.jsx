@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './SegmentTabs.module.css';
 
+export const WORKOUT_TABS = [
+  { href: '/gym/workouts', label: 'Fichas' },
+  { href: '/gym/exercises', label: 'Exercícios' },
+];
+
 export const PROGRESS_TABS = [
   { href: '/gym/progress', label: 'Resumo' },
   { href: '/gym/progress/exercises', label: 'Exercícios' },

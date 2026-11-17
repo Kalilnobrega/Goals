@@ -7,7 +7,9 @@
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--gym-border);
   padding-top: env(safe-area-inset-top);
+  transition: transform var(--dur-base) var(--ease-out);
 }
+
 
 .headerInner {
   max-width: 760px;
@@ -146,5 +148,35 @@
 
   .tabbar {
     display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .headerHidden {
+    transform: translateY(-100%);
+  }
+
+  .headerInner {
+    height: 52px;
+  }
+
+  .brandMark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brandName {
+    font-size: 1.02rem;
+  }
+
+  .switch {
+    height: 34px;
+    padding: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    transition: none;
   }
 }

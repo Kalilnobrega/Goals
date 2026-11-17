@@ -6,6 +6,7 @@ import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural } from '../../../lib/gym';
 import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../../components/gym/useStartSession';
+import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import styles from './page.module.css';
 
 export default function WorkoutsPage() {
@@ -35,6 +36,8 @@ export default function WorkoutsPage() {
           <Plus size={18} strokeWidth={2.4} /> Nova ficha
         </Link>
       </header>
+
+      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
 
       <ActiveSessionBanner />
 

@@ -33,6 +33,18 @@
   animation: sheetDown var(--dur-fast) var(--ease-in) forwards;
 }
 
+.handle {
+  flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
 .grip {
   width: 40px;
   height: 4px;
@@ -87,12 +99,17 @@
   .grip {
     display: none;
   }
+
+  .handle {
+    cursor: default;
+    touch-action: auto;
+  }
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
-@keyframes sheetDown { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes sheetDown { from { transform: translateY(var(--drag-offset, 0px)); } to { transform: translateY(100%); } }
 
 @media (prefers-reduced-motion: reduce) {
   .overlay, .sheet, .overlayClosing, .sheetClosing {
