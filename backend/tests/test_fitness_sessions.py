@@ -259,6 +259,59 @@ def test_add_swap_and_remove_exercises_mid_session(client, library, ana):
     assert [e["exercise"]["name"] for e in stored["exercises"]] == ["Supino reto", "Leg press"]
 
 
+def test_reorder_exercises_mid_session(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    session = start(client, headers, workout["id"])
+    bench_id, legs_id = [e["id"] for e in session["exercises"]]
+    log_set(client, headers, bench_id, 60, 10)
+
+    reordered = client.put(
+        f"/fitness/sessions/{session['id']}/order", json={"exercise_ids": [legs_id, bench_id]}, headers=headers
+    )
+    assert reordered.status_code == 200, reordered.text
+    assert [e["exercise_name"] for e in reordered.json()["exercises"]] == ["Leg press", "Supino reto"]
+    assert len(reordered.json()["exercises"][1]["sets"]) == 1
+
+    added = client.post(
+        f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": library["rosca-direta"]}, headers=headers
+    ).json()
+    assert [e["exercise_name"] for e in added["exercises"]] == ["Leg press", "Supino reto", "Rosca direta"]
+
+    fetched = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()
+    assert [e["exercise_name"] for e in fetched["exercises"]] == ["Leg press", "Supino reto", "Rosca direta"]
+
+    stored = client.get(f"/fitness/workouts/{workout['id']}", headers=headers).json()
+    assert [e["exercise"]["name"] for e in stored["exercises"]] == ["Supino reto", "Leg press"]
+
+
+@pytest.mark.parametrize("case", ["empty", "missing", "duplicate", "foreign"])
+def test_reorder_rejects_lists_that_do_not_match(client, library, ana, case):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    bench_id, legs_id = [e["id"] for e in session["exercises"]]
+    payload = {
+        "empty": [],
+        "missing": [bench_id],
+        "duplicate": [bench_id, bench_id],
+        "foreign": [bench_id, legs_id + 999],
+    }[case]
+    response = client.put(f"/fitness/sessions/{session['id']}/order", json={"exercise_ids": payload}, headers=headers)
+    assert response.status_code == 409
+
+
+def test_cannot_reorder_finished_session(client, library, ana):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    ids = [e["id"] for e in session["exercises"]]
+    log_set(client, headers, ids[0], 60, 10)
+    assert finish(client, headers, session["id"]).status_code == 200
+    response = client.put(
+        f"/fitness/sessions/{session['id']}/order", json={"exercise_ids": ids[::-1]}, headers=headers
+    )
+    assert response.status_code == 409
+
+
 def test_cannot_swap_exercise_with_sets(client, library, ana):
     _, headers = ana
     session = start(client, headers, make_workout(client, headers, library)["id"])
@@ -354,6 +407,11 @@ def test_other_users_cannot_touch_session(client, library, ana, bruno):
     ).status_code == 404
     assert client.patch(f"/fitness/session-exercises/{item_id}", json={"rest_seconds": 10}, headers=bruno_headers).status_code == 404
     assert client.delete(f"/fitness/session-exercises/{item_id}", headers=bruno_headers).status_code == 404
+    assert client.put(
+        f"/fitness/sessions/{session['id']}/order",
+        json={"exercise_ids": [e["id"] for e in session["exercises"]]},
+        headers=bruno_headers,
+    ).status_code == 404
     assert client.post(
         f"/fitness/session-exercises/{item_id}/sets", json={"weight_kg": 1, "reps": 1}, headers=bruno_headers
     ).status_code == 404

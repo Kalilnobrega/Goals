@@ -9,6 +9,7 @@ from app.fitness_models import Exercise, Workout, WorkoutExercise, WorkoutSessio
 from app.fitness_schemas import (
     StartSessionSchema,
     AddSessionExerciseSchema,
+    ReorderSessionSchema,
     EditSessionExerciseSchema,
     SetSchema,
     EditSetSchema,
@@ -323,6 +324,25 @@ def add_session_exercise(
             rest_seconds=last_rest(exercise.id, user, db),
         )
     )
+    return commit_session(workout_session, db)
+
+
+@fitness_sessions_router.put("/sessions/{session_id}/order", response_model=SessionResponseSchema)
+def reorder_session_exercises(
+    session_id: int,
+    data: ReorderSessionSchema,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout_session = get_own_session(session_id, user, db)
+    ensure_in_progress(workout_session)
+    by_id = {item.id: item for item in workout_session.exercises}
+    if len(data.exercise_ids) != len(by_id) or set(data.exercise_ids) != set(by_id):
+        raise HTTPException(
+            status_code=409, detail="A lista de exercícios mudou. Atualize a página e tente de novo."
+        )
+    for index, item_id in enumerate(data.exercise_ids):
+        by_id[item_id].position = index
     return commit_session(workout_session, db)
 
 

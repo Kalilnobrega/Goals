@@ -135,6 +135,10 @@ class AddSessionExerciseSchema(BaseModel):
     exercise_id: int
 
 
+class ReorderSessionSchema(BaseModel):
+    exercise_ids: list[int]
+
+
 class EditSessionExerciseSchema(BaseModel):
     exercise_id: int | None = None
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
