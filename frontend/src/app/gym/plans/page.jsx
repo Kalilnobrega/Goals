@@ -99,7 +99,7 @@ export default function PlansPage() {
                   {plan.is_active && <span className={styles.badge}><Check size={13} strokeWidth={3} /> Ativo</span>}
                 </span>
                 <span className={styles.cardMeta}>
-                  {plural(new Set(plan.days.map(d => d.weekday)).size, 'dia de treino', 'dias de treino')} por semana
+                  {plural(new Set(plan.days.map(d => d.weekday)).size, 'dia de treino', 'dias de treino')} · {plural(plan.days.reduce((sum, d) => sum + d.total_sets, 0), 'série', 'séries')} por semana
                 </span>
                 <WeekPreview plan={plan} />
               </Link>

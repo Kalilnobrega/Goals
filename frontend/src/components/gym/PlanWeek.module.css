@@ -1,0 +1,81 @@
+.week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day {
+  min-width: 0;
+}
+
+.inner {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.link {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.link:active {
+  background: var(--gym-surface-2);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--gym-accent);
+  outline-offset: 2px;
+}
+
+.letter {
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dot {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.dotTraining {
+  background: var(--gym-accent-soft);
+  border: 2px dashed var(--gym-accent);
+}
+
+.dotRest {
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+}
+
+.name {
+  width: 100%;
+  min-height: 1.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--gym-text);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.nameRest {
+  color: var(--gym-muted);
+  font-size: clamp(0.5rem, 2.3vw, 0.62rem);
+  font-weight: 500;
+}

@@ -1,0 +1,236 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.bare {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}
+
+.totalValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.totalLabel {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.subTitle {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.fichas,
+.muscles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fichas {
+  gap: 6px;
+}
+
+.ficha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+}
+
+.fichaMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fichaName {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fichaMeta {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.fichaTotal {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscles {
+  gap: 12px;
+}
+
+.muscle {
+  --band-low: #8b939c;
+  --band-medium: var(--gym-accent);
+  --band-high: #f59e0b;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend {
+  --band-low: #8b939c;
+  --band-medium: var(--gym-accent);
+  --band-high: #f59e0b;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  color: var(--gym-text);
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.legendItem {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.muscleTop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.muscleName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muscleValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  min-width: 52px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tag_low {
+  background: rgba(139, 147, 156, 0.16);
+  color: #b4bbc3;
+}
+
+.tag_medium {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.tag_high {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf4a;
+}
+
+.track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  overflow: hidden;
+}
+
+.zoneMedium {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(198, 244, 50, 0.07);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+}
+
+.low {
+  background: var(--band-low);
+}
+
+.medium {
+  background: var(--band-medium);
+}
+
+.high {
+  background: var(--band-high);
+}
+
+.rangeMark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--gym-surface);
+}
+

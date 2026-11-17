@@ -3,12 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { getPlan, getWorkouts, updatePlan, deletePlan, peekCache } from '../../../../lib/api';
-import { apiError } from '../../../../lib/gym';
-import { useToast } from '../../../../components/Toast';
-import { useConfirm } from '../../../../components/ConfirmDialog';
-import PlanEditor from '../../../../components/gym/PlanEditor';
-import styles from '../../workouts/editor.module.css';
+import { getPlan, getWorkouts, updatePlan, deletePlan, peekCache } from '../../../../../lib/api';
+import { apiError } from '../../../../../lib/gym';
+import { useToast } from '../../../../../components/Toast';
+import { useConfirm } from '../../../../../components/ConfirmDialog';
+import PlanEditor from '../../../../../components/gym/PlanEditor';
+import styles from '../../../workouts/editor.module.css';
 
 export default function PlanPage() {
   const { id } = useParams();
@@ -44,7 +44,7 @@ export default function PlanPage() {
     try {
       await updatePlan(id, data);
       toast('Plano salvo');
-      router.push('/gym/plans');
+      router.push(`/gym/plans/${id}`);
       return null;
     } catch (err) {
       return apiError(err, 'Não foi possível salvar o plano.');
@@ -70,8 +70,8 @@ export default function PlanPage() {
   return (
     <div className={styles.page}>
       <div className={styles.top}>
-        <Link href="/gym/plans" className={styles.back}><ChevronLeft size={18} /> Planos</Link>
-        <h1 className={styles.title}>{plan && status !== 'missing' ? 'Editar plano' : 'Plano'}</h1>
+        <Link href={`/gym/plans/${id}`} className={styles.back}><ChevronLeft size={18} /> {plan?.name ?? 'Plano'}</Link>
+        <h1 className={styles.title}>Editar plano</h1>
       </div>
 
       {status === 'missing' && (

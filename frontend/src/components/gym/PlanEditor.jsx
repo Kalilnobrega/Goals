@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { Plus, X, Trash2, Check, Moon } from 'lucide-react';
 import { WEEKDAY_NAMES, plural } from '../../lib/gym';
 import GymSheet from './GymSheet';
+import PlanSummary, { summarizePlan } from './PlanSummary';
+import PlanWeek from './PlanWeek';
+import sheetStyles from './sheet.module.css';
 import styles from './PlanEditor.module.css';
 
 const emptyWeek = () => Array.from({ length: 7 }, () => []);
@@ -19,12 +22,14 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
   const [active, setActive] = useState(initial ? initial.is_active : true);
   const [week, setWeek] = useState(() => weekFrom(initial));
   const [picking, setPicking] = useState(null);
+  const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const byId = new Map(workouts.map(w => [w.id, w]));
   const trainingDays = week.filter(day => day.length).length;
   const closePicker = useCallback(() => setPicking(null), []);
+  const closeReview = useCallback(() => setReviewing(false), []);
 
   const add = (weekday, workoutId) => {
     setWeek(current => current.map((ids, i) => (i === weekday && !ids.includes(workoutId) ? [...ids, workoutId] : ids)));
@@ -35,16 +40,25 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
     setWeek(current => current.map((ids, i) => (i === weekday ? ids.filter(id => id !== workoutId) : ids)));
   };
 
-  const submit = async (event) => {
+  const submit = (event) => {
     event.preventDefault();
     if (!name.trim()) return setError('Dê um nome para o plano, ex.: Treino 1.');
     setError('');
+    setReviewing(true);
+  };
+
+  const confirm = async () => {
     setSaving(true);
     const days = week.flatMap((ids, weekday) => ids.filter(id => byId.has(id)).map(workoutId => ({ weekday, workout_id: workoutId })));
     const problem = await onSubmit({ name: name.trim(), days, is_active: active });
     setSaving(false);
-    if (problem) setError(problem);
+    if (problem) {
+      setReviewing(false);
+      setError(problem);
+    }
   };
+
+  const reviewWeek = week.map(ids => ids.map(id => byId.get(id)).filter(Boolean));
 
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
@@ -125,9 +139,26 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
           </button>
         )}
         <button type="submit" className={styles.save} disabled={saving}>
-          <Check size={20} strokeWidth={2.6} /> {saving ? 'Salvando…' : 'Salvar plano'}
+          <Check size={20} strokeWidth={2.6} /> Salvar plano
         </button>
       </div>
+
+      <GymSheet open={reviewing} onClose={closeReview} title={name.trim() || 'Plano'}>
+        {reviewing && (
+          <div className={sheetStyles.stack}>
+            <PlanWeek week={reviewWeek} />
+            <PlanSummary summary={summarizePlan(week, byId)} bare />
+            <div className={sheetStyles.actions}>
+              <button type="button" className={sheetStyles.primary} onClick={confirm} disabled={saving}>
+                <Check size={20} strokeWidth={2.6} /> {saving ? 'Salvando…' : 'Confirmar'}
+              </button>
+              <button type="button" className={sheetStyles.secondary} onClick={closeReview} disabled={saving}>
+                Voltar e editar
+              </button>
+            </div>
+          </div>
+        )}
+      </GymSheet>
 
       <GymSheet
         open={picking !== null}

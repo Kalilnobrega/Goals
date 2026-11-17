@@ -21,9 +21,9 @@ export default function NewPlanPage() {
 
   const save = async (data) => {
     try {
-      await createPlan(data);
+      const plan = await createPlan(data);
       toast('Plano criado');
-      router.push('/gym/plans');
+      router.push(`/gym/plans/${plan.id}`);
       return null;
     } catch (err) {
       return apiError(err, 'Não foi possível criar o plano.');
