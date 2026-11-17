@@ -40,7 +40,7 @@ DEFAULT_EXERCISES = [
     ('elevacao-lateral', 'Elevação lateral', 'shoulders', 'dumbbell'),
     ('elevacao-frontal', 'Elevação frontal', 'shoulders', 'dumbbell'),
     ('crucifixo-inverso', 'Crucifixo inverso', 'shoulders', 'dumbbell'),
-    ('encolhimento', 'Encolhimento', 'shoulders', 'dumbbell'),
+    ('encolhimento', 'Encolhimento', 'back', 'dumbbell'),
     ('rosca-direta', 'Rosca direta', 'biceps', 'barbell'),
     ('rosca-alternada', 'Rosca alternada', 'biceps', 'dumbbell'),
     ('rosca-martelo', 'Rosca martelo', 'biceps', 'dumbbell'),
@@ -75,6 +75,61 @@ DEFAULT_EXERCISES = [
 ]
 
 
+DEFAULT_MUSCLES = {
+    'supino-reto': (['chest_mid'], ['chest_lower', 'delts_front', 'triceps_lateral', 'triceps_medial']),
+    'supino-inclinado': (['chest_upper'], ['delts_front', 'triceps_lateral', 'triceps_medial']),
+    'supino-declinado': (['chest_lower'], ['chest_mid', 'triceps_lateral', 'triceps_medial']),
+    'supino-reto-halteres': (['chest_mid'], ['chest_lower', 'delts_front', 'triceps_lateral', 'triceps_medial']),
+    'supino-inclinado-halteres': (['chest_upper'], ['delts_front', 'triceps_lateral', 'triceps_medial']),
+    'crucifixo': (['chest_mid'], ['chest_upper', 'delts_front']),
+    'peck-deck': (['chest_mid'], ['chest_upper']),
+    'crossover': (['chest_lower'], ['chest_mid']),
+    'flexao': (['chest_mid'], ['delts_front', 'triceps_lateral', 'triceps_medial', 'abs_rectus']),
+    'puxada-frontal': (['lats'], ['biceps', 'brachialis', 'rhomboids', 'delts_rear']),
+    'remada-baixa': (['lats', 'rhomboids', 'traps_mid'], ['biceps', 'delts_rear']),
+    'remada-curvada': (['lats', 'rhomboids', 'traps_mid'], ['delts_rear', 'biceps', 'lower_back']),
+    'remada-unilateral': (['lats'], ['rhomboids', 'traps_mid', 'delts_rear', 'biceps']),
+    'remada-cavalinho': (['rhomboids', 'traps_mid', 'lats'], ['biceps', 'delts_rear']),
+    'barra-fixa': (['lats'], ['biceps', 'brachialis', 'rhomboids']),
+    'pulldown': (['lats'], ['triceps_long']),
+    'levantamento-terra': (['lower_back', 'glute_max', 'biceps_femoris', 'semitendinosus'], ['traps_upper', 'lats', 'vastus_lateralis', 'forearm_flexors']),
+    'desenvolvimento': (['delts_front'], ['delts_side', 'triceps_lateral', 'triceps_medial', 'traps_upper']),
+    'desenvolvimento-maquina': (['delts_front'], ['delts_side', 'triceps_lateral', 'triceps_medial']),
+    'elevacao-lateral': (['delts_side'], ['traps_upper']),
+    'elevacao-frontal': (['delts_front'], ['chest_upper']),
+    'crucifixo-inverso': (['delts_rear'], ['rhomboids', 'traps_mid']),
+    'encolhimento': (['traps_upper'], ['forearm_flexors']),
+    'rosca-direta': (['biceps'], ['brachialis', 'forearm_flexors']),
+    'rosca-alternada': (['biceps'], ['brachialis', 'forearm_flexors']),
+    'rosca-martelo': (['brachialis', 'brachioradialis'], ['biceps']),
+    'rosca-scott': (['biceps'], ['brachialis']),
+    'rosca-cabo': (['biceps'], ['brachialis']),
+    'triceps-pulley': (['triceps_lateral', 'triceps_medial'], ['triceps_long']),
+    'triceps-corda': (['triceps_lateral', 'triceps_medial'], ['triceps_long']),
+    'triceps-testa': (['triceps_long', 'triceps_lateral'], ['triceps_medial']),
+    'triceps-frances': (['triceps_long'], ['triceps_lateral', 'triceps_medial']),
+    'mergulho': (['triceps_lateral', 'triceps_medial', 'triceps_long'], ['chest_lower', 'delts_front']),
+    'agachamento-livre': (['vastus_lateralis', 'vastus_medialis', 'rectus_femoris', 'glute_max'], ['adductors', 'lower_back']),
+    'agachamento-hack': (['vastus_lateralis', 'vastus_medialis', 'rectus_femoris'], ['glute_max']),
+    'leg-press': (['vastus_lateralis', 'vastus_medialis'], ['rectus_femoris', 'glute_max', 'adductors']),
+    'cadeira-extensora': (['rectus_femoris', 'vastus_lateralis', 'vastus_medialis'], []),
+    'mesa-flexora': (['biceps_femoris', 'semitendinosus'], ['gastrocnemius']),
+    'cadeira-flexora': (['biceps_femoris', 'semitendinosus'], []),
+    'cadeira-adutora': (['adductors'], []),
+    'afundo': (['vastus_lateralis', 'vastus_medialis', 'glute_max'], ['rectus_femoris', 'adductors', 'glute_med']),
+    'stiff': (['biceps_femoris', 'semitendinosus'], ['glute_max', 'lower_back']),
+    'panturrilha-em-pe': (['gastrocnemius'], ['soleus']),
+    'panturrilha-sentado': (['soleus'], ['gastrocnemius']),
+    'elevacao-pelvica': (['glute_max'], ['glute_med', 'biceps_femoris', 'semitendinosus']),
+    'cadeira-abdutora': (['glute_med'], ['glute_max']),
+    'coice-cabo': (['glute_max'], ['glute_med', 'biceps_femoris']),
+    'abdominal-supra': (['abs_rectus'], ['obliques']),
+    'abdominal-infra': (['abs_rectus'], ['obliques']),
+    'abdominal-maquina': (['abs_rectus'], ['obliques']),
+    'prancha': (['abs_rectus'], ['obliques']),
+}
+
+
 def upgrade() -> None:
     exercises = op.create_table(
         'fitness_exercises',
@@ -97,6 +152,30 @@ def upgrade() -> None:
         [
             {'slug': slug, 'name': name, 'muscle_group': group, 'equipment': equipment}
             for slug, name, group, equipment in DEFAULT_EXERCISES
+        ],
+    )
+
+    exercise_muscles = op.create_table(
+        'fitness_exercise_muscles',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('exercise_id', sa.Integer(), nullable=False),
+        sa.Column('muscle', sa.String(length=30), nullable=False),
+        sa.Column('role', sa.String(length=10), nullable=False),
+        sa.ForeignKeyConstraint(['exercise_id'], ['fitness_exercises.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('exercise_id', 'muscle', name='uq_fitness_exercise_muscles'),
+    )
+    with op.batch_alter_table('fitness_exercise_muscles', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_exercise_muscles_exercise_id'), ['exercise_id'], unique=False)
+
+    ids = dict(op.get_bind().execute(sa.text('SELECT slug, id FROM fitness_exercises WHERE slug IS NOT NULL')).all())
+    op.bulk_insert(
+        exercise_muscles,
+        [
+            {'exercise_id': ids[slug], 'muscle': muscle, 'role': role}
+            for slug, (primary, secondary) in DEFAULT_MUSCLES.items()
+            for role, muscles in (('primary', primary), ('secondary', secondary))
+            for muscle in muscles
         ],
     )
 
@@ -170,6 +249,7 @@ def upgrade() -> None:
         sa.Column('reps_min', sa.Integer(), nullable=True),
         sa.Column('reps_max', sa.Integer(), nullable=True),
         sa.Column('rest_seconds', sa.Integer(), nullable=True),
+        sa.Column('muscles', sa.JSON(), nullable=True),
         sa.ForeignKeyConstraint(['session_id'], ['fitness_sessions.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['exercise_id'], ['fitness_exercises.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['workout_exercise_id'], ['fitness_workout_exercises.id'], ondelete='SET NULL'),
@@ -279,6 +359,9 @@ def downgrade() -> None:
     with op.batch_alter_table('fitness_workouts', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_workouts_user_id'))
     op.drop_table('fitness_workouts')
+    with op.batch_alter_table('fitness_exercise_muscles', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_exercise_muscles_exercise_id'))
+    op.drop_table('fitness_exercise_muscles')
     with op.batch_alter_table('fitness_exercises', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_exercises_user_id'))
     op.drop_table('fitness_exercises')

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, Workout, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
+from app.fitness_models import Exercise, ExerciseMuscle, Workout, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
@@ -61,6 +61,7 @@ def create_exercise(
         name=data.name,
         muscle_group=data.muscle_group,
         equipment=data.equipment,
+        muscles=[ExerciseMuscle(muscle=item.muscle, role=item.role) for item in data.muscles],
     )
     session.add(exercise)
     session.commit()
@@ -76,11 +77,15 @@ def edit_exercise(
     session: Session = Depends(get_db),
 ):
     exercise = get_own_exercise(exercise_id, user, session)
-    changes = data.model_dump(exclude_unset=True, exclude_none=True)
+    changes = data.model_dump(exclude_unset=True, exclude_none=True, exclude={"muscles"})
     if "name" in changes:
         ensure_unique_name(changes["name"], user, session, exclude_id=exercise.id)
     for field, value in changes.items():
         setattr(exercise, field, value)
+    if data.muscles is not None:
+        exercise.muscles = []
+        session.flush()
+        exercise.muscles = [ExerciseMuscle(muscle=item.muscle, role=item.role) for item in data.muscles]
     session.commit()
     session.refresh(exercise)
     return exercise

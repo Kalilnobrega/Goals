@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, JSON, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -15,9 +15,29 @@ class Exercise(Base):
     equipment = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    muscles = relationship(
+        "ExerciseMuscle",
+        order_by="(ExerciseMuscle.role, ExerciseMuscle.id)",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
     @property
     def is_custom(self) -> bool:
         return self.user_id is not None
+
+    def muscle_list(self) -> list[dict]:
+        return [{"muscle": item.muscle, "role": item.role} for item in self.muscles]
+
+
+class ExerciseMuscle(Base):
+    __tablename__ = "fitness_exercise_muscles"
+    __table_args__ = (UniqueConstraint("exercise_id", "muscle", name="uq_fitness_exercise_muscles"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), nullable=False, index=True)
+    muscle = Column(String(30), nullable=False)
+    role = Column(String(10), nullable=False)
 
 
 class Workout(Base):
@@ -99,6 +119,7 @@ class SessionExercise(Base):
     reps_min = Column(Integer, nullable=True)
     reps_max = Column(Integer, nullable=True)
     rest_seconds = Column(Integer, nullable=True)
+    muscles = Column(JSON, nullable=True)
 
     sets = relationship(
         "SetEntry",

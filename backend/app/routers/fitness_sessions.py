@@ -91,6 +91,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "exercise_name": item.exercise_name,
             "muscle_group": item.muscle_group,
             "equipment": item.equipment,
+            "muscles": item.muscles or [],
             "target_sets": item.target_sets,
             "reps_min": item.reps_min,
             "reps_max": item.reps_max,
@@ -317,6 +318,7 @@ def start_session(
                 exercise_name=item.exercise.name,
                 muscle_group=item.exercise.muscle_group,
                 equipment=item.exercise.equipment,
+                muscles=item.exercise.muscle_list(),
                 position=index,
                 target_sets=item.target_sets,
                 reps_min=item.reps_min,
@@ -399,6 +401,7 @@ def add_session_exercise(
             exercise_name=exercise.name,
             muscle_group=exercise.muscle_group,
             equipment=exercise.equipment,
+            muscles=exercise.muscle_list(),
             position=position,
             rest_seconds=last_rest(exercise.id, user, db),
         )
@@ -446,6 +449,7 @@ def edit_session_exercise(
         item.exercise_name = exercise.name
         item.muscle_group = exercise.muscle_group
         item.equipment = exercise.equipment
+        item.muscles = exercise.muscle_list()
         item.workout_exercise_id = None
         if "rest_seconds" not in changes:
             item.rest_seconds = last_rest(exercise.id, user, db)

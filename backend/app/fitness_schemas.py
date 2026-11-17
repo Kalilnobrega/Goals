@@ -1,6 +1,7 @@
 from typing import Literal
 from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.fitness_muscles import MuscleKey, MuscleRole
 
 
 MuscleGroup = Literal[
@@ -9,6 +10,7 @@ MuscleGroup = Literal[
     "shoulders",
     "biceps",
     "triceps",
+    "forearms",
     "quads",
     "hamstrings",
     "calves",
@@ -39,10 +41,32 @@ def clean_name(value: str, message: str = "Dê um nome para o exercício.") -> s
     return value
 
 
+class ExerciseMuscleSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    muscle: MuscleKey
+    role: MuscleRole
+
+
+def unique_muscles(value):
+    if value is None:
+        return value
+    keys = [item.muscle for item in value]
+    if len(keys) != len(set(keys)):
+        raise ValueError("Cada músculo só pode aparecer uma vez.")
+    return value
+
+
 class ExerciseSchema(BaseModel):
     name: str = Field(max_length=60)
     muscle_group: MuscleGroup
     equipment: Equipment
+    muscles: list[ExerciseMuscleSchema] = Field(default_factory=list, max_length=15)
+
+    @field_validator("muscles")
+    @classmethod
+    def no_repeated_muscles(cls, value):
+        return unique_muscles(value)
 
     @field_validator("name")
     @classmethod
@@ -54,6 +78,12 @@ class EditExerciseSchema(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     muscle_group: MuscleGroup | None = None
     equipment: Equipment | None = None
+    muscles: list[ExerciseMuscleSchema] | None = Field(default=None, max_length=15)
+
+    @field_validator("muscles")
+    @classmethod
+    def no_repeated_muscles(cls, value):
+        return unique_muscles(value)
 
     @field_validator("name")
     @classmethod
@@ -69,6 +99,7 @@ class ExerciseResponseSchema(BaseModel):
     muscle_group: str
     equipment: str
     is_custom: bool
+    muscles: list[ExerciseMuscleSchema] = []
 
 
 class WorkoutExerciseSchema(BaseModel):
@@ -182,6 +213,7 @@ class SessionExerciseResponseSchema(BaseModel):
     exercise_name: str
     muscle_group: str
     equipment: str
+    muscles: list[ExerciseMuscleSchema] = []
     target_sets: int | None
     reps_min: int | None
     reps_max: int | None
