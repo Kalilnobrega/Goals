@@ -1,4 +1,5 @@
 import GymNavbar from '../../components/gym/GymNavbar';
+import ServiceWorker from '../../components/gym/ServiceWorker';
 import styles from './gym.module.css';
 
 export const metadata = {
@@ -28,6 +29,7 @@ export const viewport = {
 export default function GymLayout({ children }) {
   return (
     <div className={styles.shell}>
+      <ServiceWorker />
       <GymNavbar />
       <main className={styles.main}>{children}</main>
     </div>

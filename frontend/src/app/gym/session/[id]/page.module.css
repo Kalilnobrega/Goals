@@ -75,6 +75,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+.offline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 6px 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.offline > span {
+  flex: 1;
+}
+
+.offlineRetry {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  cursor: pointer;
+}
+
 .headerMeta {
   color: var(--gym-muted);
   font-size: 0.9rem;

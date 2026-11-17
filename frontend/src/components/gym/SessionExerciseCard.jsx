@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Check, Minus, Plus, MoreVertical, Timer, Trash2 } from 'lucide-react';
+import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import {
   muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
   parseKg, kgInput, cleanKgInput,
@@ -207,14 +207,21 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   if (!editing) {
     return (
       <SwipeToDelete onDelete={() => onDelete(entry)}>
-        <button type="button" className={styles.setRow} onClick={onEdit} aria-label={`Editar série ${entry.position}`}>
+        <button
+          type="button"
+          className={`${styles.setRow} ${entry.pending ? styles.setPending : ''}`}
+          onClick={entry.pending ? undefined : onEdit}
+          aria-label={entry.pending ? `Série ${entry.position} guardada no celular, aguardando conexão` : `Editar série ${entry.position}`}
+        >
           <span className={styles.setIndex}>{entry.position}</span>
           <span className={styles.setValue}>
             {entry.weight_kg > 0 ? <>{formatKg(entry.weight_kg)} <small>kg</small></> : <span className={styles.bodyweight}>Peso corporal</span>}
           </span>
           <span className={styles.setTimes}>×</span>
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
-          <Check size={18} className={styles.setDone} aria-hidden="true" />
+          {entry.pending
+            ? <CloudOff size={18} className={styles.setWaiting} aria-hidden="true" />
+            : <Check size={18} className={styles.setDone} aria-hidden="true" />}
         </button>
       </SwipeToDelete>
     );

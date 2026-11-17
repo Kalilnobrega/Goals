@@ -421,3 +421,15 @@
     transition: none;
   }
 }
+
+.setPending {
+  cursor: default;
+  background: transparent;
+  border: 1px dashed var(--gym-border-strong);
+}
+
+.setWaiting {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--gym-muted);
+}

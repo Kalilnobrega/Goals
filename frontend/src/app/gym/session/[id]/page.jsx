@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd,
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw,
 } from 'lucide-react';
 import {
   getSession, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
@@ -15,6 +15,10 @@ import {
   plural, REST_OPTIONS, FORGOTTEN_AFTER_MS,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
+import {
+  newClientId, isOfflineError, pendingFor, enqueueSet, dequeueSet, forgetSession, pendingEntry, withPending,
+  saveSnapshot, readSnapshot,
+} from '../../../../lib/setQueue';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
@@ -93,11 +97,19 @@ export default function SessionPage() {
   const carouselRef = useRef(null);
   const stripRef = useRef(null);
   const fromScroll = useRef(false);
+  const flushing = useRef(false);
+  const [offline, setOffline] = useState(false);
 
   useWakeLock(session?.status === 'in_progress');
 
-  const loaded = useCallback((data) => {
+  useEffect(() => {
+    if (session) saveSnapshot(session);
+  }, [session]);
+
+  const loaded = useCallback((raw) => {
+    const data = withPending(raw);
     setSession(data);
+    setOffline(false);
     setCurrentId(current => current ?? firstPending(data));
     setStatus('ready');
     if (data.status === 'in_progress' && Date.now() - new Date(data.last_activity_at).getTime() > FORGOTTEN_AFTER_MS) {
@@ -105,7 +117,17 @@ export default function SessionPage() {
     }
   }, []);
 
-  const failed = useCallback((err) => setStatus(err?.response?.status === 404 ? 'missing' : 'error'), []);
+  const failed = useCallback((err) => {
+    const snapshot = isOfflineError(err) ? readSnapshot(Number(id)) : null;
+    if (snapshot) {
+      setSession(withPending(snapshot));
+      setCurrentId(current => current ?? firstPending(snapshot));
+      setOffline(true);
+      setStatus('ready');
+      return;
+    }
+    setStatus(err?.response?.status === 404 ? 'missing' : 'error');
+  }, [id]);
 
   const load = useCallback(() => {
     setStatus('loading');
@@ -133,18 +155,90 @@ export default function SessionPage() {
     return false;
   };
 
-  const logSet = async (item, data) => {
+  const buzz = () => {
     try {
-      const entry = await addSet(item.id, data);
-      setSession(current => withItem(current, item.id, it => ({ ...it, sets: [...it.sets, entry] })));
-      try {
-        navigator.vibrate?.(30);
-      } catch {}
+      navigator.vibrate?.(30);
+    } catch {}
+  };
+
+  const replacePending = (itemId, clientId, entry) => {
+    setSession(current => withItem(current, itemId, it => ({
+      ...it,
+      sets: entry
+        ? it.sets.map((e, i) => (e.client_id === clientId ? { ...entry, position: i + 1 } : e))
+        : it.sets.filter(e => e.client_id !== clientId).map((e, i) => ({ ...e, position: i + 1 })),
+    })));
+  };
+
+  const logSet = async (item, data) => {
+    const clientId = newClientId();
+    try {
+      const entry = await addSet(item.id, { ...data, client_id: clientId });
+      setSession(current => withItem(current, item.id, it => ({
+        ...it,
+        sets: [...it.sets, entry].map((e, i) => ({ ...e, position: i + 1 })),
+      })));
+      setOffline(false);
+      buzz();
       return true;
     } catch (err) {
-      return fail(err, 'Não foi possível salvar a série. Tente de novo.');
+      if (!isOfflineError(err)) return fail(err, 'Não foi possível salvar a série. Tente de novo.');
+      const queued = {
+        clientId,
+        sessionId: session.id,
+        itemId: item.id,
+        data,
+        position: item.sets.length + 1,
+        createdAt: new Date().toISOString(),
+      };
+      enqueueSet(queued);
+      setSession(current => withItem(current, item.id, it => ({ ...it, sets: [...it.sets, pendingEntry(queued)] })));
+      setOffline(true);
+      buzz();
+      return true;
     }
   };
+
+  const flush = useCallback(async () => {
+    if (!session || session.status !== 'in_progress' || flushing.current) return;
+    const queue = pendingFor(session.id);
+    if (!queue.length) return;
+    flushing.current = true;
+    for (const queued of queue) {
+      try {
+        const entry = await addSet(queued.itemId, { ...queued.data, client_id: queued.clientId });
+        dequeueSet(queued.clientId);
+        replacePending(queued.itemId, queued.clientId, entry);
+        setOffline(false);
+      } catch (err) {
+        if (isOfflineError(err)) {
+          setOffline(true);
+          break;
+        }
+        dequeueSet(queued.clientId);
+        replacePending(queued.itemId, queued.clientId, null);
+        toast({ tone: 'danger', message: apiError(err, 'Uma série guardada sem conexão não pôde ser salva.') });
+      }
+    }
+    flushing.current = false;
+  }, [session, toast]);
+
+  const pendingCount = session ? session.exercises.reduce((n, it) => n + it.sets.filter(e => e.pending).length, 0) : 0;
+
+  useEffect(() => {
+    if (!pendingCount) return;
+    const retry = () => { if (document.visibilityState === 'visible') flush(); };
+    const first = setTimeout(retry, 0);
+    const timer = setInterval(retry, 15000);
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', retry);
+    };
+  }, [pendingCount, flush]);
 
   const editSet = async (item, entry, data) => {
     try {
@@ -160,6 +254,11 @@ export default function SessionPage() {
   };
 
   const removeSet = async (item, entry) => {
+    if (entry.pending) {
+      dequeueSet(entry.client_id);
+      replacePending(item.id, entry.client_id, null);
+      return true;
+    }
     try {
       await deleteSet(entry.id);
       setSession(current => withItem(current, item.id, it => ({
@@ -179,7 +278,7 @@ export default function SessionPage() {
   const changeRest = async (item, seconds) => {
     setSheet(null);
     try {
-      setSession(await updateSessionExercise(item.id, { rest_seconds: seconds }));
+      setSession(withPending(await updateSessionExercise(item.id, { rest_seconds: seconds })));
     } catch (err) {
       fail(err, 'Não foi possível salvar o descanso.');
     }
@@ -193,7 +292,7 @@ export default function SessionPage() {
       const before = session.exercises.length;
       let latest = session;
       for (const exercise of selected) latest = await addSessionExercise(session.id, exercise.id);
-      setSession(latest);
+      setSession(withPending(latest));
       if (latest.exercises[before]) setCurrentId(latest.exercises[before].id);
     } catch (err) {
       fail(err, 'Não foi possível adicionar o exercício.');
@@ -204,7 +303,7 @@ export default function SessionPage() {
   const swapExercise = async (item, [exercise]) => {
     setSheet(null);
     try {
-      setSession(await updateSessionExercise(item.id, { exercise_id: exercise.id }));
+      setSession(withPending(await updateSessionExercise(item.id, { exercise_id: exercise.id })));
     } catch (err) {
       fail(err, 'Não foi possível trocar o exercício.');
     }
@@ -247,16 +346,22 @@ export default function SessionPage() {
         const index = all.indexOf(item.id);
         setCurrentId(all[index + 1] ?? all[index - 1] ?? null);
       }
-      setSession(updated);
+      setSession(withPending(updated));
     } catch (err) {
       fail(err, 'Não foi possível remover o exercício.');
     }
   };
 
   const finish = async (completedAt) => {
+    if (pendingCount) {
+      flush();
+      toast({ tone: 'info', message: `Espere ${pendingCount === 1 ? 'a série guardada ser enviada' : `as ${pendingCount} séries guardadas serem enviadas`} para finalizar.` });
+      return;
+    }
     setBusy(true);
     try {
       const data = await finishSession(session.id, completedAt);
+      forgetSession(session.id);
       if (getRestTimer()?.sessionId === session.id) stopRestTimer();
       setSession(data);
       setSheet(null);
@@ -277,6 +382,7 @@ export default function SessionPage() {
     if (!ok) return;
     try {
       await deleteSession(session.id);
+      forgetSession(session.id);
       if (getRestTimer()?.sessionId === session.id) stopRestTimer();
       toast('Treino descartado');
       router.push('/gym/workouts');
@@ -412,6 +518,21 @@ export default function SessionPage() {
           </div>
         </div>
         <h1 className={styles.title}>{session.name}</h1>
+        {(pendingCount > 0 || offline) && (
+          <div className={styles.offline} role="status">
+            <CloudOff size={16} aria-hidden="true" />
+            <span>
+              {pendingCount
+                ? `${pendingCount === 1 ? '1 série guardada' : `${pendingCount} séries guardadas`} no celular. Enviamos quando a conexão voltar.`
+                : 'Sem conexão. As próximas séries ficam guardadas no celular.'}
+            </span>
+            {pendingCount > 0 && (
+              <button type="button" className={styles.offlineRetry} onClick={flush} aria-label="Tentar enviar agora">
+                <RefreshCw size={16} />
+              </button>
+            )}
+          </div>
+        )}
         <p className={styles.headerMeta}>
           {plural(totalSets, 'série', 'séries')} · {formatVolume(volume)}
         </p>
