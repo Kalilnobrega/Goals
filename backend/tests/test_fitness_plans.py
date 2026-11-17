@@ -36,6 +36,7 @@ def test_create_plan_with_days(client, ana, split):
         (0, "Upper A"), (1, "Lower A"), (3, "Upper B"), (4, "Lower B"),
     ]
     assert plan["days"][0]["exercise_count"] == 2
+    assert plan["days"][0]["total_sets"] == 7
     assert plan["days"][0]["muscle_groups"] == ["chest", "quads"]
 
 

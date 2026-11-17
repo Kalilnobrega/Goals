@@ -545,6 +545,7 @@ class PlanDayResponseSchema(BaseModel):
     workout_id: int
     workout_name: str
     exercise_count: int
+    total_sets: int
     muscle_groups: list[str]
 
 

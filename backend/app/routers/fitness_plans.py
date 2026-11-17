@@ -29,6 +29,7 @@ def serialize_plan(plan: Plan) -> dict:
                 "workout_id": day.workout_id,
                 "workout_name": day.workout.name,
                 "exercise_count": len(day.workout.exercises),
+                "total_sets": sum(item.target_sets for item in day.workout.exercises),
                 "muscle_groups": workout_muscles(day.workout),
             }
             for day in plan.days
