@@ -1,0 +1,220 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px calc(32px + env(safe-area-inset-bottom));
+}
+
+.inner {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.subtitle {
+  color: #475569;
+  font-size: 1.05rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 112px;
+  padding: 20px;
+  border-radius: 24px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--blue-400);
+  outline-offset: 3px;
+}
+
+.goals {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  color: #0f172a;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08);
+}
+
+.gym {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(198, 244, 50, 0.16) 0%, transparent 55%),
+    #0e1013;
+  border: 1px solid #2a2f36;
+  color: #f2f4f7;
+  box-shadow: 0 14px 34px rgba(14, 16, 19, 0.28);
+}
+
+@media (hover: hover) {
+  .goals:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.14);
+  }
+
+  .gym:hover {
+    border-color: #c6f432;
+  }
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+}
+
+.goals .icon {
+  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  color: #fff;
+}
+
+.gym .icon {
+  background: #c6f432;
+  color: #0e1013;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: -0.03em;
+}
+
+.gym .name span {
+  color: #c6f432;
+}
+
+.badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.goals .badge {
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+
+.gym .badge {
+  background: rgba(198, 244, 50, 0.14);
+  color: #c6f432;
+}
+
+.description {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.goals .description {
+  color: #475569;
+}
+
+.gym .description {
+  color: #a3abb7;
+}
+
+.arrow {
+  flex-shrink: 0;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.goals .arrow {
+  color: var(--blue-500);
+}
+
+.gym .arrow {
+  color: #c6f432;
+}
+
+@media (hover: hover) {
+  .card:hover .arrow {
+    transform: translateX(3px);
+  }
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  color: var(--blue-700);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.account:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .arrow {
+    transition: none;
+  }
+}

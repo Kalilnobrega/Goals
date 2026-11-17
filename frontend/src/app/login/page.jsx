@@ -6,12 +6,8 @@ import { Target, CheckCircle2, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-
 import { useGoogleLogin } from '@react-oauth/google';
 import { googleAuth } from '../../lib/api';
 import { saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
+import { homeAfterLogin } from '../../lib/apps';
 import styles from './page.module.css';
-
-function redirectTarget() {
-  const from = new URLSearchParams(window.location.search).get('from');
-  return from && from.startsWith('/') && !from.startsWith('//') ? from : '/';
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,7 +59,7 @@ export default function LoginPage() {
         }
       }
 
-      router.push(redirectTarget());
+      router.push(homeAfterLogin());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -89,7 +85,7 @@ export default function LoginPage() {
             saveUserName(me.name);
           }
         }
-        router.push(redirectTarget());
+        router.push(homeAfterLogin());
       } catch {
         setError('Erro ao entrar com Google. Tente novamente.');
       } finally {

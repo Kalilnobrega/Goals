@@ -2,8 +2,9 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Target, House, ListChecks, ChartColumn, UserCircle2 } from 'lucide-react';
+import { Target, House, ListChecks, ChartColumn, UserCircle2, LayoutGrid } from 'lucide-react';
 import { getUserName, saveUserName } from '../lib/auth';
+import { saveLastApp } from '../lib/apps';
 import { getMe, getStreak } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
@@ -111,6 +112,10 @@ export default function Navbar() {
   }
 
   useEffect(() => {
+    if (!pathname.startsWith('/account')) saveLastApp('goals');
+  }, [pathname]);
+
+  useEffect(() => {
     if (!getUserName()) {
       getMe()
         .then(me => {
@@ -209,6 +214,10 @@ export default function Navbar() {
               <span key={`n-${bump}`} className={bump ? styles.numberIn : ''}>{streakValue}</span>
             </span>
           </div>
+
+          <Link href="/apps" className={styles.appSwitch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
+            <LayoutGrid size={16} />
+          </Link>
 
           {firstName && (
             <Link

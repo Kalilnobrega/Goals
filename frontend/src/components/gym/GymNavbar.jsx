@@ -1,7 +1,9 @@
 'use client';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, Library, History, TrendingUp, ArrowLeftRight } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, Library, History, TrendingUp, LayoutGrid } from 'lucide-react';
+import { saveLastApp } from '../../lib/apps';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -14,6 +16,10 @@ const links = [
 
 export default function GymNavbar() {
   const pathname = usePathname();
+  useEffect(() => {
+    saveLastApp('gym');
+  }, []);
+
   const isCurrent = (href) => (href === '/gym' ? pathname === '/gym' : pathname.startsWith(href));
 
   return (
@@ -38,9 +44,9 @@ export default function GymNavbar() {
             ))}
           </nav>
 
-          <Link href="/" className={styles.switch} aria-label="Trocar aplicativo">
-            <ArrowLeftRight size={16} />
-            <span>Goals</span>
+          <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
+            <LayoutGrid size={16} />
+            <span>Apps</span>
           </Link>
         </div>
       </header>

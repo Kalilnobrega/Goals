@@ -6,6 +6,7 @@ import { Target, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import { googleAuth } from '../../lib/api';
+import { homeAfterLogin } from '../../lib/apps';
 import styles from '../login/page.module.css';
 import reg from './register.module.css';
 
@@ -71,7 +72,7 @@ export default function RegisterPage() {
             saveUserName(me.name);
           }
         }
-        router.push('/');
+        router.push(homeAfterLogin());
       } catch {
         setError('Erro ao entrar com Google. Tente novamente.');
       } finally {
