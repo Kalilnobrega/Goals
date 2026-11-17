@@ -50,3 +50,12 @@
     padding: 32px 24px 64px;
   }
 }
+
+.shell:has(:global([data-session-focus])) {
+  --gym-tabbar-h: 76px;
+}
+
+.shell:has(:global([data-session-focus])) .main {
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-bottom: calc(var(--gym-tabbar-h) + 40px + env(safe-area-inset-bottom));
+}

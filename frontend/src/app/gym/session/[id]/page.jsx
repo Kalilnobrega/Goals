@@ -1,8 +1,11 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
+import {
+  Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd,
+} from 'lucide-react';
 import {
   getSession, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
@@ -21,6 +24,7 @@ import SessionSummary from '../../../../components/gym/SessionSummary';
 import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import RestTimer from '../../../../components/gym/RestTimer';
 import useNow from '../../../../components/gym/useNow';
+import useWakeLock from '../../../../components/gym/useWakeLock';
 import s from '../../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
@@ -45,6 +49,33 @@ const lastActivity = (session) => {
   return new Date(Math.max(new Date(session.started_at).getTime(), ...times)).toISOString();
 };
 
+const VIEW_KEY = 'gymSessionView';
+const VIEW_EVENT = 'gym-session-view-changed';
+
+function getView() {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'focus';
+  } catch {
+    return 'focus';
+  }
+}
+
+function saveView(view) {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {}
+  window.dispatchEvent(new Event(VIEW_EVENT));
+}
+
+function subscribeView(onChange) {
+  window.addEventListener(VIEW_EVENT, onChange);
+  return () => window.removeEventListener(VIEW_EVENT, onChange);
+}
+
+const isDone = (item) => (item.target_sets ? item.sets.length >= item.target_sets : item.sets.length > 0);
+
+const firstPending = (session) => (session.exercises.find(item => !isDone(item)) ?? session.exercises.at(-1))?.id ?? null;
+
 export default function SessionPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -57,9 +88,17 @@ export default function SessionPage() {
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [exercisesError, setExercisesError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [currentId, setCurrentId] = useState(null);
+  const view = useSyncExternalStore(subscribeView, getView, () => 'focus');
+  const carouselRef = useRef(null);
+  const stripRef = useRef(null);
+  const fromScroll = useRef(false);
+
+  useWakeLock(session?.status === 'in_progress');
 
   const loaded = useCallback((data) => {
     setSession(data);
+    setCurrentId(current => current ?? firstPending(data));
     setStatus('ready');
     if (data.status === 'in_progress' && Date.now() - new Date(data.last_activity_at).getTime() > FORGOTTEN_AFTER_MS) {
       setSheet({ type: 'forgotten' });
@@ -98,6 +137,9 @@ export default function SessionPage() {
     try {
       const entry = await addSet(item.id, data);
       setSession(current => withItem(current, item.id, it => ({ ...it, sets: [...it.sets, entry] })));
+      try {
+        navigator.vibrate?.(30);
+      } catch {}
       return true;
     } catch (err) {
       return fail(err, 'Não foi possível salvar a série. Tente de novo.');
@@ -144,9 +186,11 @@ export default function SessionPage() {
   const addExercises = async (selected) => {
     setSheet(null);
     try {
+      const before = session.exercises.length;
       let latest = session;
       for (const exercise of selected) latest = await addSessionExercise(session.id, exercise.id);
       setSession(latest);
+      if (latest.exercises[before]) setCurrentId(latest.exercises[before].id);
     } catch (err) {
       fail(err, 'Não foi possível adicionar o exercício.');
       load();
@@ -175,7 +219,9 @@ export default function SessionPage() {
 
   const moveToEnd = (item) => {
     setSheet(null);
-    const ids = session.exercises.map(e => e.id).filter(itemId => itemId !== item.id);
+    const all = session.exercises.map(e => e.id);
+    const ids = all.filter(itemId => itemId !== item.id);
+    if (item.id === currentId) setCurrentId(all[all.indexOf(item.id) + 1] ?? item.id);
     reorder([...ids, item.id]);
     toast(`${item.exercise_name} foi para o fim do treino`);
   };
@@ -191,7 +237,13 @@ export default function SessionPage() {
       if (!ok) return;
     }
     try {
-      setSession(await removeSessionExercise(item.id));
+      const all = session.exercises.map(e => e.id);
+      const updated = await removeSessionExercise(item.id);
+      if (item.id === currentId) {
+        const index = all.indexOf(item.id);
+        setCurrentId(all[index + 1] ?? all[index - 1] ?? null);
+      }
+      setSession(updated);
     } catch (err) {
       fail(err, 'Não foi possível remover o exercício.');
     }
@@ -229,6 +281,51 @@ export default function SessionPage() {
     }
   };
 
+  const ids = session?.exercises.map(item => item.id) ?? [];
+  const idsKey = ids.join(',');
+  const currentIndex = Math.max(0, ids.indexOf(currentId));
+  const focus = view === 'focus' && session?.status === 'in_progress' && ids.length > 0;
+
+  useLayoutEffect(() => {
+    const el = carouselRef.current;
+    if (!focus || !el) return;
+    if (fromScroll.current) {
+      fromScroll.current = false;
+      return;
+    }
+    const left = currentIndex * el.clientWidth;
+    if (Math.abs(el.scrollLeft - left) > 2) el.scrollTo({ left, behavior: 'instant' });
+  }, [focus, currentIndex, idsKey]);
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    const chip = strip?.children[currentIndex];
+    if (!chip) return;
+    strip.scrollTo({ left: chip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' });
+  }, [currentIndex, idsKey, focus]);
+
+  const goTo = (index) => {
+    const id = ids[index];
+    if (!id) return;
+    const el = carouselRef.current;
+    if (el) {
+      fromScroll.current = true;
+      el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
+    }
+    setCurrentId(id);
+    const top = stripRef.current?.getBoundingClientRect().top;
+    if (top !== undefined && top < 0) window.scrollBy({ top: top - 12, behavior: 'smooth' });
+  };
+
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    const id = ids[Math.round(el.scrollLeft / el.clientWidth)];
+    if (id && id !== currentId) {
+      fromScroll.current = true;
+      setCurrentId(id);
+    }
+  };
+
   if (status === 'missing' || (status === 'error' && !session)) {
     return (
       <div className={styles.state}>
@@ -252,7 +349,7 @@ export default function SessionPage() {
 
   if (session.status === 'completed') {
     return (
-      <div className={styles.page}>
+      <div className={styles.page} data-session-focus="">
         <header className={styles.doneHeader}>
           <span className={styles.trophy}><Trophy size={26} /></span>
           <p className={styles.kicker}>Treino concluído</p>
@@ -272,57 +369,132 @@ export default function SessionPage() {
   const lastAt = lastActivity(session);
   const pending = session.exercises.filter(item => item.sets.length === 0).length;
 
+  const current = session.exercises[currentIndex];
+  const next = session.exercises[currentIndex + 1];
+  const cardProps = {
+    onLogSet: logSet,
+    onEditSet: editSet,
+    onDeleteSet: removeSet,
+    onStartRest: startRest,
+    onOpenRest: it => setSheet({ type: 'rest', item: it }),
+    onOpenMenu: it => setSheet({ type: 'menu', item: it }),
+  };
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-session-focus="">
       <header className={styles.header}>
         <div className={styles.headerTop}>
-          <span className={styles.live}><span className={styles.dot} aria-hidden="true" /> Em andamento</span>
-          <button type="button" className={styles.more} onClick={() => setSheet({ type: 'options' })} aria-label="Mais opções">
-            <MoreHorizontal size={20} />
-          </button>
+          <Link href="/gym" className={styles.iconButton} aria-label="Voltar ao início">
+            <ChevronLeft size={22} />
+          </Link>
+          <span className={styles.live}>
+            <span className={styles.dot} aria-hidden="true" />
+            <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
+          </span>
+          <div className={styles.headerActions}>
+            {ids.length > 1 && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => saveView(view === 'focus' ? 'list' : 'focus')}
+                aria-label={view === 'focus' ? 'Ver todos os exercícios em lista' : 'Ver um exercício por vez'}
+              >
+                {view === 'focus' ? <LayoutList size={20} /> : <GalleryHorizontalEnd size={20} />}
+              </button>
+            )}
+            <button type="button" className={styles.iconButton} onClick={() => setSheet({ type: 'options' })} aria-label="Mais opções">
+              <MoreHorizontal size={20} />
+            </button>
+          </div>
         </div>
         <h1 className={styles.title}>{session.name}</h1>
-        <div className={styles.headerStats}>
-          <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
-          <span className={styles.headerMeta}>
-            {plural(totalSets, 'série', 'séries')} · {formatVolume(volume)}
-          </span>
-        </div>
+        <p className={styles.headerMeta}>
+          {plural(totalSets, 'série', 'séries')} · {formatVolume(volume)}
+        </p>
       </header>
 
-      {session.exercises.length === 0 ? (
+      {session.exercises.length === 0 && (
         <button type="button" className={styles.empty} onClick={() => openPicker('add')}>
           <Dumbbell size={30} aria-hidden="true" />
           <span className={styles.emptyTitle}>Treino livre</span>
           <span className={styles.emptyText}>Adicione o primeiro exercício para começar a registrar</span>
         </button>
-      ) : (
-        <div className={styles.cards}>
-          {session.exercises.map((item, index) => (
-            <SessionExerciseCard
-              key={item.id}
-              item={item}
-              index={index}
-              onLogSet={logSet}
-              onEditSet={editSet}
-              onDeleteSet={removeSet}
-              onStartRest={startRest}
-              onOpenRest={it => setSheet({ type: 'rest', item: it })}
-              onOpenMenu={it => setSheet({ type: 'menu', item: it })}
-            />
-          ))}
-        </div>
       )}
 
-      {session.exercises.length > 0 && (
-        <button type="button" className={styles.add} onClick={() => openPicker('add')}>
-          <Plus size={18} strokeWidth={2.4} /> Adicionar exercício
-        </button>
+      {focus && (
+        <>
+          <div className={styles.strip} ref={stripRef} role="tablist" aria-label="Exercícios do treino">
+            {session.exercises.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={index === currentIndex}
+                className={`${styles.chip} ${index === currentIndex ? styles.chipCurrent : ''} ${isDone(item) ? styles.chipDone : ''}`}
+                onClick={() => goTo(index)}
+              >
+                <span className={styles.chipIndex}>{isDone(item) ? <Check size={13} strokeWidth={3} /> : index + 1}</span>
+                <span className={styles.chipName}>{item.exercise_name}</span>
+              </button>
+            ))}
+            <button type="button" className={`${styles.chip} ${styles.chipAdd}`} onClick={() => openPicker('add')} aria-label="Adicionar exercício">
+              <Plus size={16} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <div className={styles.carousel} ref={carouselRef} onScroll={handleCarouselScroll}>
+            {session.exercises.map((item, index) => (
+              <div key={item.id} className={styles.slide} aria-hidden={index !== currentIndex} inert={index !== currentIndex}>
+                <SessionExerciseCard item={item} index={index} {...cardProps} />
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      <button type="button" className={styles.finish} onClick={() => setSheet({ type: 'finish' })}>
-        <Flag size={18} /> Finalizar treino
-      </button>
+      {!focus && session.exercises.length > 0 && (
+        <>
+          <div className={styles.cards}>
+            {session.exercises.map((item, index) => (
+              <SessionExerciseCard key={item.id} item={item} index={index} {...cardProps} />
+            ))}
+          </div>
+          <button type="button" className={styles.add} onClick={() => openPicker('add')}>
+            <Plus size={18} strokeWidth={2.4} /> Adicionar exercício
+          </button>
+        </>
+      )}
+
+      <nav className={styles.bar} aria-label="Navegação do treino">
+        {focus && (
+          <button
+            type="button"
+            className={styles.barPrev}
+            onClick={() => goTo(currentIndex - 1)}
+            disabled={currentIndex === 0}
+            aria-label="Exercício anterior"
+          >
+            <ChevronLeft size={22} />
+          </button>
+        )}
+        {focus && next ? (
+          <button
+            type="button"
+            className={`${styles.barMain} ${isDone(current) ? styles.barMainReady : ''}`}
+            onClick={() => goTo(currentIndex + 1)}
+          >
+            <span className={styles.barText}>
+              <small>Próximo · {currentIndex + 2} de {ids.length}</small>
+              <span>{next.exercise_name}</span>
+            </span>
+            <ChevronRight size={22} />
+          </button>
+        ) : (
+          <button type="button" className={`${styles.barMain} ${styles.barFinish}`} onClick={() => setSheet({ type: 'finish' })}>
+            <Flag size={18} /> Finalizar treino
+          </button>
+        )}
+      </nav>
 
       <RestTimer />
 

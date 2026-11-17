@@ -20,6 +20,8 @@ export default function GymNavbar() {
     saveLastApp('gym');
   }, []);
 
+  if (pathname.startsWith('/gym/session/')) return null;
+
   const isCurrent = (href) => (href === '/gym' ? pathname === '/gym' : pathname.startsWith(href));
 
   return (
