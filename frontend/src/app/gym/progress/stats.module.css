@@ -1,0 +1,622 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--gym-muted);
+  font-size: 0.95rem;
+}
+
+.periods,
+.chips {
+  display: flex;
+  gap: 6px;
+  margin: 0 -16px;
+  padding: 0 16px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.periods::-webkit-scrollbar,
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chipActive {
+  background: var(--gym-accent);
+  border-color: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.kpiValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiLabel {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.kpiNote {
+  grid-column: 1 / -1;
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.up {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.down {
+  background: var(--gym-surface-3);
+  color: var(--gym-muted);
+}
+
+.flat {
+  background: var(--gym-surface-2);
+  color: var(--gym-faint);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardIcon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cardHint {
+  margin-left: auto;
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
+.subTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.subTitle span {
+  color: var(--gym-muted);
+  font-weight: 400;
+}
+
+.empty {
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.streaks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.streak {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}
+
+.streakIcon {
+  margin-bottom: 4px;
+  color: var(--gym-accent);
+}
+
+.streakValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.streakLabel {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.weekday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.weekdayCount {
+  min-height: 1em;
+  color: var(--gym-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.weekdayTrack {
+  width: 100%;
+  max-width: 28px;
+  height: 64px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 8px;
+  background: var(--gym-surface-2);
+  overflow: hidden;
+}
+
+.weekdayFill {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  background: var(--gym-accent);
+}
+
+.weekdayLabel {
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.part {
+  display: grid;
+  grid-template-columns: 84px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.partLabel {
+  color: var(--gym-muted);
+}
+
+.partValue {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  display: block;
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gym-accent);
+}
+
+.muscles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.muscle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.muscleTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.muscleName {
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muscleValue {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscleShare {
+  color: var(--gym-faint);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.muscleBottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spark {
+  flex-shrink: 0;
+}
+
+.muscleMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
+.muscleMeta .delta {
+  margin-top: 0;
+}
+
+.neglected {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.neglectedItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--gym-border-strong);
+  font-size: 0.85rem;
+}
+
+.neglectedDays {
+  color: var(--gym-muted);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.row:active {
+  background: var(--gym-surface-3);
+}
+
+.row .delta {
+  margin-top: 0;
+}
+
+.rowDate {
+  width: 40px;
+  flex-shrink: 0;
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowName {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--gym-faint);
+}
+
+.workout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}
+
+.workoutTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.workoutCount {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.workoutChange {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
+.workoutChange .delta {
+  margin-top: 0;
+}
+
+.records {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.record {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  text-decoration: none;
+}
+
+.record:active {
+  background: var(--gym-surface-3);
+}
+
+.recordLabel {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.recordValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.recordNote {
+  color: var(--gym-faint);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifetime {
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 44px 24px;
+  text-align: center;
+  border-radius: 20px;
+  border: 1px dashed var(--gym-border-strong);
+}
+
+.stateIcon {
+  color: var(--gym-faint);
+  margin-bottom: 4px;
+}
+
+.stateTitle {
+  font-weight: 500;
+  font-size: 1.02rem;
+}
+
+.stateText {
+  max-width: 320px;
+  color: var(--gym-muted);
+  font-size: 0.92rem;
+}
+
+.stateAction {
+  border: none;
+  background: none;
+  color: var(--gym-accent);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stateLink {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 14px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeleton,
+.skeletonKpis {
+  border-radius: 22px;
+  background: linear-gradient(90deg, var(--gym-surface) 0%, var(--gym-surface-2) 50%, var(--gym-surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonKpis {
+  height: 220px;
+}
+
+.skeleton {
+  height: 260px;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (min-width: 640px) {
+  .kpis {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .records {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .skeletonKpis {
+    animation: none;
+  }
+}

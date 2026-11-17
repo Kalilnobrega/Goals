@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Search, TrendingUp, ChevronRight } from 'lucide-react';
-import { getProgressExercises, peekCache } from '../../../lib/api';
-import { formatKg, formatShortDate, muscleLabel, normalize, plural } from '../../../lib/gym';
-import SegmentTabs, { PROGRESS_TABS } from '../../../components/gym/SegmentTabs';
-import styles from './progress.module.css';
+import { getProgressExercises, peekCache } from '../../../../lib/api';
+import { formatKg, formatShortDate, muscleLabel, normalize, plural } from '../../../../lib/gym';
+import SegmentTabs, { PROGRESS_TABS } from '../../../../components/gym/SegmentTabs';
+import styles from '../progress.module.css';
 
 export default function ProgressPage() {
   const [items, setItems] = useState(() => peekCache('fitnessProgress') ?? null);

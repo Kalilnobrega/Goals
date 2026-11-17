@@ -4,8 +4,9 @@ import { usePathname } from 'next/navigation';
 import styles from './SegmentTabs.module.css';
 
 export const PROGRESS_TABS = [
-  { href: '/gym/progress', label: 'Exercícios' },
-  { href: '/gym/progress/body', label: 'Peso corporal' },
+  { href: '/gym/progress', label: 'Resumo' },
+  { href: '/gym/progress/exercises', label: 'Exercícios' },
+  { href: '/gym/progress/body', label: 'Peso' },
 ];
 
 export default function SegmentTabs({ tabs, label }) {

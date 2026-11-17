@@ -81,7 +81,7 @@ export default function ExerciseProgressPage() {
     load();
   }, [load]);
 
-  const back = <Link href="/gym/progress" className={styles.back}><ChevronLeft size={18} /> Evolução</Link>;
+  const back = <Link href="/gym/progress/exercises" className={styles.back}><ChevronLeft size={18} /> Exercícios</Link>;
 
   if (status === 'missing' || (status === 'error' && !data)) {
     return (

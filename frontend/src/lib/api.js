@@ -277,3 +277,4 @@ export const deleteBodyWeight = (id) =>
 export const getFitnessOverview = () => cachedGet("fitnessOverview", "/fitness/overview");
 export const getCalendar = (month) =>
   cachedGet(`fitnessCalendar:${month}`, `/fitness/calendar?month=${month}`);
+export const getFitnessStats = (period) => cachedGet(`fitnessStats:${period}`, `/fitness/stats?period=${period}`);
