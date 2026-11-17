@@ -110,6 +110,9 @@ class SessionExercise(Base):
 
 class SetEntry(Base):
     __tablename__ = "fitness_sets"
+    __table_args__ = (
+        UniqueConstraint("session_exercise_id", "client_id", name="uq_fitness_sets_client_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_exercise_id = Column(
@@ -119,6 +122,7 @@ class SetEntry(Base):
     weight_kg = Column(Numeric(6, 2), nullable=False)
     reps = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False)
+    client_id = Column(String(36), nullable=True)
 
 
 class BodyWeightEntry(Base):

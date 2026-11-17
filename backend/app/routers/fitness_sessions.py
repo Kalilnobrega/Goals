@@ -50,6 +50,7 @@ def serialize_set(entry: SetEntry) -> dict:
         "weight_kg": float(entry.weight_kg),
         "reps": entry.reps,
         "created_at": aware(entry.created_at),
+        "client_id": entry.client_id,
     }
 
 
@@ -477,6 +478,20 @@ def delete_session_exercise(
     return commit_session(workout_session, db)
 
 
+def existing_set(item_id: int, client_id: str, user: User, db: Session) -> SetEntry | None:
+    return (
+        db.query(SetEntry)
+        .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(
+            SetEntry.session_exercise_id == item_id,
+            SetEntry.client_id == client_id,
+            WorkoutSession.user_id == user.id,
+        )
+        .first()
+    )
+
+
 @fitness_sessions_router.post("/session-exercises/{item_id}/sets", response_model=SetResponseSchema)
 def add_set(
     item_id: int,
@@ -484,6 +499,10 @@ def add_set(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if data.client_id:
+        existing = existing_set(item_id, data.client_id, user, db)
+        if existing:
+            return serialize_set(existing)
     item = get_own_session_exercise(item_id, user, db)
     if len(item.sets) >= 50:
         raise HTTPException(status_code=400, detail="Um exercício pode ter no máximo 50 séries.")
@@ -492,9 +511,17 @@ def add_set(
         weight_kg=to_kg(data.weight_kg),
         reps=data.reps,
         created_at=utcnow(),
+        client_id=data.client_id,
     )
     item.sets.append(entry)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = existing_set(item_id, data.client_id, user, db)
+        if not existing:
+            raise
+        return serialize_set(existing)
     db.refresh(entry)
     return serialize_set(entry)
 

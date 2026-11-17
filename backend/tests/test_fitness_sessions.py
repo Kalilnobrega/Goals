@@ -523,3 +523,63 @@ def test_history_keeps_sessions_after_workout_is_deleted(client, library, ana):
     assert item["name"] == "Treino A"
     assert item["workout_id"] is None
     assert item["total_sets"] == 1
+
+
+def test_retrying_a_set_with_the_same_client_id_does_not_duplicate(client, library, ana):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    item_id = session["exercises"][0]["id"]
+    payload = {"weight_kg": 60, "reps": 10, "client_id": "7f3c2a1e-0000-4000-8000-000000000001"}
+
+    first = client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=headers)
+    retry = client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=headers)
+    other = client.post(
+        f"/fitness/session-exercises/{item_id}/sets", json={**payload, "client_id": "7f3c2a1e-0000-4000-8000-000000000002"}, headers=headers
+    )
+
+    assert first.status_code == retry.status_code == other.status_code == 200
+    assert retry.json()["id"] == first.json()["id"]
+    assert retry.json()["client_id"] == payload["client_id"]
+    assert other.json()["id"] != first.json()["id"]
+    sets = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"][0]["sets"]
+    assert [s["position"] for s in sets] == [1, 2]
+
+
+def test_retry_after_finishing_returns_the_saved_set(client, library, ana):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    item_id = session["exercises"][0]["id"]
+    payload = {"weight_kg": 60, "reps": 10, "client_id": "7f3c2a1e-0000-4000-8000-000000000003"}
+    saved = client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=headers).json()
+    assert finish(client, headers, session["id"]).status_code == 200
+
+    retry = client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=headers)
+    assert retry.status_code == 200
+    assert retry.json()["id"] == saved["id"]
+
+    fresh = client.post(
+        f"/fitness/session-exercises/{item_id}/sets", json={**payload, "client_id": "7f3c2a1e-0000-4000-8000-000000000004"}, headers=headers
+    )
+    assert fresh.status_code == 409
+
+
+def test_client_id_is_scoped_to_the_owner(client, library, ana, bruno):
+    _, ana_headers = ana
+    _, bruno_headers = bruno
+    session = start(client, ana_headers, make_workout(client, ana_headers, library)["id"])
+    item_id = session["exercises"][0]["id"]
+    payload = {"weight_kg": 60, "reps": 10, "client_id": "7f3c2a1e-0000-4000-8000-000000000005"}
+    client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=ana_headers)
+    assert client.post(f"/fitness/session-exercises/{item_id}/sets", json=payload, headers=bruno_headers).status_code == 404
+
+
+@pytest.mark.parametrize("client_id", ["short", "x" * 37, "not valid!"])
+def test_invalid_client_id_is_rejected(client, library, ana, client_id):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    response = client.post(
+        f"/fitness/session-exercises/{session['exercises'][0]['id']}/sets",
+        json={"weight_kg": 60, "reps": 10, "client_id": client_id},
+        headers=headers,
+    )
+    assert response.status_code == 422

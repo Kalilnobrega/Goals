@@ -187,8 +187,10 @@ def upgrade() -> None:
         sa.Column('weight_kg', sa.Numeric(precision=6, scale=2), nullable=False),
         sa.Column('reps', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('client_id', sa.String(length=36), nullable=True),
         sa.ForeignKeyConstraint(['session_exercise_id'], ['fitness_session_exercises.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('session_exercise_id', 'client_id', name='uq_fitness_sets_client_id'),
     )
     with op.batch_alter_table('fitness_sets', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_fitness_sets_session_exercise_id'), ['session_exercise_id'], unique=False)

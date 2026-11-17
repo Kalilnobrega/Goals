@@ -150,6 +150,7 @@ class EditSessionExerciseSchema(BaseModel):
 class SetSchema(BaseModel):
     weight_kg: float = Field(ge=0, le=1000)
     reps: int = Field(ge=1, le=1000)
+    client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
 
 
 class EditSetSchema(BaseModel):
@@ -167,6 +168,7 @@ class SetResponseSchema(BaseModel):
     weight_kg: float
     reps: int
     created_at: datetime
+    client_id: str | None = None
 
 
 class PreviousSetSchema(BaseModel):
