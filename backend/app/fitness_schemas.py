@@ -281,3 +281,72 @@ class BodyWeightResponseSchema(BaseModel):
     measured_on: date
     weight_kg: float
     note: str | None
+
+
+class OverviewActiveSchema(BaseModel):
+    id: int
+    name: str
+    started_at: datetime
+    total_sets: int
+
+
+class OverviewDaySchema(BaseModel):
+    date: date
+    sessions: int
+
+
+class OverviewWeekSchema(BaseModel):
+    days: list[OverviewDaySchema]
+    sessions: int
+    sets: int
+    volume_kg: float
+    minutes: int
+
+
+class OverviewWorkoutSchema(BaseModel):
+    id: int
+    name: str
+    exercise_count: int
+    muscle_groups: list[str]
+    last_done_at: datetime | None
+
+
+class OverviewBodyWeightSchema(BaseModel):
+    weight_kg: float
+    measured_on: date
+    change_kg: float | None
+    previous_on: date | None
+
+
+class OverviewSchema(BaseModel):
+    today: date
+    active_session: OverviewActiveSchema | None
+    week: OverviewWeekSchema
+    total_sessions: int
+    last_session: SessionHistoryItemSchema | None
+    suggested_workout: OverviewWorkoutSchema | None
+    workout_count: int
+    body_weight: OverviewBodyWeightSchema | None
+
+
+class CalendarSessionSchema(BaseModel):
+    id: int
+    name: str
+    started_at: datetime
+    completed_at: datetime
+    total_sets: int
+    volume_kg: float
+
+
+class CalendarDaySchema(BaseModel):
+    date: date
+    sessions: list[CalendarSessionSchema]
+
+
+class CalendarSchema(BaseModel):
+    month: str
+    today: date
+    first_session_on: date | None
+    total_sessions: int
+    days_trained: int
+    days: list[CalendarDaySchema]

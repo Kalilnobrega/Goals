@@ -221,14 +221,8 @@ def muscle_groups_by_session(session_ids: list[int], db: Session) -> dict[int, l
     }
 
 
-@fitness_sessions_router.get("/sessions", response_model=SessionHistorySchema)
-def list_sessions(
-    limit: int = Query(default=20, ge=1, le=50),
-    offset: int = Query(default=0, ge=0),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    stats = (
+def session_stats(db: Session):
+    return (
         db.query(
             SessionExercise.session_id.label("session_id"),
             func.count(func.distinct(SessionExercise.id)).label("exercise_count"),
@@ -239,6 +233,30 @@ def list_sessions(
         .group_by(SessionExercise.session_id)
         .subquery()
     )
+
+
+def history_item(workout_session: WorkoutSession, exercise_count, total_sets, volume, muscle_groups=None) -> dict:
+    return {
+        "id": workout_session.id,
+        "workout_id": workout_session.workout_id,
+        "name": workout_session.name,
+        "started_at": aware(workout_session.started_at),
+        "completed_at": aware(workout_session.completed_at),
+        "exercise_count": exercise_count or 0,
+        "total_sets": total_sets or 0,
+        "volume_kg": float(volume or 0),
+        "muscle_groups": muscle_groups or [],
+    }
+
+
+@fitness_sessions_router.get("/sessions", response_model=SessionHistorySchema)
+def list_sessions(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    stats = session_stats(db)
     completed = db.query(WorkoutSession).filter(
         WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED
     )
@@ -254,17 +272,7 @@ def list_sessions(
     total = completed.count()
     return {
         "items": [
-            {
-                "id": workout_session.id,
-                "workout_id": workout_session.workout_id,
-                "name": workout_session.name,
-                "started_at": aware(workout_session.started_at),
-                "completed_at": aware(workout_session.completed_at),
-                "exercise_count": exercise_count or 0,
-                "total_sets": total_sets or 0,
-                "volume_kg": float(volume or 0),
-                "muscle_groups": muscles.get(workout_session.id, []),
-            }
+            history_item(workout_session, exercise_count, total_sets, volume, muscles.get(workout_session.id))
             for workout_session, exercise_count, total_sets, volume in rows
         ],
         "total": total,
