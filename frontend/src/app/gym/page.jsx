@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Play, Plus, Zap, Scale, ChevronLeft, ChevronRight, History, TrendingUp, ClipboardList, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
+  Play, Plus, Zap, Scale, ChevronLeft, ChevronRight, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
 } from 'lucide-react';
 import { getUserName } from '../../lib/auth';
 import { getFitnessOverview, getWeek, peekCache } from '../../lib/api';
@@ -29,13 +29,43 @@ const subscribeToUserName = (onChange) => {
   };
 };
 
-function weekMessage(data) {
-  const { sessions } = data.week;
-  if (data.active_session) return 'Seu treino está em andamento. Bora terminar.';
-  if (data.total_sessions === 0) return 'Monte uma ficha, comece o treino e registre cada série na hora.';
-  if (sessions === 0) return 'Nenhum treino nesta semana ainda. Hoje é um bom dia.';
-  if (sessions === 1) return 'Você treinou 1 vez nesta semana. Mantém o ritmo.';
-  return `Você treinou ${sessions} vezes nesta semana. Mandou bem.`;
+const dayMonth = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long' });
+
+function GreetingProgress({ data }) {
+  const trainedDays = data.week.days.filter(day => day.sessions > 0).length;
+  const target = data.week.days.filter(day => day.planned.length > 0).length;
+
+  if (!target && data.total_sessions === 0) {
+    return <p className={styles.subtitle}>Monte uma ficha, comece o treino e registre cada série na hora.</p>;
+  }
+
+  if (!target) {
+    return (
+      <p className={styles.progressText}>
+        {trainedDays ? `${plural(trainedDays, 'treino', 'treinos')} nesta semana` : 'Nenhum treino nesta semana ainda'}
+      </p>
+    );
+  }
+
+  const complete = trainedDays >= target;
+  return (
+    <div className={styles.progress}>
+      <span
+        className={styles.progressTrack}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={target}
+        aria-valuenow={Math.min(trainedDays, target)}
+        aria-label="Treinos da semana"
+      >
+        <span className={styles.progressFill} style={{ width: `${Math.min(trainedDays / target, 1) * 100}%` }} />
+      </span>
+      <span className={`${styles.progressText} ${complete ? styles.progressDone : ''}`}>
+        {complete ? <><Check size={14} strokeWidth={3} aria-hidden="true" /> Semana completa · </> : null}
+        {trainedDays} de {target} {target === 1 ? 'treino' : 'treinos'} da semana
+      </span>
+    </div>
+  );
 }
 
 function workoutMeta(workout, today) {
@@ -398,23 +428,6 @@ function Week({ data }) {
   );
 }
 
-function LastSession({ session, today }) {
-  const duration = new Date(session.completed_at) - new Date(session.started_at);
-  return (
-    <Link href={`/gym/history/${session.id}`} className={styles.tile}>
-      <span className={styles.tileIcon}><History size={20} /></span>
-      <span className={styles.tileText}>
-        <span className={styles.tileLabel}>Último treino · {daysAgo(session.started_at, today)}</span>
-        <span className={styles.tileTitle}>{session.name}</span>
-        <span className={styles.tileMeta}>
-          {formatDuration(duration)} · {plural(session.total_sets, 'série', 'séries')} · {formatVolume(session.volume_kg)}
-        </span>
-      </span>
-      <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-    </Link>
-  );
-}
-
 function BodyWeight({ body }) {
   if (!body) {
     return (
@@ -462,10 +475,14 @@ export default function GymHomePage() {
 
   return (
     <div className={styles.page}>
-      <header>
-        <p className={styles.kicker}>GymGoals</p>
-        <h1 className={styles.title}>{firstName ? `Bora treinar, ${firstName}.` : 'Bora treinar.'}</h1>
-        <p className={styles.subtitle}>{data ? weekMessage(data) : ' '}</p>
+      <header className={styles.greeting}>
+        <p className={styles.date}>
+          {data ? dayMonth.format(new Date(`${data.today}T12:00`)) : ' '}
+        </p>
+        <h1 className={styles.title}>
+          {firstName ? <>Bora treinar, <span className={styles.name}>{firstName}</span>!</> : 'Bora treinar!'}
+        </h1>
+        {data ? <GreetingProgress data={data} /> : <span className={styles.progressPlaceholder} aria-hidden="true" />}
       </header>
 
       {loadError && !data && (
@@ -491,21 +508,7 @@ export default function GymHomePage() {
 
           <Week data={data} />
 
-          <div className={styles.tiles}>
-            {data.last_session && <LastSession session={data.last_session} today={data.today} />}
-            <BodyWeight body={data.body_weight} />
-          </div>
-
-          <nav className={styles.shortcuts} aria-label="Atalhos">
-            <Link href="/gym/workouts" className={styles.shortcut}><ClipboardList size={18} /> Fichas</Link>
-            <Link href="/gym/history" className={styles.shortcut}><History size={18} /> Histórico</Link>
-            <Link href="/gym/progress" className={styles.shortcut}><TrendingUp size={18} /> Evolução</Link>
-            {data.suggested_workout && !data.active_session && (
-              <button type="button" className={styles.shortcut} onClick={() => begin(null)} disabled={starting}>
-                <Zap size={18} /> Treino livre
-              </button>
-            )}
-          </nav>
+          <BodyWeight body={data.body_weight} />
         </>
       )}
       {sheet}

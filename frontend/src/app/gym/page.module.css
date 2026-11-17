@@ -8,16 +8,7 @@
   margin-bottom: 8px;
 }
 
-.kicker {
-  color: var(--gym-accent);
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .title {
-  margin-top: 6px;
   font-family: var(--font-display);
   font-size: 2.1rem;
   font-weight: 800;
@@ -25,13 +16,79 @@
   line-height: 1.1;
 }
 
+.greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date {
+  min-height: 1.2em;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.name {
+  color: var(--gym-accent);
+}
+
 .subtitle {
-  min-height: 1.5em;
-  margin-top: 10px;
+  margin-top: 4px;
   max-width: 460px;
   color: var(--gym-muted);
   font-size: 0.98rem;
   line-height: 1.5;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.progressTrack {
+  position: relative;
+  width: 96px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  overflow: hidden;
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.progressText {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.progress .progressText {
+  margin-top: 0;
+}
+
+.progressDone {
+  color: var(--gym-accent);
+}
+
+.progressPlaceholder {
+  display: block;
+  height: 1.6rem;
 }
 
 .next {
@@ -540,11 +597,6 @@
   font-size: 0.8rem;
 }
 
-.tiles {
-  display: grid;
-  gap: 12px;
-}
-
 .tile {
   display: flex;
   align-items: center;
@@ -610,41 +662,6 @@
   color: var(--gym-faint);
 }
 
-.shortcuts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.shortcut {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 16px;
-  border: 1px solid var(--gym-border);
-  background: transparent;
-  color: var(--gym-text);
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.shortcut:hover {
-  border-color: var(--gym-border-strong);
-}
-
-.shortcut svg {
-  color: var(--gym-accent);
-}
-
-.shortcut:disabled {
-  opacity: 0.5;
-}
-
 .state {
   display: flex;
   flex-direction: column;
@@ -694,14 +711,6 @@
 
 @media (min-width: 640px) {
   .stats {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .tiles {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .shortcuts {
     grid-template-columns: repeat(4, 1fr);
   }
 }
