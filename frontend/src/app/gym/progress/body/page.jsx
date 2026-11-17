@@ -5,7 +5,7 @@ import { getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, peek
 import { apiError, formatDay, formatDelta, formatKg, formatLongDay, parseDay } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
-import ProgressTabs from '../../../../components/gym/ProgressTabs';
+import SegmentTabs, { PROGRESS_TABS } from '../../../../components/gym/SegmentTabs';
 import ProgressChart from '../../../../components/gym/ProgressChart';
 import BodyWeightForm from '../../../../components/gym/BodyWeightForm';
 import GymSheet from '../../../../components/gym/GymSheet';
@@ -104,7 +104,7 @@ export default function BodyWeightPage() {
         <p className={styles.subtitle}>Como suas cargas e seu corpo mudam com o tempo</p>
       </header>
 
-      <ProgressTabs />
+      <SegmentTabs tabs={PROGRESS_TABS} label="Evolução" />
 
       {loadError && !entries && (
         <div className={styles.state}>

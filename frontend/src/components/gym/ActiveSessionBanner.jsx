@@ -7,13 +7,15 @@ import { formatDuration, plural } from '../../lib/gym';
 import useNow from './useNow';
 import styles from './ActiveSessionBanner.module.css';
 
-export default function ActiveSessionBanner() {
-  const [session, setSession] = useState(null);
+export default function ActiveSessionBanner({ session: provided }) {
+  const [fetched, setFetched] = useState(null);
   const now = useNow();
+  const session = provided === undefined ? fetched : provided;
 
   useEffect(() => {
-    getActiveSession().then(setSession).catch(() => {});
-  }, []);
+    if (provided !== undefined) return;
+    getActiveSession().then(setFetched).catch(() => {});
+  }, [provided]);
 
   if (!session) return null;
 

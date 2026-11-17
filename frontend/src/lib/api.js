@@ -274,3 +274,6 @@ export const updateBodyWeight = (id, data) =>
   api.patch(`/fitness/body-weight/${id}`, data).then((r) => r.data);
 export const deleteBodyWeight = (id) =>
   api.delete(`/fitness/body-weight/${id}`).then((r) => r.data);
+export const getFitnessOverview = () => cachedGet("fitnessOverview", "/fitness/overview");
+export const getCalendar = (month) =>
+  cachedGet(`fitnessCalendar:${month}`, `/fitness/calendar?month=${month}`);

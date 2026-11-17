@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Search, TrendingUp, ChevronRight } from 'lucide-react';
 import { getProgressExercises, peekCache } from '../../../lib/api';
 import { formatKg, formatShortDate, muscleLabel, normalize, plural } from '../../../lib/gym';
-import ProgressTabs from '../../../components/gym/ProgressTabs';
+import SegmentTabs, { PROGRESS_TABS } from '../../../components/gym/SegmentTabs';
 import styles from './progress.module.css';
 
 export default function ProgressPage() {
@@ -34,7 +34,7 @@ export default function ProgressPage() {
         <p className={styles.subtitle}>Como suas cargas e seu corpo mudam com o tempo</p>
       </header>
 
-      <ProgressTabs />
+      <SegmentTabs tabs={PROGRESS_TABS} label="Evolução" />
 
       {loadError && !items && (
         <div className={styles.state}>

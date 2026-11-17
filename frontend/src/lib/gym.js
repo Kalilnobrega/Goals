@@ -141,3 +141,15 @@ export function formatDelta(value, unit = 'kg') {
   if (!rounded) return `0 ${unit}`;
   return `${rounded > 0 ? '+' : '−'}${formatKg(Math.abs(rounded))} ${unit}`;
 }
+
+export function daysAgo(iso, today) {
+  const date = new Date(iso);
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((parseDay(today) - day) / 86400000);
+  if (diff <= 0) return 'hoje';
+  if (diff === 1) return 'ontem';
+  if (diff < 7) return `há ${diff} dias`;
+  if (diff < 14) return 'há 1 semana';
+  if (diff < 60) return `há ${Math.floor(diff / 7)} semanas`;
+  return `em ${formatShortDate(iso)}`;
+}

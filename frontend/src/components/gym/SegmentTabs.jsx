@@ -1,19 +1,19 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import styles from './ProgressTabs.module.css';
+import styles from './SegmentTabs.module.css';
 
-const TABS = [
+export const PROGRESS_TABS = [
   { href: '/gym/progress', label: 'Exercícios' },
   { href: '/gym/progress/body', label: 'Peso corporal' },
 ];
 
-export default function ProgressTabs() {
+export default function SegmentTabs({ tabs, label }) {
   const pathname = usePathname();
 
   return (
-    <nav className={styles.tabs} aria-label="Evolução">
-      {TABS.map(({ href, label }) => {
+    <nav className={styles.tabs} aria-label={label}>
+      {tabs.map(({ href, label: text }) => {
         const current = pathname === href;
         return (
           <Link
@@ -22,7 +22,7 @@ export default function ProgressTabs() {
             className={`${styles.tab} ${current ? styles.active : ''}`}
             aria-current={current ? 'page' : undefined}
           >
-            {label}
+            {text}
           </Link>
         );
       })}
