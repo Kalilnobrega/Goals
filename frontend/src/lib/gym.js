@@ -4,6 +4,7 @@ export const MUSCLE_GROUPS = [
   { value: 'shoulders', label: 'Ombros' },
   { value: 'biceps', label: 'Bíceps' },
   { value: 'triceps', label: 'Tríceps' },
+  { value: 'forearms', label: 'Antebraço' },
   { value: 'quads', label: 'Quadríceps' },
   { value: 'hamstrings', label: 'Posteriores' },
   { value: 'calves', label: 'Panturrilhas' },
@@ -174,3 +175,45 @@ export const addDays = (iso, days) => {
   date.setDate(date.getDate() + days);
   return toIso(date);
 };
+
+export const BODY_REGIONS = [
+  { key: 'trunk', label: 'Tronco', groups: ['chest', 'back', 'abs'] },
+  { key: 'arms', label: 'Braços', groups: ['shoulders', 'biceps', 'triceps', 'forearms'] },
+  { key: 'legs', label: 'Pernas', groups: ['quads', 'hamstrings', 'glutes', 'adductors', 'calves'] },
+];
+
+export const MUSCLES = {
+  chest_upper: { group: 'chest', label: 'Peitoral superior' },
+  chest_mid: { group: 'chest', label: 'Peitoral médio' },
+  chest_lower: { group: 'chest', label: 'Peitoral inferior' },
+  lats: { group: 'back', label: 'Dorsal' },
+  traps_upper: { group: 'back', label: 'Trapézio superior' },
+  traps_mid: { group: 'back', label: 'Trapézio médio' },
+  rhomboids: { group: 'back', label: 'Romboides' },
+  lower_back: { group: 'back', label: 'Lombar' },
+  abs_rectus: { group: 'abs', label: 'Reto abdominal' },
+  obliques: { group: 'abs', label: 'Oblíquos' },
+  delts_front: { group: 'shoulders', label: 'Deltoide anterior' },
+  delts_side: { group: 'shoulders', label: 'Deltoide lateral' },
+  delts_rear: { group: 'shoulders', label: 'Deltoide posterior' },
+  biceps: { group: 'biceps', label: 'Bíceps' },
+  brachialis: { group: 'biceps', label: 'Braquial' },
+  triceps_long: { group: 'triceps', label: 'Tríceps (cabeça longa)' },
+  triceps_lateral: { group: 'triceps', label: 'Tríceps (cabeça lateral)' },
+  triceps_medial: { group: 'triceps', label: 'Tríceps (cabeça medial)' },
+  brachioradialis: { group: 'forearms', label: 'Braquiorradial' },
+  forearm_flexors: { group: 'forearms', label: 'Flexores do antebraço' },
+  forearm_extensors: { group: 'forearms', label: 'Extensores do antebraço' },
+  rectus_femoris: { group: 'quads', label: 'Reto femoral' },
+  vastus_lateralis: { group: 'quads', label: 'Vasto lateral' },
+  vastus_medialis: { group: 'quads', label: 'Vasto medial' },
+  biceps_femoris: { group: 'hamstrings', label: 'Bíceps femoral' },
+  semitendinosus: { group: 'hamstrings', label: 'Semitendíneo' },
+  glute_max: { group: 'glutes', label: 'Glúteo máximo' },
+  glute_med: { group: 'glutes', label: 'Glúteo médio' },
+  adductors: { group: 'adductors', label: 'Adutores' },
+  gastrocnemius: { group: 'calves', label: 'Gastrocnêmio' },
+  soleus: { group: 'calves', label: 'Sóleo' },
+};
+
+export const muscleName = (key) => MUSCLES[key]?.label ?? key;
