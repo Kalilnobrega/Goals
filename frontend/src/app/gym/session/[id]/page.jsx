@@ -2,13 +2,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy } from 'lucide-react';
+import { Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
 import {
   getSession, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
-  updateSessionExercise, removeSessionExercise, addSet, updateSet, deleteSet,
+  updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
-  apiError, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
+  apiError, muscleLabel, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
   plural, REST_OPTIONS, FORGOTTEN_AFTER_MS,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
@@ -18,6 +18,7 @@ import GymSheet from '../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../components/gym/ExercisePicker';
 import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard';
 import SessionSummary from '../../../../components/gym/SessionSummary';
+import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import RestTimer from '../../../../components/gym/RestTimer';
 import useNow from '../../../../components/gym/useNow';
 import s from '../../../../components/gym/sheet.module.css';
@@ -159,6 +160,24 @@ export default function SessionPage() {
     } catch (err) {
       fail(err, 'Não foi possível trocar o exercício.');
     }
+  };
+
+  const reorder = async (ids) => {
+    const previous = session;
+    setSession(current => ({ ...current, exercises: ids.map(itemId => current.exercises.find(item => item.id === itemId)) }));
+    try {
+      await reorderSession(previous.id, ids);
+    } catch (err) {
+      setSession(previous);
+      fail(err, 'Não foi possível mudar a ordem.');
+    }
+  };
+
+  const moveToEnd = (item) => {
+    setSheet(null);
+    const ids = session.exercises.map(e => e.id).filter(itemId => itemId !== item.id);
+    reorder([...ids, item.id]);
+    toast(`${item.exercise_name} foi para o fim do treino`);
   };
 
   const removeExercise = async (item) => {
@@ -314,6 +333,7 @@ export default function SessionPage() {
           add: 'Adicionar exercício',
           swap: 'Trocar exercício',
           menu: sheet?.item?.exercise_name,
+          order: 'Ordem dos exercícios',
           rest: 'Tempo de descanso',
           finish: 'Finalizar treino',
           forgotten: 'Esse treino ficou aberto',
@@ -336,6 +356,22 @@ export default function SessionPage() {
 
         {sheet?.type === 'menu' && (
           <div className={s.actions}>
+            {session.exercises.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={s.option}
+                  onClick={() => moveToEnd(sheet.item)}
+                  disabled={session.exercises.at(-1).id === sheet.item.id}
+                >
+                  <ArrowDownToLine size={20} />
+                  <span>Deixar para depois<small>Vai para o fim do treino, útil se o aparelho estiver ocupado</small></span>
+                </button>
+                <button type="button" className={s.option} onClick={() => setSheet({ type: 'order' })}>
+                  <ArrowUpDown size={20} /> <span>Reordenar exercícios</span>
+                </button>
+              </>
+            )}
             <button type="button" className={s.option} onClick={() => openPicker('swap', sheet.item)} disabled={sheet.item.sets.length > 0}>
               <Repeat size={20} />
               <span>Trocar exercício{sheet.item.sets.length > 0 && <small>Só dá para trocar antes de registrar séries</small>}</span>
@@ -344,6 +380,34 @@ export default function SessionPage() {
               <Trash2 size={20} />
               <span>Remover deste treino<small>A ficha não muda</small></span>
             </button>
+          </div>
+        )}
+
+        {sheet?.type === 'order' && (
+          <div className={s.stack}>
+            <p className={s.text}>Arraste para mudar a ordem. A ficha não muda.</p>
+            <SortableList ids={session.exercises.map(item => item.id)} onReorder={reorder}>
+              <ol className={s.orderList}>
+                {session.exercises.map((item, index) => (
+                  <SortableItem key={item.id} id={item.id}>
+                    {({ itemProps, handleProps, isDragging }) => (
+                      <li {...itemProps} className={`${s.orderItem} ${isDragging ? s.orderDragging : ''}`}>
+                        <DragHandle handleProps={handleProps} className={s.orderHandle} />
+                        <span className={s.orderIndex}>{index + 1}</span>
+                        <span className={s.orderText}>
+                          <span className={s.orderName}>{item.exercise_name}</span>
+                          <span className={s.orderMeta}>
+                            {muscleLabel(item.muscle_group)}
+                            {item.sets.length ? ` · ${plural(item.sets.length, 'série feita', 'séries feitas')}` : ''}
+                          </span>
+                        </span>
+                      </li>
+                    )}
+                  </SortableItem>
+                ))}
+              </ol>
+            </SortableList>
+            <button type="button" className={s.primary} onClick={closeSheet}>Pronto</button>
           </div>
         )}
 
@@ -433,6 +497,11 @@ export default function SessionPage() {
 
         {sheet?.type === 'options' && (
           <div className={s.actions}>
+            {session.exercises.length > 1 && (
+              <button type="button" className={s.option} onClick={() => setSheet({ type: 'order' })}>
+                <ArrowUpDown size={20} /> <span>Reordenar exercícios</span>
+              </button>
+            )}
             <button type="button" className={s.option} onClick={() => setSheet({ type: 'finish' })}>
               <Flag size={20} /> <span>Finalizar treino</span>
             </button>

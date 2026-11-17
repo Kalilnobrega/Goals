@@ -245,6 +245,8 @@ export const finishSession = (id, completedAt) =>
   api.post(`/fitness/sessions/${id}/finish`, { completed_at: completedAt ?? null }).then((r) => r.data);
 export const deleteSession = (id) =>
   api.delete(`/fitness/sessions/${id}`).then((r) => r.data);
+export const reorderSession = (id, exerciseIds) =>
+  api.put(`/fitness/sessions/${id}/order`, { exercise_ids: exerciseIds }).then((r) => r.data);
 export const addSessionExercise = (sessionId, exerciseId) =>
   api.post(`/fitness/sessions/${sessionId}/exercises`, { exercise_id: exerciseId }).then((r) => r.data);
 export const updateSessionExercise = (id, data) =>
