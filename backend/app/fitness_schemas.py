@@ -1,5 +1,5 @@
 from typing import Literal
-from datetime import datetime
+from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -215,3 +215,69 @@ class SessionResponseSchema(BaseModel):
     total_sets: int
     volume_kg: float
     exercises: list[SessionExerciseResponseSchema]
+
+
+class ProgressExerciseSchema(BaseModel):
+    exercise_id: int
+    name: str
+    muscle_group: str
+    equipment: str
+    sessions: int
+    last_at: datetime
+    best_weight_kg: float
+    max_reps: int
+
+
+class ProgressPointSchema(BaseModel):
+    session_id: int
+    session_name: str
+    completed_at: datetime
+    sets: int
+    max_weight_kg: float
+    reps_at_max: int
+    max_reps: int
+    estimated_1rm_kg: float | None
+    volume_kg: float
+
+
+class ExerciseProgressSchema(BaseModel):
+    exercise_id: int
+    name: str
+    muscle_group: str
+    equipment: str
+    points: list[ProgressPointSchema]
+
+
+class BodyWeightSchema(BaseModel):
+    weight_kg: float = Field(ge=20, le=400)
+    measured_on: date | None = None
+    note: str | None = Field(default=None, max_length=140)
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value):
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class EditBodyWeightSchema(BaseModel):
+    weight_kg: float | None = Field(default=None, ge=20, le=400)
+    measured_on: date | None = None
+    note: str | None = Field(default=None, max_length=140)
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value):
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class BodyWeightResponseSchema(BaseModel):
+    id: int
+    measured_on: date
+    weight_kg: float
+    note: str | None

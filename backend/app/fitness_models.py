@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric, Index, text
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -119,3 +119,15 @@ class SetEntry(Base):
     weight_kg = Column(Numeric(6, 2), nullable=False)
     reps = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class BodyWeightEntry(Base):
+    __tablename__ = "fitness_body_weights"
+    __table_args__ = (UniqueConstraint("user_id", "measured_on", name="uq_fitness_body_weights_user_day"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    measured_on = Column(Date, nullable=False)
+    weight_kg = Column(Numeric(5, 2), nullable=False)
+    note = Column(String(140), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -193,8 +193,26 @@ def upgrade() -> None:
     with op.batch_alter_table('fitness_sets', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_fitness_sets_session_exercise_id'), ['session_exercise_id'], unique=False)
 
+    op.create_table(
+        'fitness_body_weights',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('measured_on', sa.Date(), nullable=False),
+        sa.Column('weight_kg', sa.Numeric(precision=5, scale=2), nullable=False),
+        sa.Column('note', sa.String(length=140), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('user_id', 'measured_on', name='uq_fitness_body_weights_user_day'),
+    )
+    with op.batch_alter_table('fitness_body_weights', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_fitness_body_weights_user_id'), ['user_id'], unique=False)
+
 
 def downgrade() -> None:
+    with op.batch_alter_table('fitness_body_weights', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_fitness_body_weights_user_id'))
+    op.drop_table('fitness_body_weights')
     with op.batch_alter_table('fitness_sets', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_sets_session_exercise_id'))
     op.drop_table('fitness_sets')
