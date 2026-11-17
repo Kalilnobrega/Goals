@@ -47,7 +47,7 @@ export default function WorkoutPage() {
   const remove = async () => {
     const ok = await confirmAction({
       title: 'Excluir ficha',
-      message: [<><strong>{workout.name}</strong> será excluída. Treinos já registrados com ela continuam no histórico.</>],
+      message: [<><strong>{workout.name}</strong> será excluída e sai dos planos em que estiver. Treinos já registrados com ela continuam no histórico.</>],
       confirmLabel: 'Excluir',
     });
     if (!ok) return;

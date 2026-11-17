@@ -278,3 +278,10 @@ export const getFitnessOverview = () => cachedGet("fitnessOverview", "/fitness/o
 export const getCalendar = (month) =>
   cachedGet(`fitnessCalendar:${month}`, `/fitness/calendar?month=${month}`);
 export const getFitnessStats = (period) => cachedGet(`fitnessStats:${period}`, `/fitness/stats?period=${period}`);
+export const getPlans = () => cachedGet("fitnessPlans", "/fitness/plans");
+export const getPlan = (id) => cachedGet(`fitnessPlan:${id}`, `/fitness/plans/${id}`);
+export const createPlan = (data) => api.post("/fitness/plans", data).then((r) => r.data);
+export const updatePlan = (id, data) => api.put(`/fitness/plans/${id}`, data).then((r) => r.data);
+export const deletePlan = (id) => api.delete(`/fitness/plans/${id}`).then((r) => r.data);
+export const activatePlan = (id) => api.post(`/fitness/plans/${id}/activate`).then((r) => r.data);
+export const deactivatePlan = (id) => api.post(`/fitness/plans/${id}/deactivate`).then((r) => r.data);

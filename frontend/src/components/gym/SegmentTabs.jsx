@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import styles from './SegmentTabs.module.css';
 
 export const WORKOUT_TABS = [
+  { href: '/gym/plans', label: 'Planos' },
   { href: '/gym/workouts', label: 'Fichas' },
   { href: '/gym/exercises', label: 'Exercícios' },
 ];

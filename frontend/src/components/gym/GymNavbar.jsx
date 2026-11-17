@@ -8,7 +8,7 @@ import styles from './GymNavbar.module.css';
 
 const links = [
   { href: '/gym', label: 'Início', icon: House },
-  { href: '/gym/workouts', label: 'Treinos', icon: ClipboardList, also: ['/gym/exercises'] },
+  { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises'] },
   { href: '/gym/history', label: 'Histórico', icon: History },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
 ];

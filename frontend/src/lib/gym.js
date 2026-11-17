@@ -156,3 +156,7 @@ export function daysAgo(iso, today) {
   if (diff < 60) return `há ${Math.floor(diff / 7)} semanas`;
   return `em ${formatShortDate(iso)}`;
 }
+
+export const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+export const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+export const weekdayOf = (iso) => (parseDay(iso).getDay() + 6) % 7;

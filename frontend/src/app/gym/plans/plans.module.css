@@ -1,0 +1,268 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--gym-muted);
+  font-size: 0.95rem;
+}
+
+.newDesktop {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+  overflow: hidden;
+}
+
+.cardActive {
+  border-color: rgba(198, 244, 50, 0.4);
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  color: var(--gym-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cardLink:active {
+  background: var(--gym-surface-2);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardName {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cardMeta {
+  color: var(--gym-muted);
+  font-size: 0.86rem;
+}
+
+.week {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekDay {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: var(--gym-surface-2);
+  text-align: center;
+}
+
+.weekDayOn {
+  background: var(--gym-accent-soft);
+}
+
+.weekLabel {
+  color: var(--gym-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.weekDayOn .weekLabel {
+  color: var(--gym-accent);
+}
+
+.weekNames {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.weekNames span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekRest {
+  color: var(--gym-faint);
+  font-weight: 400;
+}
+
+.activate {
+  height: 48px;
+  border: none;
+  border-top: 1px solid var(--gym-border);
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activate:disabled {
+  opacity: 0.6;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 44px 24px;
+  text-align: center;
+  border-radius: 20px;
+  border: 1px dashed var(--gym-border-strong);
+}
+
+.stateIcon {
+  color: var(--gym-faint);
+  margin-bottom: 4px;
+}
+
+.stateTitle {
+  font-weight: 500;
+  font-size: 1.05rem;
+}
+
+.stateText {
+  max-width: 340px;
+  color: var(--gym-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.stateLink {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 14px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton {
+  height: 150px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+}
+
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--gym-tabbar-h) + 16px + env(safe-area-inset-bottom));
+  z-index: 40;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  box-shadow: var(--gym-accent-glow);
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .newDesktop {
+    display: flex;
+  }
+
+  .fab {
+    display: none;
+  }
+}
