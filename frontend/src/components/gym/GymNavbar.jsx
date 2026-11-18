@@ -2,21 +2,27 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
+import { useToast } from '../Toast';
 import styles from './GymNavbar.module.css';
 
 const links = [
   { href: '/gym', label: 'Início', icon: House },
   { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises', '/gym/history'] },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
+  { href: '/gym/social', label: 'Social', icon: Users, soon: true },
 ];
+
+const SOON_MESSAGE = 'Social em construção: desafios, feed e amigos chegam em breve.';
 
 export default function GymNavbar() {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const openStart = useStartWorkout();
+  const toast = useToast();
+  const announceSoon = () => toast({ tone: 'info', message: SOON_MESSAGE });
 
   useEffect(() => {
     saveLastApp('gym');
@@ -50,7 +56,22 @@ export default function GymNavbar() {
     return [href, ...(links.find(l => l.href === href)?.also ?? [])].some(path => pathname.startsWith(path));
   };
 
-  const renderTab = ({ href, label, icon: Icon }) => (
+  const renderTab = ({ href, label, icon: Icon, soon }) => (soon ? (
+    <button
+      key={href}
+      type="button"
+      className={`${styles.tab} ${styles.tabSoon}`}
+      onClick={announceSoon}
+      aria-disabled="true"
+      aria-label={`${label}, em construção`}
+    >
+      <span className={styles.tabSoonIcon}>
+        <Icon size={22} strokeWidth={2} />
+        <span className={styles.soonBadge}>Em breve</span>
+      </span>
+      <span>{label}</span>
+    </button>
+  ) : (
     <Link
       key={href}
       href={href}
@@ -60,7 +81,7 @@ export default function GymNavbar() {
       <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />
       <span>{label}</span>
     </Link>
-  );
+  ));
 
   return (
     <>
@@ -72,7 +93,17 @@ export default function GymNavbar() {
           </Link>
 
           <nav className={styles.topLinks} aria-label="GymGoals">
-            {links.map(({ href, label }) => (
+            {links.map(({ href, label, soon }) => (soon ? (
+              <button
+                key={href}
+                type="button"
+                className={`${styles.topLink} ${styles.topLinkSoon}`}
+                onClick={announceSoon}
+                aria-disabled="true"
+              >
+                {label} <span className={styles.soonTag}>Em breve</span>
+              </button>
+            ) : (
               <Link
                 key={href}
                 href={href}
@@ -81,7 +112,7 @@ export default function GymNavbar() {
               >
                 {label}
               </Link>
-            ))}
+            )))}
           </nav>
 
           <button type="button" className={styles.topStart} onClick={openStart}>
@@ -103,7 +134,6 @@ export default function GymNavbar() {
           </button>
         </div>
         {links.slice(2).map(renderTab)}
-        {links.length < 4 && <span className={styles.tabSpacer} aria-hidden="true" />}
       </nav>
     </>
   );
