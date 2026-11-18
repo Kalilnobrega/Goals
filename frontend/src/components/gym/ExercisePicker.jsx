@@ -1,25 +1,15 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Search, X, Check } from 'lucide-react';
-import { MUSCLE_GROUPS, muscleLabel, equipmentLabel, normalize, plural } from '../../lib/gym';
+import { muscleLabel, equipmentLabel, plural } from '../../lib/gym';
+import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from './ExerciseFilters';
 import styles from './ExercisePicker.module.css';
 
-const FILTERS = [{ value: 'all', label: 'Todos' }, ...MUSCLE_GROUPS];
-
 export default function ExercisePicker({ exercises, loadError, onRetry, onConfirm, single = false }) {
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const filters = useExerciseFilters(exercises);
+  const { query, setQuery, muscle, roleOf, visible } = filters;
   const [selected, setSelected] = useState([]);
-
-  const visible = useMemo(() => {
-    if (!exercises) return [];
-    const term = normalize(query);
-    return exercises
-      .filter(e => filter === 'all' || e.muscle_group === filter)
-      .filter(e => !term || normalize(e.name).includes(term))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [exercises, query, filter]);
 
   const toggle = (exercise) => {
     if (single) return onConfirm([exercise]);
@@ -50,19 +40,8 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
         )}
       </div>
 
-      <div className={styles.filters} role="tablist" aria-label="Filtrar por grupo muscular">
-        {FILTERS.map(f => (
-          <button
-            key={f.value}
-            type="button"
-            role="tab"
-            aria-selected={filter === f.value}
-            className={`${styles.filter} ${filter === f.value ? styles.filterActive : ''}`}
-            onClick={() => setFilter(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className={styles.filtersWrap}>
+        <ExerciseFilters filters={filters} exercises={exercises} />
       </div>
 
       {loadError && !exercises && (
@@ -95,7 +74,7 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
                 <span className={styles.itemText}>
                   <span className={styles.itemName}>{exercise.name}</span>
                   <span className={styles.itemMeta}>
-                    {muscleLabel(exercise.muscle_group)} · {equipmentLabel(exercise.equipment)}
+                    {muscle ? ROLE_LABEL[roleOf(exercise)] : muscleLabel(exercise.muscle_group)} · {equipmentLabel(exercise.equipment)}
                   </span>
                 </span>
                 <span className={styles.check} aria-hidden="true">

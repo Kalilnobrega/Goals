@@ -56,40 +56,6 @@
   cursor: pointer;
 }
 
-.filters {
-  display: flex;
-  gap: 8px;
-  margin: 0 -20px;
-  padding: 0 20px 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.filters::-webkit-scrollbar {
-  display: none;
-}
-
-.filter {
-  flex-shrink: 0;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--gym-border-strong);
-  background: transparent;
-  color: var(--gym-muted);
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.filterActive {
-  background: var(--gym-accent);
-  border-color: var(--gym-accent);
-  color: var(--gym-accent-ink);
-}
-
 .list {
   list-style: none;
   margin: 0;
@@ -206,4 +172,8 @@
   background: var(--gym-surface-3);
   color: var(--gym-faint);
   cursor: default;
+}
+
+.filtersWrap {
+  --filters-gutter: 20px;
 }

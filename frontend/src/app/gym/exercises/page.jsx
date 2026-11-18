@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
-import { MUSCLE_GROUPS, muscleLabel, equipmentLabel, normalize, apiError } from '../../../lib/gym';
+import { MUSCLE_GROUPS, muscleLabel, equipmentLabel, apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
@@ -11,17 +11,15 @@ import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import Floating from '../../../components/gym/Floating';
+import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from '../../../components/gym/ExerciseFilters';
 import styles from './page.module.css';
 
-const FILTERS = [{ value: 'all', label: 'Todos' }, { value: 'mine', label: 'Meus' }, ...MUSCLE_GROUPS];
-
-const byName = (a, b) => a.name.localeCompare(b.name, 'pt-BR');
 
 export default function ExercisesPage() {
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [loadError, setLoadError] = useState(false);
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const filters = useExerciseFilters(exercises);
+  const { query, setQuery, group: filter, muscle, roleOf, visible } = filters;
   const [sheet, setSheet] = useState(null);
   const toast = useToast();
   const confirmAction = useConfirm();
@@ -35,21 +33,12 @@ export default function ExercisesPage() {
     fetchExercises();
   };
 
-  const visible = useMemo(() => {
-    if (!exercises) return [];
-    const term = normalize(query);
-    return exercises
-      .filter(e => filter === 'all' || (filter === 'mine' ? e.is_custom : e.muscle_group === filter))
-      .filter(e => !term || normalize(e.name).includes(term))
-      .sort(byName);
-  }, [exercises, query, filter]);
-
   const sections = useMemo(() => {
-    if (filter !== 'all' && filter !== 'mine') return [{ key: filter, title: null, items: visible }];
+    if (muscle || (filter !== 'all' && filter !== 'mine')) return [{ key: muscle ?? filter, title: null, items: visible }];
     return MUSCLE_GROUPS
       .map(group => ({ key: group.value, title: group.label, items: visible.filter(e => e.muscle_group === group.value) }))
       .filter(section => section.items.length > 0);
-  }, [visible, filter]);
+  }, [visible, filter, muscle]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
 
@@ -128,20 +117,7 @@ export default function ExercisesPage() {
         )}
       </div>
 
-      <div className={styles.filters} role="tablist" aria-label="Filtrar por grupo muscular">
-        {FILTERS.map(f => (
-          <button
-            key={f.value}
-            type="button"
-            role="tab"
-            aria-selected={filter === f.value}
-            className={`${styles.filter} ${filter === f.value ? styles.filterActive : ''}`}
-            onClick={() => setFilter(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <ExerciseFilters filters={filters} exercises={exercises} allowMine />
 
       {loadError && !exercises && (
         <div className={styles.state}>
@@ -193,7 +169,7 @@ export default function ExercisesPage() {
                   <span className={styles.itemText}>
                     <span className={styles.itemName}>{exercise.name}</span>
                     <span className={styles.itemMeta}>
-                      {filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
+                      {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
                       {equipmentLabel(exercise.equipment)}
                     </span>
                   </span>
