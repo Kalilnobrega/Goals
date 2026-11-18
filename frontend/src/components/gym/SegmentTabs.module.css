@@ -17,7 +17,7 @@
   height: calc(100% - 8px);
   border-radius: 12px;
   background: var(--gym-surface-3);
-  transition: transform var(--dur-slow) var(--ease-tab), width var(--dur-slow) var(--ease-tab);
+  transition: transform var(--dur-tab) var(--ease-tab), width var(--dur-tab) var(--ease-tab);
   pointer-events: none;
 }
 

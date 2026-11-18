@@ -21,10 +21,13 @@ export default function SegmentTabs({ tabs, label }) {
   const indicatorRef = useRef(null);
   const activeIndex = tabs.findIndex(tab => tab.href === pathname);
 
+  const fromIndex = useRef(lastIndex.get(label));
+
   useLayoutEffect(() => {
     const nav = navRef.current;
     const indicator = indicatorRef.current;
     if (!nav || !indicator) return;
+    let frame = 0;
     const place = (index, animate) => {
       const link = nav.querySelectorAll('a')[index];
       if (!link) {
@@ -36,18 +39,24 @@ export default function SegmentTabs({ tabs, label }) {
       indicator.style.width = `${link.offsetWidth}px`;
       indicator.style.transform = `translateX(${link.offsetLeft}px)`;
     };
-    const previous = lastIndex.get(label);
-    if (previous !== undefined && previous !== activeIndex && activeIndex !== -1) {
-      place(previous, false);
+    const from = fromIndex.current;
+    if (from !== undefined && from !== activeIndex && activeIndex !== -1) {
+      place(from, false);
       indicator.getBoundingClientRect();
-      requestAnimationFrame(() => place(activeIndex, true));
+      frame = requestAnimationFrame(() => {
+        place(activeIndex, true);
+        fromIndex.current = activeIndex;
+      });
     } else {
       place(activeIndex, false);
     }
     if (activeIndex !== -1) lastIndex.set(label, activeIndex);
     const onResize = () => place(activeIndex, false);
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', onResize);
+    };
   }, [activeIndex, label]);
 
   return (
