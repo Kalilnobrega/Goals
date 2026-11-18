@@ -2,13 +2,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Scale, ChevronRight, ChevronLeft } from 'lucide-react';
-import { getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, peekCache } from '../../../../lib/api';
+import {
+  getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, getBodyGoal, saveBodyGoal, deleteBodyGoal, peekCache,
+} from '../../../../lib/api';
 import { apiError, formatDay, formatDelta, formatKg, formatLongDay, parseDay } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import ProgressChart from '../../../../components/gym/ProgressChart';
 import BodyWeightForm from '../../../../components/gym/BodyWeightForm';
 import GymSheet from '../../../../components/gym/GymSheet';
+import TargetGoal from '../../../../components/gym/TargetGoal';
 import styles from '../progress.module.css';
 
 const DAY = 86400000;
@@ -29,6 +32,9 @@ export default function BodyWeightPage() {
   const [loadError, setLoadError] = useState(false);
   const [rangeKey, setRangeKey] = useState('90');
   const [editing, setEditing] = useState(null);
+  const [goal, setGoal] = useState(() => peekCache('fitnessBodyGoal') ?? null);
+
+  const refreshGoal = useCallback(() => getBodyGoal().then(setGoal).catch(() => {}), []);
 
   const fetchEntries = useCallback(() => {
     setLoadError(false);
@@ -37,7 +43,30 @@ export default function BodyWeightPage() {
 
   useEffect(() => {
     getBodyWeights().then(setEntries).catch(() => setLoadError(true));
+    getBodyGoal().then(setGoal).catch(() => {});
   }, []);
+
+  const saveGoal = async (data) => {
+    try {
+      setGoal(await saveBodyGoal(data));
+      toast(goal ? 'Meta atualizada' : 'Meta definida');
+      return null;
+    } catch (err) {
+      return apiError(err, 'Não foi possível salvar a meta.');
+    }
+  };
+
+  const removeGoal = async () => {
+    try {
+      await deleteBodyGoal();
+      setGoal(null);
+      toast('Meta removida');
+      return true;
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível remover a meta.') });
+      return false;
+    }
+  };
 
   const closeSheet = useCallback(() => setEditing(null), []);
 
@@ -46,6 +75,7 @@ export default function BodyWeightPage() {
     try {
       const entry = await logBodyWeight(data);
       setEntries(list => sortDesc([...list.filter(e => e.id !== entry.id), entry]));
+      refreshGoal();
       toast(replacing ? `Peso de ${formatDay(entry.measured_on)} atualizado` : 'Peso registrado');
       return null;
     } catch (err) {
@@ -57,6 +87,7 @@ export default function BodyWeightPage() {
     try {
       const entry = await updateBodyWeight(editing.id, data);
       setEntries(list => sortDesc(list.map(e => (e.id === entry.id ? entry : e))));
+      refreshGoal();
       setEditing(null);
       toast('Registro atualizado');
       return null;
@@ -76,6 +107,7 @@ export default function BodyWeightPage() {
     try {
       await deleteBodyWeight(entry.id);
       setEntries(list => list.filter(e => e.id !== entry.id));
+      refreshGoal();
       setEditing(null);
       toast('Registro excluído');
       return true;
@@ -147,7 +179,7 @@ export default function BodyWeightPage() {
                   ))}
                 </div>
               )}
-              <ProgressChart key={range.key} points={series} format={kg} axisFormat={formatKg} label="Peso corporal ao longo do tempo" />
+              <ProgressChart key={range.key} points={series} format={kg} axisFormat={formatKg} label="Peso corporal ao longo do tempo" target={goal?.target_kg ?? null} />
               {oldest !== previous && (
                 <p className={styles.panelNote}>
                   {formatDelta(latest.weight_kg - oldest.weight_kg)} desde o primeiro registro, em {formatDay(oldest.measured_on)}
@@ -156,6 +188,20 @@ export default function BodyWeightPage() {
             </>
           )}
         </section>
+      )}
+
+      {entries && (
+        <TargetGoal
+          goal={goal}
+          title="Meta de peso"
+          addLabel="Definir meta de peso"
+          addText="Escolha o peso que quer alcançar e, se quiser, um prazo."
+          dataWord="pesagens"
+          suggestion={latest?.weight_kg}
+          unitHint="75"
+          onSave={saveGoal}
+          onDelete={removeGoal}
+        />
       )}
 
       {entries && (

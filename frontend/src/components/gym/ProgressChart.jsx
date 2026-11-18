@@ -9,7 +9,7 @@ const DAY = 86400000;
 
 const shortDate = (time) => new Date(time).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
 
-export default function ProgressChart({ points, format, axisFormat = format, label }) {
+export default function ProgressChart({ points, format, axisFormat = format, label, target = null }) {
   const ref = useRef(null);
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState(null);
@@ -21,7 +21,7 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
     return () => observer.disconnect();
   }, []);
 
-  const values = points.map(p => p.value);
+  const values = [...points.map(p => p.value), ...(target !== null ? [target] : [])];
   const low = Math.min(...values);
   const high = Math.max(...values);
   const margin = (high - low) * 0.1 || Math.max(Math.abs(high) * 0.05, 1);
@@ -95,6 +95,13 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
               <text x={PAD.left} y={HEIGHT - 6} className={styles.axis}>{shortDate(first)}</text>
               <text x={width - PAD.right} y={HEIGHT - 6} className={styles.axis} textAnchor="end">{shortDate(last)}</text>
             </>
+          )}
+
+          {target !== null && (
+            <g>
+              <line x1={PAD.left} x2={width - PAD.right} y1={y(target)} y2={y(target)} className={styles.target} />
+              <text x={width - PAD.right} y={y(target) - 5} className={styles.targetLabel} textAnchor="end">Meta {format(target)}</text>
+            </g>
           )}
 
           {area && <path d={area} className={styles.area} />}

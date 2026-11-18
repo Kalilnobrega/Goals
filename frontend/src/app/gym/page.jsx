@@ -476,6 +476,14 @@ function BodyWeight({ body, today, onSaved }) {
             {body.change_kg !== null && (
               <span className={styles.tileMeta}>{formatDelta(body.change_kg)} desde {formatDay(body.previous_on)}</span>
             )}
+            {body.goal && (
+              <span className={styles.tileMeta}>
+                Meta {formatKg(body.goal.target_kg)} kg
+                {body.goal.status === 'reached' && ' · alcançada'}
+                {body.goal.status !== 'reached' && body.goal.current_kg !== null
+                  && ` · faltam ${formatKg(Math.round(Math.abs(body.goal.target_kg - body.goal.current_kg) * 10) / 10)} kg`}
+              </span>
+            )}
           </span>
         ) : (
           <span className={styles.tileText}>

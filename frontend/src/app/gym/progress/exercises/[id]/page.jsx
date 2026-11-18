@@ -3,10 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
-import { getExerciseProgress, peekCache } from '../../../../../lib/api';
+import { getExerciseProgress, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  equipmentLabel, formatDelta, formatKg, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, formatDelta, formatKg, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
+import { useToast } from '../../../../../components/Toast';
+import TargetGoal from '../../../../../components/gym/TargetGoal';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
 import styles from '../../progress.module.css';
 
@@ -70,6 +72,7 @@ export default function ExerciseProgressPage() {
   const [data, setData] = useState(() => peekCache(`fitnessProgress:${id}`) ?? null);
   const [status, setStatus] = useState(data ? 'ready' : 'loading');
   const [metricKey, setMetricKey] = useState(null);
+  const toast = useToast();
 
   const load = useCallback(() => {
     getExerciseProgress(id)
@@ -80,6 +83,29 @@ export default function ExerciseProgressPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const saveGoal = async (goalData) => {
+    try {
+      const goal = await saveExerciseGoal(id, goalData);
+      setData(current => ({ ...current, goal }));
+      toast(data.goal ? 'Meta atualizada' : 'Meta definida');
+      return null;
+    } catch (err) {
+      return apiError(err, 'Não foi possível salvar a meta.');
+    }
+  };
+
+  const removeGoal = async () => {
+    try {
+      await deleteExerciseGoal(id);
+      setData(current => ({ ...current, goal: null }));
+      toast('Meta removida');
+      return true;
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível remover a meta.') });
+      return false;
+    }
+  };
 
   const back = <Link href="/gym/progress/exercises" className={styles.back}><ChevronLeft size={18} /> Exercícios</Link>;
 
@@ -186,8 +212,21 @@ export default function ExerciseProgressPage() {
               format={metric.format}
               axisFormat={metric.axis}
               label={`${metric.label} de ${data.name} por treino`}
+              target={metric.key === 'weight' ? data.goal?.target_kg ?? null : null}
             />
           </section>
+
+          <TargetGoal
+            goal={data.goal}
+            title="Meta de carga"
+            addLabel="Definir meta de carga"
+            addText="A carga máxima que você quer levantar neste exercício, com prazo opcional."
+            dataWord="treinos"
+            suggestion={heaviest ? heaviest.max_weight_kg + 2.5 : null}
+            unitHint="80"
+            onSave={saveGoal}
+            onDelete={removeGoal}
+          />
 
           <section className={styles.records} aria-label="Recordes">
             {records.map(record => (

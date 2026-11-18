@@ -83,6 +83,7 @@ export default function ProgressPage() {
                       <span className={styles.rowName}>{item.name}</span>
                       <span className={styles.rowMeta}>
                         {muscleLabel(item.muscle_group)} · {plural(item.sessions, 'treino', 'treinos')} · último {formatShortDate(item.last_at)}
+                        {item.goal_kg ? ` · meta ${formatKg(item.goal_kg)} kg` : ''}
                       </span>
                     </span>
                     <span className={styles.rowBest}>
