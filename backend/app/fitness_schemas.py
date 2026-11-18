@@ -27,6 +27,7 @@ Equipment = Literal[
     "machine",
     "plate_loaded",
     "cable",
+    "cardio",
     "smith",
     "bodyweight",
     "kettlebell",

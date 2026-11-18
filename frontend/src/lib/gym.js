@@ -25,6 +25,7 @@ export const EQUIPMENT = [
   { value: 'bodyweight', label: 'Peso corporal' },
   { value: 'kettlebell', label: 'Kettlebell' },
   { value: 'band', label: 'Elástico' },
+  { value: 'cardio', label: 'Aparelho de cardio' },
   { value: 'other', label: 'Outro' },
 ];
 
