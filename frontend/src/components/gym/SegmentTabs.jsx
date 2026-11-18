@@ -9,12 +9,6 @@ export const WORKOUT_TABS = [
   { href: '/gym/exercises', label: 'Exercícios' },
 ];
 
-export const PROGRESS_TABS = [
-  { href: '/gym/progress', label: 'Resumo' },
-  { href: '/gym/progress/exercises', label: 'Exercícios' },
-  { href: '/gym/progress/body', label: 'Peso' },
-];
-
 export default function SegmentTabs({ tabs, label }) {
   const pathname = usePathname();
 

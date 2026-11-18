@@ -1,10 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, TrendingUp, ChevronRight } from 'lucide-react';
+import { Search, TrendingUp, ChevronRight, ChevronLeft } from 'lucide-react';
 import { getProgressExercises, peekCache } from '../../../../lib/api';
 import { formatKg, formatShortDate, muscleLabel, normalize, plural } from '../../../../lib/gym';
-import SegmentTabs, { PROGRESS_TABS } from '../../../../components/gym/SegmentTabs';
 import styles from '../progress.module.css';
 
 export default function ProgressPage() {
@@ -29,12 +28,11 @@ export default function ProgressPage() {
 
   return (
     <div className={styles.page}>
-      <header>
-        <h1 className={styles.title}>Evolução</h1>
-        <p className={styles.subtitle}>Como suas cargas e seu corpo mudam com o tempo</p>
-      </header>
-
-      <SegmentTabs tabs={PROGRESS_TABS} label="Evolução" />
+      <div className={styles.top}>
+        <Link href="/gym/progress" className={styles.back}><ChevronLeft size={18} /> Evolução</Link>
+        <h1 className={styles.detailTitle}>Exercícios</h1>
+        <p className={styles.subtitle}>Como suas cargas mudam em cada exercício</p>
+      </div>
 
       {loadError && !items && (
         <div className={styles.state}>

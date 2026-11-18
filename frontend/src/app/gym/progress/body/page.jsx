@@ -1,11 +1,11 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Scale, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Scale, ChevronRight, ChevronLeft } from 'lucide-react';
 import { getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, peekCache } from '../../../../lib/api';
 import { apiError, formatDay, formatDelta, formatKg, formatLongDay, parseDay } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
-import SegmentTabs, { PROGRESS_TABS } from '../../../../components/gym/SegmentTabs';
 import ProgressChart from '../../../../components/gym/ProgressChart';
 import BodyWeightForm from '../../../../components/gym/BodyWeightForm';
 import GymSheet from '../../../../components/gym/GymSheet';
@@ -99,12 +99,11 @@ export default function BodyWeightPage() {
 
   return (
     <div className={styles.page}>
-      <header>
-        <h1 className={styles.title}>Evolução</h1>
-        <p className={styles.subtitle}>Como suas cargas e seu corpo mudam com o tempo</p>
-      </header>
-
-      <SegmentTabs tabs={PROGRESS_TABS} label="Evolução" />
+      <div className={styles.top}>
+        <Link href="/gym/progress" className={styles.back}><ChevronLeft size={18} /> Evolução</Link>
+        <h1 className={styles.detailTitle}>Peso corporal</h1>
+        <p className={styles.subtitle}>Como seu peso muda com o tempo</p>
+      </div>
 
       {loadError && !entries && (
         <div className={styles.state}>

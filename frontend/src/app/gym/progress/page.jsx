@@ -2,13 +2,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Trophy, ClipboardList, Target, ChevronRight,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Trophy, ClipboardList, Target, ChevronRight, Scale,
 } from 'lucide-react';
-import { getFitnessStats, peekCache } from '../../../lib/api';
+import { getFitnessStats, getProgressWorkouts, getProgressExercises, getBodyWeights, peekCache } from '../../../lib/api';
 import {
   formatDay, formatDuration, formatKg, formatVolume, muscleLabel, parseDay, plural,
 } from '../../../lib/gym';
-import SegmentTabs, { PROGRESS_TABS } from '../../../components/gym/SegmentTabs';
 import BarChart from '../../../components/gym/BarChart';
 import Sparkline from '../../../components/gym/Sparkline';
 import styles from './stats.module.css';
@@ -392,13 +391,69 @@ function MostDone({ data }) {
   );
 }
 
+function WorkoutRow({ workoutId, children }) {
+  if (!workoutId) return <div className={styles.workout}>{children}</div>;
+  return <Link href={`/gym/progress/workouts/${workoutId}`} className={`${styles.workout} ${styles.workoutLink}`}>{children}</Link>;
+}
+
+function useSections() {
+  const [workouts, setWorkouts] = useState(() => peekCache('fitnessProgressWorkouts') ?? null);
+  const [exercises, setExercises] = useState(() => peekCache('fitnessProgress') ?? null);
+  const [weights, setWeights] = useState(() => peekCache('fitnessBodyWeight') ?? null);
+
+  useEffect(() => {
+    getProgressWorkouts().then(setWorkouts).catch(() => {});
+    getProgressExercises().then(setExercises).catch(() => {});
+    getBodyWeights().then(setWeights).catch(() => {});
+  }, []);
+
+  const latest = weights?.[0];
+  return [
+    {
+      href: '/gym/progress/workouts',
+      icon: ClipboardList,
+      title: 'Fichas',
+      meta: workouts ? (workouts.length ? plural(workouts.length, 'ficha treinada', 'fichas treinadas') : 'Nenhuma treinada') : null,
+    },
+    {
+      href: '/gym/progress/exercises',
+      icon: Dumbbell,
+      title: 'Exercícios',
+      meta: exercises ? (exercises.length ? plural(exercises.length, 'exercício', 'exercícios') : 'Nenhum treinado') : null,
+    },
+    {
+      href: '/gym/progress/body',
+      icon: Scale,
+      title: 'Peso corporal',
+      meta: weights ? (latest ? `${formatKg(latest.weight_kg)} kg` : 'Registrar peso') : null,
+    },
+  ];
+}
+
+function Sections() {
+  const sections = useSections();
+  return (
+    <nav className={styles.sections} aria-label="Evolução detalhada">
+      {sections.map(({ href, icon: Icon, title, meta }) => (
+        <Link key={href} href={href} className={styles.section}>
+          <span className={styles.sectionIcon}><Icon size={18} aria-hidden="true" /></span>
+          <span className={styles.sectionTitle}>{title}</span>
+          <span className={styles.sectionMeta}>{meta ?? '\u00a0'}</span>
+          <ChevronRight size={16} className={styles.sectionChevron} aria-hidden="true" />
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 function Workouts({ data }) {
   if (!data.workouts.length) return null;
   return (
     <Card icon={ClipboardList} title="Fichas">
       <ul className={styles.rows}>
         {data.workouts.map(w => (
-          <li key={`${w.workout_id}-${w.name}`} className={styles.workout}>
+          <li key={`${w.workout_id}-${w.name}`}>
+            <WorkoutRow workoutId={w.workout_id}>
             <div className={styles.workoutTop}>
               <span className={styles.rowName}>{w.name}</span>
               <span className={styles.workoutCount}>{w.sessions}×</span>
@@ -412,6 +467,7 @@ function Workouts({ data }) {
                 {w.volume_change_pct !== null && <>Volume: <Delta value={Math.round(w.volume_change_pct)} /></>}
               </span>
             )}
+            </WorkoutRow>
           </li>
         ))}
       </ul>
@@ -485,7 +541,7 @@ export default function StatsPage() {
         <p className={styles.subtitle}>Seus números de treino, do volume aos recordes</p>
       </header>
 
-      <SegmentTabs tabs={PROGRESS_TABS} label="Evolução" />
+      <Sections />
 
       <div className={styles.periods} role="tablist" aria-label="Período">
         {PERIODS.map(p => (
