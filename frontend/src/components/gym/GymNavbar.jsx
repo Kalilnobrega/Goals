@@ -2,8 +2,9 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, History, TrendingUp, LayoutGrid } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, History, TrendingUp, LayoutGrid, Play } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
+import { useStartWorkout } from './StartWorkout';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -16,6 +17,7 @@ const links = [
 export default function GymNavbar() {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
+  const openStart = useStartWorkout();
 
   useEffect(() => {
     saveLastApp('gym');
@@ -49,6 +51,18 @@ export default function GymNavbar() {
     return [href, ...(links.find(l => l.href === href)?.also ?? [])].some(path => pathname.startsWith(path));
   };
 
+  const renderTab = ({ href, label, icon: Icon }) => (
+    <Link
+      key={href}
+      href={href}
+      className={`${styles.tab} ${isCurrent(href) ? styles.tabActive : ''}`}
+      aria-current={isCurrent(href) ? 'page' : undefined}
+    >
+      <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />
+      <span>{label}</span>
+    </Link>
+  );
+
   return (
     <>
       <header className={`${styles.header} ${hidden ? styles.headerHidden : ''}`}>
@@ -71,6 +85,10 @@ export default function GymNavbar() {
             ))}
           </nav>
 
+          <button type="button" className={styles.topStart} onClick={openStart}>
+            <Play size={15} fill="currentColor" /> Treinar
+          </button>
+
           <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
             <LayoutGrid size={16} />
             <span>Apps</span>
@@ -79,17 +97,13 @@ export default function GymNavbar() {
       </header>
 
       <nav className={styles.tabbar} aria-label="GymGoals">
-        {links.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`${styles.tab} ${isCurrent(href) ? styles.tabActive : ''}`}
-            aria-current={isCurrent(href) ? 'page' : undefined}
-          >
-            <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />
-            <span>{label}</span>
-          </Link>
-        ))}
+        {links.slice(0, 2).map(renderTab)}
+        <div className={styles.tabStartSlot}>
+          <button type="button" className={styles.tabStart} onClick={openStart} aria-label="Iniciar treino">
+            <Play size={26} fill="currentColor" />
+          </button>
+        </div>
+        {links.slice(2).map(renderTab)}
       </nav>
     </>
   );

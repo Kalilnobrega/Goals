@@ -1,5 +1,6 @@
 import GymNavbar from '../../components/gym/GymNavbar';
 import ServiceWorker from '../../components/gym/ServiceWorker';
+import { StartWorkoutProvider } from '../../components/gym/StartWorkout';
 import styles from './gym.module.css';
 
 export const metadata = {
@@ -30,8 +31,10 @@ export default function GymLayout({ children }) {
   return (
     <div className={styles.shell}>
       <ServiceWorker />
-      <GymNavbar />
-      <main className={styles.main}>{children}</main>
+      <StartWorkoutProvider>
+        <GymNavbar />
+        <main className={styles.main}>{children}</main>
+      </StartWorkoutProvider>
     </div>
   );
 }

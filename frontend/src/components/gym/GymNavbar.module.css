@@ -81,6 +81,28 @@
   background: var(--gym-accent);
 }
 
+.topStart {
+  margin-left: auto;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--dur-instant) var(--ease-out);
+}
+
+.topStart:active {
+  transform: scale(0.96);
+}
+
 .switch {
   margin-left: auto;
   display: flex;
@@ -137,6 +159,34 @@
   color: var(--gym-accent);
 }
 
+.tabStartSlot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabStart {
+  width: 58px;
+  height: 58px;
+  margin-top: -26px;
+  display: grid;
+  place-items: center;
+  padding-left: 3px;
+  border: 4px solid var(--gym-bg, #0e1013);
+  border-radius: 50%;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  box-shadow: var(--gym-accent-glow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-instant) var(--ease-out);
+}
+
+.tabStart:active {
+  transform: scale(0.92);
+}
+
 @media (min-width: 768px) {
   .headerInner {
     padding: 0 24px;
@@ -144,6 +194,14 @@
 
   .topLinks {
     display: flex;
+  }
+
+  .topStart {
+    display: inline-flex;
+  }
+
+  .topStart + .switch {
+    margin-left: 0;
   }
 
   .tabbar {

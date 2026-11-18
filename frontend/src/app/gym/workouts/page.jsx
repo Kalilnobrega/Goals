@@ -1,11 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Play, ClipboardList, Zap } from 'lucide-react';
+import { Plus, ClipboardList } from 'lucide-react';
 import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural } from '../../../lib/gym';
 import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
-import useStartSession from '../../../components/gym/useStartSession';
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
@@ -14,7 +13,6 @@ import styles from './page.module.css';
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
-  const { begin, starting, sheet } = useStartSession();
   const [bodyType] = useBodyType();
 
   const fetchWorkouts = useCallback(() => {
@@ -101,28 +99,11 @@ export default function WorkoutsPage() {
                     )}
                   </span>
                 </Link>
-                <button
-                  type="button"
-                  className={styles.play}
-                  onClick={() => begin(workout.id)}
-                  disabled={starting}
-                  aria-label={`Iniciar ${workout.name}`}
-                >
-                  <Play size={20} fill="currentColor" />
-                </button>
               </li>
             );
           })}
         </ul>
       )}
-
-      {workouts && (
-        <button type="button" className={styles.free} onClick={() => begin(null)} disabled={starting}>
-          <Zap size={18} /> Começar treino livre
-        </button>
-      )}
-
-      {sheet}
 
       <Link href="/gym/workouts/new" className={styles.fab} aria-label="Nova ficha">
         <Plus size={26} strokeWidth={2.4} />

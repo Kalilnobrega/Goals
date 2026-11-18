@@ -12,6 +12,7 @@ import {
 } from '../../lib/gym';
 import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../components/gym/useStartSession';
+import { useStartWorkout } from '../../components/gym/StartWorkout';
 import WeekPicker from '../../components/gym/WeekPicker';
 import MusclesWeek from '../../components/gym/MusclesWeek';
 import RecentRecords from '../../components/gym/RecentRecords';
@@ -90,6 +91,7 @@ function nextText(plan, today) {
 }
 
 function PlanToday({ data, begin, starting }) {
+  const openStart = useStartWorkout();
   const { plan, today } = data;
   const kicker = `Hoje · ${WEEKDAY_NAMES[weekdayOf(today)]} · ${plan.name}`;
   const pending = plan.today.filter(w => !w.done);
@@ -118,7 +120,7 @@ function PlanToday({ data, begin, starting }) {
           <button type="button" className={styles.nextStart} onClick={() => begin(main.workout_id)} disabled={starting}>
             <Play size={20} fill="currentColor" /> {starting ? 'Iniciando…' : 'Começar treino'}
           </button>
-          <Link href="/gym/workouts" className={styles.nextFree}>Outra ficha</Link>
+          <button type="button" className={styles.nextFree} onClick={openStart}>Outra ficha</button>
         </div>
       </section>
     );
@@ -141,7 +143,7 @@ function PlanToday({ data, begin, starting }) {
             <Play size={18} fill="currentColor" /> Treinar {data.suggested_workout.name} mesmo assim
           </button>
         ) : (
-          <Link href="/gym/workouts" className={styles.nextSecondary}>Treinar outra ficha</Link>
+          <button type="button" className={styles.nextSecondary} onClick={openStart}>Treinar outra ficha</button>
         )}
       </div>
     </section>
@@ -149,6 +151,7 @@ function PlanToday({ data, begin, starting }) {
 }
 
 function NextWorkout({ data, begin, starting }) {
+  const openStart = useStartWorkout();
   const workout = data.suggested_workout;
 
   if (data.plan) return <PlanToday data={data} begin={begin} starting={starting} />;
@@ -180,7 +183,7 @@ function NextWorkout({ data, begin, starting }) {
         <button type="button" className={styles.nextStart} onClick={() => begin(workout.id)} disabled={starting}>
           <Play size={20} fill="currentColor" /> {starting ? 'Iniciando…' : 'Começar treino'}
         </button>
-        <Link href="/gym/workouts" className={styles.nextFree}>Outra ficha</Link>
+        <button type="button" className={styles.nextFree} onClick={openStart}>Outra ficha</button>
       </div>
       <Link href="/gym/plans/new" className={styles.planHint}>Monte sua semana: diga qual ficha fazer em cada dia</Link>
     </section>

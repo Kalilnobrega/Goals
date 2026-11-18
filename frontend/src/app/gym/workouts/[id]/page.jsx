@@ -2,18 +2,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Pencil, Play, Timer } from 'lucide-react';
+import { ChevronLeft, Pencil, Timer } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
 import { muscleLabel, equipmentLabel, plural, prescription, formatRest } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
-import useStartSession from '../../../../components/gym/useStartSession';
 import styles from './workout.module.css';
 
 export default function WorkoutDetailPage() {
   const { id } = useParams();
   const [workout, setWorkout] = useState(() => peekCache(`fitnessWorkout:${id}`) ?? null);
   const [status, setStatus] = useState(workout ? 'ready' : 'loading');
-  const { begin, starting, sheet } = useStartSession();
 
   const load = useCallback(() => (
     getWorkout(id)
@@ -67,12 +65,7 @@ export default function WorkoutDetailPage() {
         {workout.description && <p className={styles.description}>{workout.description}</p>}
       </div>
 
-      <div className={styles.actions}>
-        <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
-        <button type="button" className={styles.primary} onClick={() => begin(workout.id)} disabled={starting}>
-          <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Iniciar treino'}
-        </button>
-      </div>
+      <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
 
       {exercises.length > 0 ? (
         <section className={styles.card} aria-labelledby="workout-exercises-title">
@@ -105,8 +98,6 @@ export default function WorkoutDetailPage() {
       )}
 
       <WorkoutBodyMap exercises={exercises} />
-
-      {sheet}
     </div>
   );
 }

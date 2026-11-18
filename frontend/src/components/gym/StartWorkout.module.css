@@ -1,0 +1,50 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupTitle {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--gym-muted);
+}
+
+.highlight {
+  border-color: color-mix(in srgb, var(--gym-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--gym-accent) 10%, var(--gym-surface-2));
+}
+
+.highlight .icon,
+.play {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--gym-faint);
+}
+
+.retry {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--gym-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.skeleton {
+  height: 56px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}

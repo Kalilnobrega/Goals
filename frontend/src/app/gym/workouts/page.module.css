@@ -163,7 +163,7 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  padding: 18px 8px 18px 18px;
+  padding: 18px;
   border-radius: 20px;
   color: var(--gym-text);
   text-decoration: none;
@@ -172,49 +172,6 @@
 
 .cardLink:active {
   background: var(--gym-surface-2);
-}
-
-.play {
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  margin: 14px 14px 0 0;
-  border: none;
-  border-radius: 16px;
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform var(--dur-instant) var(--ease-out);
-}
-
-.play:active {
-  transform: scale(0.94);
-}
-
-.play:disabled {
-  opacity: 0.6;
-}
-
-.free {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 52px;
-  border-radius: 16px;
-  border: 1px dashed var(--gym-border-strong);
-  background: transparent;
-  color: var(--gym-text);
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.free:hover {
-  border-color: var(--gym-accent);
 }
 
 .cardMain {

@@ -47,42 +47,35 @@
   overflow-wrap: anywhere;
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.edit,
-.primary {
-  flex: 1;
-  height: 50px;
+.edit {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: 1px solid var(--gym-border-strong);
   border-radius: 16px;
+  background: var(--gym-surface);
+  color: var(--gym-text);
   font: inherit;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-instant) var(--ease-out);
 }
 
-.edit {
-  border: 1px solid var(--gym-border-strong);
-  background: var(--gym-surface);
-  color: var(--gym-text);
+.edit:hover {
+  border-color: var(--gym-accent);
 }
 
-.primary {
-  border: none;
-  box-shadow: var(--gym-accent-glow);
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-}
-
-.primary:disabled {
-  opacity: 0.6;
+.edit:active {
+  transform: scale(0.98);
 }
 
 .card {
