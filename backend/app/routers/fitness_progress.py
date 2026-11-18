@@ -4,14 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dates import today_br
+from app.dates import today_br, to_br_date
 from app.models import User
-from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry
+from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal
+from app.fitness_forecast import forecast
 from app.fitness_schemas import (
     ProgressExerciseSchema,
     ExerciseProgressSchema,
     BodyWeightSchema,
     EditBodyWeightSchema,
+    FitnessGoalSchema,
+    FitnessGoalResponseSchema,
     BodyWeightResponseSchema,
 )
 from .auth import get_current_user
@@ -19,6 +22,9 @@ from .fitness import visible_exercises
 from .fitness_sessions import COMPLETED, aware, to_kg
 
 fitness_progress_router = APIRouter(prefix="/fitness", tags=["fitness"])
+
+BODY_WEIGHT = "body_weight"
+EXERCISE = "exercise"
 
 EPLEY_MAX_REPS = 12
 
@@ -59,9 +65,14 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
         exercise.id: exercise
         for exercise in db.query(Exercise).filter(Exercise.id.in_([row[0] for row in rows]))
     } if rows else {}
+    goals = {
+        goal.exercise_id: float(goal.target_kg)
+        for goal in db.query(FitnessGoal).filter(FitnessGoal.user_id == user.id, FitnessGoal.kind == EXERCISE)
+    }
     items = [
         {
             "exercise_id": exercise_id,
+            "goal_kg": goals.get(exercise_id),
             "name": exercises[exercise_id].name,
             "muscle_group": exercises[exercise_id].muscle_group,
             "equipment": exercises[exercise_id].equipment,
@@ -128,6 +139,7 @@ def get_exercise_progress(
         "name": exercise.name,
         "muscle_group": exercise.muscle_group,
         "equipment": exercise.equipment,
+        "goal": serialize_goal(find_goal(user, db, EXERCISE, exercise.id), exercise_points(user, db, exercise.id)),
         "points": [
             {**point, "max_weight_kg": float(point["max_weight_kg"]), "volume_kg": float(point["volume_kg"])}
             for point in points.values()
@@ -232,3 +244,116 @@ def delete_body_weight(
     db.delete(get_own_body_weight(entry_id, user, db))
     db.commit()
     return {"message": "Registro excluído"}
+
+
+def find_goal(user: User, db: Session, kind: str, exercise_id: int | None = None) -> FitnessGoal | None:
+    return (
+        db.query(FitnessGoal)
+        .filter(FitnessGoal.user_id == user.id, FitnessGoal.kind == kind, FitnessGoal.exercise_id == exercise_id)
+        .first()
+    )
+
+
+def body_points(user: User, db: Session, since: date | None = None) -> list[tuple[date, float]]:
+    query = db.query(BodyWeightEntry.measured_on, BodyWeightEntry.weight_kg).filter(BodyWeightEntry.user_id == user.id)
+    if since:
+        query = query.filter(BodyWeightEntry.measured_on >= since)
+    return [(day, float(weight)) for day, weight in query.order_by(BodyWeightEntry.measured_on).all()]
+
+
+def exercise_points(user: User, db: Session, exercise_id: int) -> list[tuple[date, float]]:
+    rows = (
+        completed_sets(user, db)
+        .filter(SessionExercise.exercise_id == exercise_id)
+        .with_entities(WorkoutSession.id, WorkoutSession.completed_at, func.max(SetEntry.weight_kg))
+        .group_by(WorkoutSession.id, WorkoutSession.completed_at)
+        .order_by(WorkoutSession.completed_at)
+        .all()
+    )
+    return [(to_br_date(aware(completed_at)), float(weight)) for _, completed_at, weight in rows]
+
+
+def serialize_goal(goal: FitnessGoal | None, points: list[tuple[date, float]]) -> dict | None:
+    if goal is None:
+        return None
+    baseline = (goal.start_on, float(goal.start_kg)) if goal.start_kg is not None else None
+    after = [point for point in points if point[0] >= goal.start_on]
+    result = forecast(baseline, after, float(goal.target_kg), goal.deadline, today_br())
+    return {**result, "target_kg": float(goal.target_kg), "deadline": goal.deadline, "start_on": goal.start_on}
+
+
+def check_deadline(deadline: date | None):
+    if deadline is not None and deadline < today_br():
+        raise HTTPException(status_code=400, detail="O prazo não pode ser no passado.")
+
+
+def save_goal(goal: FitnessGoal | None, data: FitnessGoalSchema, user: User, db: Session, kind: str,
+              exercise_id: int | None, points: list[tuple[date, float]]) -> FitnessGoal:
+    check_deadline(data.deadline)
+    if goal is None:
+        today = today_br()
+        before = [value for day, value in points if day <= today]
+        goal = FitnessGoal(
+            user_id=user.id, kind=kind, exercise_id=exercise_id, start_on=today,
+            start_kg=to_kg(before[-1]) if before else None,
+        )
+        db.add(goal)
+    goal.target_kg = to_kg(data.target_kg)
+    goal.deadline = data.deadline
+    db.commit()
+    db.refresh(goal)
+    return goal
+
+
+@fitness_progress_router.get("/body-weight-goal", response_model=FitnessGoalResponseSchema | None)
+def get_body_goal(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    goal = find_goal(user, db, BODY_WEIGHT)
+    return serialize_goal(goal, body_points(user, db, goal.start_on) if goal else [])
+
+
+@fitness_progress_router.put("/body-weight-goal", response_model=FitnessGoalResponseSchema)
+def set_body_goal(data: FitnessGoalSchema, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not 20 <= data.target_kg <= 400:
+        raise HTTPException(status_code=400, detail="Informe uma meta entre 20 e 400 kg.")
+    points = body_points(user, db)
+    goal = save_goal(find_goal(user, db, BODY_WEIGHT), data, user, db, BODY_WEIGHT, None, points)
+    return serialize_goal(goal, points)
+
+
+@fitness_progress_router.delete("/body-weight-goal")
+def delete_body_goal(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    goal = find_goal(user, db, BODY_WEIGHT)
+    if goal:
+        db.delete(goal)
+        db.commit()
+    return {"message": "Meta removida"}
+
+
+def visible_exercise_or_404(exercise_id: int, user: User, db: Session) -> Exercise:
+    exercise = visible_exercises(user, db).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercício não encontrado")
+    return exercise
+
+
+@fitness_progress_router.put("/exercises/{exercise_id}/goal", response_model=FitnessGoalResponseSchema)
+def set_exercise_goal(
+    exercise_id: int,
+    data: FitnessGoalSchema,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    exercise = visible_exercise_or_404(exercise_id, user, db)
+    points = exercise_points(user, db, exercise.id)
+    goal = save_goal(find_goal(user, db, EXERCISE, exercise.id), data, user, db, EXERCISE, exercise.id, points)
+    return serialize_goal(goal, points)
+
+
+@fitness_progress_router.delete("/exercises/{exercise_id}/goal")
+def delete_exercise_goal(exercise_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    exercise = visible_exercise_or_404(exercise_id, user, db)
+    goal = find_goal(user, db, EXERCISE, exercise.id)
+    if goal:
+        db.delete(goal)
+        db.commit()
+    return {"message": "Meta removida"}

@@ -207,3 +207,17 @@ class FitnessProfile(Base):
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     body_type = Column(String(10), nullable=False, default="male")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class FitnessGoal(Base):
+    __tablename__ = "fitness_goals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(20), nullable=False)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), nullable=True, index=True)
+    target_kg = Column(Numeric(6, 2), nullable=False)
+    deadline = Column(Date, nullable=True)
+    start_kg = Column(Numeric(6, 2), nullable=True)
+    start_on = Column(Date, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

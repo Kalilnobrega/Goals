@@ -274,6 +274,7 @@ class ProgressExerciseSchema(BaseModel):
     last_at: datetime
     best_weight_kg: float
     max_reps: int
+    goal_kg: float | None = None
 
 
 class ProgressPointSchema(BaseModel):
@@ -294,6 +295,7 @@ class ExerciseProgressSchema(BaseModel):
     muscle_group: str
     equipment: str
     points: list[ProgressPointSchema]
+    goal: "FitnessGoalResponseSchema | None" = None
 
 
 class BodyWeightSchema(BaseModel):
@@ -386,6 +388,7 @@ class OverviewBodyWeightSchema(BaseModel):
     month_change_kg: float | None = None
     month_from_on: date | None = None
     recent: list[OverviewWeightPointSchema] = []
+    goal: "FitnessGoalResponseSchema | None" = None
 
 
 class OverviewRecordSchema(BaseModel):
@@ -803,3 +806,21 @@ class SessionInsightsSchema(BaseModel):
     exercises: list[SessionExerciseInsightSchema]
     records: list[StatsRecordSchema]
     muscle_sets: list[MuscleSetsSchema]
+
+
+class FitnessGoalSchema(BaseModel):
+    target_kg: float = Field(gt=0, le=1000)
+    deadline: date | None = None
+
+
+class FitnessGoalResponseSchema(BaseModel):
+    target_kg: float
+    deadline: date | None
+    start_on: date
+    status: Literal["reached", "on_track", "behind", "no_trend", "no_data"]
+    start_kg: float | None
+    current_kg: float | None
+    progress: float | None
+    eta: date | None
+    rate_per_day: float | None
+    needed_per_day: float | None

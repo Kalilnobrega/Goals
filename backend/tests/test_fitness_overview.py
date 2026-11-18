@@ -116,7 +116,7 @@ def test_overview_body_weight_change(client, ana):
     client.post("/fitness/body-weight", json={"weight_kg": 80}, headers=headers)
     assert overview(client, headers)["body_weight"] == {
         "weight_kg": 80.0, "measured_on": today.isoformat(), "change_kg": None, "previous_on": None,
-        "month_change_kg": None, "month_from_on": None,
+        "month_change_kg": None, "month_from_on": None, "goal": None,
         "recent": [{"measured_on": today.isoformat(), "weight_kg": 80.0}],
     }
 

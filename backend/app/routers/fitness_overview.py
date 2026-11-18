@@ -11,6 +11,7 @@ from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
 from .fitness_plans import active_plan, workout_muscles
 from .fitness_stats import completed_facts, weight_records
+from .fitness_progress import BODY_WEIGHT, body_points, find_goal, serialize_goal
 from app.fitness_muscles import muscle_credit
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -195,6 +196,11 @@ def muscle_map(plan: Plan | None, everything: list[dict], today: date) -> list[d
     ]
 
 
+def body_goal_summary(user: User, db: Session) -> dict | None:
+    goal = find_goal(user, db, BODY_WEIGHT)
+    return serialize_goal(goal, body_points(user, db, goal.start_on)) if goal else None
+
+
 def body_weight_summary(user: User, db: Session) -> dict | None:
     entries = (
         db.query(BodyWeightEntry)
@@ -233,6 +239,7 @@ def body_weight_summary(user: User, db: Session) -> dict | None:
         "previous_on": previous.measured_on if previous else None,
         "month_change_kg": round(float(latest.weight_kg - baseline.weight_kg), 2) if baseline else None,
         "month_from_on": baseline.measured_on if baseline else None,
+        "goal": body_goal_summary(user, db),
         "recent": [
             {"measured_on": entry.measured_on, "weight_kg": float(entry.weight_kg)}
             for entry in reversed(recent)
