@@ -159,6 +159,10 @@
   color: var(--gym-accent);
 }
 
+.tabSpacer {
+  flex: 1;
+}
+
 .tabStartSlot {
   flex: 1;
   display: flex;

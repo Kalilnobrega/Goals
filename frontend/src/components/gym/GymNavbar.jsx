@@ -2,15 +2,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, History, TrendingUp, LayoutGrid, Play } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
 import styles from './GymNavbar.module.css';
 
 const links = [
   { href: '/gym', label: 'Início', icon: House },
-  { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises'] },
-  { href: '/gym/history', label: 'Histórico', icon: History },
+  { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises', '/gym/history'] },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
 ];
 
@@ -104,6 +103,7 @@ export default function GymNavbar() {
           </button>
         </div>
         {links.slice(2).map(renderTab)}
+        {links.length < 4 && <span className={styles.tabSpacer} aria-hidden="true" />}
       </nav>
     </>
   );

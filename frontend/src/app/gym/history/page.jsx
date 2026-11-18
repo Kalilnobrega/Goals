@@ -8,6 +8,7 @@ import {
   MUSCLE_GROUPS,
 } from '../../../lib/gym';
 import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
+import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import GymSheet from '../../../components/gym/GymSheet';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
@@ -173,6 +174,8 @@ export default function HistoryPage() {
             : 'Seus treinos concluídos'}
         </p>
       </header>
+
+      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
 
       <ActiveSessionBanner />
 

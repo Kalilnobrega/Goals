@@ -7,6 +7,7 @@ export const WORKOUT_TABS = [
   { href: '/gym/plans', label: 'Planos' },
   { href: '/gym/workouts', label: 'Fichas' },
   { href: '/gym/exercises', label: 'Exercícios' },
+  { href: '/gym/history', label: 'Histórico' },
 ];
 
 export default function SegmentTabs({ tabs, label }) {
