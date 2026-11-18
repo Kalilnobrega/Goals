@@ -8,6 +8,7 @@ import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
+import Floating from '../../../components/gym/Floating';
 import styles from './page.module.css';
 
 export default function WorkoutsPage() {
@@ -105,9 +106,11 @@ export default function WorkoutsPage() {
         </ul>
       )}
 
-      <Link href="/gym/workouts/new" className={styles.fab} aria-label="Nova ficha">
-        <Plus size={26} strokeWidth={2.4} />
-      </Link>
+      <Floating>
+        <Link href="/gym/workouts/new" className={styles.fab} aria-label="Nova ficha">
+          <Plus size={26} strokeWidth={2.4} />
+        </Link>
+      </Floating>
     </div>
   );
 }

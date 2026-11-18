@@ -29,7 +29,7 @@ export const viewport = {
 
 export default function GymLayout({ children }) {
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-gym-shell="">
       <ServiceWorker />
       <StartWorkoutProvider>
         <GymNavbar />

@@ -6,6 +6,7 @@ import { getPlans, activatePlan, peekCache } from '../../../lib/api';
 import { apiError, plural, WEEKDAY_SHORT } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
+import Floating from '../../../components/gym/Floating';
 import styles from './plans.module.css';
 
 function WeekPreview({ plan }) {
@@ -113,9 +114,11 @@ export default function PlansPage() {
         </ul>
       )}
 
-      <Link href="/gym/plans/new" className={styles.fab} aria-label="Novo plano">
-        <Plus size={26} strokeWidth={2.4} />
-      </Link>
+      <Floating>
+        <Link href="/gym/plans/new" className={styles.fab} aria-label="Novo plano">
+          <Plus size={26} strokeWidth={2.4} />
+        </Link>
+      </Floating>
     </div>
   );
 }

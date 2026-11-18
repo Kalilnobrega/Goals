@@ -1,0 +1,14 @@
+.floating > * {
+  animation: popIn var(--dur-slow) var(--ease-spring) 120ms backwards;
+}
+
+:global(html[data-sliding]) .floating > * {
+  animation-play-state: paused;
+}
+
+@keyframes popIn {
+  from {
+    scale: 0.3;
+    opacity: 0;
+  }
+}

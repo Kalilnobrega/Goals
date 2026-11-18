@@ -10,6 +10,7 @@ import ExerciseForm from '../../../components/gym/ExerciseForm';
 import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
+import Floating from '../../../components/gym/Floating';
 import styles from './page.module.css';
 
 const FILTERS = [{ value: 'all', label: 'Todos' }, { value: 'mine', label: 'Meus' }, ...MUSCLE_GROUPS];
@@ -212,9 +213,11 @@ export default function ExercisesPage() {
         </section>
       ))}
 
-      <button type="button" className={styles.fab} onClick={openNew} aria-label="Novo exercício">
-        <Plus size={26} strokeWidth={2.4} />
-      </button>
+      <Floating>
+        <button type="button" className={styles.fab} onClick={openNew} aria-label="Novo exercício">
+          <Plus size={26} strokeWidth={2.4} />
+        </button>
+      </Floating>
 
       <GymSheet
         open={!!sheet}
