@@ -18,7 +18,8 @@ export const MUSCLE_GROUPS = [
 export const EQUIPMENT = [
   { value: 'barbell', label: 'Barra' },
   { value: 'dumbbell', label: 'Halteres' },
-  { value: 'machine', label: 'Máquina' },
+  { value: 'machine', label: 'Máquina de placas' },
+  { value: 'plate_loaded', label: 'Máquina com anilhas' },
   { value: 'cable', label: 'Cabo' },
   { value: 'smith', label: 'Smith' },
   { value: 'bodyweight', label: 'Peso corporal' },
