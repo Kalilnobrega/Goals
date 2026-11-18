@@ -5,6 +5,7 @@ import {
   muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
   parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME,
 } from '../../lib/gym';
+import MarqueeText from './MarqueeText';
 import styles from './SessionExerciseCard.module.css';
 
 const digits = (value) => value.replace(/\D/g, '').slice(0, 4);
@@ -496,16 +497,20 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   return (
     <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
       <header className={styles.header}>
-        <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
-        <div className={styles.title}>
-          <h2 className={styles.name}>{item.exercise_name}</h2>
+        <div className={styles.headerTop}>
+          <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
+          <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
+          <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
+            <MoreVertical size={18} />
+          </button>
+        </div>
+        <div className={styles.headerBottom}>
           <p className={styles.meta}>
             {target ? <span className={styles.target}>{target}</span> : null}
             {target ? ' · ' : ''}
             {muscleLabel(item.muscle_group)}
             {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
           </p>
-        </div>
         {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (
           <button
             type="button"
@@ -522,9 +527,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
         <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
           <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
         </button>
-        <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
-          <MoreVertical size={18} />
-        </button>
+        </div>
       </header>
 
       {item.previous.length > 0 && (

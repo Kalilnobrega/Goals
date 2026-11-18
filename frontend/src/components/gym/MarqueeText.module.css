@@ -1,0 +1,31 @@
+.outer {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.inner {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.moving {
+  animation: marquee var(--duration) ease-in-out 1s infinite;
+}
+
+@keyframes marquee {
+  0%, 20% { transform: translateX(0); }
+  50%, 70% { transform: translateX(var(--distance)); }
+  100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outer {
+    text-overflow: ellipsis;
+  }
+
+  .moving {
+    animation: none;
+  }
+}
