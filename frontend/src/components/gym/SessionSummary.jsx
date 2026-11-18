@@ -167,6 +167,7 @@ export default function SessionSummary({ session, insights }) {
                   <span key={entry.id} className={styles.set}>{setLabel(entry.weight_kg, entry.reps)}</span>
                 ))}
               </div>
+              {item.note && <p className={styles.note}>“{item.note}”</p>}
               {now && (
                 <dl className={styles.perf}>
                   <div>

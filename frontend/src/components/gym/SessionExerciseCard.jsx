@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2 } from 'lucide-react';
+import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
   parseKg, kgInput, cleanKgInput,
@@ -265,7 +265,79 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu }) {
+const NOTE_LIMIT = 200;
+
+function ExerciseNote({ item, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.note ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const open = () => {
+    setDraft(item.note ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    const note = draft.trim();
+    if (note === (item.note ?? '')) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    const ok = await onSave(item, note || null);
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className={styles.noteEditor}>
+        <textarea
+          className={styles.noteInput}
+          value={draft}
+          onChange={e => setDraft(e.target.value.slice(0, NOTE_LIMIT))}
+          maxLength={NOTE_LIMIT}
+          rows={2}
+          placeholder="Ex.: execução boa, subir a carga na próxima"
+          aria-label={`Observação de ${item.exercise_name}`}
+          autoFocus
+          enterKeyHint="done"
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              save();
+            } else if (e.key === 'Escape') {
+              setEditing(false);
+            }
+          }}
+        />
+        <div className={styles.noteActions}>
+          <span className={styles.noteCount}>{draft.length}/{NOTE_LIMIT}</span>
+          <button type="button" className={styles.noteCancel} onClick={() => setEditing(false)} disabled={saving}>Cancelar</button>
+          <button type="button" className={styles.noteSave} onClick={save} disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (item.note) {
+    return (
+      <button type="button" className={styles.note} onClick={open} aria-label={`Editar observação: ${item.note}`}>
+        <MessageSquareText size={15} className={styles.noteIcon} aria-hidden="true" />
+        <span className={styles.noteText}>{item.note}</span>
+        <Pencil size={14} className={styles.noteEdit} aria-hidden="true" />
+      </button>
+    );
+  }
+
+  return (
+    <button type="button" className={styles.noteAdd} onClick={open}>
+      <MessageSquareText size={15} aria-hidden="true" /> Adicionar observação
+    </button>
+  );
+}
+
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onSaveNote }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -313,6 +385,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
               {entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
             </span>
           ))}
+          {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
         </p>
       )}
 
@@ -350,6 +423,8 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           </button>
         </div>
       )}
+
+      {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
     </article>
   );
 }

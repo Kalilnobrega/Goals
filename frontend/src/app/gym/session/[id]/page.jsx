@@ -297,6 +297,16 @@ export default function SessionPage() {
 
   const startRest = (item) => startRestTimer(item.rest_seconds, item.exercise_name, session.id);
 
+  const saveNote = async (item, note) => {
+    try {
+      setSession(withPending(await updateSessionExercise(item.id, { note })));
+      return true;
+    } catch (err) {
+      fail(err, 'Não foi possível salvar a observação.');
+      return false;
+    }
+  };
+
   const addExercises = async (selected) => {
     setSheet(null);
     try {
@@ -509,6 +519,7 @@ export default function SessionPage() {
     onStartRest: startRest,
     onOpenRest: it => setSheet({ type: 'rest', item: it }),
     onOpenMenu: it => setSheet({ type: 'menu', item: it }),
+    onSaveNote: saveNote,
   };
 
   return (

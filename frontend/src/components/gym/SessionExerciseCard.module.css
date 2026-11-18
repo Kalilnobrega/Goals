@@ -486,3 +486,130 @@
   font-size: 0.88rem;
   cursor: pointer;
 }
+
+.previousNote {
+  flex-basis: 100%;
+  color: var(--gym-text);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.noteAdd,
+.note {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noteAdd {
+  margin-left: -10px;
+  color: var(--gym-muted);
+}
+
+.noteAdd:hover {
+  color: var(--gym-text);
+}
+
+.note {
+  align-self: stretch;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--gym-bg);
+  color: var(--gym-text);
+  text-align: left;
+}
+
+.noteIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--gym-accent);
+}
+
+.noteText {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.noteEdit {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--gym-faint);
+}
+
+.noteEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.noteInput {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-bg);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.noteInput:focus {
+  outline: none;
+  border-color: var(--gym-accent);
+}
+
+.noteActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.noteCount {
+  margin-right: auto;
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.noteCancel,
+.noteSave {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.noteCancel {
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+}
+
+.noteSave {
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.noteCancel:disabled,
+.noteSave:disabled {
+  opacity: 0.6;
+}

@@ -301,3 +301,14 @@
   color: var(--gym-faint);
   font-size: 0.78rem;
 }
+
+.note {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--gym-bg);
+  color: var(--gym-text);
+  font-size: 0.88rem;
+  font-style: italic;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
