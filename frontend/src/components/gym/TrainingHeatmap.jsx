@@ -84,6 +84,7 @@ export default function TrainingHeatmap({ activity, today }) {
                       type="button"
                       className={`${styles.cell} ${iso === today ? styles.today : ''}`}
                       data-level={levelFor(day)}
+                      style={{ '--w': w, '--d': d }}
                       aria-label={`${dateLabel(iso)}: ${summary}`}
                       onMouseEnter={e => show(e, cell)}
                       onFocus={e => show(e, cell)}

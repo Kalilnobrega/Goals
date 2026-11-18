@@ -82,6 +82,7 @@ export default function BarChart({ bars, format, axisFormat = format, label }) {
                     width={barW}
                     height={h}
                     rx={Math.min(4, barW / 2)}
+                    style={{ '--i': Math.min(i, 30) }}
                     className={`${styles.bar} ${i === active ? styles.barActive : ''} ${active !== null && i !== active ? styles.barDim : ''}`}
                   />
                 )}

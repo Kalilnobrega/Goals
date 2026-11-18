@@ -76,6 +76,8 @@
 }
 
 .cell {
+  animation: cellIn var(--dur-slow) var(--ease-spring) backwards;
+  animation-delay: calc(var(--w, 0) * 10ms + var(--d, 0) * 18ms);
   padding: 0;
   border: none;
   cursor: pointer;
@@ -166,4 +168,8 @@
 
 .legend > span:last-child {
   margin-left: 4px;
+}
+
+@keyframes cellIn {
+  from { opacity: 0; scale: 0.4; }
 }

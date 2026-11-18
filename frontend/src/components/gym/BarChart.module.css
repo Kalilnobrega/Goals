@@ -31,7 +31,15 @@
 
 .bar {
   fill: var(--gym-accent);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: barGrow var(--dur-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 18ms);
   transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+@keyframes barGrow {
+  from { transform: scaleY(0); }
 }
 
 .barDim {

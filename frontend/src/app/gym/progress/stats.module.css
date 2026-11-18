@@ -286,6 +286,12 @@
   height: 100%;
   border-radius: 999px;
   background: var(--gym-accent);
+  transform-origin: left;
+  animation: fillGrow var(--dur-progress) var(--ease-out) backwards;
+}
+
+@keyframes fillGrow {
+  from { transform: scaleX(0); }
 }
 
 .muscles {
