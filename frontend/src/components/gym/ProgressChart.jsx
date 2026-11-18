@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { niceTicks } from '../../lib/numeric';
 import styles from './ProgressChart.module.css';
 
@@ -11,6 +11,7 @@ const shortDate = (time) => new Date(time).toLocaleDateString('pt-BR', { day: '2
 
 export default function ProgressChart({ points, format, axisFormat = format, label, target = null }) {
   const ref = useRef(null);
+  const lineRef = useRef(null);
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState(null);
 
@@ -42,6 +43,11 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
   const area = points.length > 1
     ? `${path} L${x(last)},${PAD.top + plotH} L${x(first)},${PAD.top + plotH} Z`
     : '';
+
+  useLayoutEffect(() => {
+    const line = lineRef.current;
+    if (line) line.style.setProperty('--line-length', `${line.getTotalLength()}`);
+  }, [path]);
 
   const pick = (clientX) => {
     const rect = ref.current.getBoundingClientRect();
@@ -105,7 +111,7 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
           )}
 
           {area && <path d={area} className={styles.area} />}
-          {points.length > 1 && <path d={path} className={styles.line} />}
+          {points.length > 1 && <path key={`line-${points.length}`} ref={lineRef} d={path} className={styles.line} />}
 
           {current && (
             <line x1={x(current.time)} x2={x(current.time)} y1={PAD.top} y2={PAD.top + plotH} className={styles.crosshair} />
