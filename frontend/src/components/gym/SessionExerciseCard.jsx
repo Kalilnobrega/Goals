@@ -70,7 +70,7 @@ function validate(weight, reps) {
   return { data: { weight_kg: kg, reps: count } };
 }
 
-function NewSet({ item, onLogSet, onStartRest }) {
+function NewSet({ item, onLogSet, onStartRest, onCancel }) {
   const next = item.sets.length + 1;
   const reference = item.previous[item.sets.length] ?? item.sets[item.sets.length - 1] ?? null;
   const [weight, setWeight] = useState(reference ? kgInput(reference.weight_kg) : '');
@@ -106,6 +106,11 @@ function NewSet({ item, onLogSet, onStartRest }) {
           <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
         </button>
       </div>
+      {onCancel && (
+        <button type="button" className={styles.extraCancel} onClick={onCancel} disabled={saving}>
+          Cancelar série extra
+        </button>
+      )}
     </form>
   );
 }
@@ -262,8 +267,10 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
 
 export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu }) {
   const [editingId, setEditingId] = useState(null);
+  const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
   const complete = item.target_sets && item.sets.length >= item.target_sets;
+  const addingExtra = complete && extraAt === item.sets.length;
 
   const saveEdit = async (entry, data) => {
     const ok = await onEditSet(item, entry, data);
@@ -325,7 +332,24 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
         </ol>
       )}
 
-      <NewSet key={item.sets.length} item={item} onLogSet={onLogSet} onStartRest={onStartRest} />
+      {!complete || addingExtra ? (
+        <NewSet
+          key={item.sets.length}
+          item={item}
+          onLogSet={onLogSet}
+          onStartRest={onStartRest}
+          onCancel={addingExtra ? () => setExtraAt(null) : undefined}
+        />
+      ) : (
+        <div className={styles.completeBox}>
+          <p className={styles.completeText}>
+            <Check size={16} strokeWidth={3} aria-hidden="true" /> {item.target_sets} de {item.target_sets} séries do exercício feitas
+          </p>
+          <button type="button" className={styles.extra} onClick={() => setExtraAt(item.sets.length)}>
+            <Plus size={18} strokeWidth={2.4} /> Adicionar série extra
+          </button>
+        </div>
+      )}
     </article>
   );
 }
