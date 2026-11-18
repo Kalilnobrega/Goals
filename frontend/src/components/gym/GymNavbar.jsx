@@ -1,11 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
 import { useToast } from '../Toast';
+import { GYM_TAB_ORDER, useGymTabNav } from '../../lib/gymTabs';
+import { prefetchGymTabs } from '../../lib/gymPrefetch';
+import { useSwipeTabs } from '../../lib/useSwipeTabs';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -23,6 +26,22 @@ export default function GymNavbar() {
   const openStart = useStartWorkout();
   const toast = useToast();
   const announceSoon = () => toast({ tone: 'info', message: SOON_MESSAGE });
+  const { linkProps, step, swipeable } = useGymTabNav();
+  const router = useRouter();
+
+  useEffect(() => {
+    const prefetch = () => {
+      GYM_TAB_ORDER.forEach(href => router.prefetch(href));
+      prefetchGymTabs();
+    };
+    if (!('requestIdleCallback' in window)) {
+      const timer = setTimeout(prefetch, 600);
+      return () => clearTimeout(timer);
+    }
+    const idle = requestIdleCallback(prefetch, { timeout: 1500 });
+    return () => cancelIdleCallback(idle);
+  }, [router, pathname]);
+  useSwipeTabs(swipeable && !pathname.startsWith('/gym/session/'), step);
 
   useEffect(() => {
     saveLastApp('gym');
@@ -75,6 +94,7 @@ export default function GymNavbar() {
     <Link
       key={href}
       href={href}
+      {...linkProps(href)}
       className={`${styles.tab} ${isCurrent(href) ? styles.tabActive : ''}`}
       aria-current={isCurrent(href) ? 'page' : undefined}
     >
@@ -87,7 +107,7 @@ export default function GymNavbar() {
     <>
       <header className={`${styles.header} ${hidden ? styles.headerHidden : ''}`}>
         <div className={styles.headerInner}>
-          <Link href="/gym" className={styles.brand}>
+          <Link href="/gym" {...linkProps('/gym')} className={styles.brand}>
             <span className={styles.brandMark}><Dumbbell size={18} strokeWidth={2.4} /></span>
             <span className={styles.brandName}>Gym<span>Goals</span></span>
           </Link>
@@ -107,6 +127,7 @@ export default function GymNavbar() {
               <Link
                 key={href}
                 href={href}
+                {...linkProps(href)}
                 className={`${styles.topLink} ${isCurrent(href) ? styles.topLinkActive : ''}`}
                 aria-current={isCurrent(href) ? 'page' : undefined}
               >

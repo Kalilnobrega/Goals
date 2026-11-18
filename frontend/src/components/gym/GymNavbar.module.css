@@ -159,6 +159,21 @@
   color: var(--gym-accent);
 }
 
+.tab svg {
+  transition: translate var(--dur-base) var(--ease-spring);
+}
+
+.tabActive svg {
+  animation: tabPop var(--dur-slow) var(--ease-spring);
+  translate: 0 -1px;
+}
+
+@keyframes tabPop {
+  0% { scale: 1; }
+  40% { scale: 1.18; }
+  100% { scale: 1; }
+}
+
 .tabSoon {
   border: none;
   background: none;

@@ -1,4 +1,5 @@
 .tabs {
+  position: relative;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -9,7 +10,24 @@
   border: 1px solid var(--gym-border);
 }
 
+.indicator {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: calc(100% - 8px);
+  border-radius: 12px;
+  background: var(--gym-surface-3);
+  transition: transform var(--dur-slow) var(--ease-tab), width var(--dur-slow) var(--ease-tab);
+  pointer-events: none;
+}
+
+.indicator[data-hidden] {
+  opacity: 0;
+}
+
 .tab {
+  position: relative;
+  z-index: 1;
   height: 42px;
   display: grid;
   place-items: center;
@@ -19,10 +37,13 @@
   font-weight: 500;
   font-size: 0.92rem;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.tab:hover {
+  color: var(--gym-text);
 }
 
 .active {
-  background: var(--gym-surface-3);
   color: var(--gym-text);
 }
