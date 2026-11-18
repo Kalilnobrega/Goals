@@ -372,6 +372,8 @@ class OverviewBodyWeightSchema(BaseModel):
     measured_on: date
     change_kg: float | None
     previous_on: date | None
+    month_change_kg: float | None = None
+    month_from_on: date | None = None
     recent: list[OverviewWeightPointSchema] = []
 
 

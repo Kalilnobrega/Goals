@@ -116,6 +116,7 @@ def test_overview_body_weight_change(client, ana):
     client.post("/fitness/body-weight", json={"weight_kg": 80}, headers=headers)
     assert overview(client, headers)["body_weight"] == {
         "weight_kg": 80.0, "measured_on": today.isoformat(), "change_kg": None, "previous_on": None,
+        "month_change_kg": None, "month_from_on": None,
         "recent": [{"measured_on": today.isoformat(), "weight_kg": 80.0}],
     }
 
@@ -126,6 +127,20 @@ def test_overview_body_weight_change(client, ana):
     assert body["change_kg"] == -1.5
     assert body["previous_on"] == earlier
     assert [p["weight_kg"] for p in body["recent"]] == [81.5, 80.0]
+    assert body["month_change_kg"] == -1.5
+    assert body["month_from_on"] == earlier
+
+
+def test_overview_body_weight_month_change_uses_the_weigh_in_closest_to_30_days(client, ana):
+    _, headers = ana
+    today = today_br()
+    for days, weight in [(60, 90), (33, 84), (20, 83), (3, 82.5), (0, 82)]:
+        day = (today - timedelta(days=days)).isoformat()
+        client.post("/fitness/body-weight", json={"weight_kg": weight, "measured_on": day}, headers=headers)
+    body = overview(client, headers)["body_weight"]
+    assert body["change_kg"] == -0.5
+    assert body["month_change_kg"] == -2.0
+    assert body["month_from_on"] == (today - timedelta(days=33)).isoformat()
 
 
 def test_overview_is_private(client, library, ana, bruno):

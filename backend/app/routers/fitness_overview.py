@@ -215,11 +215,24 @@ def body_weight_summary(user: User, db: Session) -> dict | None:
     )
     latest = entries[0]
     previous = entries[1] if len(entries) > 1 else None
+    target = latest.measured_on - timedelta(days=30)
+    candidates = (
+        db.query(BodyWeightEntry)
+        .filter(
+            BodyWeightEntry.user_id == user.id,
+            BodyWeightEntry.measured_on >= latest.measured_on - timedelta(days=45),
+            BodyWeightEntry.measured_on <= latest.measured_on - timedelta(days=7),
+        )
+        .all()
+    )
+    baseline = min(candidates, key=lambda e: abs((e.measured_on - target).days), default=None)
     return {
         "weight_kg": float(latest.weight_kg),
         "measured_on": latest.measured_on,
         "change_kg": round(float(latest.weight_kg - previous.weight_kg), 2) if previous else None,
         "previous_on": previous.measured_on if previous else None,
+        "month_change_kg": round(float(latest.weight_kg - baseline.weight_kg), 2) if baseline else None,
+        "month_from_on": baseline.measured_on if baseline else None,
         "recent": [
             {"measured_on": entry.measured_on, "weight_kg": float(entry.weight_kg)}
             for entry in reversed(recent)
