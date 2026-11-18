@@ -1,9 +1,7 @@
-const TAB_TYPES = ['tab-forward', 'tab-back'];
 const LANDED_EVENT = 'page-landed';
 const SIDE_ENTRY_MS = 1400;
 const ANNOUNCE_TTL_MS = 1500;
 const SLIDE_FALLBACK_MS = 1200;
-const COARSE_QUERY = '(pointer: coarse)';
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)';
 const EXIT_MS = 150;
 const EXIT_SHIFT_PX = 40;
@@ -15,14 +13,6 @@ let exiting = false;
 
 const sideOf = (types) => (types?.[0] === 'tab-forward' ? 'right' : types?.[0] === 'tab-back' ? 'left' : null);
 
-export function subscribeCoarsePointer(onChange) {
-  const query = window.matchMedia(COARSE_QUERY);
-  query.addEventListener('change', onChange);
-  return () => query.removeEventListener('change', onChange);
-}
-
-export const isCoarsePointer = () => window.matchMedia(COARSE_QUERY).matches;
-
 export function announceTabSlide(types) {
   const side = sideOf(types);
   announced = side ? { side, at: performance.now() } : null;
@@ -30,19 +20,37 @@ export function announceTabSlide(types) {
 
 export function leaveTab(types, navigate) {
   if (exiting) return false;
-  const frame = document.querySelector('.page-frame');
+  const frames = document.querySelectorAll('.page-frame');
+  const frame = frames[frames.length - 1];
   const side = sideOf(types);
   if (!frame || !side || window.matchMedia(REDUCED_QUERY).matches) {
     navigate();
     return true;
   }
   exiting = true;
+  const floats = [...document.querySelectorAll('[data-floating]')].map((floating) => {
+    floating.dataset.popped = '';
+    return {
+      floating,
+      animation: floating.firstElementChild?.animate(
+        [{ scale: 1, opacity: 1 }, { scale: 0.3, opacity: 0 }],
+        { duration: EXIT_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+      ),
+    };
+  });
   const shift = side === 'right' ? -EXIT_SHIFT_PX : EXIT_SHIFT_PX;
   const animation = frame.animate(
     [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${shift}px)` }],
     { duration: EXIT_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
   );
-  setTimeout(() => { if (frame.isConnected) animation.cancel(); }, EXIT_RESET_MS);
+  setTimeout(() => {
+    if (frame.isConnected) animation.cancel();
+    floats.forEach(({ floating, animation: pop }) => {
+      if (!floating.isConnected) return;
+      pop?.cancel();
+      delete floating.dataset.popped;
+    });
+  }, EXIT_RESET_MS);
   animation.finished.catch(() => {}).then(() => {
     exiting = false;
     navigate();
@@ -79,13 +87,6 @@ function slideFrame(frame, side) {
 export function holdUntilLanded(frame) {
   const pending = announced;
   announced = null;
-
-  const transition = document.activeViewTransition;
-  if (transition && TAB_TYPES.some(type => transition.types?.has(type))) {
-    document.documentElement.dataset.sliding = '';
-    transition.finished.finally(() => land(transition.types.has('tab-forward') ? 'right' : 'left'));
-    return;
-  }
 
   if (pending && frame && performance.now() - pending.at < ANNOUNCE_TTL_MS) slideFrame(frame, pending.side);
 }

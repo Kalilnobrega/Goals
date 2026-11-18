@@ -181,22 +181,6 @@ html:active-view-transition [data-navbar] {
   animation: none;
 }
 
-::view-transition-old(.tab-out-left) {
-  animation: vt-tab-out-left var(--dur-tab) var(--ease-tab) both;
-}
-
-::view-transition-new(.tab-in-right) {
-  animation: vt-tab-in-right var(--dur-tab) var(--ease-tab) both;
-}
-
-::view-transition-old(.tab-out-right) {
-  animation: vt-tab-out-right var(--dur-tab) var(--ease-tab) both;
-}
-
-::view-transition-new(.tab-in-left) {
-  animation: vt-tab-in-left var(--dur-tab) var(--ease-tab) both;
-}
-
 .page-clip {
   overflow-x: clip;
 }
@@ -219,9 +203,7 @@ html[data-entry="left"] {
   --enter-y: 0px;
 }
 
-@keyframes vt-tab-out-left  { to   { transform: translateX(-100%); } }
 @keyframes vt-tab-in-right  { from { transform: translateX(100%); } }
-@keyframes vt-tab-out-right { to   { transform: translateX(100%); } }
 @keyframes vt-tab-in-left   { from { transform: translateX(-100%); } }
 
 
@@ -273,8 +255,8 @@ html[data-entry="left"] {
   }
 }
 
-html[data-sliding] main,
-html[data-sliding] main *,
+html[data-sliding] main:not(:has(.page-frame)),
+html[data-sliding] main :not(.page-clip, .page-frame),
 [data-reveal]:not([data-revealed]),
 [data-reveal]:not([data-revealed]) * {
   animation-play-state: paused !important;
