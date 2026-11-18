@@ -47,10 +47,15 @@
   overflow-wrap: anywhere;
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
 .edit {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
-  width: 100%;
   min-height: 52px;
   padding: 14px 20px;
   display: flex;

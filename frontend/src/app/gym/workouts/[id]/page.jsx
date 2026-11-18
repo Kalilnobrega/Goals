@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Pencil, Timer } from 'lucide-react';
+import { ChevronLeft, Pencil, Timer, TrendingUp } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
 import { muscleLabel, equipmentLabel, plural, prescription, formatRest } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
@@ -65,7 +65,10 @@ export default function WorkoutDetailPage() {
         {workout.description && <p className={styles.description}>{workout.description}</p>}
       </div>
 
-      <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
+      <div className={styles.actions}>
+        <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
+        <Link href={`/gym/progress/workouts/${workout.id}`} className={styles.edit}><TrendingUp size={18} /> Evolução</Link>
+      </div>
 
       {exercises.length > 0 ? (
         <section className={styles.card} aria-labelledby="workout-exercises-title">

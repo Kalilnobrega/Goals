@@ -270,6 +270,9 @@ export const deleteSet = (id) =>
 export const getProgressExercises = () => cachedGet("fitnessProgress", "/fitness/progress/exercises");
 export const getExerciseProgress = (id) =>
   cachedGet(`fitnessProgress:${id}`, `/fitness/exercises/${id}/progress`);
+export const getProgressWorkouts = () => cachedGet("fitnessProgressWorkouts", "/fitness/progress/workouts");
+export const getWorkoutProgress = (id) =>
+  cachedGet(`fitnessWorkoutProgress:${id}`, `/fitness/workouts/${id}/progress`);
 export const getBodyWeights = () => cachedGet("fitnessBodyWeight", "/fitness/body-weight");
 export const logBodyWeight = (data) =>
   api.post("/fitness/body-weight", data).then((r) => r.data);
