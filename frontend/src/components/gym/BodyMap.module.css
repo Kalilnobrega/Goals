@@ -1,0 +1,96 @@
+.body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.svg {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  overflow: visible;
+}
+
+.compact .svg {
+  max-width: 130px;
+}
+
+.neutral {
+  fill: var(--gym-surface-2);
+}
+
+.hair {
+  fill: #3a4048;
+}
+
+.muscle {
+  stroke: var(--gym-bg);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: fill var(--dur-base) var(--ease-out);
+}
+
+.clickable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clickable:focus-visible {
+  outline: none;
+  stroke: var(--gym-text);
+  stroke-width: 2.5;
+}
+
+.selected {
+  stroke: var(--gym-text);
+  stroke-width: 2.5;
+}
+
+.caption {
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--gym-surface-2);
+}
+
+.toggleOption {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggleActive {
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle {
+    transition: none;
+  }
+}

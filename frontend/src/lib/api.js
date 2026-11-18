@@ -286,3 +286,5 @@ export const deletePlan = (id) => api.delete(`/fitness/plans/${id}`).then((r) =>
 export const activatePlan = (id) => api.post(`/fitness/plans/${id}/activate`).then((r) => r.data);
 export const deactivatePlan = (id) => api.post(`/fitness/plans/${id}/deactivate`).then((r) => r.data);
 export const getWeek = (start) => cachedGet(`fitnessWeek:${start}`, `/fitness/week?start=${start}`);
+export const getFitnessProfile = () => cachedGet("fitnessProfile", "/fitness/profile");
+export const updateFitnessProfile = (data) => api.put("/fitness/profile", data).then((r) => r.data);
