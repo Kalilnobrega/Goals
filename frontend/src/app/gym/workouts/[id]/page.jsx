@@ -1,103 +1,111 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Play } from 'lucide-react';
-import { getWorkout, updateWorkout, deleteWorkout, peekCache } from '../../../../lib/api';
-import { apiError } from '../../../../lib/gym';
-import { useToast } from '../../../../components/Toast';
-import { useConfirm } from '../../../../components/ConfirmDialog';
-import WorkoutEditor from '../../../../components/gym/WorkoutEditor';
+import { useParams } from 'next/navigation';
+import { ChevronLeft, Pencil, Play, Timer } from 'lucide-react';
+import { getWorkout, peekCache } from '../../../../lib/api';
+import { muscleLabel, equipmentLabel, plural, prescription, formatRest } from '../../../../lib/gym';
+import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
 import useStartSession from '../../../../components/gym/useStartSession';
-import styles from '../editor.module.css';
+import styles from './workout.module.css';
 
-export default function WorkoutPage() {
+export default function WorkoutDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
-  const toast = useToast();
-  const confirmAction = useConfirm();
   const [workout, setWorkout] = useState(() => peekCache(`fitnessWorkout:${id}`) ?? null);
-  const [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState(workout ? 'ready' : 'loading');
   const { begin, starting, sheet } = useStartSession();
 
-  const fetchWorkout = useCallback(() => {
-    setStatus('loading');
-    return getWorkout(id)
-      .then(data => { setWorkout(data); setStatus('ready'); })
-      .catch(err => setStatus(err?.response?.status === 404 ? 'missing' : 'error'));
-  }, [id]);
-
-  useEffect(() => {
+  const load = useCallback(() => (
     getWorkout(id)
       .then(data => { setWorkout(data); setStatus('ready'); })
-      .catch(err => setStatus(err?.response?.status === 404 ? 'missing' : 'error'));
-  }, [id]);
+      .catch(err => setStatus(err?.response?.status === 404 ? 'missing' : 'error'))
+  ), [id]);
 
-  const save = async (data) => {
-    try {
-      await updateWorkout(id, data);
-      toast('Ficha salva');
-      router.push('/gym/workouts');
-      return null;
-    } catch (err) {
-      return apiError(err, 'Não foi possível salvar a ficha.');
-    }
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const remove = async () => {
-    const ok = await confirmAction({
-      title: 'Excluir ficha',
-      message: [<><strong>{workout.name}</strong> será excluída e sai dos planos em que estiver. Treinos já registrados com ela continuam no histórico.</>],
-      confirmLabel: 'Excluir',
-    });
-    if (!ok) return;
-    try {
-      await deleteWorkout(id);
-      toast('Ficha excluída');
-      router.push('/gym/workouts');
-    } catch (err) {
-      toast({ tone: 'danger', message: apiError(err, 'Não foi possível excluir a ficha.') });
-    }
-  };
+  const back = <Link href="/gym/workouts" className={styles.back}><ChevronLeft size={18} /> Treinos</Link>;
 
-  const ready = workout && status !== 'missing';
+  if (status === 'missing' || (status === 'error' && !workout)) {
+    return (
+      <div className={styles.page}>
+        {back}
+        <div className={styles.state}>
+          <p>{status === 'missing' ? 'Essa ficha não existe ou foi excluída.' : 'Não foi possível carregar a ficha.'}</p>
+          {status === 'missing'
+            ? <Link href="/gym/workouts" className={styles.stateAction}>Ver suas fichas</Link>
+            : <button type="button" className={styles.stateAction} onClick={load}>Tentar de novo</button>}
+        </div>
+      </div>
+    );
+  }
+
+  if (!workout) {
+    return (
+      <div className={styles.page} aria-busy="true" aria-label="Carregando ficha">
+        {back}
+        <div className={styles.skeleton} />
+        <div className={styles.skeletonTall} />
+      </div>
+    );
+  }
+
+  const exercises = workout.exercises;
+  const totalSets = exercises.reduce((sum, item) => sum + item.target_sets, 0);
 
   return (
     <div className={styles.page}>
       <div className={styles.top}>
-        <Link href="/gym/workouts" className={styles.back}><ChevronLeft size={18} /> Treinos</Link>
-        <h1 className={styles.title}>{ready ? 'Editar ficha' : 'Ficha'}</h1>
+        {back}
+        <h1 className={styles.title}>{workout.name}</h1>
+        <p className={styles.subtitle}>
+          {exercises.length
+            ? `${plural(exercises.length, 'exercício', 'exercícios')} · ${plural(totalSets, 'série', 'séries')}`
+            : 'Sem exercícios'}
+        </p>
+        {workout.description && <p className={styles.description}>{workout.description}</p>}
       </div>
 
-      {status === 'missing' && (
+      <div className={styles.actions}>
+        <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
+        <button type="button" className={styles.primary} onClick={() => begin(workout.id)} disabled={starting}>
+          <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Iniciar treino'}
+        </button>
+      </div>
+
+      {exercises.length > 0 ? (
+        <section className={styles.card} aria-labelledby="workout-exercises-title">
+          <h2 id="workout-exercises-title" className={styles.cardTitle}>Exercícios</h2>
+          <ol className={styles.list}>
+            {exercises.map((item, index) => (
+              <li key={item.id} className={styles.item}>
+                <span className={styles.index}>{index + 1}</span>
+                <span className={styles.itemText}>
+                  <span className={styles.itemName}>{item.exercise.name}</span>
+                  <span className={styles.itemMeta}>
+                    {muscleLabel(item.exercise.muscle_group)} · {equipmentLabel(item.exercise.equipment)}
+                  </span>
+                </span>
+                <span className={styles.itemTarget}>
+                  <span className={styles.prescription}>{prescription(item)}</span>
+                  {item.rest_seconds && (
+                    <span className={styles.rest}><Timer size={12} aria-hidden="true" /> {formatRest(item.rest_seconds)}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : (
         <div className={styles.state}>
-          <p>Essa ficha não existe ou foi excluída.</p>
-          <Link href="/gym/workouts" className={styles.stateAction}>Ver suas fichas</Link>
+          <p>Nenhum exercício nesta ficha ainda.</p>
+          <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.stateAction}>Adicionar exercícios</Link>
         </div>
       )}
 
-      {status === 'error' && !workout && (
-        <div className={styles.state}>
-          <p>Não foi possível carregar a ficha.</p>
-          <button type="button" className={styles.stateAction} onClick={fetchWorkout}>Tentar de novo</button>
-        </div>
-      )}
+      <WorkoutBodyMap exercises={exercises} />
 
-      {status === 'loading' && !workout && (
-        <div className={styles.top} aria-busy="true" aria-label="Carregando ficha">
-          <div className={styles.skeleton} />
-          <div className={styles.skeletonTall} />
-        </div>
-      )}
-
-      {ready && (
-        <>
-          <button type="button" className={styles.start} onClick={() => begin(workout.id)} disabled={starting}>
-            <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Iniciar treino'}
-          </button>
-          <WorkoutEditor key={workout.id} initial={workout} onSubmit={save} onDelete={remove} />
-        </>
-      )}
       {sheet}
     </div>
   );
