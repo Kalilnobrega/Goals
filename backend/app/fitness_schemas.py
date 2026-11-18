@@ -561,6 +561,46 @@ class StatsWorkoutSchema(BaseModel):
     last_done_on: date
 
 
+class WorkoutProgressSessionSchema(BaseModel):
+    session_id: int
+    completed_at: datetime
+    day: date
+    minutes: int
+    sets: int
+    volume_kg: float
+
+
+class WorkoutProgressExerciseSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    in_workout: bool
+    sessions: int
+    metric: str | None
+    first_kg: float | None
+    last_kg: float | None
+    best_kg: float | None
+    load_change_pct: float | None
+    first_reps: int
+    last_reps: int
+    reps_change_pct: float | None
+    last_weight_kg: float
+    last_reps_at_weight: int
+    last_on: date
+
+
+class WorkoutProgressSchema(BaseModel):
+    workout_id: int
+    name: str
+    sessions: list[WorkoutProgressSessionSchema]
+    avg_minutes: int | None
+    avg_volume_kg: float | None
+    volume_change_pct: float | None
+    load_pct: float | None
+    reps_pct: float | None
+    exercises: list[WorkoutProgressExerciseSchema]
+
+
 class StatsSessionRefSchema(BaseModel):
     session_id: int
     name: str

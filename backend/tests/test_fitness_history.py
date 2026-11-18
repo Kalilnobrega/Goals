@@ -137,3 +137,73 @@ def test_insights_are_private_and_need_a_finished_session(client, library, ana, 
     log_set(client, headers, session["exercises"][0]["id"], 60, 10)
     finish(client, headers, session["id"])
     assert client.get(f"/fitness/sessions/{session['id']}/insights", headers=bruno_headers).status_code == 404
+
+
+def test_workout_progress_follows_the_ficha_over_time(client, library, ana, bruno, db_session):
+    _, headers = ana
+    _, bruno_headers = bruno
+    workout = make_workout(client, headers, library)
+    other = make_workout(client, headers, library, name="Treino B")
+    train(client, headers, db_session, workout["id"], [[(60, 10), (60, 8)], [(100, 10)]], at(14), minutes=50)
+    train(client, headers, db_session, other["id"], [[(90, 5)]], at(10))
+    train(client, headers, db_session, workout["id"], [[(70, 12)]], at(7), minutes=40)
+
+    response = client.get(f"/fitness/workouts/{workout['id']}/progress", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+
+    assert data["name"] == "Treino A"
+    assert [s["minutes"] for s in data["sessions"]] == [50, 40]
+    assert data["avg_minutes"] == 45
+    assert data["sessions"][0]["volume_kg"] == 60 * 10 + 60 * 8 + 100 * 10
+    assert data["volume_change_pct"] == round((840 - 2080) / 2080 * 100, 1)
+
+    bench, press = data["exercises"]
+    assert bench["name"] == "Supino reto"
+    assert bench["sessions"] == 2
+    assert bench["metric"] == "e1rm"
+    assert bench["first_kg"] == 80.0
+    assert bench["last_kg"] == 98.0
+    assert bench["load_change_pct"] == 22.5
+    assert (bench["first_reps"], bench["last_reps"], bench["reps_change_pct"]) == (10, 12, 20.0)
+    assert (bench["last_weight_kg"], bench["last_reps_at_weight"]) == (70.0, 12)
+    assert press["sessions"] == 1
+    assert press["load_change_pct"] is None
+    assert data["load_pct"] == 22.5
+
+    assert client.get(f"/fitness/workouts/{workout['id']}/progress", headers=bruno_headers).status_code == 404
+
+
+def test_workout_progress_without_sessions_is_empty(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    data = client.get(f"/fitness/workouts/{workout['id']}/progress", headers=headers).json()
+    assert data["sessions"] == []
+    assert data["exercises"] == []
+    assert data["avg_minutes"] is None
+
+
+def test_progress_workouts_lists_trained_fichas_with_current_names(client, library, ana, bruno, db_session):
+    _, headers = ana
+    _, bruno_headers = bruno
+    workout = make_workout(client, headers, library)
+    make_workout(client, headers, library, name="Nunca treinada")
+    train(client, headers, db_session, workout["id"], [[(60, 10)]], at(14))
+    client.put(
+        f"/fitness/workouts/{workout['id']}",
+        json={"name": "Treino A novo", "exercises": [
+            {"exercise_id": library["supino-reto"], "target_sets": 3, "reps_min": 8},
+        ]},
+        headers=headers,
+    )
+    train(client, headers, db_session, workout["id"], [[(70, 10)]], at(7))
+    free = start(client, headers)
+    client.post(f"/fitness/sessions/{free['id']}/exercises", json={"exercise_id": library["rosca-direta"]}, headers=headers)
+    finish(client, headers, free["id"])
+
+    response = client.get("/fitness/progress/workouts", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert [(w["workout_id"], w["name"], w["sessions"]) for w in data] == [(workout["id"], "Treino A novo", 2)]
+    assert data[0]["progress_pct"] is not None
+    assert client.get("/fitness/progress/workouts", headers=bruno_headers).json() == []

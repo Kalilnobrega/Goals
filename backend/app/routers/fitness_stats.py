@@ -5,10 +5,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import BRT, today_br, to_br_date
 from app.models import User
-from app.fitness_models import WorkoutSession
-from app.fitness_schemas import StatsSchema, SessionInsightsSchema
+from app.fitness_models import Workout, WorkoutSession
+from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema
 from app.fitness_muscles import muscle_credit
 from .auth import get_current_user
+from .fitness import get_own_workout
 from .fitness_progress import estimated_1rm
 from .fitness_sessions import COMPLETED, aware
 
@@ -485,3 +486,81 @@ def get_session_insights(
         "records": weight_records(everything, lambda s: s["id"] == session_id),
         "muscle_sets": [{"muscle": m, "sets": round(v, 2)} for m, v in sorted(muscle_sets.items(), key=lambda kv: -kv[1])],
     }
+
+
+@fitness_stats_router.get("/workouts/{workout_id}/progress", response_model=WorkoutProgressSchema)
+def get_workout_progress(
+    workout_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout = get_own_workout(workout_id, user, db)
+    sessions = [s for s in completed_facts(user, db) if s["workout_id"] == workout.id]
+
+    grouped: dict = {}
+    for s in sessions:
+        for e in s["exercises"]:
+            grouped.setdefault(exercise_key(e), []).append((s, e))
+
+    order = [item.exercise_id for item in workout.exercises]
+    planned = set(order)
+    keys = [key for key in order if key in grouped] + [key for key in grouped if key not in planned]
+
+    exercises = []
+    for key in keys:
+        rows = grouped[key]
+        first_s, first_e = rows[0]
+        last_s, last_e = rows[-1]
+        loads = [(load_value(e), e["e1rm"] is not None) for _, e in rows if load_value(e)]
+        estimated = bool(loads) and loads[0][1] and loads[-1][1]
+        first_kg = round(loads[0][0], 1) if loads else None
+        last_kg = round(loads[-1][0], 1) if loads else None
+        exercises.append({
+            "exercise_id": last_e["exercise_id"],
+            "name": last_e["name"],
+            "muscle_group": last_e["muscle_group"],
+            "in_workout": key in planned,
+            "sessions": len(rows),
+            "metric": ("e1rm" if estimated else "weight") if loads else None,
+            "first_kg": first_kg,
+            "last_kg": last_kg,
+            "best_kg": round(max(e["top_weight"] for _, e in rows), 1) or None,
+            "load_change_pct": pct(first_kg, last_kg) if len(loads) > 1 and first_kg else None,
+            "first_reps": first_e["max_reps"],
+            "last_reps": last_e["max_reps"],
+            "reps_change_pct": pct(first_e["max_reps"], last_e["max_reps"]) if len(rows) > 1 and first_e["max_reps"] else None,
+            "last_weight_kg": last_e["top_weight"],
+            "last_reps_at_weight": last_e["top_reps"],
+            "last_on": last_s["day"],
+        })
+
+    count = len(sessions)
+    first_volume = sessions[0]["volume"] if sessions else 0
+    return {
+        "workout_id": workout.id,
+        "name": workout.name,
+        "sessions": [
+            {
+                "session_id": s["id"],
+                "completed_at": s["completed_at"],
+                "day": s["day"],
+                "minutes": round(s["minutes"]),
+                "sets": s["sets"],
+                "volume_kg": round(s["volume"], 1),
+            }
+            for s in sessions
+        ],
+        "avg_minutes": round(sum(s["minutes"] for s in sessions) / count) if count else None,
+        "avg_volume_kg": round(sum(s["volume"] for s in sessions) / count, 1) if count else None,
+        "volume_change_pct": pct(first_volume, sessions[-1]["volume"]) if count > 1 and first_volume else None,
+        "load_pct": mean([e["load_change_pct"] for e in exercises if e["load_change_pct"] is not None]),
+        "reps_pct": mean([e["reps_change_pct"] for e in exercises if e["reps_change_pct"] is not None]),
+        "exercises": exercises,
+    }
+
+
+@fitness_stats_router.get("/progress/workouts", response_model=list[StatsWorkoutSchema])
+def list_workout_progress(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    own = {w.id: w.name for w in db.query(Workout).filter(Workout.user_id == user.id)}
+    sessions = [{**s, "name": own[s["workout_id"]]} for s in completed_facts(user, db) if s["workout_id"] in own]
+    return sorted(workout_stats(sessions), key=lambda i: i["last_done_on"], reverse=True)
