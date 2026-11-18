@@ -266,3 +266,65 @@ def test_stats_filter_by_plan_keeps_only_its_fichas(client, library, ana, bruno,
     assert [w["name"] for w in filtered["workouts"]] == ["Upper"]
     assert len(filtered["activity"]) == 1
     assert client.get("/fitness/stats", params={"plan_id": plan["id"]}, headers=bruno_headers).status_code == 404
+
+
+def test_stats_plan_adherence_counts_planned_days(client, library, ana, db_session):
+    from app.fitness_models import Plan
+    _, headers = ana
+    upper = make_workout(client, headers, library, name="Upper")
+    today = today_br()
+    days = [{"weekday": (today - timedelta(days=offset)).weekday(), "workout_id": upper["id"]} for offset in (1, 2)]
+    plan = client.post("/fitness/plans", json={"name": "Treino 1", "days": days}, headers=headers).json()
+    stored = db_session.get(Plan, plan["id"])
+    stored.created_at = datetime.combine(today - timedelta(days=13), time(8), tzinfo=BRT).astimezone(timezone.utc)
+    db_session.commit()
+    train(client, headers, db_session, upper["id"], [[(60, 10)]], at(1))
+    train(client, headers, db_session, upper["id"], [[(60, 10)]], at(8))
+    train(client, headers, db_session, upper["id"], [[(60, 10)]], at(3))
+
+    adherence = client.get("/fitness/stats", params={"period": "4w", "plan_id": plan["id"]}, headers=headers).json()["adherence"]
+    assert adherence["since"] == (today - timedelta(days=13)).isoformat()
+    assert adherence["planned"] == 4
+    assert adherence["done"] == 2
+    assert adherence["pct"] == 50
+    assert adherence["extra_days"] == 1
+    assert sum(w["planned"] for w in adherence["weekdays"]) == 4
+
+    assert client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["adherence"] is None
+
+
+def test_stats_relative_strength_uses_the_body_weight_of_the_day(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    empty = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["relative_strength"]
+    assert empty == {"has_body_weight": False, "items": []}
+
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": (today_br() - timedelta(days=20)).isoformat()}, headers=headers)
+    client.post("/fitness/body-weight", json={"weight_kg": 75, "measured_on": (today_br() - timedelta(days=5)).isoformat()}, headers=headers)
+    train(client, headers, db_session, workout["id"], [[(60, 10)]], at(14))
+    train(client, headers, db_session, workout["id"], [[(75, 10)]], at(2))
+
+    strength = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["relative_strength"]
+    bench = strength["items"][0]
+    assert bench["name"] == "Supino reto"
+    assert bench["e1rm_kg"] == 100.0
+    assert bench["body_weight_kg"] == 75.0
+    assert bench["ratio"] == 1.33
+    assert bench["first_ratio"] == 1.0
+
+
+def test_stats_density_and_best_periods(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    train(client, headers, db_session, workout["id"], [[(50, 10)]], at(20), minutes=50)
+    train(client, headers, db_session, workout["id"], [[(100, 10)]], at(3), minutes=40)
+    train(client, headers, db_session, workout["id"], [[(10, 10)]], at(2), minutes=20)
+
+    data = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()
+    assert data["summary"]["density_kg_min"] == round(1600 / 110, 1)
+    assert all("density_kg_min" in bucket for bucket in data["timeline"])
+
+    best = data["all_time"]["best_periods"]
+    assert best["week_volume"]["volume_kg"] in (1000.0, 1100.0)
+    assert best["week_sessions"]["sessions"] in (1, 2)
+    assert best["month_volume"]["volume_kg"] >= 1100.0

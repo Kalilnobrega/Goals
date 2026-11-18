@@ -1,3 +1,4 @@
+from bisect import bisect_right
 from collections import defaultdict
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -5,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import BRT, today_br, to_br_date
 from app.models import User
-from app.fitness_models import Workout, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema
 from app.fitness_muscles import muscle_credit
 from .auth import get_current_user
@@ -72,6 +73,10 @@ def session_facts(workout_session: WorkoutSession) -> dict:
     }
 
 
+def density(volume: float, minutes: float) -> float:
+    return round(volume / minutes, 1) if minutes >= 1 else 0
+
+
 def totals(sessions: list[dict], days: int) -> dict:
     count = len(sessions)
     minutes = sum(s["minutes"] for s in sessions)
@@ -83,6 +88,7 @@ def totals(sessions: list[dict], days: int) -> dict:
         "volume_kg": round(sum(s["volume"] for s in sessions), 1),
         "active_days": len({s["day"] for s in sessions}),
         "avg_minutes": round(minutes / count) if count else 0,
+        "density_kg_min": density(sum(s["volume"] for s in sessions), minutes),
         "per_week": round(count / (days / 7), 1) if days else 0,
     }
 
@@ -337,8 +343,10 @@ def get_stats(
 ):
     today = today_br()
     everything = completed_facts(user, db)
+    plan = None
     if plan_id is not None:
-        plan_workouts = {day.workout_id for day in get_own_plan(plan_id, user, db).days}
+        plan = get_own_plan(plan_id, user, db)
+        plan_workouts = {day.workout_id for day in plan.days}
         everything = [s for s in everything if s["workout_id"] in plan_workouts]
     first_day = everything[0]["day"] if everything else today
     if period == "all":
@@ -375,6 +383,8 @@ def get_stats(
         "period": period,
         "plan_id": plan_id,
         "activity": activity_days(everything, today),
+        "adherence": plan_adherence(plan, everything, start, today) if plan else None,
+        "relative_strength": relative_strength(in_period, user, db),
         "start": start,
         "end": today,
         "bucket": "month" if by_month else "week",
@@ -387,6 +397,7 @@ def get_stats(
                 "sets": value["sets"],
                 "volume_kg": round(value["volume"], 1),
                 "minutes": round(value["minutes"]),
+                "density_kg_min": density(value["volume"], value["minutes"]),
             }
             for key, value in timeline.items()
         ],
@@ -410,11 +421,113 @@ def get_stats(
             "minutes": round(sum(s["minutes"] for s in everything)),
             "first_session_on": everything[0]["day"] if everything else None,
             "records": all_time_records(everything),
+            "best_periods": best_periods(everything),
         },
     }
 
 
 HEATMAP_DAYS = 371
+RELATIVE_STRENGTH_LIMIT = 5
+
+
+def plan_adherence(plan, sessions: list[dict], start: date, today: date) -> dict:
+    created = to_br_date(aware(plan.created_at)) if plan.created_at else start
+    begin = max(start, created)
+    planned_weekdays = sorted({day.weekday for day in plan.days})
+    trained = {s["day"] for s in sessions}
+    by_weekday = {weekday: {"weekday": weekday, "planned": 0, "done": 0} for weekday in planned_weekdays}
+    day = begin
+    while day <= today:
+        slot = by_weekday.get(day.weekday())
+        if slot and (day < today or day in trained):
+            slot["planned"] += 1
+            if day in trained:
+                slot["done"] += 1
+        day += timedelta(days=1)
+    planned = sum(slot["planned"] for slot in by_weekday.values())
+    done = sum(slot["done"] for slot in by_weekday.values())
+    extra = len({d for d in trained if begin <= d <= today and d.weekday() not in by_weekday})
+    return {
+        "since": begin,
+        "planned": planned,
+        "done": done,
+        "pct": round(done / planned * 100) if planned else None,
+        "extra_days": extra,
+        "weekdays": list(by_weekday.values()),
+    }
+
+
+def relative_strength(period: list[dict], user, db) -> dict:
+    entries = (
+        db.query(BodyWeightEntry.measured_on, BodyWeightEntry.weight_kg)
+        .filter(BodyWeightEntry.user_id == user.id)
+        .order_by(BodyWeightEntry.measured_on)
+        .all()
+    )
+    if not entries:
+        return {"has_body_weight": False, "items": []}
+    days = [day for day, _ in entries]
+
+    def weight_on(day: date) -> float:
+        index = bisect_right(days, day) - 1
+        return float(entries[max(index, 0)][1])
+
+    points: dict = defaultdict(list)
+    names: dict = {}
+    for s in period:
+        for e in s["exercises"]:
+            if e["e1rm"] is None:
+                continue
+            key = exercise_key(e)
+            names[key] = e
+            points[key].append((s["completed_at"], s["day"], e["e1rm"]))
+
+    items = []
+    for key, values in points.items():
+        values.sort(key=lambda p: p[0])
+        _, first_day, first_e1rm = values[0]
+        _, last_day, last_e1rm = values[-1]
+        body = weight_on(last_day)
+        ratio = round(last_e1rm / body, 2)
+        first_ratio = round(first_e1rm / weight_on(first_day), 2) if len(values) > 1 else None
+        items.append({
+            "exercise_id": names[key]["exercise_id"],
+            "name": names[key]["name"],
+            "muscle_group": names[key]["muscle_group"],
+            "e1rm_kg": round(last_e1rm, 1),
+            "body_weight_kg": body,
+            "ratio": ratio,
+            "first_ratio": first_ratio,
+            "sessions": len(values),
+        })
+    items.sort(key=lambda i: (-i["sessions"], -i["ratio"]))
+    return {"has_body_weight": True, "items": items[:RELATIVE_STRENGTH_LIMIT]}
+
+
+def best_periods(sessions: list[dict]) -> dict | None:
+    if not sessions:
+        return None
+
+    def group(key):
+        result: dict = {}
+        for s in sessions:
+            item = result.setdefault(key(s["day"]), {"sessions": 0, "volume_kg": 0.0})
+            item["sessions"] += 1
+            item["volume_kg"] += s["volume"]
+        return result
+
+    def best(groups: dict, metric: str, other: str) -> dict:
+        start, value = max(groups.items(), key=lambda kv: (kv[1][metric], kv[1][other], kv[0]))
+        return {"start": start, "sessions": value["sessions"], "volume_kg": round(value["volume_kg"], 1)}
+
+    weeks = group(week_start)
+    months = group(month_start)
+    return {
+        "week_sessions": best(weeks, "sessions", "volume_kg"),
+        "week_volume": best(weeks, "volume_kg", "sessions"),
+        "month_sessions": best(months, "sessions", "volume_kg"),
+        "month_volume": best(months, "volume_kg", "sessions"),
+    }
 
 
 def activity_days(sessions: list[dict], today: date) -> list[dict]:

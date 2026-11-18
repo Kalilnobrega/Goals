@@ -470,6 +470,7 @@ class StatsTotalsSchema(BaseModel):
     active_days: int
     avg_minutes: int
     per_week: float
+    density_kg_min: float = 0
 
 
 class StatsBucketSchema(BaseModel):
@@ -478,6 +479,7 @@ class StatsBucketSchema(BaseModel):
     sets: int
     volume_kg: float
     minutes: int
+    density_kg_min: float = 0
 
 
 class StatsDayPartSchema(BaseModel):
@@ -631,6 +633,51 @@ class StatsAllTimeSchema(BaseModel):
     minutes: int
     first_session_on: date | None
     records: StatsAllTimeRecordsSchema | None
+    best_periods: "StatsBestPeriodsSchema | None" = None
+
+
+class StatsBestPeriodSchema(BaseModel):
+    start: date
+    sessions: int
+    volume_kg: float
+
+
+class StatsBestPeriodsSchema(BaseModel):
+    week_sessions: StatsBestPeriodSchema
+    week_volume: StatsBestPeriodSchema
+    month_sessions: StatsBestPeriodSchema
+    month_volume: StatsBestPeriodSchema
+
+
+class StatsAdherenceWeekdaySchema(BaseModel):
+    weekday: int
+    planned: int
+    done: int
+
+
+class StatsAdherenceSchema(BaseModel):
+    since: date
+    planned: int
+    done: int
+    pct: int | None
+    extra_days: int
+    weekdays: list[StatsAdherenceWeekdaySchema]
+
+
+class StatsRelativeStrengthItemSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    e1rm_kg: float
+    body_weight_kg: float
+    ratio: float
+    first_ratio: float | None
+    sessions: int
+
+
+class StatsRelativeStrengthSchema(BaseModel):
+    has_body_weight: bool
+    items: list[StatsRelativeStrengthItemSchema]
 
 
 class StatsActivityDaySchema(BaseModel):
@@ -646,6 +693,8 @@ class StatsSchema(BaseModel):
     period: str
     plan_id: int | None = None
     activity: list[StatsActivityDaySchema] = []
+    adherence: StatsAdherenceSchema | None = None
+    relative_strength: StatsRelativeStrengthSchema | None = None
     start: date
     end: date
     bucket: str
