@@ -2,14 +2,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Trophy, ClipboardList, Target, ChevronRight, Scale,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X,
 } from 'lucide-react';
-import { getFitnessStats, getProgressWorkouts, getProgressExercises, getBodyWeights, peekCache } from '../../../lib/api';
+import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, peekCache } from '../../../lib/api';
 import {
   formatDay, formatDuration, formatKg, formatVolume, muscleLabel, parseDay, plural,
 } from '../../../lib/gym';
 import BarChart from '../../../components/gym/BarChart';
 import Sparkline from '../../../components/gym/Sparkline';
+import TrainingHeatmap from '../../../components/gym/TrainingHeatmap';
 import styles from './stats.module.css';
 
 const PERIODS = [
@@ -345,31 +346,6 @@ function Progressions({ data }) {
   );
 }
 
-function Records({ data }) {
-  return (
-    <Card icon={Trophy} title="Recordes no período" hint={data.records.length ? plural(data.records.length, 'recorde', 'recordes') : null}>
-      {data.records.length === 0 ? (
-        <p className={styles.empty}>Nenhuma carga nova neste período. Recordes aparecem quando você supera a maior carga já feita num exercício.</p>
-      ) : (
-        <ul className={styles.rows}>
-          {data.records.map(r => (
-            <li key={`${r.session_id}-${r.name}`}>
-              <Link href={`/gym/history/${r.session_id}`} className={styles.row}>
-                <span className={styles.rowDate}>{formatDay(r.date)}</span>
-                <span className={styles.rowMain}>
-                  <span className={styles.rowName}>{r.name}</span>
-                  <span className={styles.rowMeta}>{kg(r.weight_kg)} × {r.reps} · antes {kg(r.previous_kg)}</span>
-                </span>
-                <span className={`${styles.delta} ${styles.up}`}>+{formatKg(Math.round((r.weight_kg - r.previous_kg) * 100) / 100)} kg</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
 function MostDone({ data }) {
   if (!data.most_done.length) return null;
   const max = Math.max(...data.most_done.map(e => e.sets), 1);
@@ -389,11 +365,6 @@ function MostDone({ data }) {
       </ul>
     </Card>
   );
-}
-
-function WorkoutRow({ workoutId, children }) {
-  if (!workoutId) return <div className={styles.workout}>{children}</div>;
-  return <Link href={`/gym/progress/workouts/${workoutId}`} className={`${styles.workout} ${styles.workoutLink}`}>{children}</Link>;
 }
 
 function useSections() {
@@ -446,31 +417,10 @@ function Sections() {
   );
 }
 
-function Workouts({ data }) {
-  if (!data.workouts.length) return null;
+function Frequency({ data }) {
   return (
-    <Card icon={ClipboardList} title="Fichas">
-      <ul className={styles.rows}>
-        {data.workouts.map(w => (
-          <li key={`${w.workout_id}-${w.name}`}>
-            <WorkoutRow workoutId={w.workout_id}>
-            <div className={styles.workoutTop}>
-              <span className={styles.rowName}>{w.name}</span>
-              <span className={styles.workoutCount}>{w.sessions}×</span>
-            </div>
-            <span className={styles.rowMeta}>
-              {formatDuration(w.avg_minutes * 60000)} em média · {formatVolume(w.avg_volume_kg)} por treino · último {formatDay(w.last_done_on)}
-            </span>
-            {(w.progress_pct !== null || w.volume_change_pct !== null) && (
-              <span className={styles.workoutChange}>
-                {w.progress_pct !== null && <>Progressão média: <Delta value={w.progress_pct} /></>}
-                {w.volume_change_pct !== null && <>Volume: <Delta value={Math.round(w.volume_change_pct)} /></>}
-              </span>
-            )}
-            </WorkoutRow>
-          </li>
-        ))}
-      </ul>
+    <Card icon={CalendarDays} title="Frequência" hint="séries por dia">
+      <TrainingHeatmap activity={data.activity} today={data.end} />
     </Card>
   );
 }
@@ -508,31 +458,72 @@ function AllTime({ data }) {
   );
 }
 
+const statsKey = (period, planId) => `fitnessStats:${period}:${planId ?? 'all'}`;
+
+function PlanFilter({ plans, value, onChange }) {
+  if (!plans?.length) return null;
+  const selected = plans.find(p => p.id === value);
+  return (
+    <div className={styles.planFilter}>
+      <label className={`${styles.planSelect} ${selected ? styles.planSelectActive : ''}`}>
+        <ListFilter size={15} aria-hidden="true" />
+        <span className={styles.planLabel}>{selected ? selected.name : 'Todos os treinos'}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+        <select
+          value={value ?? ''}
+          onChange={e => onChange(e.target.value ? Number(e.target.value) : null)}
+          aria-label="Filtrar por plano"
+        >
+          <option value="">Todos os treinos</option>
+          {plans.map(p => <option key={p.id} value={p.id}>{p.name}{p.is_active ? ' (ativo)' : ''}</option>)}
+        </select>
+      </label>
+      {selected && (
+        <button type="button" className={styles.planClear} onClick={() => onChange(null)} aria-label="Limpar filtro de plano">
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function StatsPage() {
   const [period, setPeriod] = useState('3m');
-  const [data, setData] = useState(() => peekCache('fitnessStats:3m') ?? null);
+  const [planId, setPlanId] = useState(null);
+  const [plans, setPlans] = useState(() => peekCache('fitnessPlans') ?? null);
+  const [data, setData] = useState(() => peekCache(statsKey('3m', null)) ?? null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    getPlans().then(setPlans).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     let current = true;
-    getFitnessStats(period)
+    getFitnessStats(period, planId)
       .then(result => { if (current) setData(result); })
       .catch(() => { if (current) setLoadError(true); });
     return () => { current = false; };
-  }, [period]);
+  }, [period, planId]);
 
   const choose = (key) => {
     setLoadError(false);
-    setData(peekCache(`fitnessStats:${key}`) ?? null);
+    setData(peekCache(statsKey(key, planId)) ?? null);
     setPeriod(key);
+  };
+
+  const choosePlan = (id) => {
+    setLoadError(false);
+    setData(peekCache(statsKey(period, id)) ?? null);
+    setPlanId(id);
   };
 
   const retry = () => {
     setLoadError(false);
-    getFitnessStats(period).then(setData).catch(() => setLoadError(true));
+    getFitnessStats(period, planId).then(setData).catch(() => setLoadError(true));
   };
 
-  const ready = data?.period === period ? data : null;
+  const ready = data?.period === period && (data?.plan_id ?? null) === planId ? data : null;
 
   return (
     <div className={styles.page}>
@@ -557,6 +548,8 @@ export default function StatsPage() {
           </button>
         ))}
       </div>
+
+      <PlanFilter plans={plans} value={planId} onChange={choosePlan} />
 
       {loadError && !ready && (
         <div className={styles.state}>
@@ -585,13 +578,12 @@ export default function StatsPage() {
       {ready && ready.all_time.sessions > 0 && (
         <>
           <Summary data={ready} />
+          <Frequency data={ready} />
           <Timeline data={ready} />
           <Muscles data={ready} />
           <Progressions data={ready} />
-          <Records data={ready} />
           <Consistency data={ready} />
           <MostDone data={ready} />
-          <Workouts data={ready} />
           <AllTime data={ready} />
         </>
       )}

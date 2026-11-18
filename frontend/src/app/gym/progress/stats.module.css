@@ -660,17 +660,6 @@
   font-size: 0.78rem;
 }
 
-.workoutLink {
-  color: var(--gym-text);
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background var(--dur-fast) var(--ease-out);
-}
-
-.workoutLink:hover,
-.workoutLink:active {
-  background: var(--gym-surface-3);
-}
 
 .sections {
   display: grid;
@@ -734,4 +723,64 @@
   top: 14px;
   right: 10px;
   color: var(--gym-faint);
+}
+
+.planFilter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.planSelect {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  color: var(--gym-muted);
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.planSelectActive {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+  font-weight: 600;
+}
+
+.planLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planSelect select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.planClear {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  cursor: pointer;
 }
