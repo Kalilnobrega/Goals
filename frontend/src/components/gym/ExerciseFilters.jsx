@@ -37,7 +37,9 @@ export function useExerciseFilters(exercises) {
     setMuscle(null);
   };
 
-  return { query, setQuery, group, setGroup, equipment, setEquipment, muscle, setMuscle, roleOf, visible, active, clear };
+  const signature = `${group}|${equipment}|${muscle ?? ''}`;
+
+  return { query, setQuery, group, setGroup, equipment, setEquipment, muscle, setMuscle, roleOf, visible, active, clear, signature };
 }
 
 function Chips({ options, value, onChange, label }) {
@@ -50,7 +52,7 @@ function Chips({ options, value, onChange, label }) {
           role="tab"
           aria-selected={value === option.value}
           className={`${styles.chip} ${value === option.value ? styles.chipActive : ''}`}
-          onClick={() => onChange(option.value)}
+          onClick={() => onChange(value === option.value ? 'all' : option.value)}
         >
           {option.label}
         </button>
@@ -123,7 +125,7 @@ export default function ExerciseFilters({ filters, exercises, allowMine = false 
             type="button"
             className={`${styles.chip} ${equipment === option.value ? styles.chipActive : ''}`}
             aria-pressed={equipment === option.value}
-            onClick={() => setEquipment(option.value)}
+            onClick={() => setEquipment(current => (current === option.value ? 'all' : option.value))}
           >
             {option.label}
           </button>

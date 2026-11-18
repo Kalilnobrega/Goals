@@ -9,7 +9,7 @@ import styles from './ExercisePicker.module.css';
 
 export default function ExercisePicker({ exercises, loadError, onRetry, onConfirm, single = false }) {
   const filters = useExerciseFilters(exercises);
-  const { query, setQuery, muscle, roleOf, visible } = filters;
+  const { query, setQuery, muscle, roleOf, visible, signature } = filters;
   const [selected, setSelected] = useState([]);
 
   const toggle = (exercise) => {
@@ -61,11 +61,11 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
         </div>
       )}
 
-      <ul className={styles.list}>
-        {visible.map(exercise => {
+      <ul key={signature} className={styles.list}>
+        {visible.map((exercise, index) => {
           const position = order(exercise.id);
           return (
-            <li key={exercise.id}>
+            <li key={exercise.id} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
               <button
                 type="button"
                 className={`${styles.item} ${position ? styles.itemSelected : ''}`}

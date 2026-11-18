@@ -35,13 +35,22 @@
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-instant) var(--ease-out);
+}
+
+.chip:active {
+  transform: scale(0.95);
 }
 
 .chipActive {
   background: var(--gym-accent);
   border-color: var(--gym-accent);
   color: var(--gym-accent-ink);
+  animation: chipOn var(--dur-slow) var(--ease-spring);
+}
+
+@keyframes chipOn {
+  40% { transform: scale(1.06); }
 }
 
 .bodyChip:not(.chipActive) {

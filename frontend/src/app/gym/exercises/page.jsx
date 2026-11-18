@@ -20,7 +20,7 @@ export default function ExercisesPage() {
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [loadError, setLoadError] = useState(false);
   const filters = useExerciseFilters(exercises);
-  const { query, setQuery, group: filter, muscle, roleOf, visible } = filters;
+  const { query, setQuery, group: filter, muscle, roleOf, visible, signature } = filters;
   const [sheet, setSheet] = useState(null);
   const toast = useToast();
   const confirmAction = useConfirm();
@@ -155,41 +155,43 @@ export default function ExercisesPage() {
         </div>
       )}
 
-      {sections.map(section => (
-        <section key={section.key} className={styles.section}>
-          {section.title && (
-            <h2 className={styles.sectionTitle}>
-              {section.title}
-              <span>{section.items.length}</span>
-            </h2>
-          )}
-          <ul className={styles.list}>
-            {section.items.map(exercise => {
-              const meta = (
-                <>
-                  <span className={styles.itemText}>
-                    <span className={styles.itemName}>{exercise.name}</span>
-                    <span className={styles.itemMeta}>
-                      {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
-                      {equipmentLabel(exercise.equipment)}
-                      {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
+      <div className={styles.results}>
+        {sections.map(section => (
+          <section key={`${signature}-${section.key}`} className={styles.section}>
+            {section.title && (
+              <h2 className={styles.sectionTitle}>
+                {section.title}
+                <span>{section.items.length}</span>
+              </h2>
+            )}
+            <ul className={styles.list}>
+              {section.items.map((exercise, index) => {
+                const meta = (
+                  <>
+                    <span className={styles.itemText}>
+                      <span className={styles.itemName}>{exercise.name}</span>
+                      <span className={styles.itemMeta}>
+                        {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
+                        {equipmentLabel(exercise.equipment)}
+                        {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
+                      </span>
                     </span>
-                  </span>
-                  {exercise.is_custom && <span className={styles.badge}>Seu</span>}
-                </>
-              );
-              return (
-                <li key={exercise.id}>
-                  <button type="button" className={`${styles.item} ${styles.itemButton}`} onClick={() => setSheet({ exercise, mode: 'detail' })}>
-                    {meta}
-                    <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+                    {exercise.is_custom && <span className={styles.badge}>Seu</span>}
+                  </>
+                );
+                return (
+                  <li key={exercise.id} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
+                    <button type="button" className={`${styles.item} ${styles.itemButton}`} onClick={() => setSheet({ exercise, mode: 'detail' })}>
+                      {meta}
+                      <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       <Floating>
         <button type="button" className={styles.fab} onClick={openNew} aria-label="Novo exercício">
