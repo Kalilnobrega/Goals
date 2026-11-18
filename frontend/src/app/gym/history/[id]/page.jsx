@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Play, Trash2 } from 'lucide-react';
-import { getSession, deleteSession } from '../../../../lib/api';
+import { getSession, getSessionInsights, deleteSession } from '../../../../lib/api';
 import { apiError } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
@@ -19,6 +19,7 @@ export default function HistoryDetailPage() {
   const confirmAction = useConfirm();
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('loading');
+  const [insights, setInsights] = useState(null);
   const { begin, starting, sheet } = useStartSession();
 
   const loaded = useCallback((data) => {
@@ -37,6 +38,13 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     getSession(id).then(loaded).catch(failed);
   }, [id, loaded]);
+
+  useEffect(() => {
+    if (status !== 'ready' || !session) return;
+    let active = true;
+    getSessionInsights(session.id).then(result => { if (active) setInsights(result); }).catch(() => {});
+    return () => { active = false; };
+  }, [status, session]);
 
   const remove = async () => {
     const ok = await confirmAction({
@@ -84,7 +92,7 @@ export default function HistoryDetailPage() {
 
       {status === 'ready' && (
         <>
-          <SessionSummary session={session} />
+          <SessionSummary session={session} insights={insights} />
           <div className={s.actions}>
             {session.workout_id && (
               <button type="button" className={s.primary} onClick={() => begin(session.workout_id)} disabled={starting}>

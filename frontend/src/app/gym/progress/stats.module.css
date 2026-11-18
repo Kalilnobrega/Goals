@@ -469,6 +469,7 @@
 
 .workoutChange {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   color: var(--gym-faint);
@@ -619,4 +620,42 @@
   .skeletonKpis {
     animation: none;
   }
+}
+
+.averages {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.average {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}
+
+.averageLabel {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.averageValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.averageValue .delta {
+  margin-top: 0;
+  font-size: 0.95rem;
+  padding: 3px 10px;
+}
+
+.averageNote {
+  grid-column: 1 / -1;
+  color: var(--gym-faint);
+  font-size: 0.78rem;
 }

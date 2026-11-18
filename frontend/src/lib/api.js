@@ -238,10 +238,13 @@ export const updateWorkout = (id, data) =>
 export const deleteWorkout = (id) =>
   api.delete(`/fitness/workouts/${id}`).then((r) => r.data);
 export const HISTORY_PAGE = 20;
-export const getHistory = (offset = 0) =>
-  offset
-    ? api.get("/fitness/sessions", { params: { limit: HISTORY_PAGE, offset } }).then((r) => r.data)
+export const getHistory = (offset = 0, filters = {}) => {
+  const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+  return offset || Object.keys(params).length
+    ? api.get("/fitness/sessions", { params: { limit: HISTORY_PAGE, offset, ...params } }).then((r) => r.data)
     : cachedGet("fitnessHistory", `/fitness/sessions?limit=${HISTORY_PAGE}`);
+};
+export const getSessionInsights = (id) => cachedGet(`fitnessInsights:${id}`, `/fitness/sessions/${id}/insights`);
 export const getActiveSession = () => api.get("/fitness/sessions/active").then((r) => r.data);
 export const getSession = (id) => api.get(`/fitness/sessions/${id}`).then((r) => r.data);
 export const startSession = (workoutId) =>

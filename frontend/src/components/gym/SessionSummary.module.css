@@ -95,3 +95,209 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+.stat {
+  align-items: flex-start;
+}
+
+.delta {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.up {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.down {
+  background: var(--gym-surface-3);
+  color: var(--gym-muted);
+}
+
+.compare {
+  margin-top: -6px;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.compare a,
+.perfNote a {
+  color: var(--gym-accent);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.records {
+  border-color: rgba(198, 244, 50, 0.35);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(198, 244, 50, 0.1) 0%, transparent 55%),
+    var(--gym-surface);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardIcon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.cardTitle {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.recordList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+}
+
+.recordName {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordValue {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.recordValue small {
+  color: var(--gym-accent);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.selection {
+  min-height: 1.4em;
+  text-align: center;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.selection strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.perf {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--gym-border);
+}
+
+.perf div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perf dt {
+  color: var(--gym-muted);
+  font-size: 0.75rem;
+}
+
+.perf dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.perf .delta {
+  margin-top: 0;
+}
+
+.perfNote {
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
+.averages {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.average {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}
+
+.averageLabel {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.averageValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.averageUp {
+  color: var(--gym-accent);
+}
+
+.averageDown {
+  color: var(--gym-muted);
+}
+
+.averageNote {
+  color: var(--gym-faint);
+  font-size: 0.78rem;
+}

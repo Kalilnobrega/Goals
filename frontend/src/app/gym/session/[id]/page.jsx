@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw,
 } from 'lucide-react';
 import {
-  getSession, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
+  getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
@@ -101,6 +101,16 @@ export default function SessionPage() {
   const [offline, setOffline] = useState(false);
 
   useWakeLock(session?.status === 'in_progress');
+
+  const [insights, setInsights] = useState(null);
+  const finishedId = session?.status === 'completed' ? session.id : null;
+
+  useEffect(() => {
+    if (!finishedId) return;
+    let active = true;
+    getSessionInsights(finishedId).then(result => { if (active) setInsights(result); }).catch(() => {});
+    return () => { active = false; };
+  }, [finishedId]);
 
   useEffect(() => {
     if (session) saveSnapshot(session);
@@ -465,7 +475,7 @@ export default function SessionPage() {
           <p className={styles.kicker}>Treino concluído</p>
           <h1 className={styles.title}>{session.name}</h1>
         </header>
-        <SessionSummary session={session} />
+        <SessionSummary session={session} insights={insights} />
         <div className={s.actions}>
           <Link href="/gym" className={s.primary}>Voltar ao início</Link>
           <Link href="/gym/history" className={s.secondary}>Ver histórico</Link>

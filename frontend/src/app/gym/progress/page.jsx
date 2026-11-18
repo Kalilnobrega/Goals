@@ -42,7 +42,7 @@ function change(current, previous) {
 function Delta({ value, suffix = '%' }) {
   if (value === null || value === undefined) return null;
   const tone = value > 0 ? styles.up : value < 0 ? styles.down : styles.flat;
-  return <span className={`${styles.delta} ${tone}`}>{value > 0 ? '+' : value < 0 ? '−' : ''}{Math.abs(value)}{suffix}</span>;
+  return <span className={`${styles.delta} ${tone}`}>{value > 0 ? '+' : value < 0 ? '−' : ''}{formatKg(Math.abs(value))}{suffix}</span>;
 }
 
 function Card({ icon: Icon, title, hint, children }) {
@@ -251,15 +251,20 @@ function Muscles({ data }) {
 }
 
 function Progressions({ data }) {
-  if (!data.progressions.length && !data.declines.length) {
+  const [mode, setMode] = useState('load');
+  const average = data.progress_average;
+  const hasLoad = data.progressions.length > 0 || data.declines.length > 0;
+  const hasReps = data.rep_progressions.length > 0;
+
+  if (!hasLoad && !hasReps && !average?.exercises) {
     return (
-      <Card icon={TrendingUp} title="Maiores progressões">
+      <Card icon={TrendingUp} title="Progressão">
         <p className={styles.empty}>Faça o mesmo exercício em pelo menos dois treinos do período para comparar.</p>
       </Card>
     );
   }
 
-  const row = (p) => (
+  const loadRow = (p) => (
     <li key={`${p.exercise_id}-${p.name}`}>
       <Link href={p.exercise_id ? `/gym/progress/exercises/${p.exercise_id}` : '/gym/progress/exercises'} className={styles.row}>
         <span className={styles.rowMain}>
@@ -274,16 +279,68 @@ function Progressions({ data }) {
     </li>
   );
 
+  const repRow = (p) => (
+    <li key={`${p.exercise_id}-${p.name}`}>
+      <Link href={p.exercise_id ? `/gym/progress/exercises/${p.exercise_id}` : '/gym/progress/exercises'} className={styles.row}>
+        <span className={styles.rowMain}>
+          <span className={styles.rowName}>{p.name}</span>
+          <span className={styles.rowMeta}>Máximo numa série: {p.first_reps} → {plural(p.last_reps, 'rep', 'reps')}</span>
+        </span>
+        <Delta value={p.change_pct} />
+        <ChevronRight size={16} className={styles.chevron} aria-hidden="true" />
+      </Link>
+    </li>
+  );
+
   return (
-    <Card icon={TrendingUp} title="Maiores progressões" hint="início × fim do período">
-      {data.progressions.length > 0
-        ? <ul className={styles.rows}>{data.progressions.map(row)}</ul>
-        : <p className={styles.empty}>Nenhum exercício subiu de carga neste período.</p>}
-      {data.declines.length > 0 && (
+    <Card icon={TrendingUp} title="Progressão" hint="início × fim do período">
+      {average?.exercises > 0 && (
+        <div className={styles.averages}>
+          <div className={styles.average}>
+            <span className={styles.averageLabel}>Média de carga</span>
+            <span className={styles.averageValue}>{average.load_pct === null ? '—' : <Delta value={average.load_pct} />}</span>
+          </div>
+          <div className={styles.average}>
+            <span className={styles.averageLabel}>Média de repetições</span>
+            <span className={styles.averageValue}>{average.reps_pct === null ? '—' : <Delta value={average.reps_pct} />}</span>
+          </div>
+          <p className={styles.averageNote}>Média de {plural(average.exercises, 'exercício feito', 'exercícios feitos')} mais de uma vez no período</p>
+        </div>
+      )}
+
+      <div className={styles.chips} role="tablist" aria-label="Tipo de progressão">
+        {[{ key: 'load', label: 'Carga' }, { key: 'reps', label: 'Repetições' }].map(option => (
+          <button
+            key={option.key}
+            type="button"
+            role="tab"
+            aria-selected={mode === option.key}
+            className={`${styles.chip} ${mode === option.key ? styles.chipActive : ''}`}
+            onClick={() => setMode(option.key)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'load' && (
         <>
-          <h3 className={styles.subTitle}><TrendingDown size={14} aria-hidden="true" /> Em queda</h3>
-          <ul className={styles.rows}>{data.declines.map(row)}</ul>
+          {data.progressions.length > 0
+            ? <ul className={styles.rows}>{data.progressions.map(loadRow)}</ul>
+            : <p className={styles.empty}>Nenhum exercício subiu de carga neste período.</p>}
+          {data.declines.length > 0 && (
+            <>
+              <h3 className={styles.subTitle}><TrendingDown size={14} aria-hidden="true" /> Em queda</h3>
+              <ul className={styles.rows}>{data.declines.map(loadRow)}</ul>
+            </>
+          )}
         </>
+      )}
+
+      {mode === 'reps' && (
+        hasReps
+          ? <ul className={styles.rows}>{data.rep_progressions.map(repRow)}</ul>
+          : <p className={styles.empty}>Nenhum exercício aumentou as repetições neste período.</p>
       )}
     </Card>
   );
@@ -349,8 +406,11 @@ function Workouts({ data }) {
             <span className={styles.rowMeta}>
               {formatDuration(w.avg_minutes * 60000)} em média · {formatVolume(w.avg_volume_kg)} por treino · último {formatDay(w.last_done_on)}
             </span>
-            {w.volume_change_pct !== null && (
-              <span className={styles.workoutChange}>Volume do primeiro ao último: <Delta value={Math.round(w.volume_change_pct)} /></span>
+            {(w.progress_pct !== null || w.volume_change_pct !== null) && (
+              <span className={styles.workoutChange}>
+                {w.progress_pct !== null && <>Progressão média: <Delta value={w.progress_pct} /></>}
+                {w.volume_change_pct !== null && <>Volume: <Delta value={Math.round(w.volume_change_pct)} /></>}
+              </span>
             )}
           </li>
         ))}
