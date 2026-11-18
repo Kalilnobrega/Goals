@@ -12,6 +12,7 @@ import sheetStyles from '../../../components/gym/sheet.module.css';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import Floating from '../../../components/gym/Floating';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from '../../../components/gym/ExerciseFilters';
+import UnilateralTag from '../../../components/gym/UnilateralTag';
 import styles from './page.module.css';
 
 
@@ -171,6 +172,7 @@ export default function ExercisesPage() {
                     <span className={styles.itemMeta}>
                       {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
                       {equipmentLabel(exercise.equipment)}
+                      {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
                     </span>
                   </span>
                   {exercise.is_custom && <span className={styles.badge}>Seu</span>}
@@ -204,6 +206,7 @@ export default function ExercisesPage() {
           <div className={sheetStyles.stack}>
             <p className={sheetStyles.text}>
               {muscleLabel(sheet.exercise.muscle_group)} · {equipmentLabel(sheet.exercise.equipment)}{sheet.exercise.is_custom ? ' · seu' : ''}
+              {sheet.exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
             <ExerciseMuscles muscles={sheet.exercise.muscles ?? []} />
             {sheet.exercise.is_custom && (

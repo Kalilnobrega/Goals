@@ -302,7 +302,7 @@ export default function SessionPage() {
   const toggleUnilateral = async (item) => {
     try {
       setSession(withPending(await updateSessionExercise(item.id, { unilateral: !item.unilateral })));
-      toast(item.unilateral ? `${item.exercise_name}: as duas pernas/braços juntos` : `${item.exercise_name}: lado a lado (E/D)`);
+      toast(item.unilateral ? `${item.exercise_name}: bilateral` : `${item.exercise_name}: unilateral (esquerda e direita)`);
     } catch (err) {
       fail(err, 'Não foi possível mudar o modo do exercício.');
     }
@@ -721,7 +721,7 @@ export default function SessionPage() {
             >
               <ArrowLeftRight size={20} />
               <span>
-                {sheet.item.unilateral ? 'Fazer os dois lados juntos' : 'Fazer lado a lado (E/D)'}
+                {sheet.item.unilateral ? 'Fazer bilateral' : 'Fazer unilateral (E/D)'}
                 <small>{sheet.item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : 'Anote carga e reps da esquerda e da direita em cada série'}</small>
               </span>
             </button>

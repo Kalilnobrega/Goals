@@ -259,7 +259,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                           aria-pressed={!!(item.unilateral ?? item.exercise.is_unilateral)}
                           onClick={() => updateItem(item.key, { unilateral: !(item.unilateral ?? item.exercise.is_unilateral) })}
                         >
-                          E/D <span>{(item.unilateral ?? item.exercise.is_unilateral) ? 'lado a lado' : 'dois lados juntos'}</span>
+                          {(item.unilateral ?? item.exercise.is_unilateral) ? 'Unilateral' : 'Bilateral'}
                         </button>
                       </div>
                     </li>

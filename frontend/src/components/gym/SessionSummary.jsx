@@ -7,6 +7,7 @@ import {
   muscleName, plural, seriesCount, seriesRows, SIDE_LABEL,
 } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import UnilateralTag from './UnilateralTag';
 import styles from './SessionSummary.module.css';
 
 const percent = (now, before) => (before > 0 ? ((now - before) / before) * 100 : null);
@@ -160,7 +161,10 @@ export default function SessionSummary({ session, insights }) {
             <li key={item.id} className={styles.item}>
               <div className={styles.itemHeader}>
                 <span className={styles.itemName}>{item.exercise_name}</span>
-                <span className={styles.itemMeta}>{muscleLabel(item.muscle_group)} · {plural(seriesCount(item.sets), 'série', 'séries')}</span>
+                <span className={styles.itemMeta}>
+                  {muscleLabel(item.muscle_group)} · {plural(seriesCount(item.sets), 'série', 'séries')}
+                  {item.unilateral && <>{' '}<UnilateralTag /></>}
+                </span>
               </div>
               <div className={styles.sets}>
                 {seriesRows(item.sets).map(row => (

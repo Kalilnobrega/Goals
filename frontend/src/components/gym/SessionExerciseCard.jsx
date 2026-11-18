@@ -513,10 +513,10 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
             onClick={() => onToggleUnilateral(item)}
             disabled={item.sets.length > 0}
             aria-pressed={!!item.unilateral}
-            aria-label={item.unilateral ? 'Lado a lado ativado' : 'Fazer lado a lado (esquerda e direita)'}
+            aria-label={item.unilateral ? 'Unilateral ativado' : 'Tornar unilateral (esquerda e direita)'}
             title={item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : undefined}
           >
-            <ArrowLeftRight size={14} /> E/D
+            <ArrowLeftRight size={14} /> Unilateral
           </button>
         )}
         <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>

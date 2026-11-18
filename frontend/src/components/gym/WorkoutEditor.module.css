@@ -430,10 +430,6 @@
   cursor: pointer;
 }
 
-.sideToggle span {
-  font-weight: 400;
-}
-
 .sideToggleOn {
   border-style: solid;
   border-color: var(--gym-accent);

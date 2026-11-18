@@ -6,6 +6,7 @@ import { ChevronLeft, Pencil, Timer, TrendingUp } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
 import { muscleLabel, equipmentLabel, plural, prescription, formatRest } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
+import UnilateralTag from '../../../../components/gym/UnilateralTag';
 import styles from './workout.module.css';
 
 export default function WorkoutDetailPage() {
@@ -81,6 +82,7 @@ export default function WorkoutDetailPage() {
                   <span className={styles.itemName}>{item.exercise.name}</span>
                   <span className={styles.itemMeta}>
                     {muscleLabel(item.exercise.muscle_group)} · {equipmentLabel(item.exercise.equipment)}
+                    {(item.unilateral ?? item.exercise.is_unilateral) && <>{' '}<UnilateralTag /></>}
                   </span>
                 </span>
                 <span className={styles.itemTarget}>
