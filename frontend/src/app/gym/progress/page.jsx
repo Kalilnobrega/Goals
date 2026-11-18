@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks,
 } from 'lucide-react';
 import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, peekCache } from '../../../lib/api';
 import {
@@ -26,7 +26,11 @@ const TIMELINE_METRICS = [
   { key: 'sets', label: 'Séries', format: v => plural(v, 'série', 'séries'), axis: v => String(v) },
   { key: 'volume_kg', label: 'Volume', format: formatVolume, axis: v => (v >= 1000 ? `${formatKg(Math.round(v / 100) / 10)}t` : formatKg(v)) },
   { key: 'minutes', label: 'Tempo', format: v => formatDuration(v * 60000), axis: v => (v >= 60 ? `${Math.round(v / 60)}h` : `${v}m`) },
+  { key: 'density_kg_min', label: 'Densidade', format: v => `${formatKg(v)} kg/min`, axis: v => formatKg(v) },
 ];
+
+const WEEKDAY_LONG = ['segundas', 'terças', 'quartas', 'quintas', 'sextas', 'sábados', 'domingos'];
+const ratio = (value) => `${formatKg(value)}×`;
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const DAY_PARTS = { dawn: 'Madrugada', morning: 'Manhã', afternoon: 'Tarde', night: 'Noite' };
@@ -68,7 +72,7 @@ function Summary({ data }) {
     { label: 'Repetições', value: summary.reps.toLocaleString('pt-BR'), delta: change(summary.reps, previous?.reps) },
     { label: 'Treinos por semana', value: formatKg(summary.per_week), delta: change(summary.per_week, previous?.per_week) },
     { label: 'Duração média', value: summary.avg_minutes ? formatDuration(summary.avg_minutes * 60000) : '—', delta: change(summary.avg_minutes, previous?.avg_minutes) },
-    { label: 'Dias treinados', value: summary.active_days, delta: change(summary.active_days, previous?.active_days) },
+    { label: 'Densidade (kg/min)', value: summary.density_kg_min ? formatKg(summary.density_kg_min) : '—', delta: change(summary.density_kg_min, previous?.density_kg_min) },
   ];
 
   return (
@@ -417,6 +421,120 @@ function Sections() {
   );
 }
 
+function Adherence({ data }) {
+  const adherence = data.adherence;
+  if (!adherence) return null;
+  if (!adherence.planned) {
+    return (
+      <Card icon={ListChecks} title="Aderência ao plano">
+        <p className={styles.empty}>Ainda não teve nenhum dia planejado neste período.</p>
+      </Card>
+    );
+  }
+  const missed = adherence.weekdays
+    .filter(w => w.planned > 0 && w.done < w.planned)
+    .sort((a, b) => (a.done / a.planned) - (b.done / b.planned))[0];
+
+  return (
+    <Card icon={ListChecks} title="Aderência ao plano" hint={`desde ${formatDay(adherence.since)}`}>
+      <div className={styles.adherenceTop}>
+        <span className={styles.adherencePct}>{adherence.pct}%</span>
+        <span className={styles.adherenceText}>
+          {adherence.done} de {plural(adherence.planned, 'dia planejado', 'dias planejados')} treinados
+          {adherence.extra_days > 0 && <> · {plural(adherence.extra_days, 'dia extra', 'dias extras')}</>}
+        </span>
+      </div>
+      <span className={styles.track}><span className={styles.fill} style={{ width: `${adherence.pct}%` }} /></span>
+      <ul className={styles.adherenceDays}>
+        {adherence.weekdays.map(w => (
+          <li key={w.weekday} className={styles.adherenceDay}>
+            <span className={styles.adherenceLabel}>{WEEKDAYS[w.weekday]}</span>
+            <span className={styles.track}>
+              <span className={styles.fill} style={{ width: `${w.planned ? (w.done / w.planned) * 100 : 0}%` }} />
+            </span>
+            <span className={styles.adherenceCount}>{w.done}/{w.planned}</span>
+          </li>
+        ))}
+      </ul>
+      {missed && <p className={styles.adherenceNote}>Você mais falta nas {WEEKDAY_LONG[missed.weekday]}.</p>}
+    </Card>
+  );
+}
+
+function RelativeStrength({ data }) {
+  const strength = data.relative_strength;
+  if (!strength) return null;
+  if (!strength.has_body_weight) {
+    if (!data.progressions.length && !data.most_done.length) return null;
+    return (
+      <Card icon={Scale} title="Força relativa">
+        <p className={styles.empty}>
+          Registre seu peso para ver quantas vezes o seu peso corporal você levanta em cada exercício.{' '}
+          <Link href="/gym/progress/body" className={styles.inlineLink}>Registrar peso</Link>
+        </p>
+      </Card>
+    );
+  }
+  if (!strength.items.length) return null;
+
+  return (
+    <Card icon={Scale} title="Força relativa" hint="1RM estimado ÷ peso corporal">
+      <ul className={styles.rows}>
+        {strength.items.map(item => {
+          const diff = item.first_ratio !== null ? Math.round((item.ratio - item.first_ratio) * 100) / 100 : null;
+          const content = (
+            <>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{item.name}</span>
+                <span className={styles.rowMeta}>{kg(item.e1rm_kg)} de 1RM · peso {kg(item.body_weight_kg)}</span>
+              </span>
+              <span className={styles.strengthValue}>
+                {ratio(item.ratio)}
+                {diff !== null && diff !== 0 && (
+                  <span className={`${styles.delta} ${diff > 0 ? styles.up : styles.down}`}>{diff > 0 ? '+' : '−'}{formatKg(Math.abs(diff))}</span>
+                )}
+              </span>
+            </>
+          );
+          return (
+            <li key={`${item.exercise_id}-${item.name}`}>
+              {item.exercise_id
+                ? <Link href={`/gym/progress/exercises/${item.exercise_id}`} className={styles.row}>{content}</Link>
+                : <div className={styles.row}>{content}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+function BestPeriods({ best }) {
+  if (!best) return null;
+  const weekOf = (iso) => `semana de ${formatDay(iso)}`;
+  const monthOf = (iso) => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(parseDay(iso));
+  const tiles = [
+    { label: 'Semana com mais treinos', value: plural(best.week_sessions.sessions, 'treino', 'treinos'), note: weekOf(best.week_sessions.start) },
+    { label: 'Semana com mais volume', value: formatVolume(best.week_volume.volume_kg), note: weekOf(best.week_volume.start) },
+    { label: 'Mês com mais treinos', value: plural(best.month_sessions.sessions, 'treino', 'treinos'), note: monthOf(best.month_sessions.start) },
+    { label: 'Mês com mais volume', value: formatVolume(best.month_volume.volume_kg), note: monthOf(best.month_volume.start) },
+  ];
+  return (
+    <>
+      <h3 className={styles.subTitle}>Melhores períodos</h3>
+      <div className={styles.records}>
+        {tiles.map(tile => (
+          <div key={tile.label} className={`${styles.record} ${styles.recordStatic}`}>
+            <span className={styles.recordLabel}>{tile.label}</span>
+            <span className={styles.recordValue}>{tile.value}</span>
+            <span className={styles.recordNote}>{tile.note}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function Frequency({ data }) {
   return (
     <Card icon={CalendarDays} title="Frequência" hint="séries por dia">
@@ -451,6 +569,7 @@ function AllTime({ data }) {
           </Link>
         ))}
       </div>
+      <BestPeriods best={allTime.best_periods} />
       <p className={styles.lifetime}>
         Desde {formatDay(allTime.first_session_on)}: {plural(allTime.sessions, 'treino', 'treinos')} · {formatDuration(allTime.minutes * 60000)} · {formatVolume(allTime.volume_kg)}
       </p>
@@ -579,9 +698,11 @@ export default function StatsPage() {
         <>
           <Summary data={ready} />
           <Frequency data={ready} />
+          <Adherence data={ready} />
           <Timeline data={ready} />
           <Muscles data={ready} />
           <Progressions data={ready} />
+          <RelativeStrength data={ready} />
           <Consistency data={ready} />
           <MostDone data={ready} />
           <AllTime data={ready} />
