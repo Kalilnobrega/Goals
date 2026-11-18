@@ -182,7 +182,7 @@ function Consistency({ data }) {
 }
 
 function Muscles({ data }) {
-  const [mode, setMode] = useState('sets');
+  const [mode, setMode] = useState('volume');
   const trained = data.muscles.filter(m => m.sets > 0);
   const max = Math.max(...trained.map(m => (mode === 'sets' ? m.sets : m.volume_kg)), 1);
   const sorted = [...trained].sort((a, b) => (mode === 'sets' ? b.sets - a.sets : b.volume_kg - a.volume_kg));
@@ -197,7 +197,7 @@ function Muscles({ data }) {
       ) : (
         <>
           <div className={styles.chips} role="tablist" aria-label="Medida">
-            {[{ key: 'sets', label: 'Séries' }, { key: 'volume', label: 'Volume' }].map(option => (
+            {[{ key: 'volume', label: 'Volume' }, { key: 'sets', label: 'Séries' }].map(option => (
               <button
                 key={option.key}
                 type="button"
