@@ -51,7 +51,7 @@
   stroke: var(--gym-bg);
   stroke-width: 1.5;
   stroke-linejoin: round;
-  transition: fill var(--dur-base) var(--ease-out);
+  transition: fill var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
 }
 
 .clickable {
@@ -59,15 +59,46 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.clickable:focus,
 .clickable:focus-visible {
   outline: none;
+}
+
+.clickable:focus-visible:not(.selected) {
   stroke: var(--gym-text);
   stroke-width: 2.5;
 }
 
-.selected {
+.focused .muscle:not(.selected) {
+  opacity: 0.75;
+}
+
+.highlight {
+  pointer-events: none;
+  animation: highlightIn var(--dur-base) var(--ease-out);
+}
+
+.glow,
+.line {
+  fill: none;
+  stroke-linejoin: round;
+}
+
+.glow {
+  stroke: var(--gym-accent);
+  stroke-opacity: 0.35;
+  stroke-width: 5;
+}
+
+.line {
   stroke: var(--gym-text);
-  stroke-width: 2.5;
+  stroke-width: 2;
+}
+
+@keyframes highlightIn {
+  from {
+    opacity: 0;
+  }
 }
 
 .caption {
