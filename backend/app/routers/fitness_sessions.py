@@ -97,12 +97,14 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "reps_min": item.reps_min,
             "reps_max": item.reps_max,
             "rest_seconds": item.rest_seconds,
+            "note": item.note,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
                 {"weight_kg": float(entry.weight_kg), "reps": entry.reps}
                 for entry in (previous.sets if previous else [])
             ],
             "previous_at": aware(db.get(WorkoutSession, previous.session_id).completed_at) if previous else None,
+            "previous_note": previous.note if previous else None,
         })
     return {
         "id": workout_session.id,
@@ -489,6 +491,9 @@ def edit_session_exercise(
         item.workout_exercise_id = None
         if "rest_seconds" not in changes:
             item.rest_seconds = last_rest(exercise.id, user, db)
+
+    if "note" in changes:
+        item.note = data.note
 
     if "rest_seconds" in changes:
         rest = data.rest_seconds or None

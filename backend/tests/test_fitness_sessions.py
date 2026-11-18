@@ -583,3 +583,26 @@ def test_invalid_client_id_is_rejected(client, library, ana, client_id):
         headers=headers,
     )
     assert response.status_code == 422
+
+
+def test_session_exercise_note_is_saved_and_shown_next_time(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    session = start(client, headers, workout["id"])
+    bench_id = session["exercises"][0]["id"]
+    log_set(client, headers, bench_id, 60, 10)
+
+    data = client.patch(f"/fitness/session-exercises/{bench_id}", json={"note": "  execução boa  "}, headers=headers).json()
+    assert data["exercises"][0]["note"] == "execução boa"
+    assert client.patch(f"/fitness/session-exercises/{bench_id}", json={"note": "x" * 201}, headers=headers).status_code == 422
+    finish(client, headers, session["id"])
+
+    history = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()
+    assert history["exercises"][0]["note"] == "execução boa"
+
+    following = start(client, headers, workout["id"])
+    assert following["exercises"][0]["note"] is None
+    assert following["exercises"][0]["previous_note"] == "execução boa"
+
+    cleared = client.patch(f"/fitness/session-exercises/{following['exercises'][0]['id']}", json={"note": "   "}, headers=headers).json()
+    assert cleared["exercises"][0]["note"] is None

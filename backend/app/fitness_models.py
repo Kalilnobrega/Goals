@@ -123,6 +123,7 @@ class SessionExercise(Base):
     reps_max = Column(Integer, nullable=True)
     rest_seconds = Column(Integer, nullable=True)
     muscles = Column(JSON, nullable=True)
+    note = Column(String(200), nullable=True)
 
     sets = relationship(
         "SetEntry",

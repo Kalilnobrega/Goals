@@ -176,6 +176,15 @@ class ReorderSessionSchema(BaseModel):
 class EditSessionExerciseSchema(BaseModel):
     exercise_id: int | None = None
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
+    note: str | None = Field(default=None, max_length=200)
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value):
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
 
 
 class SetSchema(BaseModel):
@@ -218,9 +227,11 @@ class SessionExerciseResponseSchema(BaseModel):
     reps_min: int | None
     reps_max: int | None
     rest_seconds: int | None
+    note: str | None = None
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
     previous_at: datetime | None
+    previous_note: str | None = None
 
 
 class SessionHistoryItemSchema(BaseModel):
