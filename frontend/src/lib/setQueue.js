@@ -45,6 +45,7 @@ export const pendingEntry = (queued) => ({
   position: queued.position,
   weight_kg: queued.data.weight_kg,
   reps: queued.data.reps,
+  side: queued.data.side ?? null,
   created_at: queued.createdAt,
   pending: true,
 });

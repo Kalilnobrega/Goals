@@ -402,3 +402,29 @@
     animation: none;
   }
 }
+
+.balance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.balanceTitle {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.balanceValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+.balanceNote {
+  color: var(--gym-faint);
+  font-size: 0.82rem;
+}

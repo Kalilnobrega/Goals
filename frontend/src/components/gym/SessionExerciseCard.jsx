@@ -1,9 +1,9 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
+import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
   muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput,
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME,
 } from '../../lib/gym';
 import styles from './SessionExerciseCard.module.css';
 
@@ -96,6 +96,92 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
         <button type="submit" className={styles.log} disabled={saving}>
           <Check size={18} strokeWidth={2.8} />
           {saving ? 'Salvando…' : `Registrar série ${next}`}
+        </button>
+        <button
+          type="button"
+          className={styles.rest}
+          onClick={() => onStartRest(item)}
+          aria-label={item.rest_seconds ? `Iniciar descanso de ${formatRest(item.rest_seconds)}` : 'Iniciar cronômetro de descanso'}
+        >
+          <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
+        </button>
+      </div>
+      {onCancel && (
+        <button type="button" className={styles.extraCancel} onClick={onCancel} disabled={saving}>
+          Cancelar série extra
+        </button>
+      )}
+    </form>
+  );
+}
+
+const sideCount = (item, side) => item.sets.filter(entry => entry.side === side).length;
+
+function sideReference(item, side, index) {
+  const previous = item.previous.filter(entry => entry.side === side);
+  const done = item.sets.filter(entry => entry.side === side);
+  return previous[index] ?? done.at(-1) ?? previous.at(-1) ?? null;
+}
+
+function SideFields({ side, values, onChange }) {
+  return (
+    <div className={styles.side}>
+      <span className={styles.sideLabel} aria-label={SIDE_NAME[side]}>{SIDE_LABEL[side]}</span>
+      <SetInputs
+        weight={values.weight}
+        reps={values.reps}
+        onWeight={weight => onChange({ ...values, weight })}
+        onReps={reps => onChange({ ...values, reps })}
+      />
+    </div>
+  );
+}
+
+function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
+  const left = sideCount(item, 'left');
+  const right = sideCount(item, 'right');
+  const pairs = Math.min(left, right);
+  const initial = (side) => {
+    const reference = sideReference(item, side, pairs);
+    return {
+      weight: reference ? kgInput(reference.weight_kg) : '',
+      reps: reference ? String(reference.reps) : item.reps_min ? String(item.reps_min) : '',
+    };
+  };
+  const [values, setValues] = useState(() => ({ left: initial('left'), right: initial('right') }));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const missing = saving ? ['left', 'right'] : left === right ? ['left', 'right'] : [left < right ? 'left' : 'right'];
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const entries = [];
+    for (const side of missing) {
+      const { data, error: problem } = validate(values[side].weight, values[side].reps);
+      if (problem) return setError(`${SIDE_NAME[side]}: ${problem}`);
+      entries.push({ ...data, side });
+    }
+    setError('');
+    setSaving(true);
+    for (const data of entries) {
+      const ok = await onLogSet(item, data);
+      if (!ok) {
+        setSaving(false);
+        return;
+      }
+    }
+  };
+
+  return (
+    <form className={styles.newSet} onSubmit={submit} noValidate>
+      {missing.map(side => (
+        <SideFields key={side} side={side} values={values[side]} onChange={next => setValues(current => ({ ...current, [side]: next }))} />
+      ))}
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <div className={styles.newActions}>
+        <button type="submit" className={styles.log} disabled={saving}>
+          <Check size={18} strokeWidth={2.8} />
+          {saving ? 'Salvando…' : missing.length === 2 ? `Registrar série ${pairs + 1}` : `Completar série ${pairs + 1} (${SIDE_NAME[missing[0]].toLowerCase()})`}
         </button>
         <button
           type="button"
@@ -250,7 +336,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
     <li className={styles.editRow}>
       <div className={styles.editHeader}>
         <span className={styles.setIndex}>{entry.position}</span>
-        <span>Editar série</span>
+        <span>Editar série{entry.side ? ` · ${SIDE_NAME[entry.side]}` : ''}</span>
       </div>
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
       {error && <p className={styles.error} role="alert">{error}</p>}
@@ -337,12 +423,63 @@ function ExerciseNote({ item, onSave }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onSaveNote }) {
+const sideValue = (entry) => (entry.weight_kg > 0 ? `${formatKg(entry.weight_kg)} × ${entry.reps}` : `PC × ${entry.reps}`);
+
+function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
+  const editing = [row.left, row.right].find(entry => entry && entry.id === editingId);
+  if (editing) {
+    return (
+      <SetRow key={editing.id} entry={editing} editing onEdit={() => {}} onCancel={onCancel} onSave={onSave} onDelete={onDelete} />
+    );
+  }
+
+  const removeBoth = async () => {
+    for (const entry of [row.left, row.right].filter(Boolean)) {
+      const ok = await onDelete(entry, true);
+      if (!ok) return false;
+    }
+    return true;
+  };
+
+  const pending = [row.left, row.right].some(entry => entry?.pending);
+
+  return (
+    <SwipeToDelete onDelete={removeBoth}>
+      <div className={`${styles.setRow} ${styles.pairRow} ${pending ? styles.setPending : ''}`}>
+        <span className={styles.setIndex}>{row.position}</span>
+        {['left', 'right'].map(side => {
+          const entry = row[side];
+          return (
+            <button
+              key={side}
+              type="button"
+              className={`${styles.pairSide} ${entry ? '' : styles.pairMissing}`}
+              onClick={entry && !entry.pending ? () => onEdit(entry.id) : undefined}
+              disabled={!entry || entry.pending}
+              aria-label={entry ? `Editar série ${row.position}, ${SIDE_NAME[side].toLowerCase()}: ${sideValue(entry)}` : `${SIDE_NAME[side]} ainda não registrada`}
+            >
+              <span className={styles.pairLabel}>{SIDE_LABEL[side]}</span>
+              <span className={styles.pairValue}>{entry ? sideValue(entry) : '—'}</span>
+            </button>
+          );
+        })}
+        {pending
+          ? <CloudOff size={18} className={styles.setWaiting} aria-hidden="true" />
+          : <Check size={18} className={styles.setDone} aria-hidden="true" />}
+      </div>
+    </SwipeToDelete>
+  );
+}
+
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onSaveNote, onToggleUnilateral }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
-  const complete = item.target_sets && item.sets.length >= item.target_sets;
-  const addingExtra = complete && extraAt === item.sets.length;
+  const done = seriesCount(item.sets);
+  const complete = item.target_sets && done >= item.target_sets;
+  const addingExtra = complete && extraAt === done;
+  const rows = seriesRows(item.sets);
+  const pairedKey = item.unilateral ? Math.min(sideCount(item, 'left'), sideCount(item, 'right')) : item.sets.length;
 
   const saveEdit = async (entry, data) => {
     const ok = await onEditSet(item, entry, data);
@@ -350,8 +487,8 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
     return ok;
   };
 
-  const deleteEntry = async (entry) => {
-    const ok = await onDeleteSet(item, entry);
+  const deleteEntry = async (entry, silent = false) => {
+    const ok = await onDeleteSet(item, entry, silent);
     if (ok) setEditingId(null);
     return ok;
   };
@@ -366,9 +503,22 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
             {target ? <span className={styles.target}>{target}</span> : null}
             {target ? ' · ' : ''}
             {muscleLabel(item.muscle_group)}
-            {item.target_sets ? ` · ${item.sets.length}/${item.target_sets}` : ''}
+            {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
           </p>
         </div>
+        {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (
+          <button
+            type="button"
+            className={`${styles.sideChip} ${item.unilateral ? styles.sideChipOn : ''}`}
+            onClick={() => onToggleUnilateral(item)}
+            disabled={item.sets.length > 0}
+            aria-pressed={!!item.unilateral}
+            aria-label={item.unilateral ? 'Lado a lado ativado' : 'Fazer lado a lado (esquerda e direita)'}
+            title={item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : undefined}
+          >
+            <ArrowLeftRight size={14} /> E/D
+          </button>
+        )}
         <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
           <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
         </button>
@@ -382,7 +532,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}</span>
           {item.previous.map((entry, i) => (
             <span key={i} className={styles.previousSet}>
-              {entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
+              {entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
             </span>
           ))}
           {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
@@ -391,34 +541,54 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
 
       {item.sets.length > 0 && (
         <ol className={styles.sets}>
-          {item.sets.map(entry => (
+          {rows.map(row => (row.entry ? (
             <SetRow
-              key={`${entry.id}-${editingId === entry.id}`}
-              entry={entry}
-              editing={editingId === entry.id}
-              onEdit={() => setEditingId(entry.id)}
+              key={`${row.entry.id}-${editingId === row.entry.id}`}
+              entry={row.entry}
+              editing={editingId === row.entry.id}
+              onEdit={() => setEditingId(row.entry.id)}
               onCancel={() => setEditingId(null)}
               onSave={saveEdit}
               onDelete={deleteEntry}
             />
-          ))}
+          ) : (
+            <PairRow
+              key={row.key}
+              row={row}
+              editingId={editingId}
+              onEdit={setEditingId}
+              onCancel={() => setEditingId(null)}
+              onSave={saveEdit}
+              onDelete={deleteEntry}
+            />
+          )))}
         </ol>
       )}
 
       {!complete || addingExtra ? (
-        <NewSet
-          key={item.sets.length}
-          item={item}
-          onLogSet={onLogSet}
-          onStartRest={onStartRest}
-          onCancel={addingExtra ? () => setExtraAt(null) : undefined}
-        />
+        item.unilateral ? (
+          <UnilateralNewSet
+            key={`u-${pairedKey}`}
+            item={item}
+            onLogSet={onLogSet}
+            onStartRest={onStartRest}
+            onCancel={addingExtra ? () => setExtraAt(null) : undefined}
+          />
+        ) : (
+          <NewSet
+            key={pairedKey}
+            item={item}
+            onLogSet={onLogSet}
+            onStartRest={onStartRest}
+            onCancel={addingExtra ? () => setExtraAt(null) : undefined}
+          />
+        )
       ) : (
         <div className={styles.completeBox}>
           <p className={styles.completeText}>
             <Check size={16} strokeWidth={3} aria-hidden="true" /> {item.target_sets} de {item.target_sets} séries do exercício feitas
           </p>
-          <button type="button" className={styles.extra} onClick={() => setExtraAt(item.sets.length)}>
+          <button type="button" className={styles.extra} onClick={() => setExtraAt(done)}>
             <Plus size={18} strokeWidth={2.4} /> Adicionar série extra
           </button>
         </div>

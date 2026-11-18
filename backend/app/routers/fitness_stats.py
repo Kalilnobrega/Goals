@@ -13,7 +13,7 @@ from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
 from .fitness_progress import estimated_1rm
-from .fitness_sessions import COMPLETED, aware
+from .fitness_sessions import COMPLETED, aware, series_count
 
 fitness_stats_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -49,7 +49,7 @@ def session_facts(workout_session: WorkoutSession) -> dict:
             "name": item.exercise_name,
             "muscle_group": item.muscle_group,
             "muscles": item.muscles or [],
-            "sets": len(item.sets),
+            "sets": series_count(item.sets),
             "reps": sum(reps for _, reps in weights),
             "volume": sum(weight * reps for weight, reps in weights),
             "top_weight": top_weight,

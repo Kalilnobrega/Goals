@@ -62,6 +62,7 @@ class ExerciseSchema(BaseModel):
     name: str = Field(max_length=60)
     muscle_group: MuscleGroup
     equipment: Equipment
+    is_unilateral: bool = False
     muscles: list[ExerciseMuscleSchema] = Field(default_factory=list, max_length=15)
 
     @field_validator("muscles")
@@ -79,6 +80,7 @@ class EditExerciseSchema(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     muscle_group: MuscleGroup | None = None
     equipment: Equipment | None = None
+    is_unilateral: bool | None = None
     muscles: list[ExerciseMuscleSchema] | None = Field(default=None, max_length=15)
 
     @field_validator("muscles")
@@ -100,6 +102,7 @@ class ExerciseResponseSchema(BaseModel):
     muscle_group: str
     equipment: str
     is_custom: bool
+    is_unilateral: bool = False
     muscles: list[ExerciseMuscleSchema] = []
 
 
@@ -109,6 +112,7 @@ class WorkoutExerciseSchema(BaseModel):
     reps_min: int = Field(ge=1, le=100)
     reps_max: int | None = Field(default=None, ge=1, le=100)
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
+    unilateral: bool | None = None
 
     @model_validator(mode="after")
     def reps_range(self):
@@ -150,6 +154,7 @@ class WorkoutExerciseResponseSchema(BaseModel):
     reps_min: int
     reps_max: int | None
     rest_seconds: int | None
+    unilateral: bool | None = None
 
 
 class WorkoutResponseSchema(BaseModel):
@@ -178,6 +183,7 @@ class EditSessionExerciseSchema(BaseModel):
     exercise_id: int | None = None
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     note: str | None = Field(default=None, max_length=200)
+    unilateral: bool | None = None
 
     @field_validator("note")
     @classmethod
@@ -192,6 +198,7 @@ class SetSchema(BaseModel):
     weight_kg: float = Field(ge=0, le=1000)
     reps: int = Field(ge=1, le=1000)
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
+    side: Literal["left", "right"] | None = None
 
 
 class EditSetSchema(BaseModel):
@@ -210,11 +217,13 @@ class SetResponseSchema(BaseModel):
     reps: int
     created_at: datetime
     client_id: str | None = None
+    side: str | None = None
 
 
 class PreviousSetSchema(BaseModel):
     weight_kg: float
     reps: int
+    side: str | None = None
 
 
 class SessionExerciseResponseSchema(BaseModel):
@@ -229,6 +238,7 @@ class SessionExerciseResponseSchema(BaseModel):
     reps_max: int | None
     rest_seconds: int | None
     note: str | None = None
+    unilateral: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
     previous_at: datetime | None
@@ -288,6 +298,10 @@ class ProgressPointSchema(BaseModel):
     max_reps: int
     estimated_1rm_kg: float | None
     volume_kg: float
+    left_max_weight_kg: float | None = None
+    right_max_weight_kg: float | None = None
+    left_estimated_1rm_kg: float | None = None
+    right_estimated_1rm_kg: float | None = None
 
 
 class ExerciseProgressSchema(BaseModel):

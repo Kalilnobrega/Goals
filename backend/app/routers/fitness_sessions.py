@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_
+from sqlalchemy import String, case, cast, func, literal, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -52,7 +52,19 @@ def serialize_set(entry: SetEntry) -> dict:
         "reps": entry.reps,
         "created_at": aware(entry.created_at),
         "client_id": entry.client_id,
+        "side": entry.side,
     }
+
+
+def series_count(entries) -> int:
+    return len({("pair", entry.position) if entry.side else ("set", entry.id) for entry in entries})
+
+
+def series_key():
+    return case(
+        (SetEntry.side.is_(None), cast(SetEntry.id, String)),
+        else_=literal("p") + cast(SetEntry.session_exercise_id, String) + literal("-") + cast(SetEntry.position, String),
+    )
 
 
 def previous_performance(item: SessionExercise, workout_session: WorkoutSession, db: Session):
@@ -84,7 +96,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
     volume = Decimal(0)
     for item in workout_session.exercises:
         previous = previous_performance(item, workout_session, db)
-        total_sets += len(item.sets)
+        total_sets += series_count(item.sets)
         volume += sum((entry.weight_kg * entry.reps for entry in item.sets), Decimal(0))
         exercises.append({
             "id": item.id,
@@ -98,9 +110,10 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "reps_max": item.reps_max,
             "rest_seconds": item.rest_seconds,
             "note": item.note,
+            "unilateral": bool(item.unilateral),
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
-                {"weight_kg": float(entry.weight_kg), "reps": entry.reps}
+                {"weight_kg": float(entry.weight_kg), "reps": entry.reps, "side": entry.side}
                 for entry in (previous.sets if previous else [])
             ],
             "previous_at": aware(db.get(WorkoutSession, previous.session_id).completed_at) if previous else None,
@@ -231,7 +244,7 @@ def session_stats(db: Session):
         db.query(
             SessionExercise.session_id.label("session_id"),
             func.count(func.distinct(SessionExercise.id)).label("exercise_count"),
-            func.count(SetEntry.id).label("total_sets"),
+            func.count(func.distinct(series_key())).label("total_sets"),
             func.sum(SetEntry.weight_kg * SetEntry.reps).label("volume"),
         )
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
@@ -362,6 +375,7 @@ def start_session(
                 reps_min=item.reps_min,
                 reps_max=item.reps_max,
                 rest_seconds=item.rest_seconds,
+                unilateral=item.unilateral if item.unilateral is not None else item.exercise.is_unilateral,
             )
             for index, item in enumerate(workout.exercises)
         ]
@@ -442,6 +456,7 @@ def add_session_exercise(
             muscles=exercise.muscle_list(),
             position=position,
             rest_seconds=last_rest(exercise.id, user, db),
+            unilateral=exercise.is_unilateral,
         )
     )
     return commit_session(workout_session, db)
@@ -489,11 +504,28 @@ def edit_session_exercise(
         item.equipment = exercise.equipment
         item.muscles = exercise.muscle_list()
         item.workout_exercise_id = None
+        item.unilateral = exercise.is_unilateral
         if "rest_seconds" not in changes:
             item.rest_seconds = last_rest(exercise.id, user, db)
 
     if "note" in changes:
         item.note = data.note
+
+    if "unilateral" in changes and data.unilateral is not None and data.unilateral != item.unilateral:
+        if item.sets:
+            raise HTTPException(
+                status_code=409, detail="Só dá para mudar entre unilateral e normal antes de registrar séries."
+            )
+        item.unilateral = data.unilateral
+        if item.workout_exercise_id is not None:
+            planned = (
+                db.query(WorkoutExercise)
+                .join(Workout, Workout.id == WorkoutExercise.workout_id)
+                .filter(WorkoutExercise.id == item.workout_exercise_id, Workout.user_id == user.id)
+                .first()
+            )
+            if planned:
+                planned.unilateral = data.unilateral
 
     if "rest_seconds" in changes:
         rest = data.rest_seconds or None
@@ -549,10 +581,12 @@ def add_set(
         if existing:
             return serialize_set(existing)
     item = get_own_session_exercise(item_id, user, db)
-    if len(item.sets) >= 50:
+    if len(item.sets) >= 100 or (not data.side and series_count(item.sets) >= 50):
         raise HTTPException(status_code=400, detail="Um exercício pode ter no máximo 50 séries.")
+    same_side = [s for s in item.sets if s.side == data.side]
     entry = SetEntry(
-        position=max((s.position for s in item.sets), default=0) + 1,
+        position=(len(same_side) if data.side else max((s.position for s in same_side), default=0)) + 1,
+        side=data.side,
         weight_kg=to_kg(data.weight_kg),
         reps=data.reps,
         created_at=utcnow(),
@@ -598,7 +632,8 @@ def delete_set(
     item = db.get(SessionExercise, entry.session_exercise_id)
     item.sets.remove(entry)
     db.flush()
-    for index, remaining in enumerate(sorted(item.sets, key=lambda s: s.position), start=1):
+    same_side = [s for s in item.sets if s.side == entry.side]
+    for index, remaining in enumerate(sorted(same_side, key=lambda s: (s.position, s.id)), start=1):
         remaining.position = index
     db.commit()
     return {"message": "Série excluída"}

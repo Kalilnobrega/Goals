@@ -613,3 +613,105 @@
 .noteSave:disabled {
   opacity: 0.6;
 }
+
+.sideChip {
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sideChipOn {
+  border-style: solid;
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.sideChip:disabled {
+  cursor: default;
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.sideLabel {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.pairRow {
+  cursor: default;
+}
+
+.pairSide {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: none;
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pairSide:disabled {
+  cursor: default;
+}
+
+.pairMissing {
+  background: transparent;
+  border: 1px dashed var(--gym-border-strong);
+  color: var(--gym-faint);
+}
+
+.pairLabel {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.pairValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}

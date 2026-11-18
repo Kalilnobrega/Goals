@@ -61,6 +61,7 @@ def create_exercise(
         name=data.name,
         muscle_group=data.muscle_group,
         equipment=data.equipment,
+        is_unilateral=data.is_unilateral,
         muscles=[ExerciseMuscle(muscle=item.muscle, role=item.role) for item in data.muscles],
     )
     session.add(exercise)
@@ -150,6 +151,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
             reps_min=item.reps_min,
             reps_max=item.reps_max,
             rest_seconds=item.rest_seconds,
+            unilateral=item.unilateral,
         )
         for index, item in enumerate(data.exercises)
     ]

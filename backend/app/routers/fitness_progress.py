@@ -106,13 +106,18 @@ def get_exercise_progress(
             WorkoutSession.completed_at,
             SetEntry.weight_kg,
             SetEntry.reps,
+            SetEntry.side,
+            SetEntry.position,
+            SetEntry.id,
+            SessionExercise.id,
         )
         .order_by(WorkoutSession.completed_at, WorkoutSession.id, SetEntry.id)
         .all()
     )
 
     points: dict[int, dict] = {}
-    for session_id, session_name, completed_at, weight, reps in rows:
+    series: dict[int, set] = {}
+    for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id in rows:
         point = points.setdefault(session_id, {
             "session_id": session_id,
             "session_name": session_name,
@@ -123,8 +128,12 @@ def get_exercise_progress(
             "max_reps": 0,
             "estimated_1rm_kg": None,
             "volume_kg": Decimal(0),
+            "left_max_weight_kg": None,
+            "right_max_weight_kg": None,
+            "left_estimated_1rm_kg": None,
+            "right_estimated_1rm_kg": None,
         })
-        point["sets"] += 1
+        series.setdefault(session_id, set()).add(("pair", item_id, position) if side else ("set", set_id))
         point["volume_kg"] += weight * reps
         point["max_reps"] = max(point["max_reps"], reps)
         if weight > point["max_weight_kg"] or (weight == point["max_weight_kg"] and reps > point["reps_at_max"]):
@@ -133,6 +142,15 @@ def get_exercise_progress(
         estimate = estimated_1rm(weight, reps)
         if estimate is not None and (point["estimated_1rm_kg"] is None or estimate > point["estimated_1rm_kg"]):
             point["estimated_1rm_kg"] = estimate
+        if side:
+            key = f"{side}_max_weight_kg"
+            if point[key] is None or float(weight) > point[key]:
+                point[key] = float(weight)
+            key = f"{side}_estimated_1rm_kg"
+            if estimate is not None and (point[key] is None or estimate > point[key]):
+                point[key] = estimate
+    for session_id, point in points.items():
+        point["sets"] = len(series[session_id])
 
     return {
         "exercise_id": exercise.id,

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw,
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight
 } from 'lucide-react';
 import {
   getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
@@ -12,7 +12,7 @@ import {
 } from '../../../../lib/api';
 import {
   apiError, muscleLabel, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS,
+  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -76,7 +76,7 @@ function subscribeView(onChange) {
   return () => window.removeEventListener(VIEW_EVENT, onChange);
 }
 
-const isDone = (item) => (item.target_sets ? item.sets.length >= item.target_sets : item.sets.length > 0);
+const isDone = (item) => (item.target_sets ? seriesCount(item.sets) >= item.target_sets : item.sets.length > 0);
 
 const firstPending = (session) => (session.exercises.find(item => !isDone(item)) ?? session.exercises.at(-1))?.id ?? null;
 
@@ -175,9 +175,9 @@ export default function SessionPage() {
   const replacePending = (itemId, clientId, entry) => {
     setSession(current => withItem(current, itemId, it => ({
       ...it,
-      sets: entry
-        ? it.sets.map((e, i) => (e.client_id === clientId ? { ...entry, position: i + 1 } : e))
-        : it.sets.filter(e => e.client_id !== clientId).map((e, i) => ({ ...e, position: i + 1 })),
+      sets: renumberSets(entry
+        ? it.sets.map(e => (e.client_id === clientId ? entry : e))
+        : it.sets.filter(e => e.client_id !== clientId)),
     })));
   };
 
@@ -187,7 +187,7 @@ export default function SessionPage() {
       const entry = await addSet(item.id, { ...data, client_id: clientId });
       setSession(current => withItem(current, item.id, it => ({
         ...it,
-        sets: [...it.sets, entry].map((e, i) => ({ ...e, position: i + 1 })),
+        sets: renumberSets([...it.sets, entry]),
       })));
       setOffline(false);
       buzz();
@@ -199,7 +199,7 @@ export default function SessionPage() {
         sessionId: session.id,
         itemId: item.id,
         data,
-        position: item.sets.length + 1,
+        position: nextPosition(item.sets, data.side ?? null),
         createdAt: new Date().toISOString(),
       };
       enqueueSet(queued);
@@ -264,7 +264,7 @@ export default function SessionPage() {
     }
   };
 
-  const removeSet = async (item, entry) => {
+  const removeSet = async (item, entry, silent = false) => {
     if (entry.pending) {
       dequeueSet(entry.client_id);
       replacePending(item.id, entry.client_id, null);
@@ -274,12 +274,14 @@ export default function SessionPage() {
       await deleteSet(entry.id);
       setSession(current => withItem(current, item.id, it => ({
         ...it,
-        sets: it.sets.filter(e => e.id !== entry.id).map((e, i) => ({ ...e, position: i + 1 })),
+        sets: renumberSets(it.sets.filter(e => e.id !== entry.id)),
       })));
-      toast({
-        message: `Série ${entry.position} de ${item.exercise_name} excluída`,
-        action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps }) },
-      });
+      if (!silent) {
+        toast({
+          message: `Série ${entry.position} de ${item.exercise_name} excluída`,
+          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined }) },
+        });
+      }
       return true;
     } catch (err) {
       return fail(err, 'Não foi possível excluir a série.');
@@ -296,6 +298,15 @@ export default function SessionPage() {
   };
 
   const startRest = (item) => startRestTimer(item.rest_seconds, item.exercise_name, session.id);
+
+  const toggleUnilateral = async (item) => {
+    try {
+      setSession(withPending(await updateSessionExercise(item.id, { unilateral: !item.unilateral })));
+      toast(item.unilateral ? `${item.exercise_name}: as duas pernas/braços juntos` : `${item.exercise_name}: lado a lado (E/D)`);
+    } catch (err) {
+      fail(err, 'Não foi possível mudar o modo do exercício.');
+    }
+  };
 
   const saveNote = async (item, note) => {
     try {
@@ -355,7 +366,7 @@ export default function SessionPage() {
     if (item.sets.length) {
       const ok = await confirmAction({
         title: 'Remover exercício',
-        message: [<><strong>{item.exercise_name}</strong> sai deste treino junto com {plural(item.sets.length, 'série registrada', 'séries registradas')}.</>],
+        message: [<><strong>{item.exercise_name}</strong> sai deste treino junto com {plural(seriesCount(item.sets), 'série registrada', 'séries registradas')}.</>],
         confirmLabel: 'Remover',
       });
       if (!ok) return;
@@ -520,6 +531,7 @@ export default function SessionPage() {
     onOpenRest: it => setSheet({ type: 'rest', item: it }),
     onOpenMenu: it => setSheet({ type: 'menu', item: it }),
     onSaveNote: saveNote,
+    onToggleUnilateral: toggleUnilateral,
   };
 
   return (
@@ -701,6 +713,18 @@ export default function SessionPage() {
                 </button>
               </>
             )}
+            <button
+              type="button"
+              className={s.option}
+              onClick={() => { const item = sheet.item; setSheet(null); toggleUnilateral(item); }}
+              disabled={sheet.item.sets.length > 0}
+            >
+              <ArrowLeftRight size={20} />
+              <span>
+                {sheet.item.unilateral ? 'Fazer os dois lados juntos' : 'Fazer lado a lado (E/D)'}
+                <small>{sheet.item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : 'Anote carga e reps da esquerda e da direita em cada série'}</small>
+              </span>
+            </button>
             <button type="button" className={s.option} onClick={() => openPicker('swap', sheet.item)} disabled={sheet.item.sets.length > 0}>
               <Repeat size={20} />
               <span>Trocar exercício{sheet.item.sets.length > 0 && <small>Só dá para trocar antes de registrar séries</small>}</span>

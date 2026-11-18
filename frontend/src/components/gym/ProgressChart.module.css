@@ -123,3 +123,47 @@
   fill: var(--gym-accent);
   font-family: var(--font-body);
 }
+
+.compareLine {
+  fill: none;
+  stroke: var(--gym-text);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 6 4;
+  opacity: 0.75;
+  animation: areaIn 900ms var(--ease-out) 300ms backwards;
+}
+
+.compareDot {
+  fill: var(--gym-text);
+  stroke: var(--gym-surface);
+  stroke-width: 2;
+  animation: areaIn 600ms var(--ease-out) 900ms backwards;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendMain,
+.legendCompare {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--gym-accent);
+}
+
+.legendCompare {
+  border-top: 2px dashed var(--gym-text);
+}

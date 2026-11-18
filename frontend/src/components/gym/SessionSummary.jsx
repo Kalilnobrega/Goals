@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Trophy, Activity } from 'lucide-react';
 import {
   formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleLabel,
-  muscleName, plural,
+  muscleName, plural, seriesCount, seriesRows, SIDE_LABEL,
 } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import styles from './SessionSummary.module.css';
@@ -160,11 +160,15 @@ export default function SessionSummary({ session, insights }) {
             <li key={item.id} className={styles.item}>
               <div className={styles.itemHeader}>
                 <span className={styles.itemName}>{item.exercise_name}</span>
-                <span className={styles.itemMeta}>{muscleLabel(item.muscle_group)} · {plural(item.sets.length, 'série', 'séries')}</span>
+                <span className={styles.itemMeta}>{muscleLabel(item.muscle_group)} · {plural(seriesCount(item.sets), 'série', 'séries')}</span>
               </div>
               <div className={styles.sets}>
-                {item.sets.map(entry => (
-                  <span key={entry.id} className={styles.set}>{setLabel(entry.weight_kg, entry.reps)}</span>
+                {seriesRows(item.sets).map(row => (
+                  <span key={row.key} className={styles.set}>
+                    {row.entry
+                      ? setLabel(row.entry.weight_kg, row.entry.reps)
+                      : ['left', 'right'].filter(side => row[side]).map(side => `${SIDE_LABEL[side]} ${setLabel(row[side].weight_kg, row[side].reps)}`).join(' · ')}
+                  </span>
                 ))}
               </div>
               {item.note && <p className={styles.note}>“{item.note}”</p>}

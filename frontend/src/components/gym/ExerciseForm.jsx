@@ -30,6 +30,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? null);
   const [equipment, setEquipment] = useState(initial?.equipment ?? null);
+  const [unilateral, setUnilateral] = useState(initial?.is_unilateral ?? false);
   const [muscles, setMuscles] = useState(initial?.muscles ?? []);
 
   const changeMuscles = (next) => {
@@ -47,7 +48,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
     if (!equipment) return setError('Escolha o equipamento.');
     setError('');
     setSaving(true);
-    const message = await onSubmit({ name: name.trim(), muscle_group: muscleGroup, equipment, muscles });
+    const message = await onSubmit({ name: name.trim(), muscle_group: muscleGroup, equipment, is_unilateral: unilateral, muscles });
     setSaving(false);
     if (message) setError(message);
   };
@@ -69,6 +70,14 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
 
       <ChoiceGroup label="Grupo muscular" options={MUSCLE_GROUPS} value={muscleGroup} onChange={setMuscleGroup} />
       <ChoiceGroup label="Equipamento" options={EQUIPMENT} value={equipment} onChange={setEquipment} />
+
+      <label className={styles.toggle}>
+        <input type="checkbox" checked={unilateral} onChange={e => setUnilateral(e.target.checked)} />
+        <span>
+          Unilateral (um lado de cada vez)
+          <small>No treino, cada série tem carga e reps da esquerda e da direita</small>
+        </span>
+      </label>
 
       <fieldset className={styles.field}>
         <legend className={styles.label}>Músculos <small>opcional</small></legend>

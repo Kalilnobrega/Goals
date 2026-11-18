@@ -8,7 +8,7 @@ from app.models import User
 from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, Plan
 from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema
 from .auth import get_current_user
-from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
+from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item, series_key
 from .fitness_plans import active_plan, workout_muscles
 from .fitness_stats import completed_facts, weight_records
 from .fitness_progress import BODY_WEIGHT, body_points, find_goal, serialize_goal
@@ -26,7 +26,7 @@ def active_summary(user: User, db: Session) -> dict | None:
     if not workout_session:
         return None
     total_sets = (
-        db.query(func.count(SetEntry.id))
+        db.query(func.count(func.distinct(series_key())))
         .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
         .filter(SessionExercise.session_id == workout_session.id)
         .scalar()

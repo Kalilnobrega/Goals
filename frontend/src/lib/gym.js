@@ -242,3 +242,38 @@ export function muscleSets(entries) {
 }
 
 export const formatSets = (value) => `${formatKg(Math.round(value * 10) / 10)} ${value === 1 ? 'série' : 'séries'}`;
+
+export const SIDE_LABEL = { left: 'E', right: 'D' };
+export const SIDE_NAME = { left: 'Esquerda', right: 'Direita' };
+
+export const seriesCount = (sets) => new Set(sets.map(entry => (entry.side ? `p${entry.position}` : `s${entry.id}`))).size;
+
+export function renumberSets(sets) {
+  const counters = {};
+  return sets.map(entry => {
+    const key = entry.side ?? 'both';
+    counters[key] = (counters[key] ?? 0) + 1;
+    return { ...entry, position: counters[key] };
+  });
+}
+
+export const nextPosition = (sets, side = null) => sets.filter(entry => (entry.side ?? null) === side).length + 1;
+
+export function seriesRows(sets) {
+  const pairs = new Map();
+  const rows = [];
+  sets.forEach(entry => {
+    if (!entry.side) {
+      rows.push({ key: `s${entry.id}`, position: entry.position, entry });
+      return;
+    }
+    let row = pairs.get(entry.position);
+    if (!row) {
+      row = { key: `p${entry.position}`, position: entry.position, left: null, right: null };
+      pairs.set(entry.position, row);
+      rows.push(row);
+    }
+    row[entry.side] = entry;
+  });
+  return rows.sort((a, b) => a.position - b.position);
+}

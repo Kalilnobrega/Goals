@@ -47,6 +47,17 @@ const METRICS = [
     unit: 'kg',
   },
   {
+    key: 'sides',
+    label: 'Esquerda × direita',
+    value: p => p.left_max_weight_kg,
+    compare: p => p.right_max_weight_kg,
+    has: points => points.some(p => p.left_max_weight_kg != null && p.right_max_weight_kg != null),
+    format: kg,
+    axis: formatKg,
+    detail: p => (p.right_max_weight_kg != null ? `Esquerda · direita ${kg(p.right_max_weight_kg)}` : 'Esquerda'),
+    unit: 'kg',
+  },
+  {
     key: 'reps',
     label: 'Repetições',
     value: p => p.max_reps,
@@ -57,6 +68,39 @@ const METRICS = [
     unit: 'reps',
   },
 ];
+
+function sideStrength(point) {
+  const useOneRm = point.left_estimated_1rm_kg != null && point.right_estimated_1rm_kg != null;
+  return useOneRm
+    ? { left: point.left_estimated_1rm_kg, right: point.right_estimated_1rm_kg, metric: '1RM estimado' }
+    : { left: point.left_max_weight_kg, right: point.right_max_weight_kg, metric: 'carga máxima' };
+}
+
+function Balance({ points }) {
+  const paired = points.filter(p => p.left_max_weight_kg != null && p.right_max_weight_kg != null);
+  if (!paired.length) return null;
+  const now = sideStrength(paired.at(-1));
+  const strong = Math.max(now.left, now.right);
+  const gap = strong ? Math.round((Math.abs(now.left - now.right) / strong) * 100) : 0;
+  const weaker = now.left < now.right ? 'Esquerda' : 'Direita';
+  const before = paired.length > 1 ? sideStrength(paired[0]) : null;
+  const gapBefore = before && Math.max(before.left, before.right)
+    ? Math.round((Math.abs(before.left - before.right) / Math.max(before.left, before.right)) * 100)
+    : null;
+
+  return (
+    <section className={styles.balance} aria-label="Equilíbrio entre os lados">
+      <span className={styles.balanceTitle}>Esquerda × direita</span>
+      <span className={styles.balanceValue}>
+        {gap < 3 ? 'Lados equilibrados' : `${weaker} ${gap}% mais fraca`}
+      </span>
+      <span className={styles.balanceNote}>
+        E {kg(now.left)} · D {kg(now.right)} de {now.metric} no último treino
+        {gapBefore !== null && gapBefore !== gap && ` · diferença era ${gapBefore}% no primeiro`}
+      </span>
+    </section>
+  );
+}
 
 function bestOf(points, pick) {
   return points.reduce((best, p) => {
@@ -213,8 +257,17 @@ export default function ExerciseProgressPage() {
               axisFormat={metric.axis}
               label={`${metric.label} de ${data.name} por treino`}
               target={metric.key === 'weight' ? data.goal?.target_kg ?? null : null}
+              compare={metric.compare ? {
+                mainLabel: 'Esquerda',
+                label: 'Direita',
+                points: points
+                  .filter(p => metric.compare(p) != null)
+                  .map(p => ({ key: p.session_id, time: new Date(p.completed_at).getTime(), value: metric.compare(p) })),
+              } : null}
             />
           </section>
+
+          <Balance points={points} />
 
           <TargetGoal
             goal={data.goal}

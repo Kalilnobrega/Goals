@@ -19,6 +19,7 @@ const toItem = (row) => ({
   reps_min: String(row.reps_min),
   reps_max: row.reps_max ? String(row.reps_max) : '',
   rest_seconds: row.rest_seconds ?? null,
+  unilateral: row.unilateral ?? null,
 });
 
 const toPayload = (name, description, items) => ({
@@ -30,6 +31,7 @@ const toPayload = (name, description, items) => ({
     reps_min: Number(item.reps_min),
     reps_max: item.reps_max ? Number(item.reps_max) : null,
     rest_seconds: item.rest_seconds,
+    unilateral: item.unilateral,
   })),
 });
 
@@ -91,7 +93,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), exercise, target_sets: 3, reps_min: '10', reps_max: '', rest_seconds: null })),
+      ...selected.map(exercise => ({ key: newKey(), exercise, target_sets: 3, reps_min: '10', reps_max: '', rest_seconds: null, unilateral: null })),
     ]);
     setPickerOpen(false);
     setError('');
@@ -251,6 +253,14 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                             ))}
                           </select>
                         </label>
+                        <button
+                          type="button"
+                          className={`${styles.sideToggle} ${(item.unilateral ?? item.exercise.is_unilateral) ? styles.sideToggleOn : ''}`}
+                          aria-pressed={!!(item.unilateral ?? item.exercise.is_unilateral)}
+                          onClick={() => updateItem(item.key, { unilateral: !(item.unilateral ?? item.exercise.is_unilateral) })}
+                        >
+                          E/D <span>{(item.unilateral ?? item.exercise.is_unilateral) ? 'lado a lado' : 'dois lados juntos'}</span>
+                        </button>
                       </div>
                     </li>
                   )}

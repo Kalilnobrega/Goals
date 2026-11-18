@@ -9,7 +9,7 @@ const DAY = 86400000;
 
 const shortDate = (time) => new Date(time).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
 
-export default function ProgressChart({ points, format, axisFormat = format, label, target = null }) {
+export default function ProgressChart({ points, format, axisFormat = format, label, target = null, compare = null }) {
   const ref = useRef(null);
   const lineRef = useRef(null);
   const [width, setWidth] = useState(0);
@@ -22,7 +22,7 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
     return () => observer.disconnect();
   }, []);
 
-  const values = [...points.map(p => p.value), ...(target !== null ? [target] : [])];
+  const values = [...points.map(p => p.value), ...(compare?.points ?? []).map(p => p.value), ...(target !== null ? [target] : [])];
   const low = Math.min(...values);
   const high = Math.max(...values);
   const margin = (high - low) * 0.1 || Math.max(Math.abs(high) * 0.05, 1);
@@ -30,8 +30,9 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
   const yMin = ticks[0];
   const yMax = ticks[ticks.length - 1];
 
-  const first = points[0].time;
-  const last = points[points.length - 1].time;
+  const times = [...points, ...(compare?.points ?? [])].map(p => p.time);
+  const first = Math.min(...times);
+  const last = Math.max(...times);
   const single = last - first < DAY / 2;
   const plotW = Math.max(width - PAD.left - PAD.right, 1);
   const plotH = HEIGHT - PAD.top - PAD.bottom;
@@ -41,7 +42,7 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
 
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.time)},${y(p.value)}`).join(' ');
   const area = points.length > 1
-    ? `${path} L${x(last)},${PAD.top + plotH} L${x(first)},${PAD.top + plotH} Z`
+    ? `${path} L${x(points[points.length - 1].time)},${PAD.top + plotH} L${x(points[0].time)},${PAD.top + plotH} Z`
     : '';
 
   useLayoutEffect(() => {
@@ -112,6 +113,16 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
 
           {area && <path d={area} className={styles.area} />}
           {points.length > 1 && <path key={`line-${points.length}`} ref={lineRef} d={path} className={styles.line} />}
+          {compare?.points.length > 1 && (
+            <path
+              key={`compare-${compare.points.length}`}
+              d={compare.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.time)},${y(p.value)}`).join(' ')}
+              className={styles.compareLine}
+            />
+          )}
+          {compare?.points.map(p => (
+            <circle key={`c-${p.key}`} cx={x(p.time)} cy={y(p.value)} r={3.5} className={styles.compareDot} />
+          ))}
 
           {current && (
             <line x1={x(current.time)} x2={x(current.time)} y1={PAD.top} y2={PAD.top + plotH} className={styles.crosshair} />
@@ -127,6 +138,13 @@ export default function ProgressChart({ points, format, axisFormat = format, lab
             />
           ))}
         </svg>
+      )}
+
+      {compare && (
+        <div className={styles.legend} aria-hidden="true">
+          <span><i className={styles.legendMain} /> {compare.mainLabel}</span>
+          <span><i className={styles.legendCompare} /> {compare.label}</span>
+        </div>
       )}
 
       {current && (

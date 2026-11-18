@@ -13,6 +13,7 @@ class Exercise(Base):
     name = Column(String(60), nullable=False)
     muscle_group = Column(String(20), nullable=False)
     equipment = Column(String(20), nullable=False)
+    is_unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     muscles = relationship(
@@ -72,6 +73,7 @@ class WorkoutExercise(Base):
     reps_min = Column(Integer, nullable=False)
     reps_max = Column(Integer, nullable=True)
     rest_seconds = Column(Integer, nullable=True)
+    unilateral = Column(Boolean, nullable=True)
 
     exercise = relationship("Exercise", lazy="joined")
 
@@ -124,10 +126,11 @@ class SessionExercise(Base):
     rest_seconds = Column(Integer, nullable=True)
     muscles = Column(JSON, nullable=True)
     note = Column(String(200), nullable=True)
+    unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     sets = relationship(
         "SetEntry",
-        order_by="SetEntry.position",
+        order_by="(SetEntry.position, SetEntry.id)",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
@@ -148,6 +151,7 @@ class SetEntry(Base):
     reps = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False)
     client_id = Column(String(36), nullable=True)
+    side = Column(String(5), nullable=True)
 
 
 class BodyWeightEntry(Base):

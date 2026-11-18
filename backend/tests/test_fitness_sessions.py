@@ -230,7 +230,7 @@ def test_previous_performance_comes_from_last_completed_session(client, library,
     second = start(client, headers, workout["id"])
 
     bench, legs = second["exercises"]
-    assert bench["previous"] == [{"weight_kg": 60.0, "reps": 10}, {"weight_kg": 60.0, "reps": 9}]
+    assert bench["previous"] == [{"weight_kg": 60.0, "reps": 10, "side": None}, {"weight_kg": 60.0, "reps": 9, "side": None}]
     assert bench["previous_at"] is not None
     assert legs["previous"] == []
     assert legs["previous_at"] is None
@@ -606,3 +606,74 @@ def test_session_exercise_note_is_saved_and_shown_next_time(client, library, ana
 
     cleared = client.patch(f"/fitness/session-exercises/{following['exercises'][0]['id']}", json={"note": "   "}, headers=headers).json()
     assert cleared["exercises"][0]["note"] is None
+
+
+
+def log_side(client, headers, item_id, weight, reps, side):
+    response = client.post(
+        f"/fitness/session-exercises/{item_id}/sets", json={"weight_kg": weight, "reps": reps, "side": side}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_unilateral_sets_pair_by_side_and_count_as_one_series(client, library, ana, db_session):
+    from app.fitness_models import Exercise
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    session = start(client, headers, workout["id"])
+    assert session["exercises"][0]["unilateral"] is False
+    bench_id = session["exercises"][0]["id"]
+
+    data = client.patch(f"/fitness/session-exercises/{bench_id}", json={"unilateral": True}, headers=headers).json()
+    assert data["exercises"][0]["unilateral"] is True
+
+    log_side(client, headers, bench_id, 25, 12, "left")
+    log_side(client, headers, bench_id, 22.5, 10, "right")
+    right = log_side(client, headers, bench_id, 22.5, 9, "right")
+    assert right["position"] == 2
+    left = log_side(client, headers, bench_id, 25, 11, "left")
+    assert left["position"] == 2
+
+    current = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()
+    sets = current["exercises"][0]["sets"]
+    assert [(s["position"], s["side"]) for s in sets] == [(1, "left"), (1, "right"), (2, "right"), (2, "left")]
+    assert current["total_sets"] == 2
+    assert client.patch(f"/fitness/session-exercises/{bench_id}", json={"unilateral": False}, headers=headers).status_code == 409
+
+    client.delete(f"/fitness/sets/{sets[0]['id']}", headers=headers)
+    after = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"][0]["sets"]
+    assert sorted((s["position"], s["side"]) for s in after) == [(1, "left"), (1, "right"), (2, "right")]
+
+    finish(client, headers, session["id"])
+    history = client.get("/fitness/sessions", headers=headers).json()["items"][0]
+    assert history["total_sets"] == 2
+
+    stored = client.get(f"/fitness/workouts/{workout['id']}", headers=headers).json()
+    assert stored["exercises"][0]["unilateral"] is True
+    following = start(client, headers, workout["id"])
+    assert following["exercises"][0]["unilateral"] is True
+    assert {p["side"] for p in following["exercises"][0]["previous"]} == {"left", "right"}
+
+    progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["points"][0]
+    assert progress["sets"] == 2
+    assert progress["left_max_weight_kg"] == 25.0
+    assert progress["right_max_weight_kg"] == 22.5
+
+
+def test_unilateral_exercises_start_unilateral(client, ana, db_session):
+    from app.fitness_models import Exercise
+    _, headers = ana
+    exercise = Exercise(slug="extensora-uni", name="Extensora unilateral", muscle_group="quads", equipment="machine", is_unilateral=True)
+    db_session.add(exercise)
+    db_session.commit()
+    session = start(client, headers)
+    data = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": exercise.id}, headers=headers).json()
+    assert data["exercises"][0]["unilateral"] is True
+
+    created = client.post(
+        "/fitness/exercises",
+        json={"name": "Remada serrote", "muscle_group": "back", "equipment": "dumbbell", "is_unilateral": True},
+        headers=headers,
+    ).json()
+    assert created["is_unilateral"] is True
