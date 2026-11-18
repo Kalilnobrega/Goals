@@ -51,7 +51,7 @@ export default function SegmentTabs({ tabs, label }) {
   }, [activeIndex, label]);
 
   return (
-    <nav className={styles.tabs} aria-label={label} ref={navRef}>
+    <nav className={styles.tabs} aria-label={label} ref={navRef} data-segment-tabs="">
       <span className={styles.indicator} ref={indicatorRef} aria-hidden="true" />
       {tabs.map(({ href, label: text }) => {
         const current = pathname === href;

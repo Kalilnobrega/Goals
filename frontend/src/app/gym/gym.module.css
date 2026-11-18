@@ -48,13 +48,17 @@
   animation: gymRise var(--dur-slow) var(--ease-out) backwards;
 }
 
-:where(.main) :where(:global(.page-frame) > * > :nth-child(2)) { animation-delay: 40ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(3)) { animation-delay: 80ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(4)) { animation-delay: 120ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(5)) { animation-delay: 160ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(6)) { animation-delay: 200ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(7)) { animation-delay: 240ms; }
-:where(.main) :where(:global(.page-frame) > * > :nth-child(n + 8)) { animation-delay: 280ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(2)) { animation-delay: 0ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(3)) { animation-delay: 40ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(4)) { animation-delay: 80ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(5)) { animation-delay: 120ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(6)) { animation-delay: 160ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(7)) { animation-delay: 200ms; }
+:where(.main) :where(:global(.page-frame) > * > :nth-child(n + 8)) { animation-delay: 240ms; }
+
+:where(.main) :where(:global(.page-frame) > * > :is(:first-child, [data-segment-tabs])) {
+  animation: none;
+}
 
 @keyframes gymRise {
   from {
