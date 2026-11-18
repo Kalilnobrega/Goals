@@ -633,8 +633,19 @@ class StatsAllTimeSchema(BaseModel):
     records: StatsAllTimeRecordsSchema | None
 
 
+class StatsActivityDaySchema(BaseModel):
+    date: date
+    sessions: int
+    sets: int
+    minutes: int
+    volume_kg: float
+    workouts: list[str]
+
+
 class StatsSchema(BaseModel):
     period: str
+    plan_id: int | None = None
+    activity: list[StatsActivityDaySchema] = []
     start: date
     end: date
     bucket: str

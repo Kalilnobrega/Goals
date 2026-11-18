@@ -229,3 +229,40 @@ def test_stats_progress_average_is_empty_without_repeats(client, library, ana, d
     assert data["progress_average"] == {"load_pct": None, "reps_pct": None, "exercises": 0}
     assert data["rep_progressions"] == []
     assert data["workouts"][0]["progress_pct"] is None
+
+
+def test_stats_activity_days_for_the_heatmap(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    train(client, headers, db_session, workout["id"], [[(60, 10), (60, 10)]], at(3), minutes=45)
+    train(client, headers, db_session, workout["id"], [[(60, 10)]], at(3, hour=18), minutes=30)
+    train(client, headers, db_session, workout["id"], [[(60, 10)]], at(400))
+
+    activity = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["activity"]
+    assert activity == [{
+        "date": (today_br() - timedelta(days=3)).isoformat(),
+        "sessions": 2,
+        "sets": 3,
+        "minutes": 75,
+        "volume_kg": 1800.0,
+        "workouts": ["Treino A", "Treino A"],
+    }]
+
+
+def test_stats_filter_by_plan_keeps_only_its_fichas(client, library, ana, bruno, db_session):
+    _, headers = ana
+    _, bruno_headers = bruno
+    upper = make_workout(client, headers, library, name="Upper")
+    other = make_workout(client, headers, library, name="Outra")
+    plan = client.post("/fitness/plans", json={"name": "Treino 1", "days": [{"weekday": 0, "workout_id": upper["id"]}]}, headers=headers).json()
+    train(client, headers, db_session, upper["id"], [[(60, 10)]], at(5))
+    train(client, headers, db_session, other["id"], [[(60, 10)]], at(4))
+
+    everything = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()
+    filtered = client.get("/fitness/stats", params={"period": "4w", "plan_id": plan["id"]}, headers=headers).json()
+    assert everything["summary"]["sessions"] == 2
+    assert filtered["summary"]["sessions"] == 1
+    assert filtered["plan_id"] == plan["id"]
+    assert [w["name"] for w in filtered["workouts"]] == ["Upper"]
+    assert len(filtered["activity"]) == 1
+    assert client.get("/fitness/stats", params={"plan_id": plan["id"]}, headers=bruno_headers).status_code == 404

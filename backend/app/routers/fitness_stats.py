@@ -10,6 +10,7 @@ from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkout
 from app.fitness_muscles import muscle_credit
 from .auth import get_current_user
 from .fitness import get_own_workout
+from .fitness_plans import get_own_plan
 from .fitness_progress import estimated_1rm
 from .fitness_sessions import COMPLETED, aware
 
@@ -330,11 +331,15 @@ def all_time_records(everything: list[dict]):
 @fitness_stats_router.get("/stats", response_model=StatsSchema)
 def get_stats(
     period: str = Query(default="3m", pattern="^(4w|3m|6m|1y|all)$"),
+    plan_id: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     today = today_br()
     everything = completed_facts(user, db)
+    if plan_id is not None:
+        plan_workouts = {day.workout_id for day in get_own_plan(plan_id, user, db).days}
+        everything = [s for s in everything if s["workout_id"] in plan_workouts]
     first_day = everything[0]["day"] if everything else today
     if period == "all":
         start = first_day
@@ -368,6 +373,8 @@ def get_stats(
 
     return {
         "period": period,
+        "plan_id": plan_id,
+        "activity": activity_days(everything, today),
         "start": start,
         "end": today,
         "bucket": "month" if by_month else "week",
@@ -405,6 +412,27 @@ def get_stats(
             "records": all_time_records(everything),
         },
     }
+
+
+HEATMAP_DAYS = 371
+
+
+def activity_days(sessions: list[dict], today: date) -> list[dict]:
+    since = today - timedelta(days=HEATMAP_DAYS - 1)
+    days: dict[date, dict] = {}
+    for s in sessions:
+        if s["day"] < since:
+            continue
+        day = days.setdefault(s["day"], {"date": s["day"], "sessions": 0, "sets": 0, "minutes": 0.0, "volume_kg": 0.0, "workouts": []})
+        day["sessions"] += 1
+        day["sets"] += s["sets"]
+        day["minutes"] += s["minutes"]
+        day["volume_kg"] += s["volume"]
+        day["workouts"].append(s["name"])
+    return [
+        {**day, "minutes": round(day["minutes"]), "volume_kg": round(day["volume_kg"], 1)}
+        for day in sorted(days.values(), key=lambda d: d["date"])
+    ]
 
 
 def exercise_key(e: dict):
