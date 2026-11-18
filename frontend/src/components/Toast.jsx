@@ -53,11 +53,7 @@ export function ToastProvider({ children }) {
   const nextId = useRef(0);
   const pathname = usePathname();
   const gym = pathname === '/gym' || pathname.startsWith('/gym/');
-  const regionClass = [
-    styles.region,
-    gym ? `${gymTheme.theme} ${styles.gym}` : '',
-    pathname.startsWith('/gym/session/') ? styles.gymSession : '',
-  ].join(' ');
+  const regionClass = gym ? `${styles.region} ${gymTheme.theme} ${styles.gym}` : styles.region;
 
   const dismiss = useCallback((id) => {
     setToasts(prev => prev.map(t => (t.id === id ? { ...t, leaving: true } : t)));
