@@ -3,13 +3,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Play, Plus, Zap, Scale, ChevronLeft, ChevronRight, Flame, CalendarDays, Check, Moon, ArrowLeftRight,
+  Play, Plus, Zap, Scale, ChevronLeft, ChevronRight, Flame, CalendarDays, Check, Moon, ArrowLeftRight, AlertCircle,
 } from 'lucide-react';
 import { getUserName } from '../../lib/auth';
-import { getFitnessOverview, getWeek, peekCache } from '../../lib/api';
+import { getFitnessOverview, getWeek, logBodyWeight, peekCache } from '../../lib/api';
 import {
-  addDays, daysAgo, formatDay, formatDelta, formatDuration, formatKg, formatVolume, mondayOf, muscleLabel, plural, weekdayOf,
+  addDays, apiError, daysAgo, formatDay, formatDelta, formatDuration, formatKg, formatVolume, mondayOf, muscleLabel, parseDay, plural, weekdayOf,
 } from '../../lib/gym';
+import { useToast } from '../../components/Toast';
+import BodyWeightForm from '../../components/gym/BodyWeightForm';
 import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../components/gym/useStartSession';
 import { useStartWorkout } from '../../components/gym/StartWorkout';
@@ -434,35 +436,80 @@ function Week({ data }) {
   );
 }
 
-function BodyWeight({ body }) {
-  if (!body) {
-    return (
-      <Link href="/gym/progress/body" className={styles.tile}>
-        <span className={styles.tileIcon}><Scale size={20} /></span>
-        <span className={styles.tileText}>
-          <span className={styles.tileTitle}>Registrar peso</span>
-          <span className={styles.tileMeta}>Acompanhe seu peso corporal ao longo do tempo</span>
-        </span>
-        <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-      </Link>
-    );
-  }
+const STALE_DAYS = 7;
+const DAY_MS = 86400000;
+
+function BodyWeight({ body, today, onSaved }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+
+  const save = async (data) => {
+    try {
+      await logBodyWeight(data);
+      toast('Peso registrado');
+      setOpen(false);
+      onSaved();
+      return null;
+    } catch (err) {
+      return apiError(err, 'Não foi possível salvar o peso.');
+    }
+  };
+
+  const age = body ? Math.round((parseDay(today) - parseDay(body.measured_on)) / DAY_MS) : null;
+  const stale = age !== null && age > STALE_DAYS;
+  const monthDays = body?.month_from_on ? Math.round((parseDay(body.measured_on) - parseDay(body.month_from_on)) / DAY_MS) : null;
+  const tone = (value) => (value < 0 ? styles.weightDown : value > 0 ? styles.weightUp : '');
 
   return (
-    <Link href="/gym/progress/body" className={styles.tile}>
-      <span className={styles.tileIcon}><Scale size={20} /></span>
-      <span className={styles.tileText}>
-        <span className={styles.tileLabel}>Peso corporal · {formatDay(body.measured_on)}</span>
-        <span className={styles.tileTitle}>{formatKg(body.weight_kg)} kg</span>
-        {body.change_kg !== null && (
-          <span className={styles.tileMeta}>{formatDelta(body.change_kg)} desde {formatDay(body.previous_on)}</span>
+    <section className={`${styles.weightCard} ${stale ? styles.weightStale : ''}`}>
+      <Link href="/gym/progress/body" className={styles.weightMain}>
+        <span className={styles.tileIcon}><Scale size={20} /></span>
+        {body ? (
+          <span className={styles.tileText}>
+            <span className={styles.tileLabel}>Peso corporal · {formatDay(body.measured_on)}</span>
+            <span className={styles.tileTitle}>{formatKg(body.weight_kg)} kg</span>
+            {body.month_change_kg !== null && (
+              <span className={`${styles.weightMonth} ${tone(body.month_change_kg)}`}>
+                {formatDelta(body.month_change_kg)} em {monthDays} dias
+              </span>
+            )}
+            {body.change_kg !== null && (
+              <span className={styles.tileMeta}>{formatDelta(body.change_kg)} desde {formatDay(body.previous_on)}</span>
+            )}
+          </span>
+        ) : (
+          <span className={styles.tileText}>
+            <span className={styles.tileTitle}>Peso corporal</span>
+            <span className={styles.tileMeta}>Acompanhe seu peso ao longo do tempo</span>
+          </span>
         )}
-      </span>
-      {body.recent.length > 1 && (
-        <Sparkline values={body.recent.map(point => point.weight_kg)} relative className={styles.tileSpark} />
+        {body?.recent.length > 1 && (
+          <Sparkline values={body.recent.map(point => point.weight_kg)} relative className={styles.tileSpark} />
+        )}
+        <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
+      </Link>
+
+      {stale && (
+        <p className={styles.weightAlert}>
+          <AlertCircle size={15} aria-hidden="true" /> Última pesagem há {age} dias
+        </p>
       )}
-      <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-    </Link>
+
+      <button type="button" className={stale || !body ? styles.weightLogStrong : styles.weightLog} onClick={() => setOpen(true)}>
+        <Plus size={17} strokeWidth={2.4} /> {body ? 'Registrar peso' : 'Registrar primeiro peso'}
+      </button>
+
+      <GymSheet open={open} onClose={close} title="Registrar peso">
+        {open && (
+          <BodyWeightForm
+            compact
+            takenDays={new Set((body?.recent ?? []).map(point => point.measured_on))}
+            onSubmit={save}
+          />
+        )}
+      </GymSheet>
+    </section>
   );
 }
 
@@ -521,7 +568,7 @@ export default function GymHomePage() {
 
           <RecentRecords records={data.recent_records} />
 
-          <BodyWeight body={data.body_weight} />
+          <BodyWeight body={data.body_weight} today={data.today} onSaved={fetchOverview} />
         </>
       )}
       {sheet}
