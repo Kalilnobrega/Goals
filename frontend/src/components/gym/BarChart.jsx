@@ -5,6 +5,7 @@ import styles from './BarChart.module.css';
 
 const HEIGHT = 180;
 const PAD = { top: 12, right: 8, bottom: 24, left: 40 };
+const MAX_BAR = 28;
 
 export default function BarChart({ bars, format, axisFormat = format, label }) {
   const ref = useRef(null);
@@ -25,7 +26,7 @@ export default function BarChart({ bars, format, axisFormat = format, label }) {
   const plotH = HEIGHT - PAD.top - PAD.bottom;
   const slot = plotW / bars.length;
   const gap = Math.min(4, slot * 0.25);
-  const barW = Math.max(slot - gap, 1);
+  const barW = Math.min(Math.max(slot - gap, 1), MAX_BAR);
   const y = v => PAD.top + plotH - (v / top) * plotH;
   const labelEvery = Math.ceil(bars.length / Math.max(Math.floor(plotW / 44), 1));
 
@@ -70,7 +71,7 @@ export default function BarChart({ bars, format, axisFormat = format, label }) {
             </g>
           ))}
           {bars.map((bar, i) => {
-            const x = PAD.left + slot * i + gap / 2;
+            const x = PAD.left + slot * i + (slot - barW) / 2;
             const h = bar.value > 0 ? Math.max(plotH - (y(bar.value) - PAD.top), 3) : 0;
             return (
               <g key={bar.key}>
