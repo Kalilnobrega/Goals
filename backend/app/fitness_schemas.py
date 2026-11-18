@@ -385,6 +385,12 @@ class OverviewRecordSchema(BaseModel):
     date: date
 
 
+class OverviewMuscleMapSchema(BaseModel):
+    muscle: str
+    done_sets: float
+    planned_sets: float | None
+
+
 class OverviewMuscleSchema(BaseModel):
     muscle_group: str
     done_sets: int
@@ -426,6 +432,7 @@ class OverviewSchema(BaseModel):
     workout_count: int
     body_weight: OverviewBodyWeightSchema | None
     muscles_week: list[OverviewMuscleSchema] = []
+    muscle_map: list[OverviewMuscleMapSchema] = []
     recent_records: list[OverviewRecordSchema] = []
 
 

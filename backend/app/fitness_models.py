@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, JSON, text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, JSON, case, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -17,7 +17,10 @@ class Exercise(Base):
 
     muscles = relationship(
         "ExerciseMuscle",
-        order_by="(ExerciseMuscle.role, ExerciseMuscle.id)",
+        order_by=lambda: (
+            case({"primary": 0, "secondary": 1}, value=ExerciseMuscle.role, else_=2),
+            ExerciseMuscle.id,
+        ),
         cascade="all, delete-orphan",
         lazy="selectin",
     )

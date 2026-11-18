@@ -43,6 +43,7 @@ def session_facts(workout_session: WorkoutSession) -> dict:
             "exercise_id": item.exercise_id,
             "name": item.exercise_name,
             "muscle_group": item.muscle_group,
+            "muscles": item.muscles or [],
             "sets": len(item.sets),
             "reps": sum(reps for _, reps in weights),
             "volume": sum(weight * reps for weight, reps in weights),

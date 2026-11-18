@@ -96,3 +96,26 @@ def test_session_keeps_a_snapshot_of_the_muscles(client, ana):
     other = create(client, headers, [{"muscle": "lats", "role": "primary"}], name="Puxada máquina", group="back").json()
     added = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": other["id"]}, headers=headers).json()
     assert added["exercises"][1]["muscles"] == [{"muscle": "lats", "role": "primary"}]
+
+
+def test_auxiliary_counts_a_quarter_set():
+    incline = [
+        {"muscle": "chest_upper", "role": "primary"},
+        {"muscle": "chest_mid", "role": "secondary"},
+        {"muscle": "delts_front", "role": "secondary"},
+        {"muscle": "triceps_lateral", "role": "auxiliary"},
+    ]
+    assert muscle_credit(incline) == {"chest_upper": 1.0, "chest_mid": 0.5, "delts_front": 0.5, "triceps_lateral": 0.25}
+    assert group_credit(incline) == {"chest": 1.0, "shoulders": 0.5, "triceps": 0.25}
+
+
+def test_muscles_are_returned_by_role_order(client, ana):
+    _, headers = ana
+    muscles = [
+        {"muscle": "triceps_lateral", "role": "auxiliary"},
+        {"muscle": "chest_mid", "role": "secondary"},
+        {"muscle": "chest_upper", "role": "primary"},
+    ]
+    response = create(client, headers, muscles)
+    assert response.status_code == 200, response.text
+    assert [m["role"] for m in response.json()["muscles"]] == ["primary", "secondary", "auxiliary"]

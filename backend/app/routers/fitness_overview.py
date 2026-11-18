@@ -11,6 +11,7 @@ from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item
 from .fitness_plans import active_plan, workout_muscles
 from .fitness_stats import completed_facts, weight_records
+from app.fitness_muscles import muscle_credit
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -174,6 +175,26 @@ def muscles_week(plan: Plan | None, everything: list[dict], today: date) -> list
     return sorted(items, key=lambda i: (-(i["planned_sets"] or 0), -i["done_sets"], -(i["days_since"] or 0), i["muscle_group"]))
 
 
+def muscle_map(plan: Plan | None, everything: list[dict], today: date) -> list[dict]:
+    monday = today - timedelta(days=today.weekday())
+    done: dict[str, float] = {}
+    for s in everything:
+        if not monday <= s["day"] <= today:
+            continue
+        for e in s["exercises"]:
+            for muscle, credit in muscle_credit(e["muscles"]).items():
+                done[muscle] = done.get(muscle, 0.0) + credit * e["sets"]
+    planned: dict[str, float] = {}
+    for day in plan.days if plan else []:
+        for item in day.workout.exercises:
+            for muscle, credit in muscle_credit(item.exercise.muscle_list()).items():
+                planned[muscle] = planned.get(muscle, 0.0) + credit * item.target_sets
+    return [
+        {"muscle": muscle, "done_sets": round(done.get(muscle, 0.0), 1), "planned_sets": round(planned[muscle], 1) if plan and muscle in planned else (0.0 if plan else None)}
+        for muscle in sorted(set(done) | set(planned))
+    ]
+
+
 def body_weight_summary(user: User, db: Session) -> dict | None:
     entries = (
         db.query(BodyWeightEntry)
@@ -280,6 +301,7 @@ def get_overview(user: User = Depends(get_current_user), db: Session = Depends(g
         "workout_count": workout_count,
         "body_weight": body_weight_summary(user, db),
         "muscles_week": muscles_week(plan, everything, today),
+        "muscle_map": muscle_map(plan, everything, today),
         "recent_records": weight_records(everything, lambda s: s["day"] >= today - timedelta(days=13))[:3],
     }
 

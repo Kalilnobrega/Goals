@@ -55,9 +55,9 @@ MuscleKey = Literal[
     "gastrocnemius", "soleus",
 ]
 
-MuscleRole = Literal["primary", "secondary"]
+MuscleRole = Literal["primary", "secondary", "auxiliary"]
 
-ROLE_CREDIT = {"primary": 1.0, "secondary": 0.5}
+ROLE_CREDIT = {"primary": 1.0, "secondary": 0.5, "auxiliary": 0.25}
 
 
 def muscle_credit(muscles: list[dict]) -> dict[str, float]:

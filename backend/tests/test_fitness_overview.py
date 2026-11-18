@@ -288,3 +288,30 @@ def test_overview_recent_records(client, library, ana, db_session):
 
     records = overview(client, headers)["recent_records"]
     assert [(r["name"], r["weight_kg"], r["previous_kg"]) for r in records] == [("Supino reto", 75.0, 70.0)]
+
+
+def test_overview_muscle_map_counts_secondary_as_half(client, ana, db_session):
+    _, headers = ana
+    bench = client.post(
+        "/fitness/exercises",
+        json={"name": "Supino teste", "muscle_group": "chest", "equipment": "barbell", "muscles": [
+            {"muscle": "chest_mid", "role": "primary"},
+            {"muscle": "triceps_lateral", "role": "secondary"},
+        ]},
+        headers=headers,
+    ).json()
+    workout = client.post(
+        "/fitness/workouts",
+        json={"name": "Peito", "exercises": [{"exercise_id": bench["id"], "target_sets": 4, "reps_min": 8}]},
+        headers=headers,
+    ).json()
+    client.post(
+        "/fitness/plans",
+        json={"name": "Treino 1", "days": [{"weekday": today_br().weekday(), "workout_id": workout["id"]}]},
+        headers=headers,
+    )
+    train(client, headers, workout["id"], [(60, 10), (60, 10), (60, 8)])
+
+    muscles = {m["muscle"]: m for m in overview(client, headers)["muscle_map"]}
+    assert muscles["chest_mid"] == {"muscle": "chest_mid", "done_sets": 3.0, "planned_sets": 4.0}
+    assert muscles["triceps_lateral"] == {"muscle": "triceps_lateral", "done_sets": 1.5, "planned_sets": 2.0}
