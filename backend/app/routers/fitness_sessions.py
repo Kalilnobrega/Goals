@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.dates import br_day_start_utc
 from app.models import User
 from app.fitness_models import Exercise, Workout, WorkoutExercise, WorkoutSession, SessionExercise, SetEntry
 from app.fitness_schemas import (
@@ -255,6 +256,11 @@ def history_item(workout_session: WorkoutSession, exercise_count, total_sets, vo
 def list_sessions(
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0),
+    q: str | None = Query(default=None, max_length=60),
+    workout_id: int | None = None,
+    muscle_group: str | None = Query(default=None, max_length=20),
+    date_from: date | None = None,
+    date_to: date | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -262,6 +268,36 @@ def list_sessions(
     completed = db.query(WorkoutSession).filter(
         WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED
     )
+    term = (q or "").strip()
+    if term:
+        pattern = f"%{term}%"
+        has_exercise = (
+            db.query(SessionExercise.id)
+            .filter(
+                SessionExercise.session_id == WorkoutSession.id,
+                SessionExercise.exercise_name.ilike(pattern),
+                SessionExercise.sets.any(),
+            )
+            .exists()
+        )
+        completed = completed.filter(or_(WorkoutSession.name.ilike(pattern), has_exercise))
+    if workout_id is not None:
+        completed = completed.filter(WorkoutSession.workout_id == workout_id)
+    if muscle_group:
+        trained_group = (
+            db.query(SessionExercise.id)
+            .filter(
+                SessionExercise.session_id == WorkoutSession.id,
+                SessionExercise.muscle_group == muscle_group,
+                SessionExercise.sets.any(),
+            )
+            .exists()
+        )
+        completed = completed.filter(trained_group)
+    if date_from:
+        completed = completed.filter(WorkoutSession.started_at >= br_day_start_utc(date_from))
+    if date_to:
+        completed = completed.filter(WorkoutSession.started_at < br_day_start_utc(date_to + timedelta(days=1)))
     rows = (
         completed.with_entities(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume)
         .outerjoin(stats, stats.c.session_id == WorkoutSession.id)

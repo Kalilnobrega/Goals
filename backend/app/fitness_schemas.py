@@ -523,6 +523,23 @@ class StatsProgressionSchema(BaseModel):
     sessions: int
 
 
+class StatsRepProgressionSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    first_reps: int
+    last_reps: int
+    change_reps: int
+    change_pct: float
+    sessions: int
+
+
+class StatsProgressAverageSchema(BaseModel):
+    load_pct: float | None
+    reps_pct: float | None
+    exercises: int
+
+
 class StatsRecordSchema(BaseModel):
     exercise_id: int | None
     name: str
@@ -540,6 +557,7 @@ class StatsWorkoutSchema(BaseModel):
     avg_minutes: int
     avg_volume_kg: float
     volume_change_pct: float | None
+    progress_pct: float | None = None
     last_done_on: date
 
 
@@ -586,6 +604,8 @@ class StatsSchema(BaseModel):
     most_done: list[StatsExerciseUsageSchema]
     progressions: list[StatsProgressionSchema]
     declines: list[StatsProgressionSchema]
+    rep_progressions: list[StatsRepProgressionSchema] = []
+    progress_average: StatsProgressAverageSchema | None = None
     records: list[StatsRecordSchema]
     workouts: list[StatsWorkoutSchema]
     all_time: StatsAllTimeSchema
@@ -633,3 +653,40 @@ class WeekSchema(OverviewWeekSchema):
 
 class FitnessProfileSchema(BaseModel):
     body_type: Literal["male", "female"]
+
+
+class SessionPerformanceSchema(BaseModel):
+    session_id: int
+    date: date
+    weight_kg: float
+    reps: int
+    volume_kg: float
+    estimated_1rm_kg: float | None
+    sets: int
+
+
+class SessionExerciseInsightSchema(BaseModel):
+    item_id: int
+    current: SessionPerformanceSchema
+    previous: SessionPerformanceSchema | None
+
+
+class PreviousSessionSchema(BaseModel):
+    id: int
+    date: date
+    minutes: int
+    sets: int
+    volume_kg: float
+
+
+class MuscleSetsSchema(BaseModel):
+    muscle: str
+    sets: float
+
+
+class SessionInsightsSchema(BaseModel):
+    previous_session: PreviousSessionSchema | None
+    minutes: int
+    exercises: list[SessionExerciseInsightSchema]
+    records: list[StatsRecordSchema]
+    muscle_sets: list[MuscleSetsSchema]

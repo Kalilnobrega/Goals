@@ -1,12 +1,13 @@
 from collections import defaultdict
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import BRT, today_br, to_br_date
 from app.models import User
 from app.fitness_models import WorkoutSession
-from app.fitness_schemas import StatsSchema
+from app.fitness_schemas import StatsSchema, SessionInsightsSchema
+from app.fitness_muscles import muscle_credit
 from .auth import get_current_user
 from .fitness_progress import estimated_1rm
 from .fitness_sessions import COMPLETED, aware
@@ -40,6 +41,7 @@ def session_facts(workout_session: WorkoutSession) -> dict:
         estimates = [e for e in (estimated_1rm(entry.weight_kg, entry.reps) for entry in item.sets) if e is not None]
         top_weight, top_reps = max(weights, key=lambda pair: (pair[0], pair[1]))
         exercises.append({
+            "item_id": item.id,
             "exercise_id": item.exercise_id,
             "name": item.exercise_name,
             "muscle_group": item.muscle_group,
@@ -186,9 +188,22 @@ def completed_facts(user, db) -> list[dict]:
     ]
 
 
+def load_value(e: dict):
+    return e["e1rm"] if e["e1rm"] is not None else (e["top_weight"] or None)
+
+
+def pct(first: float, last: float) -> float:
+    return round((last - first) / first * 100, 1)
+
+
+def mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 1) if values else None
+
+
 def exercise_stats(period: list[dict], everything: list[dict]):
     usage: dict[tuple, dict] = {}
     timeline: dict[tuple, list] = defaultdict(list)
+    reps_timeline: dict[tuple, list] = defaultdict(list)
     for s in period:
         for e in s["exercises"]:
             key = (e["exercise_id"], e["name"])
@@ -199,9 +214,10 @@ def exercise_stats(period: list[dict], everything: list[dict]):
             item["sessions"] += 1
             item["sets"] += e["sets"]
             item["volume_kg"] += e["volume"]
-            value = e["e1rm"] if e["e1rm"] is not None else (e["top_weight"] or None)
+            value = load_value(e)
             if value:
                 timeline[key].append((s["completed_at"], value, e["e1rm"] is not None))
+            reps_timeline[key].append((s["completed_at"], e["max_reps"]))
     for item in usage.values():
         item["volume_kg"] = round(item["volume_kg"], 1)
     most_done = sorted(usage.values(), key=lambda i: (-i["sets"], -i["sessions"], i["name"]))[:8]
@@ -221,15 +237,39 @@ def exercise_stats(period: list[dict], everything: list[dict]):
             "first_kg": round(first, 1),
             "last_kg": round(last, 1),
             "change_kg": round(last - first, 1),
-            "change_pct": round((last - first) / first * 100, 1),
+            "change_pct": pct(first, last),
             "sessions": len(points),
         })
     gains = sorted([p for p in progressions if p["change_kg"] > 0], key=lambda p: -p["change_pct"])[:5]
     drops = sorted([p for p in progressions if p["change_kg"] < 0], key=lambda p: p["change_pct"])[:3]
 
+    rep_progressions = []
+    for key, points in reps_timeline.items():
+        if len(points) < 2:
+            continue
+        points.sort(key=lambda p: p[0])
+        first, last = points[0][1], points[-1][1]
+        rep_progressions.append({
+            "exercise_id": key[0],
+            "name": key[1],
+            "muscle_group": usage[key]["muscle_group"],
+            "first_reps": first,
+            "last_reps": last,
+            "change_reps": last - first,
+            "change_pct": pct(first, last),
+            "sessions": len(points),
+        })
+    rep_gains = sorted([p for p in rep_progressions if p["change_reps"] > 0], key=lambda p: -p["change_pct"])[:5]
+
+    average = {
+        "load_pct": mean([p["change_pct"] for p in progressions]),
+        "reps_pct": mean([p["change_pct"] for p in rep_progressions]),
+        "exercises": len({p["name"] for p in progressions} | {p["name"] for p in rep_progressions}),
+    }
+
     period_ids = {s["id"] for s in period}
     records = weight_records(everything, lambda s: s["id"] in period_ids)
-    return most_done, gains, drops, records[:10]
+    return most_done, gains, drops, records[:10], rep_gains, average
 
 
 def workout_stats(period: list[dict]):
@@ -240,13 +280,21 @@ def workout_stats(period: list[dict]):
     for (workout_id, name), sessions in grouped.items():
         sessions.sort(key=lambda s: s["completed_at"])
         first, last = sessions[0]["volume"], sessions[-1]["volume"]
+        loads: dict = defaultdict(list)
+        for s in sessions:
+            for e in s["exercises"]:
+                value = load_value(e)
+                if value:
+                    loads[e["exercise_id"] or e["name"]].append(value)
+        changes = [pct(values[0], values[-1]) for values in loads.values() if len(values) > 1]
         items.append({
             "workout_id": workout_id,
             "name": name,
             "sessions": len(sessions),
             "avg_minutes": round(sum(s["minutes"] for s in sessions) / len(sessions)),
             "avg_volume_kg": round(sum(s["volume"] for s in sessions) / len(sessions), 1),
-            "volume_change_pct": round((last - first) / first * 100, 1) if len(sessions) > 1 and first else None,
+            "volume_change_pct": pct(first, last) if len(sessions) > 1 and first else None,
+            "progress_pct": mean(changes),
             "last_done_on": sessions[-1]["day"],
         })
     return sorted(items, key=lambda i: (-i["sessions"], i["name"]))
@@ -315,7 +363,7 @@ def get_stats(
             if low <= s["hour"] < high:
                 day_parts[name] += 1
     current_streak, best_streak = week_streaks(everything, today)
-    most_done, gains, drops, records = exercise_stats(in_period, everything)
+    most_done, gains, drops, records, rep_gains, average = exercise_stats(in_period, everything)
 
     return {
         "period": period,
@@ -344,6 +392,8 @@ def get_stats(
         "most_done": most_done,
         "progressions": gains,
         "declines": drops,
+        "rep_progressions": rep_gains,
+        "progress_average": average,
         "records": records,
         "workouts": workout_stats(in_period),
         "all_time": {
@@ -353,4 +403,85 @@ def get_stats(
             "first_session_on": everything[0]["day"] if everything else None,
             "records": all_time_records(everything),
         },
+    }
+
+
+def exercise_key(e: dict):
+    return e["exercise_id"] or e["name"]
+
+
+def performance(s: dict, e: dict) -> dict:
+    return {
+        "session_id": s["id"],
+        "date": s["day"],
+        "weight_kg": e["top_weight"],
+        "reps": e["top_reps"],
+        "volume_kg": round(e["volume"], 1),
+        "estimated_1rm_kg": e["e1rm"],
+        "sets": e["sets"],
+    }
+
+
+@fitness_stats_router.get("/sessions/{session_id}/insights", response_model=SessionInsightsSchema)
+def get_session_insights(
+    session_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout_session = (
+        db.query(WorkoutSession)
+        .filter(WorkoutSession.id == session_id, WorkoutSession.user_id == user.id)
+        .first()
+    )
+    if not workout_session:
+        raise HTTPException(status_code=404, detail="Treino não encontrado")
+    if workout_session.status != COMPLETED:
+        raise HTTPException(status_code=409, detail="O treino ainda não foi finalizado.")
+
+    everything = completed_facts(user, db)
+    current = next(s for s in everything if s["id"] == session_id)
+    before = sorted(
+        [s for s in everything if s["started_at"] < current["started_at"] and s["id"] != session_id],
+        key=lambda s: s["started_at"],
+        reverse=True,
+    )
+
+    same = (
+        (lambda s: s["workout_id"] == current["workout_id"])
+        if current["workout_id"] is not None
+        else (lambda s: s["workout_id"] is None and s["name"] == current["name"])
+    )
+    previous = next((s for s in before if same(s)), None)
+
+    exercises = []
+    for e in current["exercises"]:
+        earlier = None
+        for s in before:
+            match = next((x for x in s["exercises"] if exercise_key(x) == exercise_key(e)), None)
+            if match:
+                earlier = performance(s, match)
+                break
+        exercises.append({
+            "item_id": e["item_id"],
+            "current": performance(current, e),
+            "previous": earlier,
+        })
+
+    muscle_sets: dict[str, float] = {}
+    for e in current["exercises"]:
+        for muscle, credit in muscle_credit(e["muscles"]).items():
+            muscle_sets[muscle] = muscle_sets.get(muscle, 0.0) + credit * e["sets"]
+
+    return {
+        "previous_session": {
+            "id": previous["id"],
+            "date": previous["day"],
+            "minutes": round(previous["minutes"]),
+            "sets": previous["sets"],
+            "volume_kg": round(previous["volume"], 1),
+        } if previous else None,
+        "minutes": round(current["minutes"]),
+        "exercises": exercises,
+        "records": weight_records(everything, lambda s: s["id"] == session_id),
+        "muscle_sets": [{"muscle": m, "sets": round(v, 2)} for m, v in sorted(muscle_sets.items(), key=lambda kv: -kv[1])],
     }

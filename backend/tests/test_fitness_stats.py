@@ -196,3 +196,36 @@ def test_stats_is_private(client, library, ana, bruno, db_session, period):
     data = stats(client, bruno_headers, period)
     assert data["summary"]["sessions"] == 0
     assert data["all_time"]["sessions"] == 0
+
+
+def test_stats_rep_progressions_and_averages(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    train(client, headers, db_session, workout["id"], [[(60, 8)], [(0, 10)]], at(20))
+    train(client, headers, db_session, workout["id"], [[(66, 10)], [(0, 15)]], at(5))
+
+    data = stats(client, headers, "4w")
+    reps = {p["name"]: p for p in data["rep_progressions"]}
+    assert reps["Supino reto"]["first_reps"] == 8
+    assert reps["Supino reto"]["last_reps"] == 10
+    assert reps["Supino reto"]["change_pct"] == 25.0
+    assert reps["Leg press"]["change_reps"] == 5
+    assert reps["Leg press"]["change_pct"] == 50.0
+
+    bench = next(p for p in data["progressions"] if p["name"] == "Supino reto")
+    average = data["progress_average"]
+    assert average["load_pct"] == bench["change_pct"]
+    assert average["reps_pct"] == 37.5
+    assert average["exercises"] == 2
+
+    ficha = data["workouts"][0]
+    assert ficha["progress_pct"] == bench["change_pct"]
+
+
+def test_stats_progress_average_is_empty_without_repeats(client, library, ana, db_session):
+    _, headers = ana
+    train(client, headers, db_session, make_workout(client, headers, library)["id"], [[(60, 10)]], at(3))
+    data = stats(client, headers, "4w")
+    assert data["progress_average"] == {"load_pct": None, "reps_pct": None, "exercises": 0}
+    assert data["rep_progressions"] == []
+    assert data["workouts"][0]["progress_pct"] is None
