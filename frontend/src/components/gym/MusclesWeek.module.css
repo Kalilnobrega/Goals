@@ -132,3 +132,35 @@
     transition: none;
   }
 }
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gym-border);
+}
+
+.bodyTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bodyHint {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.selection {
+  min-height: 1.4em;
+  text-align: center;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.selection strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}

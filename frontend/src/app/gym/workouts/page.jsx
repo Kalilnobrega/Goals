@@ -6,6 +6,8 @@ import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural } from '../../../lib/gym';
 import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../../components/gym/useStartSession';
+import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
+import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import styles from './page.module.css';
 
@@ -13,6 +15,7 @@ export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
   const { begin, starting, sheet } = useStartSession();
+  const [bodyType] = useBodyType();
 
   const fetchWorkouts = useCallback(() => {
     setLoadError(false);
@@ -81,6 +84,8 @@ export default function WorkoutsPage() {
                       {muscles.length > 0 && ` · ${muscles.slice(0, 3).join(', ')}`}
                     </span>
                     {workout.exercises.length > 0 && (
+                      <span className={styles.previewWrap}>
+                      <WorkoutBodyMini exercises={workout.exercises} sex={bodyType} />
                       <span className={styles.preview}>
                         {workout.exercises.slice(0, 3).map(item => (
                           <span key={item.id} className={styles.previewRow}>
@@ -91,6 +96,7 @@ export default function WorkoutsPage() {
                         {workout.exercises.length > 3 && (
                           <span className={styles.previewMore}>+{workout.exercises.length - 3}</span>
                         )}
+                      </span>
                       </span>
                     )}
                   </span>

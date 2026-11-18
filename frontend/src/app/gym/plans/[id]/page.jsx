@@ -8,6 +8,7 @@ import { apiError, plural } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import PlanWeek from '../../../../components/gym/PlanWeek';
 import PlanSummary, { summarizePlan } from '../../../../components/gym/PlanSummary';
+import PlanBodyMap, { planMuscleSets } from '../../../../components/gym/PlanBodyMap';
 import styles from './plan.module.css';
 
 export default function PlanDetailPage() {
@@ -105,6 +106,8 @@ export default function PlanDetailPage() {
         <h2 id="plan-week-title" className={styles.cardTitle}>Semana</h2>
         <PlanWeek week={week} linkDays />
       </section>
+
+      {summary.fichas.length > 0 && <PlanBodyMap sets={planMuscleSets(weekIds, byId)} />}
 
       {summary.fichas.length > 0 ? (
         <PlanSummary summary={summary} />

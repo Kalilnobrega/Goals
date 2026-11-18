@@ -51,7 +51,7 @@ function fillFor(value) {
   return `color-mix(in srgb, var(--gym-accent) ${strength}%, var(--gym-surface-3))`;
 }
 
-function Figure({ view, sex, values, selected, onSelect, describe }) {
+function Figure({ view, sex, values, colors, selected, onSelect, describe }) {
   const shape = SEX_SHAPE[sex] ?? SEX_SHAPE.male;
   const neutral = view === 'front' ? NEUTRAL_FRONT : NEUTRAL_BACK;
   const muscles = view === 'front' ? FRONT : BACK;
@@ -68,7 +68,7 @@ function Figure({ view, sex, values, selected, onSelect, describe }) {
         d={item.d}
         transform={placement(item, mirrored)}
         className={`${styles.muscle} ${selected === item.key ? styles.selected : ''} ${onSelect ? styles.clickable : ''}`}
-        style={{ fill: fillFor(values[item.key] ?? 0) }}
+        style={{ fill: colors?.[item.key] ?? fillFor(values[item.key] ?? 0) }}
         onClick={onSelect ? () => onSelect(item.key) : undefined}
         role={interactive ? 'button' : undefined}
         tabIndex={interactive ? 0 : undefined}
@@ -101,11 +101,11 @@ function Figure({ view, sex, values, selected, onSelect, describe }) {
   );
 }
 
-export default function BodyMap({ values = {}, sex = 'male', selected = null, onSelect, describe, compact = false }) {
+export default function BodyMap({ values = {}, colors, sex = 'male', selected = null, onSelect, describe, compact = false, size }) {
   return (
-    <div className={`${styles.body} ${compact ? styles.compact : ''}`}>
-      <Figure view="front" sex={sex} values={values} selected={selected} onSelect={onSelect} describe={describe} />
-      <Figure view="back" sex={sex} values={values} selected={selected} onSelect={onSelect} describe={describe} />
+    <div className={`${styles.body} ${compact ? styles.compact : ''} ${size === 'mini' ? styles.mini : ''}`}>
+      <Figure view="front" sex={sex} values={values} colors={colors} selected={selected} onSelect={onSelect} describe={describe} />
+      <Figure view="back" sex={sex} values={values} colors={colors} selected={selected} onSelect={onSelect} describe={describe} />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { Check, Target } from 'lucide-react';
-import { muscleLabel, plural } from '../../lib/gym';
+import { formatSets, muscleLabel, muscleName, plural, volumeBand } from '../../lib/gym';
+import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import styles from './MusclesWeek.module.css';
 
 const VISIBLE = 6;
@@ -13,9 +14,31 @@ function since(days) {
   return `há ${days} dias`;
 }
 
-export default function MusclesWeek({ muscles, hasPlan }) {
+function bodyColors(map, hasPlan) {
+  const colors = {};
+  map.forEach(m => {
+    if (hasPlan && m.planned_sets) {
+      const ratio = Math.min(m.done_sets / m.planned_sets, 1);
+      colors[m.muscle] = `color-mix(in srgb, var(--gym-accent) ${Math.round(18 + ratio * 82)}%, var(--gym-surface-3))`;
+    } else if (m.done_sets > 0) {
+      colors[m.muscle] = volumeBand(m.done_sets).color;
+    }
+  });
+  return colors;
+}
+
+function describeMuscle(entry, hasPlan) {
+  if (!entry) return 'sem séries nesta semana';
+  if (hasPlan && entry.planned_sets) return `${formatSets(entry.done_sets)} de ${formatSets(entry.planned_sets)} planejadas`;
+  return entry.done_sets ? `${formatSets(entry.done_sets)} nesta semana` : 'sem séries nesta semana';
+}
+
+export default function MusclesWeek({ muscles, muscleMap = [], hasPlan }) {
   const [expanded, setExpanded] = useState(false);
-  if (!muscles.length) return null;
+  const [selected, setSelected] = useState(null);
+  const [bodyType, setBodyType] = useBodyType();
+  if (!muscles.length && !muscleMap.length) return null;
+  const byMuscle = new Map(muscleMap.map(m => [m.muscle, m]));
 
   const maxDone = Math.max(...muscles.map(m => m.done_sets), 1);
   const visible = expanded ? muscles : muscles.slice(0, VISIBLE);
@@ -31,6 +54,28 @@ export default function MusclesWeek({ muscles, hasPlan }) {
           <span className={styles.hint}>{completed} de {planned.length} no alvo</span>
         )}
       </div>
+
+      {muscleMap.length > 0 && (
+        <div className={styles.body}>
+          <div className={styles.bodyTop}>
+            <span className={styles.bodyHint}>{hasPlan ? 'Mais forte = mais perto da meta' : 'Cor pelo volume da semana'}</span>
+            <BodyTypeToggle value={bodyType} onChange={setBodyType} />
+          </div>
+          <BodyMap
+            colors={bodyColors(muscleMap, hasPlan)}
+            sex={bodyType}
+            compact
+            selected={selected}
+            onSelect={key => setSelected(current => (current === key ? null : key))}
+            describe={key => describeMuscle(byMuscle.get(key), hasPlan)}
+          />
+          <p className={styles.selection} aria-live="polite">
+            {selected
+              ? <><strong>{muscleName(selected)}</strong> · {describeMuscle(byMuscle.get(selected), hasPlan)}</>
+              : 'Toque num músculo para ver as séries'}
+          </p>
+        </div>
+      )}
 
       <ul className={styles.list}>
         {visible.map(m => {

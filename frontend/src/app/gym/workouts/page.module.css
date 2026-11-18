@@ -240,13 +240,21 @@
   font-size: 0.88rem;
 }
 
-.preview {
+.previewWrap {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--gym-border);
+}
+
+.preview {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .previewRow {

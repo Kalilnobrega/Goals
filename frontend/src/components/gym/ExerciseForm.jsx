@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { MUSCLE_GROUPS, EQUIPMENT } from '../../lib/gym';
+import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES } from '../../lib/gym';
+import { MusclePicker } from './ExerciseMuscles';
 import styles from './ExerciseForm.module.css';
 
 function ChoiceGroup({ label, options, value, onChange }) {
@@ -29,6 +30,13 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? null);
   const [equipment, setEquipment] = useState(initial?.equipment ?? null);
+  const [muscles, setMuscles] = useState(initial?.muscles ?? []);
+
+  const changeMuscles = (next) => {
+    setMuscles(next);
+    const firstPrimary = next.find(m => m.role === 'primary');
+    if (!muscleGroup && firstPrimary) setMuscleGroup(MUSCLES[firstPrimary.muscle].group);
+  };
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -39,7 +47,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
     if (!equipment) return setError('Escolha o equipamento.');
     setError('');
     setSaving(true);
-    const message = await onSubmit({ name: name.trim(), muscle_group: muscleGroup, equipment });
+    const message = await onSubmit({ name: name.trim(), muscle_group: muscleGroup, equipment, muscles });
     setSaving(false);
     if (message) setError(message);
   };
@@ -61,6 +69,11 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
 
       <ChoiceGroup label="Grupo muscular" options={MUSCLE_GROUPS} value={muscleGroup} onChange={setMuscleGroup} />
       <ChoiceGroup label="Equipamento" options={EQUIPMENT} value={equipment} onChange={setEquipment} />
+
+      <fieldset className={styles.field}>
+        <legend className={styles.label}>Músculos <small>opcional</small></legend>
+        <MusclePicker value={muscles} onChange={changeMuscles} />
+      </fieldset>
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

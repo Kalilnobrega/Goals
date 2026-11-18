@@ -1,12 +1,14 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Search, X, ChevronRight, SearchX } from 'lucide-react';
+import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
 import { MUSCLE_GROUPS, muscleLabel, equipmentLabel, normalize, apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
 import ExerciseForm from '../../../components/gym/ExerciseForm';
+import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
+import sheetStyles from '../../../components/gym/sheet.module.css';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import styles from './page.module.css';
 
@@ -199,14 +201,10 @@ export default function ExercisesPage() {
               );
               return (
                 <li key={exercise.id}>
-                  {exercise.is_custom ? (
-                    <button type="button" className={`${styles.item} ${styles.itemButton}`} onClick={() => setSheet({ exercise })}>
-                      {meta}
-                      <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <div className={styles.item}>{meta}</div>
-                  )}
+                  <button type="button" className={`${styles.item} ${styles.itemButton}`} onClick={() => setSheet({ exercise, mode: 'detail' })}>
+                    {meta}
+                    <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
+                  </button>
                 </li>
               );
             })}
@@ -218,8 +216,25 @@ export default function ExercisesPage() {
         <Plus size={26} strokeWidth={2.4} />
       </button>
 
-      <GymSheet open={!!sheet} onClose={closeSheet} title={sheet?.exercise ? 'Editar exercício' : 'Novo exercício'}>
-        {sheet && (
+      <GymSheet
+        open={!!sheet}
+        onClose={closeSheet}
+        title={sheet?.mode === 'detail' ? sheet.exercise.name : sheet?.exercise ? 'Editar exercício' : 'Novo exercício'}
+      >
+        {sheet?.mode === 'detail' && (
+          <div className={sheetStyles.stack}>
+            <p className={sheetStyles.text}>
+              {muscleLabel(sheet.exercise.muscle_group)} · {equipmentLabel(sheet.exercise.equipment)}{sheet.exercise.is_custom ? ' · seu' : ''}
+            </p>
+            <ExerciseMuscles muscles={sheet.exercise.muscles ?? []} />
+            {sheet.exercise.is_custom && (
+              <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: sheet.exercise, mode: 'edit' })}>
+                <Pencil size={18} /> Editar exercício
+              </button>
+            )}
+          </div>
+        )}
+        {sheet && sheet.mode !== 'detail' && (
           <ExerciseForm
             key={sheet.exercise?.id ?? 'new'}
             initial={sheet.exercise ?? (sheet.initialName ? { name: sheet.initialName } : null)}

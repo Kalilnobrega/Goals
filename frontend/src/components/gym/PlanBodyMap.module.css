@@ -1,0 +1,70 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  color: var(--gym-text);
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.selection {
+  min-height: 1.4em;
+  text-align: center;
+  color: var(--gym-muted);
+  font-size: 0.86rem;
+}
+
+.selection strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.note {
+  color: var(--gym-faint);
+  font-size: 0.75rem;
+  text-align: center;
+}

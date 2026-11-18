@@ -23,6 +23,22 @@
   max-width: 130px;
 }
 
+.mini {
+  gap: 2px;
+}
+
+.mini .svg {
+  max-width: 46px;
+}
+
+.mini .caption {
+  display: none;
+}
+
+.mini .muscle {
+  stroke-width: 2.5;
+}
+
 .neutral {
   fill: var(--gym-surface-2);
 }

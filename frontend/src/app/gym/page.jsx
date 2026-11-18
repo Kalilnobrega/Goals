@@ -514,7 +514,7 @@ export default function GymHomePage() {
 
           <Week data={data} />
 
-          <MusclesWeek muscles={data.muscles_week} hasPlan={!!data.plan} />
+          <MusclesWeek muscles={data.muscles_week} muscleMap={data.muscle_map ?? []} hasPlan={!!data.plan} />
 
           <RecentRecords records={data.recent_records} />
 

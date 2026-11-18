@@ -1,0 +1,115 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hint {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.selection {
+  min-height: 1.4em;
+  text-align: center;
+  color: var(--gym-muted);
+  font-size: 0.86rem;
+}
+
+.selection strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.lists {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listTitle {
+  margin-bottom: 6px;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.chipPrimary {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.chipButton {
+  cursor: pointer;
+}
+
+.empty {
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+}

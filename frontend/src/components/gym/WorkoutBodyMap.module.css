@@ -1,0 +1,51 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.hint {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.selection {
+  min-height: 1.4em;
+  text-align: center;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.selection strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.mini {
+  display: block;
+  width: 96px;
+  flex-shrink: 0;
+}

@@ -217,3 +217,27 @@ export const MUSCLES = {
 };
 
 export const muscleName = (key) => MUSCLES[key]?.label ?? key;
+
+export const VOLUME_BANDS = [
+  { key: 'low', label: 'Volume baixo', short: 'Baixo', color: 'color-mix(in srgb, var(--gym-accent) 40%, var(--gym-surface-3))' },
+  { key: 'medium', label: 'Volume médio', short: 'Médio', color: 'var(--gym-accent)' },
+  { key: 'high', label: 'Volume alto', short: 'Alto', color: '#f59e0b' },
+];
+
+export const volumeBand = (sets) => (sets < 10 ? VOLUME_BANDS[0] : sets <= 20 ? VOLUME_BANDS[1] : VOLUME_BANDS[2]);
+
+const ROLE_CREDIT = { primary: 1, secondary: 0.5, auxiliary: 0.25 };
+
+export const roleCredit = (role) => ROLE_CREDIT[role] ?? 0;
+
+export function muscleSets(entries) {
+  const totals = {};
+  entries.forEach(({ muscles, sets }) => {
+    const credit = {};
+    (muscles ?? []).forEach(m => { credit[m.muscle] = Math.max(credit[m.muscle] ?? 0, roleCredit(m.role)); });
+    Object.entries(credit).forEach(([muscle, value]) => { totals[muscle] = (totals[muscle] ?? 0) + value * sets; });
+  });
+  return totals;
+}
+
+export const formatSets = (value) => `${formatKg(Math.round(value * 10) / 10)} ${value === 1 ? 'série' : 'séries'}`;

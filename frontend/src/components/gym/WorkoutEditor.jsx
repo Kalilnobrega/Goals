@@ -6,6 +6,7 @@ import { muscleLabel, equipmentLabel, plural, REST_OPTIONS, formatRest } from '.
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import GymSheet from './GymSheet';
 import ExercisePicker from './ExercisePicker';
+import WorkoutBodyMap from './WorkoutBodyMap';
 import styles from './WorkoutEditor.module.css';
 
 let nextKey = 0;
@@ -265,6 +266,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
           </button>
         )}
       </section>
+
+      <WorkoutBodyMap exercises={items} />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 
