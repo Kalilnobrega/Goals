@@ -7,7 +7,6 @@ import {
   addDays, formatDay, formatDuration, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
   MUSCLE_GROUPS,
 } from '../../../lib/gym';
-import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import GymSheet from '../../../components/gym/GymSheet';
 import sheetStyles from '../../../components/gym/sheet.module.css';
@@ -176,8 +175,6 @@ export default function HistoryPage() {
       </header>
 
       <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
-
-      <ActiveSessionBanner />
 
       <div className={styles.searchBox}>
         <Search size={18} className={styles.searchIcon} aria-hidden="true" />

@@ -108,7 +108,7 @@
   text-decoration: none;
   position: fixed;
   right: 16px;
-  bottom: calc(var(--gym-tabbar-h) + 16px + env(safe-area-inset-bottom));
+  bottom: calc(var(--gym-tabbar-h) + 16px + var(--gym-pill-space, 0px) + env(safe-area-inset-bottom));
   z-index: 40;
   width: 60px;
   height: 60px;
@@ -121,7 +121,7 @@
   box-shadow: var(--gym-accent-glow);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--dur-instant) var(--ease-out);
+  transition: transform var(--dur-instant) var(--ease-out), bottom var(--dur-base) var(--ease-out);
 }
 
 .fab:active {

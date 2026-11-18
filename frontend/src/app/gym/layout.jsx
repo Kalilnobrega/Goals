@@ -1,6 +1,7 @@
 import GymNavbar from '../../components/gym/GymNavbar';
 import ServiceWorker from '../../components/gym/ServiceWorker';
 import { StartWorkoutProvider } from '../../components/gym/StartWorkout';
+import ActiveSessionPill from '../../components/gym/ActiveSessionPill';
 import styles from './gym.module.css';
 
 export const metadata = {
@@ -34,6 +35,7 @@ export default function GymLayout({ children }) {
       <StartWorkoutProvider>
         <GymNavbar />
         <main className={styles.main}>{children}</main>
+        <ActiveSessionPill />
       </StartWorkoutProvider>
     </div>
   );

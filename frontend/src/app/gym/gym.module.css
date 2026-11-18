@@ -22,16 +22,20 @@
   color: var(--gym-text);
 }
 
+.shell:has([data-session-pill]:not([data-hidden])) {
+  --gym-pill-space: 70px;
+}
+
 .main {
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
-  padding: 20px 16px calc(var(--gym-tabbar-h) + 40px + env(safe-area-inset-bottom));
+  padding: 20px 16px calc(var(--gym-tabbar-h) + 40px + var(--gym-pill-space, 0px) + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 768px) {
   .main {
-    padding: 32px 24px 64px;
+    padding: 32px 24px calc(64px + var(--gym-pill-space, 0px));
   }
 }
 

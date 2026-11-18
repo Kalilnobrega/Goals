@@ -244,7 +244,8 @@
 .fab {
   position: fixed;
   right: 16px;
-  bottom: calc(var(--gym-tabbar-h) + 16px + env(safe-area-inset-bottom));
+  bottom: calc(var(--gym-tabbar-h) + 16px + var(--gym-pill-space, 0px) + env(safe-area-inset-bottom));
+  transition: bottom var(--dur-base) var(--ease-out);
   z-index: 40;
   width: 60px;
   height: 60px;

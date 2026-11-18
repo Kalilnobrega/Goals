@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Plus, ClipboardList } from 'lucide-react';
 import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural } from '../../../lib/gym';
-import ActiveSessionBanner from '../../../components/gym/ActiveSessionBanner';
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
@@ -40,8 +39,6 @@ export default function WorkoutsPage() {
       </header>
 
       <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
-
-      <ActiveSessionBanner />
 
       {loadError && !workouts && (
         <div className={styles.state}>

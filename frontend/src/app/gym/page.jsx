@@ -12,7 +12,6 @@ import {
 } from '../../lib/gym';
 import { useToast } from '../../components/Toast';
 import BodyWeightForm from '../../components/gym/BodyWeightForm';
-import ActiveSessionBanner from '../../components/gym/ActiveSessionBanner';
 import useStartSession from '../../components/gym/useStartSession';
 import { useStartWorkout } from '../../components/gym/StartWorkout';
 import WeekPicker from '../../components/gym/WeekPicker';
@@ -558,9 +557,7 @@ export default function GymHomePage() {
 
       {data && (
         <>
-          {data.active_session
-            ? <ActiveSessionBanner session={data.active_session} />
-            : <NextWorkout data={data} begin={begin} starting={starting} />}
+          {!data.active_session && <NextWorkout data={data} begin={begin} starting={starting} />}
 
           <Week data={data} />
 
