@@ -97,6 +97,7 @@ export default function SessionPage() {
   const carouselRef = useRef(null);
   const stripRef = useRef(null);
   const fromScroll = useRef(false);
+  const scrollTarget = useRef(null);
   const flushing = useRef(false);
   const [offline, setOffline] = useState(false);
 
@@ -430,6 +431,8 @@ export default function SessionPage() {
     const el = carouselRef.current;
     if (el) {
       fromScroll.current = true;
+      clearTimeout(scrollTarget.current?.timer);
+      scrollTarget.current = { index, timer: setTimeout(() => { scrollTarget.current = null; }, 1000) };
       el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
     }
     setCurrentId(id);
@@ -439,6 +442,14 @@ export default function SessionPage() {
 
   const handleCarouselScroll = () => {
     const el = carouselRef.current;
+    const target = scrollTarget.current;
+    if (target) {
+      if (Math.abs(el.scrollLeft - target.index * el.clientWidth) < 2) {
+        clearTimeout(target.timer);
+        scrollTarget.current = null;
+      }
+      return;
+    }
     const id = ids[Math.round(el.scrollLeft / el.clientWidth)];
     if (id && id !== currentId) {
       fromScroll.current = true;
