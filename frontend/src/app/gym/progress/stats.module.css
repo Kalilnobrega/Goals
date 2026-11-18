@@ -885,3 +885,39 @@
 .recordStatic:active {
   background: var(--gym-surface-2);
 }
+
+.cardLink {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--gym-accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.weightHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.weightValue {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.weightDiff {
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.weightGoal {
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}

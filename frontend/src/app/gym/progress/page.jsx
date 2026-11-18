@@ -4,13 +4,14 @@ import Link from 'next/link';
 import {
   Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks,
 } from 'lucide-react';
-import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, peekCache } from '../../../lib/api';
+import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, getBodyGoal, peekCache } from '../../../lib/api';
 import {
-  formatDay, formatDuration, formatKg, formatVolume, muscleLabel, parseDay, plural,
+  formatDay, formatDelta, formatDuration, formatKg, formatVolume, muscleLabel, parseDay, plural,
 } from '../../../lib/gym';
 import BarChart from '../../../components/gym/BarChart';
 import Sparkline from '../../../components/gym/Sparkline';
 import TrainingHeatmap from '../../../components/gym/TrainingHeatmap';
+import ProgressChart from '../../../components/gym/ProgressChart';
 import styles from './stats.module.css';
 
 const PERIODS = [
@@ -375,11 +376,13 @@ function useSections() {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessProgressWorkouts') ?? null);
   const [exercises, setExercises] = useState(() => peekCache('fitnessProgress') ?? null);
   const [weights, setWeights] = useState(() => peekCache('fitnessBodyWeight') ?? null);
+  const [bodyGoal, setBodyGoal] = useState(() => peekCache('fitnessBodyGoal') ?? null);
 
   useEffect(() => {
     getProgressWorkouts().then(setWorkouts).catch(() => {});
     getProgressExercises().then(setExercises).catch(() => {});
     getBodyWeights().then(setWeights).catch(() => {});
+    getBodyGoal().then(setBodyGoal).catch(() => {});
   }, []);
 
   const latest = weights?.[0];
@@ -400,7 +403,7 @@ function useSections() {
       href: '/gym/progress/body',
       icon: Scale,
       title: 'Peso corporal',
-      meta: weights ? (latest ? `${formatKg(latest.weight_kg)} kg` : 'Registrar peso') : null,
+      meta: weights ? (latest ? `${formatKg(latest.weight_kg)} kg${bodyGoal ? ` · meta ${formatKg(bodyGoal.target_kg)}` : ''}` : 'Registrar peso') : null,
     },
   ];
 }
@@ -532,6 +535,74 @@ function BestPeriods({ best }) {
         ))}
       </div>
     </>
+  );
+}
+
+const GOAL_STATUS = {
+  reached: 'Meta alcançada!',
+  on_track: 'No ritmo para a meta',
+  behind: 'Atrasado para o prazo',
+  no_trend: 'Sem avanço em direção à meta',
+  no_data: 'Registre mais pesagens para ver a previsão',
+};
+
+function BodyWeightCard({ data }) {
+  const [weights, setWeights] = useState(() => peekCache('fitnessBodyWeight') ?? null);
+  const [goal, setGoal] = useState(() => peekCache('fitnessBodyGoal') ?? null);
+
+  useEffect(() => {
+    getBodyWeights().then(setWeights).catch(() => {});
+    getBodyGoal().then(setGoal).catch(() => {});
+  }, []);
+
+  if (!weights) return null;
+  const inPeriod = weights.filter(w => w.measured_on >= data.start && w.measured_on <= data.end).reverse();
+  const link = <Link href="/gym/progress/body" className={styles.cardLink}>{weights.length ? 'Ver peso corporal' : 'Registrar peso'} <ChevronRight size={16} /></Link>;
+
+  const goalLine = goal && (
+    <p className={styles.weightGoal}>
+      Meta {kg(goal.target_kg)} · {GOAL_STATUS[goal.status]}
+    </p>
+  );
+
+  if (inPeriod.length < 2) {
+    const latest = weights[0];
+    return (
+      <Card icon={Scale} title="Peso corporal">
+        {latest && (
+          <div className={styles.weightHead}>
+            <span className={styles.weightValue}>{kg(latest.weight_kg)}</span>
+            <span className={styles.weightDiff}>em {formatDay(latest.measured_on)}</span>
+          </div>
+        )}
+        <p className={styles.empty}>
+          {weights.length
+            ? 'O gráfico aparece a partir da segunda pesagem neste período.'
+            : 'Registre seu peso para acompanhar a curva junto com os treinos.'}
+        </p>
+        {goalLine}
+        {link}
+      </Card>
+    );
+  }
+
+  const first = inPeriod[0];
+  const last = inPeriod.at(-1);
+  const series = inPeriod.map(w => ({ key: w.id, time: parseDay(w.measured_on).getTime(), value: w.weight_kg, detail: w.note }));
+  const diff = Math.round((last.weight_kg - first.weight_kg) * 10) / 10;
+
+  return (
+    <Card icon={Scale} title="Peso corporal" hint={plural(inPeriod.length, 'pesagem', 'pesagens')}>
+      <div className={styles.weightHead}>
+        <span className={styles.weightValue}>{kg(last.weight_kg)}</span>
+        <span className={styles.weightDiff}>
+          {formatDelta(diff)} desde {formatDay(first.measured_on)}
+        </span>
+      </div>
+      <ProgressChart points={series} format={kg} axisFormat={formatKg} label="Peso corporal no período" target={goal?.target_kg ?? null} />
+      {goalLine}
+      {link}
+    </Card>
   );
 }
 
@@ -700,6 +771,7 @@ export default function StatsPage() {
           <Frequency data={ready} />
           <Adherence data={ready} />
           <Timeline data={ready} />
+          <BodyWeightCard data={ready} />
           <Muscles data={ready} />
           <Progressions data={ready} />
           <RelativeStrength data={ready} />
