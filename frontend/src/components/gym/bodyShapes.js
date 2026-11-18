@@ -2,6 +2,7 @@ export const VIEW_WIDTH = 200;
 export const VIEW_HEIGHT = 430;
 
 export const ARM_ROTATION = 'rotate(13 50 119)';
+export const ARM_AXIS = 50;
 
 const HEAD = 'M100 12 C86 12 79 24 79 38 C79 54 88 64 100 64 C112 64 121 54 121 38 C121 24 114 12 100 12 Z';
 const HAND = 'M43 211 C39 219 39 231 44 238 C48 243 55 242 57 236 C59 228 58 218 56 211 Z M43 214 C37 218 34 224 35 230 C37 233 40 232 41 228 C42 224 43 220 45 216 Z';
@@ -35,8 +36,8 @@ export const FRONT = [
   { key: 'lats', zone: 'upper', d: 'M63 116 C61 126 62 138 66 148 C67 151 68 153 70 154 C69 146 69 138 70 132 C68 126 66 120 63 116 Z' },
   { key: 'biceps', zone: 'upper', part: 'arm', d: 'M55 119 C50 128 48 141 49 153 C50 160 56 163 59 159 C63 150 63 138 61 127 C60 121 57 118 55 119 Z' },
   { key: 'brachialis', zone: 'upper', part: 'arm', d: 'M50 122 C45 125 42 133 41 143 C40 152 42 159 45 161 C47 162 48 160 48 157 C46 147 46 134 50 124 C51 123 51 122 50 122 Z' },
-  { key: 'brachioradialis', zone: 'upper', part: 'arm', d: 'M44 164 C38 176 38 192 42 208 L48 210 C46 196 46 180 50 166 Z' },
-  { key: 'forearm_flexors', zone: 'upper', part: 'arm', d: 'M50 166 C47 180 47 196 49 210 L56 210 C59 196 60 180 58 166 C55 164 52 164 50 166 Z' },
+  { key: 'brachioradialis', zone: 'upper', part: 'arm', d: 'M44 164 C38 174 38 188 43 201 C44.5 205 45.5 208 46.5 210 L48.5 210 C46.5 196 46 180 50 166 Z' },
+  { key: 'forearm_flexors', zone: 'upper', part: 'arm', d: 'M50 166 C47 180 47.5 196 48.5 210 L53.5 210 C56 198 59.5 182 58 166 C55 164 52 164 50 166 Z' },
   { key: 'abs_rectus', zone: 'upper', d: 'M99 135 L90 135 C89 140 89 145 89 149 L99 149 Z' },
   { key: 'abs_rectus', zone: 'upper', d: 'M99 152 L89 152 L89 166 L99 166 Z' },
   { key: 'abs_rectus', zone: 'upper', d: 'M99 169 L89 169 L89 183 L99 183 Z' },
@@ -62,9 +63,10 @@ export const BACK = [
   { key: 'triceps_lateral', zone: 'upper', part: 'arm', d: 'M44 123 C47 121.5 50 122.5 51 125.5 C51 129 51 131.5 50.5 134 C46.5 137 44.5 150 45 163 C43.5 163 42.5 162 41.8 160 C39 149 39.5 134 44 123 Z' },
   { key: 'triceps_long', zone: 'upper', part: 'arm', d: 'M51 125.5 C53 121.5 57 121 59.5 122 C62.5 132 63 148 59.8 160 C59 162 57.5 163.5 56 163 C56.5 150 54.5 137 50.5 134 C51 131.5 51 129 51 125.5 Z' },
   { key: 'triceps_medial', zone: 'upper', part: 'arm', d: 'M45 163 C48 165 53 165 56 163 C57.5 163.5 59 162 59.8 160 C60 163 59 166 57 167.5 C52 169.5 47 169.5 43.5 167.5 C42.5 166 42 163.5 41.8 160 C42.5 162 43.5 163 45 163 Z' },
-  { key: 'forearm_extensors', zone: 'upper', part: 'arm', d: 'M44 170 C38 184 38 200 42 212 L56 212 C58 200 59 184 57 170 C53 168 48 168 44 170 Z' },
+  { key: 'forearm_extensors', zone: 'upper', part: 'arm', d: 'M44 170 C38 182 38.5 196 43.5 206 C45 209 46 211 46.5 212 L53.5 212 C56 200 59 184 57 170 C53 168 48 168 44 170 Z' },
   { key: 'glute_med', zone: 'lower', d: 'M74 188 C68 196 66 206 67 214 C74 210 80 204 86 197 C82 192 78 189 74 188 Z' },
   { key: 'glute_max', zone: 'lower', d: 'M86 197 C76 204 67 212 66 222 C66 240 75 250 87 251 C96 251 100 244 100 234 L100 201 C96 199 91 197 86 197 Z' },
+  { key: 'vastus_lateralis', zone: 'lower', d: 'M65 224 C58 240 54.5 262 55.5 284 C56 294 58.5 300 62 303 C60 290 59.5 270 62.5 255 C63.5 245 65 234 66 226 Z' },
   { key: 'biceps_femoris', zone: 'lower', d: 'M68 252 C62 266 60 288 64 302 C66 308 74 309 77 304 C75 288 76 270 79 256 C76 251 71 250 68 252 Z' },
   { key: 'semitendinosus', zone: 'lower', d: 'M80 256 C77 272 77 290 79 304 C82 309 88 309 90 303 C91 290 90 276 89 264 C87 255 83 252 80 256 Z' },
   { key: 'adductors', zone: 'lower', d: 'M89.5 253.3 C92.7 252.7 95.4 255.9 95.7 261.1 C96 268.9 94.7 275.4 92.1 279.4 C90.2 278.1 89.5 272.9 89.5 266.4 C88.9 261.1 88.9 256.6 89.5 253.3 Z' },
@@ -77,6 +79,6 @@ export const HAIR_FRONT = 'M100 8 C84 8 74 20 75 38 C76 46 78 52 80 56 C80 44 82
 export const HAIR_BACK = 'M100 8 C84 8 75 20 76 38 C77 50 86 60 100 62 C114 60 123 50 124 38 C125 20 116 8 100 8 Z M95 60 C93 70 94 80 100 86 C106 80 107 70 105 60 Z';
 
 export const SEX_SHAPE = {
-  male: { upper: 1, lower: 1, hair: false },
-  female: { upper: 0.9, lower: 1.06, hair: true },
+  male: { upper: 1.04, lower: 1, arm: 1.16, hair: false },
+  female: { upper: 0.9, lower: 1.06, arm: 1, hair: true },
 };
