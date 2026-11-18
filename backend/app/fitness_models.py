@@ -195,3 +195,11 @@ class PlanDay(Base):
     position = Column(Integer, nullable=False)
 
     workout = relationship("Workout", lazy="joined")
+
+
+class FitnessProfile(Base):
+    __tablename__ = "fitness_profiles"
+
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    body_type = Column(String(10), nullable=False, default="male")
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

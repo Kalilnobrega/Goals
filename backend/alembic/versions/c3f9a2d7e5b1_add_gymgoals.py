@@ -328,7 +328,18 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_fitness_plan_days_workout_id'), ['workout_id'], unique=False)
 
 
+    op.create_table(
+        'fitness_profiles',
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('body_type', sa.String(length=10), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('user_id'),
+    )
+
+
 def downgrade() -> None:
+    op.drop_table('fitness_profiles')
     with op.batch_alter_table('fitness_plan_days', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_fitness_plan_days_workout_id'))
         batch_op.drop_index(batch_op.f('ix_fitness_plan_days_plan_id'))

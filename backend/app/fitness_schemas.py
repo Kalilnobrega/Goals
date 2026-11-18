@@ -622,3 +622,7 @@ class WeekSchema(OverviewWeekSchema):
     today: date
     has_plan: bool
     first_session_on: date | None
+
+
+class FitnessProfileSchema(BaseModel):
+    body_type: Literal["male", "female"]

@@ -66,6 +66,7 @@ from app.routers.fitness_progress import fitness_progress_router
 from app.routers.fitness_overview import fitness_overview_router
 from app.routers.fitness_stats import fitness_stats_router
 from app.routers.fitness_plans import fitness_plans_router
+from app.routers.fitness_profile import fitness_profile_router
 
 app.include_router(auth_router)
 app.include_router(home_router)
@@ -81,3 +82,4 @@ app.include_router(fitness_progress_router)
 app.include_router(fitness_overview_router)
 app.include_router(fitness_stats_router)
 app.include_router(fitness_plans_router)
+app.include_router(fitness_profile_router)
