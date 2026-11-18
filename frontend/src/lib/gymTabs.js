@@ -5,6 +5,8 @@ import { prefetchGymTab } from './gymPrefetch';
 
 export const GYM_TAB_ORDER = ['/gym', '/gym/plans', '/gym/workouts', '/gym/exercises', '/gym/history', '/gym/progress'];
 
+const TREINOS = new Set(['/gym/plans', '/gym/workouts', '/gym/exercises', '/gym/history']);
+
 export function useGymTabNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -13,6 +15,7 @@ export function useGymTabNav() {
   const tabSlide = (href) => {
     const target = GYM_TAB_ORDER.indexOf(href);
     if (current === -1 || target === -1 || target === current) return undefined;
+    if (TREINOS.has(pathname) && TREINOS.has(href)) return undefined;
     return [target > current ? 'tab-forward' : 'tab-back'];
   };
 
