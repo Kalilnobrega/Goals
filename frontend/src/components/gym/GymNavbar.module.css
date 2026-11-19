@@ -7,7 +7,8 @@
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--gym-border);
   padding-top: env(safe-area-inset-top);
-  transition: transform var(--dur-base) var(--ease-out);
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+  will-change: transform;
 }
 
 
@@ -282,10 +283,6 @@
 }
 
 @media (max-width: 767px) {
-  .headerHidden {
-    transform: translateY(-100%);
-  }
-
   .headerInner {
     height: 52px;
   }

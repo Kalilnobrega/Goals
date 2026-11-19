@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users } from 'lucide-react';
 import { saveLastApp } from '../../lib/apps';
@@ -22,7 +22,7 @@ const SOON_MESSAGE = 'Social em construção: desafios, feed e amigos chegam em 
 
 export default function GymNavbar() {
   const pathname = usePathname();
-  const [hidden, setHidden] = useState(false);
+  const headerRef = useRef(null);
   const openStart = useStartWorkout();
   const toast = useToast();
   const announceSoon = () => toast({ tone: 'info', message: SOON_MESSAGE });
@@ -48,16 +48,44 @@ export default function GymNavbar() {
   }, []);
 
   useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const mobile = window.matchMedia('(max-width: 767px)');
     let last = window.scrollY;
+    let offset = 0;
     let frame = 0;
+    let settle = 0;
+
+    const apply = (value, animate) => {
+      offset = value;
+      const height = header.offsetHeight || 1;
+      header.style.transition = animate ? '' : 'none';
+      header.style.transform = `translateY(${-value}px)`;
+      header.style.opacity = String(1 - (value / height) * 0.6);
+      header.dataset.hidden = value >= height ? 'true' : 'false';
+    };
+
+    const snap = () => {
+      const height = header.offsetHeight;
+      const hide = window.scrollY > height && offset > height / 2;
+      apply(hide ? height : 0, true);
+    };
+
     const update = () => {
       frame = 0;
       const y = window.scrollY;
-      if (y < 64) setHidden(false);
-      else if (y > last + 8) setHidden(true);
-      else if (y < last - 8) setHidden(false);
-      if (Math.abs(y - last) > 8) last = y;
+      const delta = y - last;
+      last = y;
+      if (!mobile.matches || y <= 0) {
+        apply(0, offset !== 0);
+        return;
+      }
+      const height = header.offsetHeight;
+      apply(Math.min(height, Math.max(0, offset + delta)), false);
+      clearTimeout(settle);
+      settle = setTimeout(snap, 140);
     };
+
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
@@ -65,8 +93,9 @@ export default function GymNavbar() {
     return () => {
       window.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(frame);
+      clearTimeout(settle);
     };
-  }, []);
+  }, [pathname]);
 
   if (pathname.startsWith('/gym/session/')) return null;
 
@@ -105,7 +134,7 @@ export default function GymNavbar() {
 
   return (
     <>
-      <header className={`${styles.header} ${hidden ? styles.headerHidden : ''}`}>
+      <header ref={headerRef} className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/gym" {...linkProps('/gym')} className={styles.brand}>
             <span className={styles.brandMark}><Dumbbell size={18} strokeWidth={2.4} /></span>
