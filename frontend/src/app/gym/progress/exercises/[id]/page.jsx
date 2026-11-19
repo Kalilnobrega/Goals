@@ -133,7 +133,10 @@ function Insights({ data }) {
 
       {repRecords.length > 0 && (
         <Group icon={Repeat} title="Recorde por repetições">
-          <ul className={styles.repRecords}>
+          <ul
+            className={`${styles.repRecords} ${repRecords.length > 3 ? styles.repCarousel : ''}`}
+            style={{ '--count': Math.min(repRecords.length, 3) }}
+          >
             {repRecords.map(record => (
               <li key={record.reps}>
                 <Link href={`/gym/history/${record.session_id}`} className={styles.repRecord}>

@@ -88,7 +88,7 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
     return sorted(items, key=lambda item: item["last_at"], reverse=True)
 
 
-REP_TARGETS = [1, 3, 5, 8, 10, 12, 15]
+REP_TARGETS = list(range(1, 16))
 STAGNATION_SESSIONS = 4
 
 
