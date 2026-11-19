@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
-import { MUSCLE_GROUPS, muscleLabel, equipmentLabel, apiError } from '../../../lib/gym';
+import { MUSCLE_GROUPS, equipmentLabel, apiError, groupsLabel, exerciseGroups } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
@@ -37,7 +37,7 @@ export default function ExercisesPage() {
   const sections = useMemo(() => {
     if (muscle || (filter !== 'all' && filter !== 'mine')) return [{ key: muscle ?? filter, title: null, items: visible }];
     return MUSCLE_GROUPS
-      .map(group => ({ key: group.value, title: group.label, items: visible.filter(e => e.muscle_group === group.value) }))
+      .map(group => ({ key: group.value, title: group.label, items: visible.filter(e => exerciseGroups(e).includes(group.value)) }))
       .filter(section => section.items.length > 0);
   }, [visible, filter, muscle]);
 
@@ -171,7 +171,7 @@ export default function ExercisesPage() {
                     <span className={styles.itemText}>
                       <span className={styles.itemName}>{exercise.name}</span>
                       <span className={styles.itemMeta}>
-                        {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${muscleLabel(exercise.muscle_group)} · `}
+                        {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${groupsLabel(exercise)} · `}
                         {equipmentLabel(exercise.equipment)}
                         {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
                       </span>
@@ -207,7 +207,7 @@ export default function ExercisesPage() {
         {sheet?.mode === 'detail' && (
           <div className={sheetStyles.stack}>
             <p className={sheetStyles.text}>
-              {muscleLabel(sheet.exercise.muscle_group)} · {equipmentLabel(sheet.exercise.equipment)}{sheet.exercise.is_custom ? ' · seu' : ''}
+              {groupsLabel(sheet.exercise)} · {equipmentLabel(sheet.exercise.equipment)}{sheet.exercise.is_custom ? ' · seu' : ''}
               {sheet.exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
             <ExerciseMuscles muscles={sheet.exercise.muscles ?? []} />

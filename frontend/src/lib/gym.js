@@ -280,3 +280,17 @@ export function seriesRows(sets) {
 }
 
 export const formatSeconds = (seconds) => (seconds == null ? '—' : seconds < 60 ? `${Math.round(seconds)}s` : formatRest(Math.round(seconds)));
+
+export function exerciseGroups(exercise) {
+  const groups = [exercise.muscle_group];
+  (exercise.muscles ?? []).forEach(item => {
+    const group = MUSCLES[item.muscle]?.group;
+    if (item.role === 'primary' && group && !groups.includes(group)) groups.push(group);
+  });
+  return groups;
+}
+
+export function groupsLabel(exercise) {
+  const labels = exerciseGroups(exercise).map(muscleLabel);
+  return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} e ${labels.at(-1)}` : labels[0];
+}

@@ -3,8 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Trophy, Activity } from 'lucide-react';
 import {
-  formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleLabel,
-  muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds,
+  formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds, groupsLabel,
 } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import UnilateralTag from './UnilateralTag';
@@ -169,7 +168,7 @@ export default function SessionSummary({ session, insights }) {
               <div className={styles.itemHeader}>
                 <span className={styles.itemName}>{item.exercise_name}</span>
                 <span className={styles.itemMeta}>
-                  {muscleLabel(item.muscle_group)} · {plural(seriesCount(item.sets), 'série', 'séries')}
+                  {groupsLabel(item)} · {plural(seriesCount(item.sets), 'série', 'séries')}
                   {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}` : ''}
                   {insight?.rest_seconds ? ` · descanso ${formatSeconds(insight.rest_seconds)}` : ''}
                   {item.unilateral && <>{' '}<UnilateralTag /></>}

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Search, X, Check } from 'lucide-react';
-import { muscleLabel, equipmentLabel, plural } from '../../lib/gym';
+import { equipmentLabel, plural, groupsLabel } from '../../lib/gym';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from './ExerciseFilters';
 import UnilateralTag from './UnilateralTag';
 import styles from './ExercisePicker.module.css';
@@ -75,7 +75,7 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
                 <span className={styles.itemText}>
                   <span className={styles.itemName}>{exercise.name}</span>
                   <span className={styles.itemMeta}>
-                    {muscle ? ROLE_LABEL[roleOf(exercise)] : muscleLabel(exercise.muscle_group)} · {equipmentLabel(exercise.equipment)}
+                    {muscle ? ROLE_LABEL[roleOf(exercise)] : groupsLabel(exercise)} · {equipmentLabel(exercise.equipment)}
                     {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
                   </span>
                 </span>

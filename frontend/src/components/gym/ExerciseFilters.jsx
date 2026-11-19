@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { PersonStanding, X } from 'lucide-react';
-import { EQUIPMENT, MUSCLE_GROUPS, muscleName, normalize } from '../../lib/gym';
+import { EQUIPMENT, MUSCLE_GROUPS, exerciseGroups, muscleName, normalize } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import styles from './ExerciseFilters.module.css';
 
@@ -23,7 +23,7 @@ export function useExerciseFilters(exercises) {
     const term = normalize(query);
     const role = (exercise) => exercise.muscles?.find(m => m.muscle === muscle)?.role;
     return exercises
-      .filter(e => group === 'all' || (group === 'mine' ? e.is_custom : e.muscle_group === group))
+      .filter(e => group === 'all' || (group === 'mine' ? e.is_custom : exerciseGroups(e).includes(group)))
       .filter(e => equipment === 'all' || e.equipment === equipment)
       .filter(e => !muscle || role(e))
       .filter(e => !term || normalize(e.name).includes(term))

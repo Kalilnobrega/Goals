@@ -2,8 +2,8 @@
 import { useRef, useState } from 'react';
 import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
-  muscleLabel, sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME,
+  sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel,
 } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import styles from './SessionExerciseCard.module.css';
@@ -508,7 +508,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           <p className={styles.meta}>
             {target ? <span className={styles.target}>{target}</span> : null}
             {target ? ' · ' : ''}
-            {muscleLabel(item.muscle_group)}
+            {groupsLabel(item)}
             {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
           </p>
         {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (

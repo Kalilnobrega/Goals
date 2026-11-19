@@ -11,8 +11,8 @@ import {
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
-  apiError, muscleLabel, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition,
+  apiError, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
+  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -750,7 +750,7 @@ export default function SessionPage() {
                         <span className={s.orderText}>
                           <span className={s.orderName}>{item.exercise_name}</span>
                           <span className={s.orderMeta}>
-                            {muscleLabel(item.muscle_group)}
+                            {groupsLabel(item)}
                             {item.sets.length ? ` · ${plural(item.sets.length, 'série feita', 'séries feitas')}` : ''}
                           </span>
                         </span>

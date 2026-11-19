@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { muscleLabel, equipmentLabel, plural, REST_OPTIONS, formatRest } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel } from '../../lib/gym';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import GymSheet from './GymSheet';
 import ExercisePicker from './ExercisePicker';
@@ -195,7 +195,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                         <span className={styles.itemText}>
                           <span className={styles.itemName}>{item.exercise.name}</span>
                           <span className={styles.itemMeta}>
-                            {muscleLabel(item.exercise.muscle_group)} · {equipmentLabel(item.exercise.equipment)}
+                            {groupsLabel(item.exercise)} · {equipmentLabel(item.exercise.equipment)}
                           </span>
                         </span>
                         <button
