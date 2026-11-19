@@ -70,8 +70,13 @@
 }
 
 .target {
+  display: block;
   color: var(--gym-accent);
   font-weight: 500;
+}
+
+.metaLine {
+  display: block;
 }
 
 .restChip {

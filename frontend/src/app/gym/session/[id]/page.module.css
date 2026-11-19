@@ -11,10 +11,17 @@
 }
 
 .headerTop {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 -8px 4px;
+  margin: calc(-1 * env(safe-area-inset-top)) -8px -6px;
+  padding-top: env(safe-area-inset-top);
+  background: var(--gym-bg);
+  box-shadow: 0 0 0 100vmax var(--gym-bg);
+  clip-path: inset(-100vmax -100vmax 0);
 }
 
 .headerActions {

@@ -539,31 +539,31 @@ export default function SessionPage() {
 
   return (
     <div className={styles.page} data-session-focus="">
-      <header className={styles.header}>
-        <div className={styles.headerTop}>
-          <Link href="/gym" className={styles.iconButton} aria-label="Voltar ao início">
-            <ChevronLeft size={22} />
-          </Link>
-          <span className={styles.live}>
-            <span className={styles.dot} aria-hidden="true" />
-            <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
-          </span>
-          <div className={styles.headerActions}>
-            {ids.length > 1 && (
-              <button
-                type="button"
-                className={styles.iconButton}
-                onClick={() => saveView(view === 'focus' ? 'list' : 'focus')}
-                aria-label={view === 'focus' ? 'Ver todos os exercícios em lista' : 'Ver um exercício por vez'}
-              >
-                {view === 'focus' ? <LayoutList size={20} /> : <GalleryHorizontalEnd size={20} />}
-              </button>
-            )}
-            <button type="button" className={styles.iconButton} onClick={() => setSheet({ type: 'options' })} aria-label="Mais opções">
-              <MoreHorizontal size={20} />
+      <div className={styles.headerTop}>
+        <Link href="/gym" className={styles.iconButton} aria-label="Voltar ao início">
+          <ChevronLeft size={22} />
+        </Link>
+        <span className={styles.live}>
+          <span className={styles.dot} aria-hidden="true" />
+          <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
+        </span>
+        <div className={styles.headerActions}>
+          {ids.length > 1 && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => saveView(view === 'focus' ? 'list' : 'focus')}
+              aria-label={view === 'focus' ? 'Ver todos os exercícios em lista' : 'Ver um exercício por vez'}
+            >
+              {view === 'focus' ? <LayoutList size={20} /> : <GalleryHorizontalEnd size={20} />}
             </button>
-          </div>
+          )}
+          <button type="button" className={styles.iconButton} onClick={() => setSheet({ type: 'options' })} aria-label="Mais opções">
+            <MoreHorizontal size={20} />
+          </button>
         </div>
+      </div>
+      <header className={styles.header}>
         <h1 className={styles.title}>{session.name}</h1>
         {(pendingCount > 0 || offline) && (
           <div className={styles.offline} role="status">

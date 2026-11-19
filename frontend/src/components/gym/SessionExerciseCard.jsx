@@ -547,9 +547,10 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           <div className={styles.headerBottom}>
             <p className={styles.meta}>
               {target ? <span className={styles.target}>{target}</span> : null}
-              {target ? ' · ' : ''}
-              {groupsLabel(item)}
-              {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
+              <span className={styles.metaLine}>
+                {groupsLabel(item)}
+                {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
+              </span>
             </p>
           {onToggleUnilateral && !timed && (item.unilateral || item.sets.length === 0) && (
             <button
