@@ -235,11 +235,6 @@
   cursor: pointer;
 }
 
-.error {
-  color: var(--gym-danger);
-  font-size: 0.9rem;
-}
-
 .actions {
   display: flex;
   gap: 8px;
@@ -325,4 +320,15 @@
   .switch::after {
     transition: none;
   }
+}
+
+.nameInvalid,
+.nameInvalid:focus {
+  border-color: var(--gym-danger);
+}
+
+.fieldError {
+  color: var(--gym-danger);
+  font-size: 0.85rem;
+  font-weight: 500;
 }

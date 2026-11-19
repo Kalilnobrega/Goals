@@ -4,6 +4,7 @@ import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
 import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings } from '../../lib/gym';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
+import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
 import ExercisePicker from './ExercisePicker';
 import WorkoutBodyMap from './WorkoutBodyMap';
@@ -64,8 +65,10 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [loadError, setLoadError] = useState(false);
-  const [error, setError] = useState('');
+  const [invalid, setInvalid] = useState(null);
   const [saving, setSaving] = useState(false);
+  const nameRef = useRef(null);
+  const toast = useToast();
   const [savedPayload] = useState(() => JSON.stringify(toPayload(initial?.name ?? '', initial?.description ?? '', (initial?.exercises ?? []).map(toItem))));
   const submitted = useRef(false);
 
@@ -102,11 +105,11 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
       ...selected.map(exercise => ({ key: newKey(), exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null })),
     ]);
     setPickerOpen(false);
-    setError('');
   };
 
   const updateItem = (key, changes) => {
     setItems(list => list.map(item => (item.key === key ? { ...item, ...changes } : item)));
+    if (invalid?.field === key) setInvalid(null);
   };
 
   const removeItem = (key) => setItems(list => list.filter(item => item.key !== key));
@@ -116,30 +119,44 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   };
 
   const validate = () => {
-    if (!name.trim()) return 'Dê um nome para a ficha.';
+    if (!name.trim()) return { field: 'name', message: 'Dê um nome para a ficha.' };
     for (const item of items) {
       const min = Number(item.reps_min);
-      if (!min) return `Informe ${item.exercise.tracking === 'cardio' ? 'a duração' : item.exercise.tracking === 'time' ? 'o tempo' : 'as repetições'} de ${item.exercise.name}.`;
-      if (min > 600) return `Em ${item.exercise.name}, use no máximo 600.`;
-      if (item.reps_max && Number(item.reps_max) < min) {
-        return `Em ${item.exercise.name}, o máximo de repetições é menor que o mínimo.`;
-      }
+      const problem = !min
+        ? `Informe ${item.exercise.tracking === 'cardio' ? 'a duração' : item.exercise.tracking === 'time' ? 'o tempo' : 'as repetições'} de ${item.exercise.name}.`
+        : min > 600
+          ? `Em ${item.exercise.name}, use no máximo 600.`
+          : item.reps_max && Number(item.reps_max) < min
+            ? `Em ${item.exercise.name}, o máximo de repetições é menor que o mínimo.`
+            : '';
+      if (problem) return { field: item.key, message: problem };
     }
-    return '';
+    return null;
+  };
+
+  const showProblem = (problem) => {
+    setInvalid(problem);
+    toast({ tone: 'danger', message: problem.message });
+    if (problem.field === 'name') {
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      nameRef.current?.focus({ preventScroll: true });
+    } else if (problem.field) {
+      document.querySelector(`[data-item="${problem.field}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   const submit = async (e) => {
     e.preventDefault();
     const problem = validate();
-    if (problem) return setError(problem);
-    setError('');
+    if (problem) return showProblem(problem);
+    setInvalid(null);
     setSaving(true);
     submitted.current = true;
     const message = await onSubmit(toPayload(name, description, items));
     if (message) {
       submitted.current = false;
       setSaving(false);
-      setError(message);
+      showProblem({ field: null, message });
     }
   };
 
@@ -151,14 +168,20 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
         <label className={styles.field}>
           <span className={styles.label}>Nome da ficha</span>
           <input
-            className={styles.nameInput}
+            ref={nameRef}
+            className={`${styles.nameInput} ${invalid?.field === 'name' ? styles.inputInvalid : ''}`}
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => {
+              setName(e.target.value);
+              if (invalid?.field === 'name') setInvalid(null);
+            }}
+            aria-invalid={invalid?.field === 'name'}
             maxLength={60}
             placeholder="Ex.: Treino A — Peito e tríceps"
             autoComplete="off"
             enterKeyHint="next"
           />
+          {invalid?.field === 'name' && <span className={styles.fieldError}>{invalid.message}</span>}
         </label>
         <label className={styles.field}>
           <span className={styles.label}>Descrição <em>opcional</em></span>
@@ -195,7 +218,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
               {items.map((item, index) => (
                 <SortableItem key={item.key} id={item.key}>
                   {({ itemProps, handleProps, isDragging }) => (
-                    <li {...itemProps} className={`${styles.item} ${isDragging ? styles.itemDragging : ''}`}>
+                    <li {...itemProps} data-item={item.key} className={`${styles.item} ${isDragging ? styles.itemDragging : ''} ${invalid?.field === item.key ? styles.itemInvalid : ''}`}>
                       <div className={styles.itemTop}>
                         <DragHandle handleProps={handleProps} className={styles.handle} />
                         <span className={styles.index}>{index + 1}</span>
@@ -305,6 +328,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                           {(item.unilateral ?? item.exercise.is_unilateral) ? 'Unilateral' : 'Bilateral'}
                         </button>
                       </div>
+                      {invalid?.field === item.key && <span className={styles.fieldError}>{invalid.message}</span>}
                     </li>
                   )}
                 </SortableItem>
@@ -322,7 +346,6 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
 
       <WorkoutBodyMap exercises={items} />
 
-      {error && <p className={styles.error} role="alert">{error}</p>}
 
       <div className={styles.actions}>
         {onDelete && (

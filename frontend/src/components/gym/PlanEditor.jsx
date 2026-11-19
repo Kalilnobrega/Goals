@@ -1,8 +1,9 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Plus, X, Trash2, Check, Moon } from 'lucide-react';
 import { WEEKDAY_NAMES, plural } from '../../lib/gym';
+import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
 import PlanSummary, { summarizePlan } from './PlanSummary';
 import PlanWeek from './PlanWeek';
@@ -23,8 +24,10 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
   const [week, setWeek] = useState(() => weekFrom(initial));
   const [picking, setPicking] = useState(null);
   const [reviewing, setReviewing] = useState(false);
-  const [error, setError] = useState('');
+  const [nameError, setNameError] = useState('');
   const [saving, setSaving] = useState(false);
+  const nameRef = useRef(null);
+  const toast = useToast();
 
   const byId = new Map(workouts.map(w => [w.id, w]));
   const trainingDays = week.filter(day => day.length).length;
@@ -42,8 +45,15 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
 
   const submit = (event) => {
     event.preventDefault();
-    if (!name.trim()) return setError('Dê um nome para o plano, ex.: Treino 1.');
-    setError('');
+    if (!name.trim()) {
+      const message = 'Dê um nome para o plano, ex.: Treino 1.';
+      setNameError(message);
+      toast({ tone: 'danger', message });
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      nameRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    setNameError('');
     setReviewing(true);
   };
 
@@ -54,7 +64,7 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
     setSaving(false);
     if (problem) {
       setReviewing(false);
-      setError(problem);
+      toast({ tone: 'danger', message: problem });
     }
   };
 
@@ -65,11 +75,17 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
       <label className={styles.field}>
         <span className={styles.label}>Nome do plano</span>
         <input
-          className={styles.name}
+          ref={nameRef}
+          className={`${styles.name} ${nameError ? styles.nameInvalid : ''}`}
           value={name}
-          onChange={e => setName(e.target.value.slice(0, 60))}
+          onChange={e => {
+            setName(e.target.value.slice(0, 60));
+            setNameError('');
+          }}
+          aria-invalid={!!nameError}
           placeholder="Ex.: Treino 1, Upper/Lower"
         />
+        {nameError && <span className={styles.fieldError}>{nameError}</span>}
       </label>
 
       <label className={styles.toggle}>
@@ -130,7 +146,6 @@ export default function PlanEditor({ initial, workouts, onSubmit, onDelete }) {
         })}
       </ol>
 
-      {error && <p className={styles.error} role="alert">{error}</p>}
 
       <div className={styles.actions}>
         {onDelete && (

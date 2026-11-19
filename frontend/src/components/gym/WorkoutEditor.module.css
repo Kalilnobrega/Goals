@@ -350,14 +350,9 @@
   border-color: var(--gym-accent);
 }
 
-.error {
-  color: var(--gym-danger);
-  font-size: 0.92rem;
-}
-
 .actions {
   position: sticky;
-  bottom: calc(var(--gym-tabbar-h) + 12px + env(safe-area-inset-bottom));
+  bottom: calc(var(--gym-tabbar-h) + 12px + var(--gym-pill-space, 0px) + env(safe-area-inset-bottom));
   z-index: 30;
   display: flex;
   gap: 10px;
@@ -478,4 +473,19 @@
   background: var(--gym-accent);
   border-color: var(--gym-accent);
   color: var(--gym-accent-ink);
+}
+
+.inputInvalid,
+.inputInvalid:focus {
+  border-color: var(--gym-danger);
+}
+
+.itemInvalid {
+  border-color: var(--gym-danger);
+}
+
+.fieldError {
+  color: var(--gym-danger);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
