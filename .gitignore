@@ -35,3 +35,5 @@ Thumbs.db
 
 # Saída gerada pelo graphify (mapa do repositório)
 graphify-out/
+# Railway IaC SDK
+/node_modules/
