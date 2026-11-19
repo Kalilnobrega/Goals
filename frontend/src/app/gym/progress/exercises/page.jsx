@@ -1,15 +1,16 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, TrendingUp, ChevronRight, ChevronLeft } from 'lucide-react';
-import { getProgressExercises, peekCache } from '../../../../lib/api';
-import { formatKg, formatShortDate, muscleLabel, normalize, plural } from '../../../../lib/gym';
+import { Search, TrendingUp, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { getExercises, getProgressExercises, peekCache } from '../../../../lib/api';
+import { equipmentLabel, formatKg, formatShortDate, groupsLabel, plural } from '../../../../lib/gym';
+import ExerciseFilters, { useExerciseFilters } from '../../../../components/gym/ExerciseFilters';
 import styles from '../progress.module.css';
 
 export default function ProgressPage() {
   const [items, setItems] = useState(() => peekCache('fitnessProgress') ?? null);
   const [loadError, setLoadError] = useState(false);
-  const [query, setQuery] = useState('');
+  const [library, setLibrary] = useState(() => peekCache('fitnessExercises') ?? null);
 
   const fetchItems = useCallback(() => {
     setLoadError(false);
@@ -18,13 +19,19 @@ export default function ProgressPage() {
 
   useEffect(() => {
     getProgressExercises().then(setItems).catch(() => setLoadError(true));
+    getExercises().then(setLibrary).catch(() => {});
   }, []);
 
-  const visible = useMemo(() => {
-    if (!items) return [];
-    const term = normalize(query.trim());
-    return term ? items.filter(item => normalize(item.name).includes(term)) : items;
-  }, [items, query]);
+  const trained = useMemo(() => {
+    if (!items) return null;
+    const byId = new Map((library ?? []).map(exercise => [exercise.id, exercise]));
+    return items.map((item, order) => ({ ...byId.get(item.exercise_id), ...item, id: item.exercise_id, order }));
+  }, [items, library]);
+
+  const filters = useExerciseFilters(trained);
+  const { query, setQuery, muscle } = filters;
+  const visible = muscle ? filters.visible : [...filters.visible].sort((a, b) => a.order - b.order);
+  const filtering = !!query.trim() || filters.active;
 
   return (
     <div className={styles.page}>
@@ -58,22 +65,38 @@ export default function ProgressPage() {
 
       {items?.length > 0 && (
         <>
-          {items.length > 6 && (
-            <label className={styles.searchWrap}>
-              <Search size={18} className={styles.searchIcon} aria-hidden="true" />
-              <input
-                type="search"
-                className={styles.search}
-                placeholder="Buscar exercício"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                aria-label="Buscar exercício"
-              />
-            </label>
+          <label className={styles.searchWrap}>
+            <Search size={18} className={styles.searchIcon} aria-hidden="true" />
+            <input
+              type="search"
+              className={styles.search}
+              placeholder="Buscar exercício"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              aria-label="Buscar exercício"
+              enterKeyHint="search"
+            />
+            {query && (
+              <button type="button" className={styles.searchClear} onClick={() => setQuery('')} aria-label="Limpar busca">
+                <X size={16} />
+              </button>
+            )}
+          </label>
+
+          <ExerciseFilters filters={filters} exercises={trained} onlyUsed />
+
+          {filtering && visible.length > 0 && (
+            <p className={styles.filterCount}>
+              {plural(visible.length, 'exercício', 'exercícios')} de {trained.length}
+              {filters.active && <button type="button" className={styles.filterReset} onClick={filters.clear}>Limpar filtros</button>}
+            </p>
           )}
 
           {visible.length === 0 ? (
-            <p className={styles.empty}>Nenhum exercício treinado com esse nome.</p>
+            <div className={styles.empty}>
+              <p>Nenhum exercício treinado com esses filtros.</p>
+              <button type="button" className={styles.filterReset} onClick={() => { setQuery(''); filters.clear(); }}>Limpar busca e filtros</button>
+            </div>
           ) : (
             <ul className={styles.list}>
               {visible.map(item => (
@@ -82,15 +105,15 @@ export default function ProgressPage() {
                     <span className={styles.rowMain}>
                       <span className={styles.rowName}>{item.name}</span>
                       <span className={styles.rowMeta}>
-                        {muscleLabel(item.muscle_group)} · {plural(item.sessions, 'treino', 'treinos')} · último {formatShortDate(item.last_at)}
+                        {groupsLabel(item)} · {equipmentLabel(item.equipment)} · {plural(item.sessions, 'treino', 'treinos')} · último {formatShortDate(item.last_at)}
                         {item.goal_kg ? ` · meta ${formatKg(item.goal_kg)} kg` : ''}
                       </span>
                     </span>
-                    <span className={styles.rowBest}>
+                    {(item.tracking ?? 'reps') === 'reps' && <span className={styles.rowBest}>
                       {item.best_weight_kg > 0
-                        ? <>{formatKg(item.best_weight_kg)}<small>kg</small></>
+                        ? <>{item.equipment === 'bodyweight' ? '+' : ''}{formatKg(item.best_weight_kg)}<small>kg</small></>
                         : <>{item.max_reps}<small>reps</small></>}
-                    </span>
+                    </span>}
                     <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
                   </Link>
                 </li>

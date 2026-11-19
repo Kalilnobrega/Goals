@@ -86,9 +86,51 @@
 }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   padding: 24px 0;
   text-align: center;
   color: var(--gym-muted);
+}
+
+.searchClear {
+  position: absolute;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.filterCount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gym-muted);
+  font-size: 0.86rem;
+}
+
+.filterReset {
+  border: none;
+  background: none;
+  padding: 4px 0;
+  color: var(--gym-accent);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .panel {
