@@ -268,6 +268,7 @@ class SessionExerciseResponseSchema(BaseModel):
     note: str | None = None
     unilateral: bool = False
     tracking: str = "reps"
+    from_plan: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
     previous_at: datetime | None

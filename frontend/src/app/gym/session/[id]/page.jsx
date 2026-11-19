@@ -308,6 +308,31 @@ export default function SessionPage() {
     }
   };
 
+  const planned = (item) => !!session.workout_id && item.from_plan;
+
+  const requestUnilateral = (item) => {
+    if (!planned(item)) return toggleUnilateral(item);
+    setSheet({
+      type: 'confirm',
+      item,
+      text: <>A ficha manda fazer <strong>{item.exercise_name}</strong> {item.unilateral ? 'unilateral (esquerda e direita)' : 'bilateral'}. Fazer {item.unilateral ? 'bilateral' : 'unilateral'} só neste treino? A ficha não muda.</>,
+      confirmLabel: item.unilateral ? 'Fazer bilateral' : 'Fazer unilateral',
+      onConfirm: () => toggleUnilateral(item),
+    });
+  };
+
+  const requestSwap = (item, selected) => {
+    const [exercise] = selected;
+    if (!exercise || !planned(item)) return swapExercise(item, selected);
+    setSheet({
+      type: 'confirm',
+      item,
+      text: <>A ficha manda <strong>{item.exercise_name}</strong> ({equipmentLabel(item.equipment).toLowerCase()}). Trocar por <strong>{exercise.name}</strong> ({equipmentLabel(exercise.equipment).toLowerCase()}) só neste treino? A ficha não muda.</>,
+      confirmLabel: 'Trocar',
+      onConfirm: () => swapExercise(item, selected),
+    });
+  };
+
   const saveNote = async (item, note) => {
     try {
       setSession(withPending(await updateSessionExercise(item.id, { note })));
@@ -534,7 +559,7 @@ export default function SessionPage() {
       setSheet({ type: 'menu', item: it });
     },
     onSaveNote: saveNote,
-    onToggleUnilateral: toggleUnilateral,
+    onToggleUnilateral: requestUnilateral,
   };
 
   return (
@@ -682,6 +707,7 @@ export default function SessionPage() {
           finish: 'Finalizar treino',
           forgotten: 'Esse treino ficou aberto',
           options: 'Treino',
+          confirm: 'Diferente da ficha',
         }[sheet?.type] ?? ''}
       >
         {sheet?.type === 'add' && (
@@ -694,7 +720,7 @@ export default function SessionPage() {
             exercises={exercises}
             loadError={exercisesError}
             onRetry={loadExercises}
-            onConfirm={selected => swapExercise(sheet.item, selected)}
+            onConfirm={selected => requestSwap(sheet.item, selected)}
           />
         )}
 
@@ -719,7 +745,7 @@ export default function SessionPage() {
             <button
               type="button"
               className={s.option}
-              onClick={() => { const item = sheet.item; setSheet(null); toggleUnilateral(item); }}
+              onClick={() => { const item = sheet.item; setSheet(null); requestUnilateral(item); }}
               disabled={sheet.item.sets.length > 0}
             >
               <ArrowLeftRight size={20} />
@@ -741,7 +767,7 @@ export default function SessionPage() {
                         type="button"
                         className={`${styles.equipmentChoice} ${variant.id === sheet.item.exercise_id ? styles.equipmentChoiceOn : ''}`}
                         disabled={sheet.item.sets.length > 0 || variant.id === sheet.item.exercise_id}
-                        onClick={() => swapExercise(sheet.item, [variant])}
+                        onClick={() => requestSwap(sheet.item, [variant])}
                       >
                         {equipmentLabel(variant.equipment)}
                       </button>
@@ -869,6 +895,18 @@ export default function SessionPage() {
                 <Play size={18} /> Continuar treinando
               </button>
               <button type="button" className={s.danger} onClick={discard}><Trash2 size={18} /> Descartar treino</button>
+            </div>
+          </div>
+        )}
+
+        {sheet?.type === 'confirm' && (
+          <div className={s.stack}>
+            <p className={s.text}>{sheet.text}</p>
+            <div className={s.actions}>
+              <button type="button" className={s.primary} onClick={() => { const run = sheet.onConfirm; setSheet(null); run(); }}>
+                {sheet.confirmLabel}
+              </button>
+              <button type="button" className={s.secondary} onClick={closeSheet}>Manter como na ficha</button>
             </div>
           </div>
         )}

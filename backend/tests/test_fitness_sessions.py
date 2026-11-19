@@ -649,9 +649,9 @@ def test_unilateral_sets_pair_by_side_and_count_as_one_series(client, library, a
     assert history["total_sets"] == 2
 
     stored = client.get(f"/fitness/workouts/{workout['id']}", headers=headers).json()
-    assert stored["exercises"][0]["unilateral"] is True
+    assert stored["exercises"][0]["unilateral"] is None
     following = start(client, headers, workout["id"])
-    assert following["exercises"][0]["unilateral"] is True
+    assert following["exercises"][0]["unilateral"] is False
     assert {p["side"] for p in following["exercises"][0]["previous"]} == {"left", "right"}
 
     progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["points"][0]

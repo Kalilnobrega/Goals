@@ -129,6 +129,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "note": item.note,
             "unilateral": bool(item.unilateral),
             "tracking": item.tracking or "reps",
+            "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
                 {key: value for key, value in serialize_set(entry).items() if key in PREVIOUS_FIELDS}
@@ -549,15 +550,6 @@ def edit_session_exercise(
                 status_code=409, detail="Só dá para mudar entre unilateral e normal antes de registrar séries."
             )
         item.unilateral = data.unilateral
-        if item.workout_exercise_id is not None:
-            planned = (
-                db.query(WorkoutExercise)
-                .join(Workout, Workout.id == WorkoutExercise.workout_id)
-                .filter(WorkoutExercise.id == item.workout_exercise_id, Workout.user_id == user.id)
-                .first()
-            )
-            if planned:
-                planned.unilateral = data.unilateral
 
     if "rest_seconds" in changes:
         rest = data.rest_seconds or None
