@@ -207,3 +207,37 @@ def test_progress_workouts_lists_trained_fichas_with_current_names(client, libra
     assert [(w["workout_id"], w["name"], w["sessions"]) for w in data] == [(workout["id"], "Treino A novo", 2)]
     assert data[0]["progress_pct"] is not None
     assert client.get("/fitness/progress/workouts", headers=bruno_headers).json() == []
+
+
+def test_workout_progress_insights(client, library, ana, db_session):
+    from datetime import timedelta as delta, timezone as tz
+    from app.fitness_models import SetEntry, WorkoutSession
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    first = train(client, headers, db_session, workout["id"], [[(60, 12), (60, 12), (60, 12)], [(100, 9)]], at(9), minutes=40)
+    second = train(client, headers, db_session, workout["id"], [[(62.5, 12), (62.5, 12), (62.5, 12), (50, 15)]], at(2), minutes=30)
+    started = db_session.get(WorkoutSession, second["id"]).started_at.replace(tzinfo=tz.utc)
+    entries = db_session.query(SetEntry).filter(SetEntry.session_exercise_id == second["exercises"][0]["id"]).order_by(SetEntry.id).all()
+    for entry, minute in zip(entries, (2, 5, 8, 11)):
+        entry.created_at = started + delta(minutes=minute)
+    db_session.commit()
+
+    data = client.get(f"/fitness/workouts/{workout['id']}/progress", headers=headers).json()
+
+    assert data["ready_to_progress"] == [{
+        "exercise_id": library["supino-reto"], "name": "Supino reto", "weight_kg": 62.5, "reps": 12, "sets": 4, "reps_max": 12,
+    }]
+    assert data["rep_range"] == {"in_range": 6, "below": 1, "above": 1}
+
+    completion = data["completion"]
+    assert completion["planned_sets"] == 14
+    assert completion["done_sets"] == 7
+    assert completion["extra_sets"] == 1
+    assert completion["pct"] == 50
+    press = next(e for e in completion["exercises"] if e["name"] == "Leg press")
+    assert (press["skipped"], press["incomplete"], press["avg_sets"]) == (1, 1, 0.5)
+
+    assert data["time"]["avg_session_seconds"] == 2100
+    assert [r["weight_kg"] for r in data["records"]] == [62.5]
+    assert [v["name"] for v in data["volume_share"]] == ["Supino reto", "Leg press"]
+    assert round(sum(v["share"] for v in data["volume_share"]), 2) == 1.0

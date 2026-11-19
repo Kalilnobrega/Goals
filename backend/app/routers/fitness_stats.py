@@ -60,6 +60,7 @@ def session_facts(workout_session: WorkoutSession) -> dict:
             "e1rm": max(estimates) if estimates else None,
             "seconds": timings[item.id]["seconds"],
             "rests": timings[item.id]["rests"],
+            "set_list": [(float(entry.weight_kg), entry.reps) for entry in item.sets],
         })
     return {
         "id": workout_session.id,
@@ -680,6 +681,112 @@ def get_session_insights(
     }
 
 
+def workout_insights(workout, sessions: list[dict], everything: list[dict]) -> dict:
+    planned = {item.exercise_id: item for item in workout.exercises}
+    names = {item.exercise_id: item.exercise.name for item in workout.exercises}
+
+    ready = []
+    in_range = below = above = 0
+    for s in sessions:
+        for e in s["exercises"]:
+            plan = planned.get(e["exercise_id"])
+            if not plan:
+                continue
+            for _, reps in e["set_list"]:
+                if reps < plan.reps_min:
+                    below += 1
+                elif plan.reps_max and reps > plan.reps_max:
+                    above += 1
+                else:
+                    in_range += 1
+
+    for exercise_id, plan in planned.items():
+        if not plan.reps_max:
+            continue
+        last = next(
+            (e for s in reversed(sessions) for e in s["exercises"] if e["exercise_id"] == exercise_id),
+            None,
+        )
+        if not last or last["sets"] < plan.target_sets or not last["set_list"]:
+            continue
+        top = max(weight for weight, _ in last["set_list"])
+        working = [reps for weight, reps in last["set_list"] if weight == top]
+        if all(reps >= plan.reps_max for reps in working):
+            ready.append({
+                "exercise_id": exercise_id,
+                "name": names[exercise_id],
+                "weight_kg": top,
+                "reps": min(working),
+                "sets": last["sets"],
+                "reps_max": plan.reps_max,
+            })
+
+    planned_sets = done_sets = extra_sets = 0
+    by_exercise: dict = {}
+    for s in sessions:
+        done = defaultdict(int)
+        for e in s["exercises"]:
+            if e["exercise_id"] in planned:
+                done[e["exercise_id"]] += e["sets"]
+        for exercise_id, plan in planned.items():
+            count = done.get(exercise_id, 0)
+            planned_sets += plan.target_sets
+            done_sets += min(count, plan.target_sets)
+            extra_sets += max(count - plan.target_sets, 0)
+            item = by_exercise.setdefault(exercise_id, {"skipped": 0, "incomplete": 0, "done": 0})
+            item["done"] += count
+            if count == 0:
+                item["skipped"] += 1
+            elif count < plan.target_sets:
+                item["incomplete"] += 1
+    completion = {
+        "planned_sets": planned_sets,
+        "done_sets": done_sets,
+        "extra_sets": extra_sets,
+        "pct": round(done_sets / planned_sets * 100) if planned_sets else None,
+        "exercises": sorted(
+            [
+                {
+                    "exercise_id": exercise_id,
+                    "name": names[exercise_id],
+                    "target_sets": planned[exercise_id].target_sets,
+                    "avg_sets": round(item["done"] / len(sessions), 1),
+                    "skipped": item["skipped"],
+                    "incomplete": item["incomplete"],
+                }
+                for exercise_id, item in by_exercise.items()
+                if item["skipped"] or item["incomplete"]
+            ],
+            key=lambda item: -(item["skipped"] * 2 + item["incomplete"]),
+        ),
+    } if sessions else None
+
+    volumes: dict = {}
+    for s in sessions:
+        for e in s["exercises"]:
+            item = volumes.setdefault(exercise_key(e), {"exercise_id": e["exercise_id"], "name": e["name"], "volume_kg": 0.0})
+            item["volume_kg"] += e["volume"]
+    total_volume = sum(item["volume_kg"] for item in volumes.values())
+    volume_share = sorted(
+        [
+            {**item, "volume_kg": round(item["volume_kg"], 1), "share": round(item["volume_kg"] / total_volume, 3)}
+            for item in volumes.values()
+            if item["volume_kg"] > 0
+        ],
+        key=lambda item: -item["volume_kg"],
+    ) if total_volume else []
+
+    session_ids = {s["id"] for s in sessions}
+    return {
+        "ready_to_progress": ready,
+        "rep_range": {"in_range": in_range, "below": below, "above": above} if in_range + below + above else None,
+        "completion": completion,
+        "time": time_stats(sessions),
+        "records": weight_records(everything, lambda s: s["id"] in session_ids)[:8],
+        "volume_share": volume_share,
+    }
+
+
 @fitness_stats_router.get("/workouts/{workout_id}/progress", response_model=WorkoutProgressSchema)
 def get_workout_progress(
     workout_id: int,
@@ -687,7 +794,8 @@ def get_workout_progress(
     db: Session = Depends(get_db),
 ):
     workout = get_own_workout(workout_id, user, db)
-    sessions = [s for s in completed_facts(user, db) if s["workout_id"] == workout.id]
+    everything = completed_facts(user, db)
+    sessions = [s for s in everything if s["workout_id"] == workout.id]
 
     grouped: dict = {}
     for s in sessions:
@@ -748,6 +856,7 @@ def get_workout_progress(
         "load_pct": mean([e["load_change_pct"] for e in exercises if e["load_change_pct"] is not None]),
         "reps_pct": mean([e["reps_change_pct"] for e in exercises if e["reps_change_pct"] is not None]),
         "exercises": exercises,
+        **workout_insights(workout, sessions, everything),
     }
 
 

@@ -631,6 +631,45 @@ class WorkoutProgressExerciseSchema(BaseModel):
     last_on: date
 
 
+class WorkoutReadySchema(BaseModel):
+    exercise_id: int
+    name: str
+    weight_kg: float
+    reps: int
+    sets: int
+    reps_max: int
+
+
+class WorkoutRepRangeSchema(BaseModel):
+    in_range: int
+    below: int
+    above: int
+
+
+class WorkoutCompletionExerciseSchema(BaseModel):
+    exercise_id: int
+    name: str
+    target_sets: int
+    avg_sets: float
+    skipped: int
+    incomplete: int
+
+
+class WorkoutCompletionSchema(BaseModel):
+    planned_sets: int
+    done_sets: int
+    extra_sets: int
+    pct: int | None
+    exercises: list[WorkoutCompletionExerciseSchema]
+
+
+class WorkoutVolumeShareSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    volume_kg: float
+    share: float
+
+
 class WorkoutProgressSchema(BaseModel):
     workout_id: int
     name: str
@@ -641,6 +680,12 @@ class WorkoutProgressSchema(BaseModel):
     load_pct: float | None
     reps_pct: float | None
     exercises: list[WorkoutProgressExerciseSchema]
+    ready_to_progress: list[WorkoutReadySchema] = []
+    rep_range: WorkoutRepRangeSchema | None = None
+    completion: WorkoutCompletionSchema | None = None
+    time: "StatsTimeSchema | None" = None
+    records: list["StatsRecordSchema"] = []
+    volume_share: list[WorkoutVolumeShareSchema] = []
 
 
 class StatsSessionRefSchema(BaseModel):

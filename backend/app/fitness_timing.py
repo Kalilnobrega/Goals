@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+MIN_REST_SECONDS = 5
 MAX_REST_SECONDS = 900
 MAX_EXERCISE_SECONDS = 90 * 60
 
@@ -28,7 +29,7 @@ def exercise_timings(workout_session) -> dict[int, dict]:
             span = (times[-1] - times[0]).total_seconds()
         rests = [
             gap for gap in ((later - earlier).total_seconds() for earlier, later in zip(times, times[1:]))
-            if 0 < gap <= MAX_REST_SECONDS
+            if MIN_REST_SECONDS <= gap <= MAX_REST_SECONDS
         ]
         result[item.id] = {
             "seconds": min(span, MAX_EXERCISE_SECONDS) if span > 0 else None,
