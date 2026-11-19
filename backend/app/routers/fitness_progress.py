@@ -8,6 +8,7 @@ from app.dates import today_br, to_br_date
 from app.models import User
 from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal
 from app.fitness_forecast import forecast
+from app.fitness_timing import exercise_timings, mean as average
 from app.fitness_schemas import (
     ProgressExerciseSchema,
     ExerciseProgressSchema,
@@ -87,6 +88,41 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
     return sorted(items, key=lambda item: item["last_at"], reverse=True)
 
 
+def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
+    sessions = (
+        db.query(WorkoutSession)
+        .join(SessionExercise, SessionExercise.session_id == WorkoutSession.id)
+        .filter(
+            WorkoutSession.user_id == user.id,
+            WorkoutSession.status == COMPLETED,
+            SessionExercise.exercise_id == exercise_id,
+        )
+        .distinct()
+        .all()
+    )
+    spans, rests, set_seconds = [], [], []
+    for workout_session in sessions:
+        timings = exercise_timings(workout_session)
+        for item in workout_session.exercises:
+            if item.exercise_id != exercise_id or item.id not in timings:
+                continue
+            timing = timings[item.id]
+            rests.extend(timing["rests"])
+            if timing["seconds"] is not None:
+                spans.append(timing["seconds"])
+                count = len({("pair", s.position) if s.side else ("set", s.id) for s in item.sets})
+                if count:
+                    set_seconds.append(timing["seconds"] / count)
+    if not spans and not rests:
+        return None
+    return {
+        "sessions": len(spans),
+        "avg_seconds": round(average(spans)) if spans else None,
+        "avg_set_seconds": round(average(set_seconds)) if set_seconds else None,
+        "avg_rest_seconds": round(average(rests)) if rests else None,
+    }
+
+
 @fitness_progress_router.get("/exercises/{exercise_id}/progress", response_model=ExerciseProgressSchema)
 def get_exercise_progress(
     exercise_id: int,
@@ -158,6 +194,7 @@ def get_exercise_progress(
         "muscle_group": exercise.muscle_group,
         "equipment": exercise.equipment,
         "goal": serialize_goal(find_goal(user, db, EXERCISE, exercise.id), exercise_points(user, db, exercise.id)),
+        "time": exercise_time(user, db, exercise.id),
         "points": [
             {**point, "max_weight_kg": float(point["max_weight_kg"]), "volume_kg": float(point["volume_kg"])}
             for point in points.values()

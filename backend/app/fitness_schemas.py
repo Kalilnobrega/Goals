@@ -312,6 +312,14 @@ class ExerciseProgressSchema(BaseModel):
     equipment: str
     points: list[ProgressPointSchema]
     goal: "FitnessGoalResponseSchema | None" = None
+    time: "ExerciseTimeSchema | None" = None
+
+
+class ExerciseTimeSchema(BaseModel):
+    sessions: int
+    avg_seconds: int | None
+    avg_set_seconds: int | None
+    avg_rest_seconds: int | None
 
 
 class BodyWeightSchema(BaseModel):
@@ -719,8 +727,27 @@ class StatsActivityDaySchema(BaseModel):
     workouts: list[str]
 
 
+class StatsTimeExerciseSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    muscle_group: str
+    sessions: int
+    avg_seconds: int
+    set_seconds: int | None
+
+
+class StatsTimeSchema(BaseModel):
+    avg_session_seconds: int
+    avg_set_seconds: int | None
+    avg_exercise_seconds: int | None
+    avg_rest_seconds: int | None
+    exercises_per_session: float
+    longest_exercises: list[StatsTimeExerciseSchema]
+
+
 class StatsSchema(BaseModel):
     period: str
+    time: StatsTimeSchema | None = None
     plan_id: int | None = None
     activity: list[StatsActivityDaySchema] = []
     adherence: StatsAdherenceSchema | None = None
@@ -801,6 +828,8 @@ class SessionExerciseInsightSchema(BaseModel):
     item_id: int
     current: SessionPerformanceSchema
     previous: SessionPerformanceSchema | None
+    seconds: int | None = None
+    rest_seconds: int | None = None
 
 
 class PreviousSessionSchema(BaseModel):
@@ -819,6 +848,8 @@ class MuscleSetsSchema(BaseModel):
 class SessionInsightsSchema(BaseModel):
     previous_session: PreviousSessionSchema | None
     minutes: int
+    set_seconds: int | None = None
+    rest_seconds: int | None = None
     exercises: list[SessionExerciseInsightSchema]
     records: list[StatsRecordSchema]
     muscle_sets: list[MuscleSetsSchema]

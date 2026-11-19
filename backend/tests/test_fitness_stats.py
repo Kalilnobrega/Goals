@@ -328,3 +328,32 @@ def test_stats_density_and_best_periods(client, library, ana, db_session):
     assert best["week_volume"]["volume_kg"] in (1000.0, 1100.0)
     assert best["week_sessions"]["sessions"] in (1, 2)
     assert best["month_volume"]["volume_kg"] >= 1100.0
+
+
+def test_time_stats_per_set_exercise_and_rest(client, library, ana, db_session):
+    from datetime import timedelta as delta
+    from app.fitness_models import SetEntry
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    session = train(client, headers, db_session, workout["id"], [[(60, 10), (60, 10)], [(100, 10)]], at(2), minutes=30)
+    start_at = at(2).astimezone(timezone.utc)
+    sets = db_session.query(SetEntry).order_by(SetEntry.id).all()
+    for entry, offset in zip(sets, (5, 7, 20)):
+        entry.created_at = start_at + delta(minutes=offset)
+    db_session.commit()
+
+    time = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["time"]
+    assert time["avg_session_seconds"] == 1800
+    assert time["avg_set_seconds"] == 600
+    assert time["avg_exercise_seconds"] == 600
+    assert time["avg_rest_seconds"] == 120
+    assert time["longest_exercises"][0]["name"] == "Leg press"
+    assert time["longest_exercises"][0]["avg_seconds"] == 780
+
+    insights = client.get(f"/fitness/sessions/{session['id']}/insights", headers=headers).json()
+    assert [e["seconds"] for e in insights["exercises"]] == [420, 780]
+    assert insights["exercises"][0]["rest_seconds"] == 120
+    assert insights["set_seconds"] == 600
+
+    progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["time"]
+    assert progress == {"sessions": 1, "avg_seconds": 420, "avg_set_seconds": 210, "avg_rest_seconds": 120}
