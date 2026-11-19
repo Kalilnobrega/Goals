@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Trophy, Activity } from 'lucide-react';
 import {
+  setSummary,
   formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds, groupsLabel,
 } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
@@ -160,7 +161,8 @@ export default function SessionSummary({ session, insights }) {
 
       <ul className={styles.list}>
         {done.map(item => {
-          const insight = byItem.get(item.id);
+          const timed = (item.tracking ?? 'reps') !== 'reps';
+          const insight = timed ? null : byItem.get(item.id);
           const now = insight?.current;
           const before = insight?.previous;
           return (
@@ -177,7 +179,9 @@ export default function SessionSummary({ session, insights }) {
               <div className={styles.sets}>
                 {seriesRows(item.sets).map(row => (
                   <span key={row.key} className={styles.set}>
-                    {row.entry
+                    {timed
+                      ? setSummary(row.entry ?? row.left ?? row.right, item.tracking, item.equipment === 'bodyweight')
+                      : row.entry
                       ? setLabel(row.entry.weight_kg, row.entry.reps, item.equipment === 'bodyweight')
                       : ['left', 'right'].filter(side => row[side]).map(side => `${SIDE_LABEL[side]} ${setLabel(row[side].weight_kg, row[side].reps, item.equipment === 'bodyweight')}`).join(' · ')}
                   </span>

@@ -735,3 +735,9 @@
   font-weight: 600;
   color: var(--gym-accent);
 }
+
+.setTimed {
+  flex: 1;
+  font-size: 0.98rem;
+  font-variant-numeric: tabular-nums;
+}

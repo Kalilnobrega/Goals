@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks, Timer,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks, Timer, HeartPulse,
 } from 'lucide-react';
 import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, getBodyGoal, peekCache } from '../../../lib/api';
 import {
@@ -657,6 +657,51 @@ function TimeCard({ data }) {
   );
 }
 
+function CardioCard({ data }) {
+  const cardio = data.cardio;
+  if (!cardio) return null;
+  const tiles = [
+    { label: 'Tempo de cardio', value: `${cardio.minutes.toLocaleString('pt-BR')} min`, note: plural(cardio.sessions, 'treino', 'treinos') },
+    { label: 'Média por treino', value: `${cardio.avg_minutes} min` },
+    cardio.distance_km > 0 && { label: 'Distância', value: `${formatKg(cardio.distance_km)} km` },
+  ].filter(Boolean);
+  return (
+    <Card icon={HeartPulse} title="Cardio">
+      <div className={styles.records}>
+        {tiles.map(tile => (
+          <div key={tile.label} className={`${styles.record} ${styles.recordStatic}`}>
+            <span className={styles.recordLabel}>{tile.label}</span>
+            <span className={styles.recordValue}>{tile.value}</span>
+            {tile.note && <span className={styles.recordNote}>{tile.note}</span>}
+          </div>
+        ))}
+      </div>
+      <ul className={styles.rows}>
+        {cardio.exercises.map(e => {
+          const content = (
+            <>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{e.name}</span>
+                <span className={styles.rowMeta}>
+                  {plural(e.sessions, 'treino', 'treinos')}{e.distance_km > 0 ? ` · ${formatKg(e.distance_km)} km` : ''}
+                </span>
+              </span>
+              <span className={styles.strengthValue}>{e.minutes} min</span>
+            </>
+          );
+          return (
+            <li key={`${e.exercise_id}-${e.name}`}>
+              {e.exercise_id
+                ? <Link href={`/gym/progress/exercises/${e.exercise_id}`} className={styles.row}>{content}</Link>
+                : <div className={styles.row}>{content}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 function Frequency({ data }) {
   return (
     <Card icon={CalendarDays} title="Frequência" hint="séries por dia">
@@ -827,6 +872,7 @@ export default function StatsPage() {
           <Progressions data={ready} />
           <RelativeStrength data={ready} />
           <TimeCard data={ready} />
+          <CardioCard data={ready} />
           <Consistency data={ready} />
           <MostDone data={ready} />
           <AllTime data={ready} />

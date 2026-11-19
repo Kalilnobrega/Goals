@@ -279,7 +279,7 @@ export default function SessionPage() {
       if (!silent) {
         toast({
           message: `Série ${entry.position} de ${item.exercise_name} excluída`,
-          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined }) },
+          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined, duration_seconds: entry.duration_seconds ?? undefined, distance_km: entry.distance_km ?? undefined, speed_kmh: entry.speed_kmh ?? undefined, level: entry.level ?? undefined }) },
         });
       }
       return true;

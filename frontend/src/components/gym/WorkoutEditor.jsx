@@ -51,6 +51,12 @@ function Stepper({ value, onChange, min, max, label }) {
   );
 }
 
+const TRACKING_DEFAULTS = {
+  reps: { target_sets: 3, reps_min: '10' },
+  time: { target_sets: 3, reps_min: '30' },
+  cardio: { target_sets: 1, reps_min: '20' },
+};
+
 export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
@@ -93,7 +99,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), exercise, target_sets: 3, reps_min: '10', reps_max: '', rest_seconds: null, unilateral: null })),
+      ...selected.map(exercise => ({ key: newKey(), exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null })),
     ]);
     setPickerOpen(false);
     setError('');
@@ -113,7 +119,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
     if (!name.trim()) return 'Dê um nome para a ficha.';
     for (const item of items) {
       const min = Number(item.reps_min);
-      if (!min) return `Informe as repetições de ${item.exercise.name}.`;
+      if (!min) return `Informe ${item.exercise.tracking === 'cardio' ? 'a duração' : item.exercise.tracking === 'time' ? 'o tempo' : 'as repetições'} de ${item.exercise.name}.`;
+      if (min > 600) return `Em ${item.exercise.name}, use no máximo 600.`;
       if (item.reps_max && Number(item.reps_max) < min) {
         return `Em ${item.exercise.name}, o máximo de repetições é menor que o mínimo.`;
       }
@@ -228,7 +235,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                         </div>
                       )}
                       <div className={styles.targets}>
-                        <div className={styles.target}>
+                        {item.exercise.tracking !== 'cardio' && <div className={styles.target}>
                           <span className={styles.targetLabel}>Séries</span>
                           <Stepper
                             label="Séries"
@@ -237,7 +244,22 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                             max={20}
                             onChange={value => updateItem(item.key, { target_sets: value })}
                           />
-                        </div>
+                        </div>}
+                        {item.exercise.tracking && item.exercise.tracking !== 'reps' ? (
+                          <div className={styles.target}>
+                            <span className={styles.targetLabel}>{item.exercise.tracking === 'cardio' ? 'Duração (min)' : 'Tempo (seg)'}</span>
+                            <div className={styles.reps}>
+                              <input
+                                className={styles.repsInput}
+                                value={item.reps_min}
+                                onChange={e => updateItem(item.key, { reps_min: digits(e.target.value), reps_max: '' })}
+                                inputMode="numeric"
+                                aria-label={`${item.exercise.tracking === 'cardio' ? 'Minutos' : 'Segundos'} de ${item.exercise.name}`}
+                                placeholder={TRACKING_DEFAULTS[item.exercise.tracking].reps_min}
+                              />
+                            </div>
+                          </div>
+                        ) : (
                         <div className={styles.target}>
                           <span className={styles.targetLabel}>Repetições</span>
                           <div className={styles.reps}>
@@ -260,6 +282,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                             />
                           </div>
                         </div>
+                        )}
                         <label className={styles.target}>
                           <span className={styles.targetLabel}>Descanso</span>
                           <select

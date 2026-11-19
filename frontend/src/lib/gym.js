@@ -49,7 +49,13 @@ export function apiError(err, fallback) {
 
 export const repsLabel = (min, max) => (max && max !== min ? `${min}–${max}` : `${min}`);
 
-export const prescription = (item) => `${item.target_sets} × ${repsLabel(item.reps_min, item.reps_max)}`;
+function targetText(tracking, sets, min, max) {
+  if (tracking === 'cardio') return `${min} min`;
+  if (tracking === 'time') return `${sets} × ${min}s`;
+  return `${sets} × ${repsLabel(min, max)}`;
+}
+
+export const prescription = (item) => targetText(item.exercise?.tracking, item.target_sets, item.reps_min, item.reps_max);
 
 export function workoutMuscles(workout) {
   const counts = new Map();
@@ -125,7 +131,7 @@ export const formatLongDate = (iso) => longDateFormat.format(new Date(iso));
 export const formatTime = (iso) => timeFormat.format(new Date(iso));
 
 export const sessionTarget = (item) =>
-  item.target_sets ? `${item.target_sets} × ${repsLabel(item.reps_min, item.reps_max)}` : null;
+  item.target_sets ? targetText(item.tracking, item.target_sets, item.reps_min, item.reps_max) : null;
 
 export const FORGOTTEN_AFTER_MS = 4 * 60 * 60 * 1000;
 
@@ -322,4 +328,27 @@ export const familyEquipment = (family) => family.variants.map(variant => equipm
 export function familySiblings(exercise, exercises) {
   if (!exercise?.family || !exercises) return [];
   return groupFamilies(exercises.filter(item => item.family === exercise.family))[0]?.variants ?? [];
+}
+
+export const TRACKING = [
+  { value: 'reps', label: 'Carga e repetições' },
+  { value: 'time', label: 'Tempo (isométrico)' },
+  { value: 'cardio', label: 'Cardio' },
+];
+
+export function setSummary(entry, tracking = 'reps', extra = false) {
+  if (tracking === 'cardio') {
+    return [
+      formatClock(entry.duration_seconds ?? 0),
+      entry.distance_km ? `${formatKg(entry.distance_km)} km` : null,
+      entry.speed_kmh ? `${formatKg(entry.speed_kmh)} km/h` : null,
+      entry.level ? `nível ${entry.level}` : null,
+    ].filter(Boolean).join(' · ');
+  }
+  if (tracking === 'time') {
+    const clock = formatClock(entry.duration_seconds ?? 0);
+    return entry.weight_kg > 0 ? `${clock} · ${extra ? 'PC + ' : '+'}${formatKg(entry.weight_kg)} kg` : clock;
+  }
+  const load = entry.weight_kg > 0 ? `${extra ? 'PC + ' : ''}${formatKg(entry.weight_kg)} kg` : 'Peso corporal';
+  return `${load} × ${entry.reps}`;
 }

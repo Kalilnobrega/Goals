@@ -3,9 +3,9 @@ import { createContext, useContext, useRef, useState } from 'react';
 import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel,
-} from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
+import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
 
 const digits = (value) => value.replace(/\D/g, '').slice(0, 4);
@@ -298,8 +298,12 @@ function SwipeToDelete({ onDelete, children }) {
   );
 }
 
+const Tracking = createContext('reps');
+
 function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   const extra = useContext(ExtraLoad);
+  const tracking = useContext(Tracking);
+  const timed = tracking !== 'reps';
   const [weight, setWeight] = useState(kgInput(entry.weight_kg));
   const [reps, setReps] = useState(String(entry.reps));
   const [error, setError] = useState('');
@@ -315,6 +319,9 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           aria-label={entry.pending ? `Série ${entry.position} guardada no celular, aguardando conexão` : `Editar série ${entry.position}`}
         >
           <span className={styles.setIndex}>{entry.position}</span>
+          {timed ? (
+            <span className={`${styles.setValue} ${styles.setTimed}`}>{setSummary(entry, tracking, extra)}</span>
+          ) : (<>
           <span className={styles.setValue}>
             {entry.weight_kg > 0
               ? <>{extra && <span className={styles.bodyweightPrefix}>PC +</span>}{formatKg(entry.weight_kg)} <small>kg</small></>
@@ -322,12 +329,17 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           </span>
           <span className={styles.setTimes}>×</span>
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
+          </>)}
           {entry.pending
             ? <CloudOff size={18} className={styles.setWaiting} aria-hidden="true" />
             : <Check size={18} className={styles.setDone} aria-hidden="true" />}
         </button>
       </SwipeToDelete>
     );
+  }
+
+  if (timed) {
+    return <TimedEditSet entry={entry} tracking={tracking} extra={extra} onSave={onSave} onDelete={onDelete} onCancel={onCancel} />;
   }
 
   const save = async () => {
@@ -493,6 +505,9 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   const addingExtra = complete && extraAt === done;
   const rows = seriesRows(item.sets);
   const pairedKey = item.unilateral ? Math.min(sideCount(item, 'left'), sideCount(item, 'right')) : item.sets.length;
+  const tracking = item.tracking ?? 'reps';
+  const timed = tracking !== 'reps';
+  const extra = item.equipment === 'bodyweight';
 
   const saveEdit = async (entry, data) => {
     const ok = await onEditSet(item, entry, data);
@@ -507,7 +522,8 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   };
 
   return (
-    <ExtraLoad.Provider value={item.equipment === 'bodyweight'}>
+    <ExtraLoad.Provider value={extra}>
+    <Tracking.Provider value={tracking}>
       <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
         <header className={styles.header}>
           <div className={styles.headerTop}>
@@ -524,7 +540,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
               {groupsLabel(item)}
               {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
             </p>
-          {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (
+          {onToggleUnilateral && !timed && (item.unilateral || item.sets.length === 0) && (
             <button
               type="button"
               className={`${styles.sideChip} ${item.unilateral ? styles.sideChipOn : ''}`}
@@ -537,9 +553,9 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
               <ArrowLeftRight size={14} /> Unilateral
             </button>
           )}
-          <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
+          {tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
             <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
-          </button>
+          </button>}
           </div>
         </header>
 
@@ -548,7 +564,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
             <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}</span>
             {item.previous.map((entry, i) => (
               <span key={i} className={styles.previousSet}>
-                {entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
+                {timed ? setSummary(entry, tracking, extra) : <>{entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}</>}
               </span>
             ))}
             {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
@@ -582,7 +598,16 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
         )}
 
         {!complete || addingExtra ? (
-          item.unilateral ? (
+          timed ? (
+            <TimedNewSet
+              key={`t-${item.sets.length}`}
+              item={item}
+              extra={extra}
+              onLogSet={onLogSet}
+              onStartRest={onStartRest}
+              onCancel={addingExtra ? () => setExtraAt(null) : undefined}
+            />
+          ) : item.unilateral ? (
             <UnilateralNewSet
               key={`u-${pairedKey}`}
               item={item}
@@ -602,16 +627,17 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
         ) : (
           <div className={styles.completeBox}>
             <p className={styles.completeText}>
-              <Check size={16} strokeWidth={3} aria-hidden="true" /> {item.target_sets} de {item.target_sets} séries do exercício feitas
+              <Check size={16} strokeWidth={3} aria-hidden="true" /> {tracking === 'cardio' ? 'Cardio feito' : `${item.target_sets} de ${item.target_sets} séries do exercício feitas`}
             </p>
             <button type="button" className={styles.extra} onClick={() => setExtraAt(done)}>
-              <Plus size={18} strokeWidth={2.4} /> Adicionar série extra
+              <Plus size={18} strokeWidth={2.4} /> {tracking === 'cardio' ? 'Adicionar outro trecho' : 'Adicionar série extra'}
             </button>
           </div>
         )}
 
         {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
       </article>
+    </Tracking.Provider>
     </ExtraLoad.Provider>
   );
 }

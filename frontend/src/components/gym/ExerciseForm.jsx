@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES } from '../../lib/gym';
+import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES, TRACKING } from '../../lib/gym';
 import { MusclePicker } from './ExerciseMuscles';
 import styles from './ExerciseForm.module.css';
 
@@ -31,6 +31,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
   const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? null);
   const [equipment, setEquipment] = useState(initial?.equipment ?? null);
   const [unilateral, setUnilateral] = useState(initial?.is_unilateral ?? false);
+  const [tracking, setTracking] = useState(initial?.tracking ?? 'reps');
   const [factor, setFactor] = useState(String(Math.round((initial?.bodyweight_factor ?? 1) * 100)));
   const [muscles, setMuscles] = useState(initial?.muscles ?? []);
 
@@ -56,6 +57,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
       equipment,
       is_unilateral: unilateral,
       bodyweight_factor: equipment === 'bodyweight' ? share : null,
+      tracking,
       muscles,
     });
     setSaving(false);
@@ -78,7 +80,34 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
       </label>
 
       <ChoiceGroup label="Grupo muscular" options={MUSCLE_GROUPS} value={muscleGroup} onChange={setMuscleGroup} />
-      <ChoiceGroup label="Equipamento" options={EQUIPMENT} value={equipment} onChange={setEquipment} />
+      <ChoiceGroup
+        label="Equipamento"
+        options={EQUIPMENT}
+        value={equipment}
+        onChange={value => {
+          setEquipment(value);
+          if (value === 'cardio') setTracking('cardio');
+          else if (tracking === 'cardio') setTracking('reps');
+        }}
+      />
+
+      <div className={styles.field}>
+        <span className={styles.label}>Como registrar</span>
+        <div className={styles.trackingRow} role="radiogroup" aria-label="Como registrar">
+          {TRACKING.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={tracking === option.value}
+              className={`${styles.trackingChip} ${tracking === option.value ? styles.trackingActive : ''}`}
+              onClick={() => setTracking(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {equipment === 'bodyweight' && (
         <label className={styles.field}>

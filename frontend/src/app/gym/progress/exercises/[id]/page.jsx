@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, familySiblings, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
@@ -16,6 +16,75 @@ import styles from '../../progress.module.css';
 
 const kg = (value) => `${formatKg(value)} kg`;
 const compactKg = (value) => (value >= 10000 ? `${formatKg(Math.round(value / 1000))}k` : formatKg(value));
+
+const minutes = (seconds) => Math.round((seconds / 60) * 10) / 10;
+const formatMinutes = (value) => `${formatKg(value)} min`;
+
+const CARDIO_METRICS = [
+  {
+    key: 'duration',
+    label: 'Duração',
+    value: p => (p.duration_seconds ? minutes(p.duration_seconds) : null),
+    has: points => points.some(p => p.duration_seconds > 0),
+    format: formatMinutes,
+    axis: v => formatKg(v),
+    detail: p => [p.distance_km ? `${formatKg(p.distance_km)} km` : null, p.level ? `nível ${p.level}` : null].filter(Boolean).join(' · ') || 'Cardio',
+    unit: 'min',
+  },
+  {
+    key: 'distance',
+    label: 'Distância',
+    value: p => p.distance_km,
+    has: points => points.some(p => p.distance_km > 0),
+    format: v => `${formatKg(v)} km`,
+    axis: v => formatKg(v),
+    detail: p => formatMinutes(minutes(p.duration_seconds)),
+    unit: 'km',
+  },
+  {
+    key: 'speed',
+    label: 'Velocidade',
+    value: p => p.speed_kmh,
+    has: points => points.some(p => p.speed_kmh > 0),
+    format: v => `${formatKg(v)} km/h`,
+    axis: v => formatKg(v),
+    detail: p => formatMinutes(minutes(p.duration_seconds)),
+    unit: 'km/h',
+  },
+  {
+    key: 'level',
+    label: 'Nível',
+    value: p => p.level,
+    has: points => points.some(p => p.level > 0),
+    format: v => `nível ${v}`,
+    axis: v => String(v),
+    detail: p => formatMinutes(minutes(p.duration_seconds)),
+    unit: '',
+  },
+];
+
+const TIME_METRICS = [
+  {
+    key: 'best',
+    label: 'Melhor tempo',
+    value: p => p.best_duration_seconds || null,
+    has: points => points.some(p => p.best_duration_seconds > 0),
+    format: formatClock,
+    axis: formatClock,
+    detail: p => plural(p.sets, 'série', 'séries'),
+    unit: 's',
+  },
+  {
+    key: 'total',
+    label: 'Tempo total',
+    value: p => p.duration_seconds || null,
+    has: points => points.some(p => p.duration_seconds > 0),
+    format: formatClock,
+    axis: formatClock,
+    detail: p => plural(p.sets, 'série', 'séries'),
+    unit: 's',
+  },
+];
 
 const METRICS = [
   {
@@ -207,6 +276,14 @@ function bestOf(points, pick) {
 
 const bestSet = (p) => (p.max_weight_kg > 0 ? `${kg(p.max_weight_kg)} × ${p.reps_at_max}` : `Peso corporal × ${p.max_reps}`);
 
+function timedRow(p, tracking) {
+  if (tracking === 'cardio') {
+    return [formatMinutes(minutes(p.duration_seconds)), p.distance_km ? `${formatKg(p.distance_km)} km` : null, p.speed_kmh ? `${formatKg(p.speed_kmh)} km/h` : null, p.level ? `nível ${p.level}` : null]
+      .filter(Boolean).join(' · ');
+  }
+  return `Melhor ${formatClock(p.best_duration_seconds)} · total ${formatClock(p.duration_seconds)}`;
+}
+
 export default function ExerciseProgressPage() {
   const { id } = useParams();
   const [data, setData] = useState(() => peekCache(`fitnessProgress:${id}`) ?? null);
@@ -281,8 +358,10 @@ export default function ExerciseProgressPage() {
   const { points } = data;
   const siblings = familySiblings(library?.find(exercise => exercise.id === data.exercise_id), library);
   const extra = data.equipment === 'bodyweight';
+  const tracking = data.tracking ?? 'reps';
+  const timed = tracking !== 'reps';
   const plusKg = (value) => `+${formatKg(value)} kg`;
-  const metrics = METRICS
+  const metrics = (tracking === 'cardio' ? CARDIO_METRICS : tracking === 'time' ? [...TIME_METRICS, ...METRICS.filter(m => m.key === 'weight')] : METRICS)
     .map(m => (extra && m.key === 'weight' ? { ...m, label: 'Carga extra', format: plusKg, axis: v => `+${formatKg(v)}` } : m))
     .filter(m => m.has(points));
   const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
@@ -301,7 +380,16 @@ export default function ExerciseProgressPage() {
   const biggest = bestOf(points, p => (p.volume_kg > 0 ? p.volume_kg : null));
   const mostReps = bestOf(points, p => p.max_reps);
 
-  const records = [
+  const longest = bestOf(points, p => p.best_duration_seconds || null);
+  const records = tracking === 'cardio' ? [
+    longest && { label: 'Mais longo', value: formatMinutes(minutes(bestOf(points, p => p.duration_seconds || null).duration_seconds)), note: formatShortDate(bestOf(points, p => p.duration_seconds || null).completed_at) },
+    bestOf(points, p => p.distance_km) && { label: 'Maior distância', value: `${formatKg(bestOf(points, p => p.distance_km).distance_km)} km`, note: formatShortDate(bestOf(points, p => p.distance_km).completed_at) },
+    bestOf(points, p => p.speed_kmh) && { label: 'Maior velocidade', value: `${formatKg(bestOf(points, p => p.speed_kmh).speed_kmh)} km/h`, note: formatShortDate(bestOf(points, p => p.speed_kmh).completed_at) },
+    bestOf(points, p => p.level) && { label: 'Maior nível', value: `nível ${bestOf(points, p => p.level).level}`, note: formatShortDate(bestOf(points, p => p.level).completed_at) },
+  ].filter(Boolean) : tracking === 'time' ? [
+    longest && { label: 'Melhor tempo', value: formatClock(longest.best_duration_seconds), note: formatShortDate(longest.completed_at) },
+    heaviest && { label: extra ? 'Maior carga extra' : 'Maior carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: formatShortDate(heaviest.completed_at) },
+  ].filter(Boolean) : [
     heaviest && { label: extra ? 'Maior carga extra' : 'Melhor carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: `× ${heaviest.reps_at_max} · ${formatShortDate(heaviest.completed_at)}` },
     strongest && { label: '1RM estimado', value: kg(strongest.estimated_1rm_kg), note: formatShortDate(strongest.completed_at) },
     biggest && { label: 'Maior volume', value: formatVolume(biggest.volume_kg), note: formatShortDate(biggest.completed_at) },
@@ -317,7 +405,7 @@ export default function ExerciseProgressPage() {
           {muscleLabel(data.muscle_group)} · {equipmentLabel(data.equipment)}
           {points.length ? ` · ${plural(points.length, 'treino', 'treinos')}` : ''}
         </p>
-        {data.equipment === 'bodyweight' && (
+        {data.equipment === 'bodyweight' && !timed && (
           <p className={styles.panelNote}>
             Carga mostrada como extra, além do peso corporal. Volume e 1RM somam {Math.round((library?.find(exercise => exercise.id === data.exercise_id)?.bodyweight_factor ?? 1) * 100)}% do seu peso da última pesagem.
           </p>
@@ -393,11 +481,11 @@ export default function ExerciseProgressPage() {
             />
           </section>
 
-          <Balance points={points} />
+          {!timed && <Balance points={points} />}
 
-          <Insights data={data} />
+          {!timed && <Insights data={data} />}
 
-          <TargetGoal
+          {!timed && <TargetGoal
             goal={data.goal}
             title="Meta de carga"
             addLabel="Definir meta de carga"
@@ -407,9 +495,9 @@ export default function ExerciseProgressPage() {
             unitHint="80"
             onSave={saveGoal}
             onDelete={removeGoal}
-          />
+          />}
 
-          {data.time && (
+          {data.time && tracking !== 'cardio' && (
             <section className={styles.group} aria-labelledby="exercise-time-title">
               <h2 id="exercise-time-title" className={styles.groupTitle}><Timer size={17} aria-hidden="true" /> Tempo</h2>
               <div className={styles.records}>
@@ -449,8 +537,8 @@ export default function ExerciseProgressPage() {
                   <Link href={`/gym/history/${p.session_id}`} className={styles.row}>
                     <span className={styles.rowDate}>{formatShortDate(p.completed_at)}</span>
                     <span className={styles.rowMain}>
-                      <span className={styles.rowName}>{bestSet(p)}</span>
-                      <span className={styles.rowMeta}>{p.session_name} · {plural(p.sets, 'série', 'séries')}</span>
+                      <span className={styles.rowName}>{timed ? timedRow(p, tracking) : bestSet(p)}</span>
+                      <span className={styles.rowMeta}>{p.session_name}{tracking === 'cardio' ? '' : ` · ${plural(p.sets, 'série', 'séries')}`}</span>
                     </span>
                     {p.volume_kg > 0 && <span className={styles.rowVolume}>{formatVolume(p.volume_kg)}</span>}
                     <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
