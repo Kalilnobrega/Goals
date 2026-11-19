@@ -206,6 +206,14 @@ class EditSessionExerciseSchema(BaseModel):
         return value or None
 
 
+class SetRecordSchema(BaseModel):
+    type: Literal["weight", "reps"]
+    weight_kg: float
+    reps: int
+    previous_weight_kg: float
+    previous_reps: int
+
+
 class SetSchema(BaseModel):
     weight_kg: float = Field(default=0, ge=0, le=1000)
     reps: int = Field(default=0, ge=0, le=1000)
@@ -215,6 +223,7 @@ class SetSchema(BaseModel):
     level: int | None = Field(default=None, ge=1, le=100)
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
     side: Literal["left", "right"] | None = None
+    rir: int | None = Field(default=None, ge=0, le=4)
 
 
 class EditSetSchema(BaseModel):
@@ -224,6 +233,7 @@ class EditSetSchema(BaseModel):
     distance_km: float | None = Field(default=None, gt=0, le=1000)
     speed_kmh: float | None = Field(default=None, gt=0, le=100)
     level: int | None = Field(default=None, ge=1, le=100)
+    rir: int | None = Field(default=None, ge=0, le=4)
 
 
 class FinishSessionSchema(BaseModel):
@@ -242,12 +252,15 @@ class SetResponseSchema(BaseModel):
     distance_km: float | None = None
     speed_kmh: float | None = None
     level: int | None = None
+    rir: int | None = None
+    record: SetRecordSchema | None = None
 
 
 class PreviousSetSchema(BaseModel):
     weight_kg: float
     reps: int
     side: str | None = None
+    rir: int | None = None
     duration_seconds: int | None = None
     distance_km: float | None = None
     speed_kmh: float | None = None

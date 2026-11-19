@@ -3,12 +3,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import gymTheme from './gym/theme.module.css';
-import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import { CheckCircle2, Info, AlertTriangle, Trophy, X } from 'lucide-react';
 import styles from './Toast.module.css';
 
 const ToastContext = createContext(() => {});
 const MAX_TOASTS = 3;
-const ICONS = { success: CheckCircle2, info: Info, danger: AlertTriangle };
+const ICONS = { success: CheckCircle2, info: Info, danger: AlertTriangle, record: Trophy };
 
 function ToastItem({ toast, onDismiss, onRemove }) {
   const Icon = ICONS[toast.tone] || ICONS.success;

@@ -50,6 +50,7 @@ export const pendingEntry = (queued) => ({
   speed_kmh: queued.data.speed_kmh ?? null,
   level: queued.data.level ?? null,
   side: queued.data.side ?? null,
+  rir: queued.data.rir ?? null,
   created_at: queued.createdAt,
   pending: true,
 });

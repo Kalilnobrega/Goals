@@ -11,7 +11,7 @@ import {
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
-  apiError, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
+  apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
   plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
@@ -172,6 +172,21 @@ export default function SessionPage() {
     } catch {}
   };
 
+  const celebrate = (item, record) => {
+    try {
+      navigator.vibrate?.([80, 60, 80, 60, 160]);
+    } catch {}
+    const load = item.equipment === 'bodyweight'
+      ? (weight) => (weight > 0 ? `PC + ${formatKg(weight)} kg` : 'peso corporal')
+      : (weight) => `${formatKg(weight)} kg`;
+    toast({
+      tone: 'record',
+      message: record.type === 'weight'
+        ? `Novo recorde em ${item.exercise_name}: ${load(record.weight_kg)} × ${record.reps}. Antes: ${load(record.previous_weight_kg)}.`
+        : `Recorde de reps em ${item.exercise_name}: ${record.reps} com ${load(record.weight_kg)}. Antes: ${record.previous_reps}.`,
+    });
+  };
+
   const replacePending = (itemId, clientId, entry) => {
     setSession(current => withItem(current, itemId, it => ({
       ...it,
@@ -190,7 +205,8 @@ export default function SessionPage() {
         sets: renumberSets([...it.sets, entry]),
       })));
       setOffline(false);
-      buzz();
+      if (entry.record) celebrate(item, entry.record);
+      else buzz();
       return true;
     } catch (err) {
       if (!isOfflineError(err)) return fail(err, 'Não foi possível salvar a série. Tente de novo.');
@@ -279,7 +295,7 @@ export default function SessionPage() {
       if (!silent) {
         toast({
           message: `Série ${entry.position} de ${item.exercise_name} excluída`,
-          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined, duration_seconds: entry.duration_seconds ?? undefined, distance_km: entry.distance_km ?? undefined, speed_kmh: entry.speed_kmh ?? undefined, level: entry.level ?? undefined }) },
+          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined, rir: entry.rir ?? undefined, duration_seconds: entry.duration_seconds ?? undefined, distance_km: entry.distance_km ?? undefined, speed_kmh: entry.speed_kmh ?? undefined, level: entry.level ?? undefined }) },
         });
       }
       return true;

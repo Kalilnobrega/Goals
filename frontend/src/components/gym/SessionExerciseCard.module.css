@@ -750,3 +750,52 @@
 .remove {
   color: var(--gym-danger);
 }
+
+.rir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rirLabel {
+  margin-right: auto;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rirLabel small {
+  font-weight: 400;
+  color: var(--gym-faint);
+}
+
+.rirChip {
+  width: 38px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rirChipOn {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

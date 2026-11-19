@@ -59,12 +59,13 @@ def serialize_set(entry: SetEntry) -> dict:
         "distance_km": float(entry.distance_km) if entry.distance_km is not None else None,
         "speed_kmh": float(entry.speed_kmh) if entry.speed_kmh is not None else None,
         "level": entry.level,
+        "rir": entry.rir,
     }
 
 
 CARDIO = "cardio"
 TIMED = ("time", CARDIO)
-PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level"}
+PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "rir"}
 
 
 def series_count(entries) -> int:
@@ -593,6 +594,44 @@ def existing_set(item_id: int, client_id: str, user: User, db: Session) -> SetEn
     )
 
 
+def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutSession, db: Session) -> dict | None:
+    if workout_session.status != IN_PROGRESS or item.exercise_id is None or (item.tracking or "reps") != "reps":
+        return None
+    rows = (
+        db.query(SetEntry.weight_kg, SetEntry.reps)
+        .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(
+            WorkoutSession.user_id == workout_session.user_id,
+            or_(WorkoutSession.status == COMPLETED, WorkoutSession.id == workout_session.id),
+            SessionExercise.exercise_id == item.exercise_id,
+            SetEntry.id != entry.id,
+        )
+        .all()
+    )
+    if not rows:
+        return None
+    best = max(weight for weight, _ in rows)
+    if entry.weight_kg > best:
+        return {
+            "type": "weight",
+            "weight_kg": float(entry.weight_kg),
+            "reps": entry.reps,
+            "previous_weight_kg": float(best),
+            "previous_reps": max(reps for weight, reps in rows if weight == best),
+        }
+    same = [reps for weight, reps in rows if weight == entry.weight_kg]
+    if same and entry.reps > max(same):
+        return {
+            "type": "reps",
+            "weight_kg": float(entry.weight_kg),
+            "reps": entry.reps,
+            "previous_weight_kg": float(entry.weight_kg),
+            "previous_reps": max(same),
+        }
+    return None
+
+
 def logged_at(item: SessionExercise, workout_session: WorkoutSession):
     times = [entry.created_at for entry in item.sets if entry.created_at]
     return max(times) if times else workout_session.completed_at or workout_session.started_at
@@ -630,6 +669,7 @@ def add_set(
         level=data.level if item.tracking == CARDIO else None,
         created_at=utcnow() if workout_session.status == IN_PROGRESS else logged_at(item, workout_session),
         client_id=data.client_id,
+        rir=None if timed else data.rir,
     )
     item.sets.append(entry)
     try:
@@ -641,7 +681,7 @@ def add_set(
             raise
         return serialize_set(existing)
     db.refresh(entry)
-    return serialize_set(entry)
+    return {**serialize_set(entry), "record": set_record(item, entry, workout_session, db)}
 
 
 @fitness_sessions_router.patch("/sets/{set_id}", response_model=SetResponseSchema)
@@ -668,6 +708,8 @@ def edit_set(
             entry.speed_kmh = round(Decimal(str(data.speed_kmh)), 1) if data.speed_kmh else None
         if "level" in changes:
             entry.level = data.level
+    if "rir" in changes and not timed:
+        entry.rir = data.rir
     db.commit()
     db.refresh(entry)
     return serialize_set(entry)

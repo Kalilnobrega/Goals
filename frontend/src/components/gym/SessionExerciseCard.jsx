@@ -3,7 +3,7 @@ import { createContext, useContext, useRef, useState } from 'react';
 import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary } from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -79,11 +79,35 @@ function validate(weight, reps) {
   return { data: { weight_kg: kg, reps: count } };
 }
 
+function RirPicker({ value, onChange }) {
+  return (
+    <div className={styles.rir} role="radiogroup" aria-label="Repetições na reserva (opcional)">
+      <span className={styles.rirLabel}>RIR <small>opcional</small></span>
+      {RIR_OPTIONS.map(option => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={value === option}
+          aria-label={option === 0 ? '0, chegou na falha' : `${rirLabel(option)} repetições na reserva`}
+          className={`${styles.rirChip} ${value === option ? styles.rirChipOn : ''}`}
+          onClick={() => onChange(value === option ? null : option)}
+        >
+          {rirLabel(option)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const withRir = (data, rir) => (rir === null ? data : { ...data, rir });
+
 function NewSet({ item, onLogSet, onStartRest, onCancel }) {
   const next = item.sets.length + 1;
   const reference = item.previous[item.sets.length] ?? item.sets[item.sets.length - 1] ?? null;
   const [weight, setWeight] = useState(reference ? kgInput(reference.weight_kg) : '');
   const [reps, setReps] = useState(reference ? String(reference.reps) : item.reps_min ? String(item.reps_min) : '');
+  const [rir, setRir] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -93,13 +117,14 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
     if (problem) return setError(problem);
     setError('');
     setSaving(true);
-    const ok = await onLogSet(item, data);
+    const ok = await onLogSet(item, withRir(data, rir));
     if (!ok) setSaving(false);
   };
 
   return (
     <form className={styles.newSet} onSubmit={submit} noValidate>
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
+      <RirPicker value={rir} onChange={setRir} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.newActions}>
         <button type="submit" className={styles.log} disabled={saving}>
@@ -160,6 +185,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
     };
   };
   const [values, setValues] = useState(() => ({ left: initial('left'), right: initial('right') }));
+  const [rir, setRir] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const missing = saving ? ['left', 'right'] : left === right ? ['left', 'right'] : [left < right ? 'left' : 'right'];
@@ -170,7 +196,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
     for (const side of missing) {
       const { data, error: problem } = validate(values[side].weight, values[side].reps);
       if (problem) return setError(`${SIDE_NAME[side]}: ${problem}`);
-      entries.push({ ...data, side });
+      entries.push(withRir({ ...data, side }, rir));
     }
     setError('');
     setSaving(true);
@@ -188,6 +214,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
       {missing.map(side => (
         <SideFields key={side} side={side} values={values[side]} onChange={next => setValues(current => ({ ...current, [side]: next }))} />
       ))}
+      <RirPicker value={rir} onChange={setRir} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.newActions}>
         <button type="submit" className={styles.log} disabled={saving}>
@@ -310,6 +337,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   const timed = tracking !== 'reps';
   const [weight, setWeight] = useState(kgInput(entry.weight_kg));
   const [reps, setReps] = useState(String(entry.reps));
+  const [rir, setRir] = useState(entry.rir ?? null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -333,6 +361,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           </span>
           <span className={styles.setTimes}>×</span>
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
+          {entry.rir != null && <span className={styles.tag}>RIR {rirLabel(entry.rir)}</span>}
           </>)}
           {entry.pending
             ? <CloudOff size={18} className={styles.setWaiting} aria-hidden="true" />
@@ -350,7 +379,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
     const { data, error: problem } = validate(weight, reps);
     if (problem) return setError(problem);
     setBusy(true);
-    const ok = await onSave(entry, data);
+    const ok = await onSave(entry, { ...data, rir });
     if (!ok) setBusy(false);
   };
 
@@ -367,6 +396,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
         <span>Editar série{entry.side ? ` · ${SIDE_NAME[entry.side]}` : ''}</span>
       </div>
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
+      <RirPicker value={rir} onChange={setRir} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.editActions}>
         <button type="button" className={styles.editDelete} onClick={remove} disabled={busy} aria-label={`Excluir série ${entry.position}`}>

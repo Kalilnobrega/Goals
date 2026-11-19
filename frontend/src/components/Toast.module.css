@@ -42,6 +42,7 @@
 .success { --tone: #10b981; }
 .info    { --tone: var(--blue-500); }
 .danger  { --tone: #ef4444; }
+.record  { --tone: #f59e0b; }
 
 .message {
   flex: 1;

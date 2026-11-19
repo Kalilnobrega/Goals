@@ -253,6 +253,9 @@ export const formatSets = (value) => `${formatKg(Math.round(value * 10) / 10)} $
 export const SIDE_LABEL = { left: 'E', right: 'D' };
 export const SIDE_NAME = { left: 'Esquerda', right: 'Direita' };
 
+export const RIR_OPTIONS = [0, 1, 2, 3, 4];
+export const rirLabel = (value) => (value >= 4 ? '4+' : String(value));
+
 export const seriesCount = (sets) => new Set(sets.map(entry => (entry.side ? `p${entry.position}` : `s${entry.id}`))).size;
 
 export function renumberSets(sets) {
