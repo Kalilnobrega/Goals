@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br, to_br_date
 from app.models import User
-from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal
-from app.fitness_forecast import forecast
+from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
+from app.fitness_forecast import forecast, slope_per_day
 from app.fitness_timing import exercise_timings, mean as average
 from app.fitness_schemas import (
     ProgressExerciseSchema,
@@ -86,6 +86,121 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
         if exercise_id in exercises
     ]
     return sorted(items, key=lambda item: item["last_at"], reverse=True)
+
+
+REP_TARGETS = [1, 3, 5, 8, 10, 12, 15]
+STAGNATION_SESSIONS = 4
+
+
+def strength(point: dict) -> float | None:
+    if point["estimated_1rm_kg"] is not None:
+        return point["estimated_1rm_kg"]
+    weight = float(point["max_weight_kg"])
+    return weight or None
+
+
+def rep_records(rows) -> list[dict]:
+    result = []
+    for target in REP_TARGETS:
+        best = None
+        for session_id, _, completed_at, weight, reps, *_ in rows:
+            if reps >= target and weight > 0 and (best is None or weight > best[0]):
+                best = (weight, reps, session_id, completed_at)
+        if best:
+            result.append({
+                "reps": target,
+                "weight_kg": float(best[0]),
+                "actual_reps": best[1],
+                "session_id": best[2],
+                "date": to_br_date(aware(best[3])),
+            })
+    kept = {}
+    for item in result:
+        kept[(item["weight_kg"], item["session_id"], item["actual_reps"])] = item
+    return sorted(kept.values(), key=lambda item: item["reps"])
+
+
+def progression_pace(ordered: list[dict]) -> dict | None:
+    series = [(to_br_date(p["completed_at"]), strength(p)) for p in ordered if strength(p)]
+    if len(series) < 3 or (series[-1][0] - series[0][0]).days < 14:
+        return None
+    rate = slope_per_day(series)
+    first = series[0][1]
+    current = series[-1][1]
+    return {
+        "metric": "e1rm" if ordered[-1]["estimated_1rm_kg"] is not None else "weight",
+        "kg_per_month": round(rate * 30, 1),
+        "pct_per_month": round(rate * 30 / first * 100, 1) if first else None,
+        "current_kg": round(current, 1),
+        "projected_kg": round(current + rate * 90, 1),
+        "sessions": len(series),
+        "since": series[0][0],
+    }
+
+
+def stagnation(ordered: list[dict]) -> dict | None:
+    best = None
+    last_record = None
+    for index, point in enumerate(ordered):
+        value = strength(point)
+        if value is None:
+            continue
+        if best is None or value > best + 0.01:
+            best = value
+            last_record = index
+    if last_record is None:
+        return None
+    since = len(ordered) - 1 - last_record
+    if since < STAGNATION_SESSIONS:
+        return None
+    return {
+        "sessions": since,
+        "since": to_br_date(ordered[last_record]["completed_at"]),
+        "best_kg": round(best, 1),
+    }
+
+
+def ready_to_progress(user: User, db: Session, exercise_id: int, rows) -> dict | None:
+    plans = (
+        db.query(WorkoutExercise, Workout.name)
+        .join(Workout, Workout.id == WorkoutExercise.workout_id)
+        .filter(Workout.user_id == user.id, WorkoutExercise.exercise_id == exercise_id, WorkoutExercise.reps_max.isnot(None))
+        .all()
+    )
+    if not plans or not rows:
+        return None
+    last_session = rows[-1][0]
+    last = [(float(weight), reps, side, position, set_id) for session_id, _, _, weight, reps, side, position, set_id, _ in rows if session_id == last_session]
+    top = max(weight for weight, *_ in last)
+    working = [reps for weight, reps, *_ in last if weight == top]
+    done = len({("pair", position) if side else ("set", set_id) for _, _, side, position, set_id in last})
+    for plan, workout_name in plans:
+        if done >= plan.target_sets and all(reps >= plan.reps_max for reps in working):
+            return {
+                "weight_kg": top,
+                "reps": min(working),
+                "sets": done,
+                "reps_max": plan.reps_max,
+                "workout_name": workout_name,
+            }
+    return None
+
+
+def frequency(ordered: list[dict]) -> dict | None:
+    if not ordered:
+        return None
+    today = today_br()
+    days = [to_br_date(p["completed_at"]) for p in ordered]
+    recent = [day for day in days if (today - day).days < 56]
+    gaps = [(later - earlier).days for earlier, later in zip(days, days[1:]) if later > earlier]
+    weeks = min(8, max(1, ((today - recent[0]).days + 1) / 7)) if recent else 8
+    return {
+        "per_week": round(len(recent) / weeks, 1),
+        "weeks": round(weeks, 1),
+        "avg_interval_days": round(sum(gaps) / len(gaps), 1) if gaps else None,
+        "days_since_last": (today - days[-1]).days,
+        "last_on": days[-1],
+    }
 
 
 def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
@@ -188,6 +303,8 @@ def get_exercise_progress(
     for session_id, point in points.items():
         point["sets"] = len(series[session_id])
 
+    ordered = sorted(points.values(), key=lambda p: p["completed_at"])
+
     return {
         "exercise_id": exercise.id,
         "name": exercise.name,
@@ -195,6 +312,11 @@ def get_exercise_progress(
         "equipment": exercise.equipment,
         "goal": serialize_goal(find_goal(user, db, EXERCISE, exercise.id), exercise_points(user, db, exercise.id)),
         "time": exercise_time(user, db, exercise.id),
+        "rep_records": rep_records(rows),
+        "pace": progression_pace(ordered),
+        "stagnation": stagnation(ordered),
+        "ready": ready_to_progress(user, db, exercise.id, rows),
+        "frequency": frequency(ordered),
         "points": [
             {**point, "max_weight_kg": float(point["max_weight_kg"]), "volume_kg": float(point["volume_kg"])}
             for point in points.values()

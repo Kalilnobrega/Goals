@@ -313,6 +313,51 @@ class ExerciseProgressSchema(BaseModel):
     points: list[ProgressPointSchema]
     goal: "FitnessGoalResponseSchema | None" = None
     time: "ExerciseTimeSchema | None" = None
+    rep_records: list["RepRecordSchema"] = []
+    pace: "ProgressPaceSchema | None" = None
+    stagnation: "StagnationSchema | None" = None
+    ready: "ExerciseReadySchema | None" = None
+    frequency: "ExerciseFrequencySchema | None" = None
+
+
+class RepRecordSchema(BaseModel):
+    reps: int
+    weight_kg: float
+    actual_reps: int
+    session_id: int
+    date: date
+
+
+class ProgressPaceSchema(BaseModel):
+    metric: str
+    kg_per_month: float
+    pct_per_month: float | None
+    current_kg: float
+    projected_kg: float
+    sessions: int
+    since: date
+
+
+class StagnationSchema(BaseModel):
+    sessions: int
+    since: date
+    best_kg: float
+
+
+class ExerciseReadySchema(BaseModel):
+    weight_kg: float
+    reps: int
+    sets: int
+    reps_max: int
+    workout_name: str
+
+
+class ExerciseFrequencySchema(BaseModel):
+    per_week: float
+    weeks: float = 8
+    avg_interval_days: float | None
+    days_since_last: int
+    last_on: date
 
 
 class ExerciseTimeSchema(BaseModel):

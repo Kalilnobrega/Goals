@@ -188,3 +188,71 @@ def test_body_weight_is_private(client, ana, bruno):
     assert client.get("/fitness/body-weight", headers=bruno_headers).json() == []
     assert client.patch(f"/fitness/body-weight/{entry['id']}", json={"weight_kg": 50}, headers=bruno_headers).status_code == 404
     assert client.delete(f"/fitness/body-weight/{entry['id']}", headers=bruno_headers).status_code == 404
+
+
+def test_exercise_progress_insights(client, library, ana, db_session):
+    from datetime import timedelta
+    from app.dates import today_br
+    from tests.test_fitness_stats import train, at
+    from tests.test_fitness_sessions import make_workout
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    plan = [
+        (60, [[(60, 12), (60, 12), (60, 12)]]),
+        (45, [[(65, 8), (65, 8), (65, 8)]]),
+        (30, [[(70, 5), (70, 5), (70, 5)]]),
+        (20, [[(70, 5), (65, 6), (65, 6)]]),
+        (15, [[(70, 4), (65, 6), (65, 6)]]),
+        (10, [[(70, 4), (65, 6), (65, 6)]]),
+        (5, [[(70, 3), (65, 6), (65, 6)]]),
+        (1, [[(62.5, 12), (62.5, 12), (62.5, 12)]]),
+    ]
+    for days, sets in plan:
+        train(client, headers, db_session, workout["id"], sets, at(days))
+
+    data = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()
+    records = {r["reps"]: (r["weight_kg"], r["actual_reps"]) for r in data["rep_records"]}
+    assert 1 not in records and 3 not in records
+    assert records[5] == (70.0, 5)
+    assert records[8] == (65.0, 8)
+    assert records[12] == (62.5, 12)
+    assert 15 not in records
+    assert len({(r["weight_kg"], r["session_id"], r["actual_reps"]) for r in data["rep_records"]}) == len(data["rep_records"])
+
+    assert data["pace"]["sessions"] == 8
+    assert data["pace"]["projected_kg"] > 0
+
+    assert data["stagnation"] is None or data["stagnation"]["sessions"] >= 4
+
+    assert data["ready"] == {"weight_kg": 62.5, "reps": 12, "sets": 3, "reps_max": 12, "workout_name": "Treino A"}
+
+    frequency = data["frequency"]
+    assert frequency["days_since_last"] == 1
+    assert frequency["per_week"] == 1.1
+    assert frequency["weeks"] == 6.6
+    assert frequency["avg_interval_days"] == round(59 / 7, 1)
+
+
+def test_exercise_progress_flags_stagnation(client, library, ana, db_session):
+    from tests.test_fitness_stats import train, at
+    from tests.test_fitness_sessions import make_workout
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    for days in (30, 25, 20, 15, 10, 5):
+        train(client, headers, db_session, workout["id"], [[(60, 10)]], at(days))
+    data = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()
+    assert data["stagnation"]["sessions"] == 5
+    assert data["stagnation"]["best_kg"] == 80.0
+
+
+
+def test_exercise_frequency_uses_the_weeks_since_the_first_time(client, library, ana, db_session):
+    from tests.test_fitness_stats import train, at
+    from tests.test_fitness_sessions import make_workout
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    for days in (6, 3):
+        train(client, headers, db_session, workout["id"], [[(60, 10)]], at(days))
+    frequency = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["frequency"]
+    assert frequency["weeks"] == 1
+    assert frequency["per_week"] == 2.0
