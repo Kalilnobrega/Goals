@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, Timer } from 'lucide-react';
 import { getExerciseProgress, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, formatDelta, formatKg, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
@@ -280,6 +280,22 @@ export default function ExerciseProgressPage() {
             onSave={saveGoal}
             onDelete={removeGoal}
           />
+
+          {data.time && (
+            <section className={styles.records} aria-label="Tempo">
+              {[
+                { label: 'Tempo no exercício', value: formatSeconds(data.time.avg_seconds), note: `média de ${plural(data.time.sessions, 'treino', 'treinos')}` },
+                { label: 'Tempo por série', value: formatSeconds(data.time.avg_set_seconds), note: 'incluindo descanso' },
+                { label: 'Descanso real', value: formatSeconds(data.time.avg_rest_seconds), note: 'entre séries' },
+              ].map(tile => (
+                <div key={tile.label} className={styles.record}>
+                  <span className={styles.recordLabel}><Timer size={13} aria-hidden="true" /> {tile.label}</span>
+                  <span className={styles.recordValue}>{tile.value}</span>
+                  <span className={styles.recordNote}>{tile.note}</span>
+                </div>
+              ))}
+            </section>
+          )}
 
           <section className={styles.records} aria-label="Recordes">
             {records.map(record => (

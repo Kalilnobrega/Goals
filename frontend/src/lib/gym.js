@@ -278,3 +278,5 @@ export function seriesRows(sets) {
   });
   return rows.sort((a, b) => a.position - b.position);
 }
+
+export const formatSeconds = (seconds) => (seconds == null ? '—' : seconds < 60 ? `${Math.round(seconds)}s` : formatRest(Math.round(seconds)));

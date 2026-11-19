@@ -312,3 +312,16 @@
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+
+.timing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.timing strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}

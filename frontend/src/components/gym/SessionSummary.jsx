@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Trophy, Activity } from 'lucide-react';
 import {
   formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleLabel,
-  muscleName, plural, seriesCount, seriesRows, SIDE_LABEL,
+  muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds,
 } from '../../lib/gym';
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import UnilateralTag from './UnilateralTag';
@@ -124,6 +124,13 @@ export default function SessionSummary({ session, insights }) {
         </div>
       </div>
 
+      {(insights?.set_seconds || insights?.rest_seconds) && (
+        <p className={styles.timing}>
+          {insights.set_seconds && <span><strong>{formatSeconds(insights.set_seconds)}</strong> por série</span>}
+          {insights.rest_seconds && <span><strong>{formatSeconds(insights.rest_seconds)}</strong> de descanso médio</span>}
+        </p>
+      )}
+
       {previous && (
         <p className={styles.compare}>
           Comparado com a última vez, em <Link href={`/gym/history/${previous.id}`}>{formatDay(previous.date)}</Link>
@@ -163,6 +170,8 @@ export default function SessionSummary({ session, insights }) {
                 <span className={styles.itemName}>{item.exercise_name}</span>
                 <span className={styles.itemMeta}>
                   {muscleLabel(item.muscle_group)} · {plural(seriesCount(item.sets), 'série', 'séries')}
+                  {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}` : ''}
+                  {insight?.rest_seconds ? ` · descanso ${formatSeconds(insight.rest_seconds)}` : ''}
                   {item.unilateral && <>{' '}<UnilateralTag /></>}
                 </span>
               </div>

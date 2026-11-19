@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, ClipboardList, Target, ChevronRight, Scale, CalendarDays, ListFilter, ChevronDown, X, ListChecks, Timer,
 } from 'lucide-react';
 import { getFitnessStats, getPlans, getProgressWorkouts, getProgressExercises, getBodyWeights, getBodyGoal, peekCache } from '../../../lib/api';
 import {
-  formatDay, formatDelta, formatDuration, formatKg, formatVolume, muscleLabel, parseDay, plural,
+  formatDay, formatDelta, formatDuration, formatKg, formatSeconds, formatVolume, muscleLabel, parseDay, plural,
 } from '../../../lib/gym';
 import BarChart from '../../../components/gym/BarChart';
 import Sparkline from '../../../components/gym/Sparkline';
@@ -606,6 +606,57 @@ function BodyWeightCard({ data }) {
   );
 }
 
+function TimeCard({ data }) {
+  const time = data.time;
+  if (!time) return null;
+  const tiles = [
+    { label: 'Duração média do treino', value: formatSeconds(time.avg_session_seconds) },
+    { label: 'Tempo médio por série', value: formatSeconds(time.avg_set_seconds), note: 'incluindo descanso' },
+    { label: 'Tempo médio por exercício', value: formatSeconds(time.avg_exercise_seconds), note: `${formatKg(time.exercises_per_session)} exercícios por treino` },
+    { label: 'Descanso real entre séries', value: formatSeconds(time.avg_rest_seconds), note: 'medido pelo app' },
+  ];
+  return (
+    <Card icon={Timer} title="Tempo">
+      <div className={styles.records}>
+        {tiles.map(tile => (
+          <div key={tile.label} className={`${styles.record} ${styles.recordStatic}`}>
+            <span className={styles.recordLabel}>{tile.label}</span>
+            <span className={styles.recordValue}>{tile.value}</span>
+            {tile.note && <span className={styles.recordNote}>{tile.note}</span>}
+          </div>
+        ))}
+      </div>
+      {time.longest_exercises.length > 0 && (
+        <>
+          <h3 className={styles.subTitle}>Exercícios que mais tomam tempo</h3>
+          <ul className={styles.rows}>
+            {time.longest_exercises.map(e => {
+              const content = (
+                <>
+                  <span className={styles.rowMain}>
+                    <span className={styles.rowName}>{e.name}</span>
+                    <span className={styles.rowMeta}>
+                      {plural(e.sessions, 'treino', 'treinos')}{e.set_seconds ? ` · ${formatSeconds(e.set_seconds)} por série` : ''}
+                    </span>
+                  </span>
+                  <span className={styles.strengthValue}>{formatSeconds(e.avg_seconds)}</span>
+                </>
+              );
+              return (
+                <li key={`${e.exercise_id}-${e.name}`}>
+                  {e.exercise_id
+                    ? <Link href={`/gym/progress/exercises/${e.exercise_id}`} className={styles.row}>{content}</Link>
+                    : <div className={styles.row}>{content}</div>}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function Frequency({ data }) {
   return (
     <Card icon={CalendarDays} title="Frequência" hint="séries por dia">
@@ -775,6 +826,7 @@ export default function StatsPage() {
           <Muscles data={ready} />
           <Progressions data={ready} />
           <RelativeStrength data={ready} />
+          <TimeCard data={ready} />
           <Consistency data={ready} />
           <MostDone data={ready} />
           <AllTime data={ready} />
