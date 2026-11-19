@@ -56,7 +56,7 @@ function AverageTile({ label, value }) {
   );
 }
 
-const setLabel = (weight, reps) => `${weight > 0 ? `${formatKg(weight)} kg` : 'Peso corporal'} × ${reps}`;
+const setLabel = (weight, reps, extra = false) => `${weight > 0 ? `${extra ? 'PC + ' : ''}${formatKg(weight)} kg` : 'Peso corporal'} × ${reps}`;
 
 function MusclesWorked({ muscleSets }) {
   const [bodyType, setBodyType] = useBodyType();
@@ -178,8 +178,8 @@ export default function SessionSummary({ session, insights }) {
                 {seriesRows(item.sets).map(row => (
                   <span key={row.key} className={styles.set}>
                     {row.entry
-                      ? setLabel(row.entry.weight_kg, row.entry.reps)
-                      : ['left', 'right'].filter(side => row[side]).map(side => `${SIDE_LABEL[side]} ${setLabel(row[side].weight_kg, row[side].reps)}`).join(' · ')}
+                      ? setLabel(row.entry.weight_kg, row.entry.reps, item.equipment === 'bodyweight')
+                      : ['left', 'right'].filter(side => row[side]).map(side => `${SIDE_LABEL[side]} ${setLabel(row[side].weight_kg, row[side].reps, item.equipment === 'bodyweight')}`).join(' · ')}
                   </span>
                 ))}
               </div>

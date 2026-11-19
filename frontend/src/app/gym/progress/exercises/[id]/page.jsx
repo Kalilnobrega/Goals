@@ -141,7 +141,7 @@ function Insights({ data }) {
               <li key={record.reps}>
                 <Link href={`/gym/history/${record.session_id}`} className={styles.repRecord}>
                   <span className={styles.repTarget}>{record.reps} {record.reps === 1 ? 'rep' : 'reps'}</span>
-                  <span className={styles.repWeight}>{formatKg(record.weight_kg)} kg</span>
+                  <span className={styles.repWeight}>{data.equipment === 'bodyweight' ? '+' : ''}{formatKg(record.weight_kg)} kg</span>
                   <span className={styles.repNote}>
                     {record.actual_reps > record.reps ? `feito com ${record.actual_reps} · ` : ''}{formatShortDate(record.date)}
                   </span>
@@ -280,7 +280,11 @@ export default function ExerciseProgressPage() {
 
   const { points } = data;
   const siblings = familySiblings(library?.find(exercise => exercise.id === data.exercise_id), library);
-  const metrics = METRICS.filter(m => m.has(points));
+  const extra = data.equipment === 'bodyweight';
+  const plusKg = (value) => `+${formatKg(value)} kg`;
+  const metrics = METRICS
+    .map(m => (extra && m.key === 'weight' ? { ...m, label: 'Carga extra', format: plusKg, axis: v => `+${formatKg(v)}` } : m))
+    .filter(m => m.has(points));
   const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
   const series = points
     .filter(p => metric.value(p) !== null)
@@ -298,7 +302,7 @@ export default function ExerciseProgressPage() {
   const mostReps = bestOf(points, p => p.max_reps);
 
   const records = [
-    heaviest && { label: 'Melhor carga', value: kg(heaviest.max_weight_kg), note: `× ${heaviest.reps_at_max} · ${formatShortDate(heaviest.completed_at)}` },
+    heaviest && { label: extra ? 'Maior carga extra' : 'Melhor carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: `× ${heaviest.reps_at_max} · ${formatShortDate(heaviest.completed_at)}` },
     strongest && { label: '1RM estimado', value: kg(strongest.estimated_1rm_kg), note: formatShortDate(strongest.completed_at) },
     biggest && { label: 'Maior volume', value: formatVolume(biggest.volume_kg), note: formatShortDate(biggest.completed_at) },
     !heaviest && mostReps && { label: 'Mais repetições', value: plural(mostReps.max_reps, 'rep', 'reps'), note: formatShortDate(mostReps.completed_at) },
@@ -313,6 +317,9 @@ export default function ExerciseProgressPage() {
           {muscleLabel(data.muscle_group)} · {equipmentLabel(data.equipment)}
           {points.length ? ` · ${plural(points.length, 'treino', 'treinos')}` : ''}
         </p>
+        {data.equipment === 'bodyweight' && (
+          <p className={styles.panelNote}>Carga mostrada como extra, além do peso corporal. Volume e 1RM somam o seu peso da última pesagem.</p>
+        )}
         {siblings.length > 1 && (
           <nav className={styles.variants} aria-label="Outros equipamentos">
             {siblings.map(variant => (

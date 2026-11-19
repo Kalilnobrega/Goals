@@ -727,3 +727,11 @@
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
 }
+
+.bodyweightPrefix {
+  margin-right: 4px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gym-accent);
+}

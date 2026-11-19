@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { createContext, useContext, useRef, useState } from 'react';
 import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
@@ -17,7 +17,15 @@ const stepKg = (text, delta) => {
 
 const stepReps = (text, delta) => String(Math.min(1000, Math.max(1, (Number(text) || 0) + delta)));
 
+const ExtraLoad = createContext(false);
+
+const loadText = (weight, extra) => {
+  if (extra) return weight > 0 ? `PC + ${formatKg(weight)} kg` : 'PC';
+  return weight > 0 ? `${formatKg(weight)} kg` : 'PC';
+};
+
 function SetInputs({ weight, reps, onWeight, onReps, autoFocus }) {
+  const extra = useContext(ExtraLoad);
   return (
     <div className={styles.inputs}>
       <div className={styles.inputGroup}>
@@ -31,10 +39,10 @@ function SetInputs({ weight, reps, onWeight, onReps, autoFocus }) {
             onChange={e => onWeight(cleanKgInput(e.target.value))}
             inputMode="decimal"
             placeholder="0"
-            aria-label="Carga em kg"
+            aria-label={extra ? 'Carga extra em kg, além do peso corporal' : 'Carga em kg'}
             autoFocus={autoFocus}
           />
-          <span className={styles.unit}>kg</span>
+          <span className={styles.unit}>{extra ? '+kg' : 'kg'}</span>
         </label>
         <button type="button" className={styles.step} onClick={() => onWeight(stepKg(weight, 2.5))} aria-label="Mais 2,5 kg">
           <Plus size={16} strokeWidth={2.6} />
@@ -291,6 +299,7 @@ function SwipeToDelete({ onDelete, children }) {
 }
 
 function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
+  const extra = useContext(ExtraLoad);
   const [weight, setWeight] = useState(kgInput(entry.weight_kg));
   const [reps, setReps] = useState(String(entry.reps));
   const [error, setError] = useState('');
@@ -307,7 +316,9 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
         >
           <span className={styles.setIndex}>{entry.position}</span>
           <span className={styles.setValue}>
-            {entry.weight_kg > 0 ? <>{formatKg(entry.weight_kg)} <small>kg</small></> : <span className={styles.bodyweight}>Peso corporal</span>}
+            {entry.weight_kg > 0
+              ? <>{extra && <span className={styles.bodyweightPrefix}>PC +</span>}{formatKg(entry.weight_kg)} <small>kg</small></>
+              : <span className={styles.bodyweight}>Peso corporal</span>}
           </span>
           <span className={styles.setTimes}>×</span>
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
@@ -424,9 +435,10 @@ function ExerciseNote({ item, onSave }) {
   );
 }
 
-const sideValue = (entry) => (entry.weight_kg > 0 ? `${formatKg(entry.weight_kg)} × ${entry.reps}` : `PC × ${entry.reps}`);
+const sideValue = (entry, extra) => `${loadText(entry.weight_kg, extra)} × ${entry.reps}`;
 
 function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
+  const extra = useContext(ExtraLoad);
   const editing = [row.left, row.right].find(entry => entry && entry.id === editingId);
   if (editing) {
     return (
@@ -457,10 +469,10 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
               className={`${styles.pairSide} ${entry ? '' : styles.pairMissing}`}
               onClick={entry && !entry.pending ? () => onEdit(entry.id) : undefined}
               disabled={!entry || entry.pending}
-              aria-label={entry ? `Editar série ${row.position}, ${SIDE_NAME[side].toLowerCase()}: ${sideValue(entry)}` : `${SIDE_NAME[side]} ainda não registrada`}
+              aria-label={entry ? `Editar série ${row.position}, ${SIDE_NAME[side].toLowerCase()}: ${sideValue(entry, extra)}` : `${SIDE_NAME[side]} ainda não registrada`}
             >
               <span className={styles.pairLabel}>{SIDE_LABEL[side]}</span>
-              <span className={styles.pairValue}>{entry ? sideValue(entry) : '—'}</span>
+              <span className={styles.pairValue}>{entry ? sideValue(entry, extra) : '—'}</span>
             </button>
           );
         })}
@@ -495,109 +507,111 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   };
 
   return (
-    <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
-      <header className={styles.header}>
-        <div className={styles.headerTop}>
-          <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
-          <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
-          <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
-            <MoreVertical size={18} />
+    <ExtraLoad.Provider value={item.equipment === 'bodyweight'}>
+      <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
+        <header className={styles.header}>
+          <div className={styles.headerTop}>
+            <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
+            <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
+            <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
+              <MoreVertical size={18} />
+            </button>
+          </div>
+          <div className={styles.headerBottom}>
+            <p className={styles.meta}>
+              {target ? <span className={styles.target}>{target}</span> : null}
+              {target ? ' · ' : ''}
+              {groupsLabel(item)}
+              {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
+            </p>
+          {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (
+            <button
+              type="button"
+              className={`${styles.sideChip} ${item.unilateral ? styles.sideChipOn : ''}`}
+              onClick={() => onToggleUnilateral(item)}
+              disabled={item.sets.length > 0}
+              aria-pressed={!!item.unilateral}
+              aria-label={item.unilateral ? 'Unilateral ativado' : 'Tornar unilateral (esquerda e direita)'}
+              title={item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : undefined}
+            >
+              <ArrowLeftRight size={14} /> Unilateral
+            </button>
+          )}
+          <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
+            <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
           </button>
-        </div>
-        <div className={styles.headerBottom}>
-          <p className={styles.meta}>
-            {target ? <span className={styles.target}>{target}</span> : null}
-            {target ? ' · ' : ''}
-            {groupsLabel(item)}
-            {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
+          </div>
+        </header>
+
+        {item.previous.length > 0 && (
+          <p className={styles.previous}>
+            <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}</span>
+            {item.previous.map((entry, i) => (
+              <span key={i} className={styles.previousSet}>
+                {entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
+              </span>
+            ))}
+            {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
           </p>
-        {onToggleUnilateral && (item.unilateral || item.sets.length === 0) && (
-          <button
-            type="button"
-            className={`${styles.sideChip} ${item.unilateral ? styles.sideChipOn : ''}`}
-            onClick={() => onToggleUnilateral(item)}
-            disabled={item.sets.length > 0}
-            aria-pressed={!!item.unilateral}
-            aria-label={item.unilateral ? 'Unilateral ativado' : 'Tornar unilateral (esquerda e direita)'}
-            title={item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : undefined}
-          >
-            <ArrowLeftRight size={14} /> Unilateral
-          </button>
         )}
-        <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
-          <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
-        </button>
-        </div>
-      </header>
 
-      {item.previous.length > 0 && (
-        <p className={styles.previous}>
-          <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}</span>
-          {item.previous.map((entry, i) => (
-            <span key={i} className={styles.previousSet}>
-              {entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}
-            </span>
-          ))}
-          {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
-        </p>
-      )}
+        {item.sets.length > 0 && (
+          <ol className={styles.sets}>
+            {rows.map(row => (row.entry ? (
+              <SetRow
+                key={`${row.entry.id}-${editingId === row.entry.id}`}
+                entry={row.entry}
+                editing={editingId === row.entry.id}
+                onEdit={() => setEditingId(row.entry.id)}
+                onCancel={() => setEditingId(null)}
+                onSave={saveEdit}
+                onDelete={deleteEntry}
+              />
+            ) : (
+              <PairRow
+                key={row.key}
+                row={row}
+                editingId={editingId}
+                onEdit={setEditingId}
+                onCancel={() => setEditingId(null)}
+                onSave={saveEdit}
+                onDelete={deleteEntry}
+              />
+            )))}
+          </ol>
+        )}
 
-      {item.sets.length > 0 && (
-        <ol className={styles.sets}>
-          {rows.map(row => (row.entry ? (
-            <SetRow
-              key={`${row.entry.id}-${editingId === row.entry.id}`}
-              entry={row.entry}
-              editing={editingId === row.entry.id}
-              onEdit={() => setEditingId(row.entry.id)}
-              onCancel={() => setEditingId(null)}
-              onSave={saveEdit}
-              onDelete={deleteEntry}
+        {!complete || addingExtra ? (
+          item.unilateral ? (
+            <UnilateralNewSet
+              key={`u-${pairedKey}`}
+              item={item}
+              onLogSet={onLogSet}
+              onStartRest={onStartRest}
+              onCancel={addingExtra ? () => setExtraAt(null) : undefined}
             />
           ) : (
-            <PairRow
-              key={row.key}
-              row={row}
-              editingId={editingId}
-              onEdit={setEditingId}
-              onCancel={() => setEditingId(null)}
-              onSave={saveEdit}
-              onDelete={deleteEntry}
+            <NewSet
+              key={pairedKey}
+              item={item}
+              onLogSet={onLogSet}
+              onStartRest={onStartRest}
+              onCancel={addingExtra ? () => setExtraAt(null) : undefined}
             />
-          )))}
-        </ol>
-      )}
-
-      {!complete || addingExtra ? (
-        item.unilateral ? (
-          <UnilateralNewSet
-            key={`u-${pairedKey}`}
-            item={item}
-            onLogSet={onLogSet}
-            onStartRest={onStartRest}
-            onCancel={addingExtra ? () => setExtraAt(null) : undefined}
-          />
+          )
         ) : (
-          <NewSet
-            key={pairedKey}
-            item={item}
-            onLogSet={onLogSet}
-            onStartRest={onStartRest}
-            onCancel={addingExtra ? () => setExtraAt(null) : undefined}
-          />
-        )
-      ) : (
-        <div className={styles.completeBox}>
-          <p className={styles.completeText}>
-            <Check size={16} strokeWidth={3} aria-hidden="true" /> {item.target_sets} de {item.target_sets} séries do exercício feitas
-          </p>
-          <button type="button" className={styles.extra} onClick={() => setExtraAt(done)}>
-            <Plus size={18} strokeWidth={2.4} /> Adicionar série extra
-          </button>
-        </div>
-      )}
+          <div className={styles.completeBox}>
+            <p className={styles.completeText}>
+              <Check size={16} strokeWidth={3} aria-hidden="true" /> {item.target_sets} de {item.target_sets} séries do exercício feitas
+            </p>
+            <button type="button" className={styles.extra} onClick={() => setExtraAt(done)}>
+              <Plus size={18} strokeWidth={2.4} /> Adicionar série extra
+            </button>
+          </div>
+        )}
 
-      {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
-    </article>
+        {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
+      </article>
+    </ExtraLoad.Provider>
   );
 }
