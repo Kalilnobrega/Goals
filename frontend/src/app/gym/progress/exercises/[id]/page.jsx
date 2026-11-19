@@ -282,29 +282,35 @@ export default function ExerciseProgressPage() {
           />
 
           {data.time && (
-            <section className={styles.records} aria-label="Tempo">
-              {[
-                { label: 'Tempo no exercício', value: formatSeconds(data.time.avg_seconds), note: `média de ${plural(data.time.sessions, 'treino', 'treinos')}` },
-                { label: 'Tempo por série', value: formatSeconds(data.time.avg_set_seconds), note: 'incluindo descanso' },
-                { label: 'Descanso real', value: formatSeconds(data.time.avg_rest_seconds), note: 'entre séries' },
-              ].map(tile => (
-                <div key={tile.label} className={styles.record}>
-                  <span className={styles.recordLabel}><Timer size={13} aria-hidden="true" /> {tile.label}</span>
-                  <span className={styles.recordValue}>{tile.value}</span>
-                  <span className={styles.recordNote}>{tile.note}</span>
-                </div>
-              ))}
+            <section className={styles.group} aria-labelledby="exercise-time-title">
+              <h2 id="exercise-time-title" className={styles.groupTitle}><Timer size={17} aria-hidden="true" /> Tempo</h2>
+              <div className={styles.records}>
+                {[
+                  { label: 'Tempo no exercício', value: formatSeconds(data.time.avg_seconds), note: `média de ${plural(data.time.sessions, 'treino', 'treinos')}` },
+                  { label: 'Tempo por série', value: formatSeconds(data.time.avg_set_seconds), note: 'incluindo descanso' },
+                  { label: 'Descanso real', value: formatSeconds(data.time.avg_rest_seconds), note: 'entre séries' },
+                ].map(tile => (
+                  <div key={tile.label} className={styles.record}>
+                    <span className={styles.recordLabel}>{tile.label}</span>
+                    <span className={styles.recordValue}>{tile.value}</span>
+                    <span className={styles.recordNote}>{tile.note}</span>
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
-          <section className={styles.records} aria-label="Recordes">
-            {records.map(record => (
-              <div key={record.label} className={styles.record}>
-                <span className={styles.recordLabel}><Trophy size={13} aria-hidden="true" /> {record.label}</span>
-                <span className={styles.recordValue}>{record.value}</span>
-                <span className={styles.recordNote}>{record.note}</span>
-              </div>
-            ))}
+          <section className={styles.group} aria-labelledby="exercise-records-title">
+            <h2 id="exercise-records-title" className={styles.groupTitle}><Trophy size={17} aria-hidden="true" /> Recordes</h2>
+            <div className={styles.records}>
+              {records.map(record => (
+                <div key={record.label} className={styles.record}>
+                  <span className={styles.recordLabel}>{record.label}</span>
+                  <span className={styles.recordValue}>{record.value}</span>
+                  <span className={styles.recordNote}>{record.note}</span>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section className={styles.sessions}>

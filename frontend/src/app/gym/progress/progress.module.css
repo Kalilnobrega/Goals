@@ -173,16 +173,20 @@
 
 .records {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .record {
+  min-width: 0;
+  min-height: 92px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 14px;
-  border-radius: 18px;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  color: var(--gym-text);
+  text-decoration: none;
   background: var(--gym-surface);
   border: 1px solid var(--gym-border);
 }
@@ -192,7 +196,8 @@
   align-items: center;
   gap: 5px;
   color: var(--gym-muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1.25;
 }
 
 .recordLabel svg {
@@ -200,16 +205,22 @@
 }
 
 .recordValue {
+  margin-top: auto;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   letter-spacing: -0.02em;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
 .recordNote {
   color: var(--gym-faint);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sessions {
@@ -427,4 +438,43 @@
 .balanceNote {
   color: var(--gym-faint);
   font-size: 0.82rem;
+}
+
+.records:has(> :nth-child(3):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 601px) {
+  .records:has(> :nth-child(4):last-child) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .records:has(> :nth-child(3):last-child) .record {
+    padding: 12px 10px;
+  }
+
+  .records:has(> :nth-child(3):last-child) .recordValue {
+    font-size: 1.05rem;
+  }
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groupTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.groupTitle svg {
+  color: var(--gym-accent);
 }
