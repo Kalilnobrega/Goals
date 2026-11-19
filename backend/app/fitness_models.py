@@ -14,6 +14,7 @@ class Exercise(Base):
     muscle_group = Column(String(20), nullable=False)
     equipment = Column(String(20), nullable=False)
     is_unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    family = Column(String(60), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     muscles = relationship(
