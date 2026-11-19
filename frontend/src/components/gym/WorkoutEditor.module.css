@@ -436,3 +436,46 @@
   background: var(--gym-accent-soft);
   color: var(--gym-accent);
 }
+
+.equipmentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 38px;
+}
+
+.equipmentChips {
+  display: flex;
+  gap: 6px;
+  margin-right: -14px;
+  padding-right: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.equipmentChips::-webkit-scrollbar {
+  display: none;
+}
+
+.equipmentChip {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
+.equipmentChipOn {
+  background: var(--gym-accent);
+  border-color: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}

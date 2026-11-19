@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, X, Check } from 'lucide-react';
-import { equipmentLabel, plural, groupsLabel } from '../../lib/gym';
+import { Search, X, Check, ChevronDown } from 'lucide-react';
+import { equipmentLabel, plural, groupsLabel, groupFamilies, familyEquipment } from '../../lib/gym';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from './ExerciseFilters';
 import UnilateralTag from './UnilateralTag';
 import styles from './ExercisePicker.module.css';
@@ -11,6 +11,8 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
   const filters = useExerciseFilters(exercises);
   const { query, setQuery, muscle, roleOf, visible, signature } = filters;
   const [selected, setSelected] = useState([]);
+  const [expanded, setExpanded] = useState(null);
+  const families = useMemo(() => groupFamilies(visible, !muscle), [visible, muscle]);
 
   const toggle = (exercise) => {
     if (single) return onConfirm([exercise]);
@@ -62,27 +64,60 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
       )}
 
       <ul key={signature} className={styles.list}>
-        {visible.map((exercise, index) => {
-          const position = order(exercise.id);
+        {families.map((family, index) => {
+          const first = family.variants[0];
+          const many = family.variants.length > 1;
+          const chosen = family.variants.filter(variant => order(variant.id));
+          const position = !many ? order(first.id) : 0;
+          const open = many && expanded === family.key;
           return (
-            <li key={exercise.id} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
+            <li key={family.key} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
               <button
                 type="button"
-                className={`${styles.item} ${position ? styles.itemSelected : ''}`}
-                aria-pressed={!!position}
-                onClick={() => toggle(exercise)}
+                className={`${styles.item} ${position || chosen.length ? styles.itemSelected : ''} ${open ? styles.itemOpen : ''}`}
+                aria-pressed={many ? undefined : !!position}
+                aria-expanded={many ? open : undefined}
+                onClick={() => (many ? setExpanded(current => (current === family.key ? null : family.key)) : toggle(first))}
               >
                 <span className={styles.itemText}>
-                  <span className={styles.itemName}>{exercise.name}</span>
+                  <span className={styles.itemName}>{family.name}</span>
                   <span className={styles.itemMeta}>
-                    {muscle ? ROLE_LABEL[roleOf(exercise)] : groupsLabel(exercise)} · {equipmentLabel(exercise.equipment)}
-                    {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
+                    {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
+                  </span>
+                  <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
+                    {many
+                      ? (chosen.length ? chosen.map(variant => equipmentLabel(variant.equipment)).join(' · ') : familyEquipment(family))
+                      : equipmentLabel(first.equipment)}
+                    {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
                   </span>
                 </span>
-                <span className={styles.check} aria-hidden="true">
-                  {position ? (selected.length > 1 ? position : <Check size={16} strokeWidth={3} />) : null}
-                </span>
+                {many ? (
+                  <ChevronDown size={18} className={`${styles.expand} ${open ? styles.expandOpen : ''}`} aria-hidden="true" />
+                ) : (
+                  <span className={styles.check} aria-hidden="true">
+                    {position ? (selected.length > 1 ? position : <Check size={16} strokeWidth={3} />) : null}
+                  </span>
+                )}
               </button>
+              {open && (
+                <div className={styles.equipments} role="group" aria-label={`Equipamento para ${family.name}`}>
+                  {family.variants.map(variant => {
+                    const variantPosition = order(variant.id);
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        className={`${styles.equipment} ${variantPosition ? styles.equipmentOn : ''}`}
+                        aria-pressed={!!variantPosition}
+                        onClick={() => toggle(variant)}
+                      >
+                        {variantPosition && selected.length > 1 && <span className={styles.equipmentOrder}>{variantPosition}</span>}
+                        {equipmentLabel(variant.equipment)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </li>
           );
         })}

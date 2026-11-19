@@ -318,3 +318,35 @@
   gap: 16px;
   min-height: 100dvh;
 }
+
+.variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.variant {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
+.variantActive {
+  background: var(--gym-accent);
+  border-color: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.itemEquipment {
+  color: var(--gym-faint);
+  white-space: normal;
+  line-height: 1.35;
+}

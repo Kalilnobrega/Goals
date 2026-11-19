@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
-import { MUSCLE_GROUPS, equipmentLabel, apiError, groupsLabel, exerciseGroups } from '../../../lib/gym';
+import { MUSCLE_GROUPS, equipmentLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyEquipment } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
@@ -35,13 +35,21 @@ export default function ExercisesPage() {
   };
 
   const sections = useMemo(() => {
-    if (muscle || (filter !== 'all' && filter !== 'mine')) return [{ key: muscle ?? filter, title: null, items: visible }];
+    const families = groupFamilies(visible, !muscle);
+    if (muscle || (filter !== 'all' && filter !== 'mine')) return [{ key: muscle ?? filter, title: null, items: families }];
     return MUSCLE_GROUPS
-      .map(group => ({ key: group.value, title: group.label, items: visible.filter(e => exerciseGroups(e).includes(group.value)) }))
+      .map(group => ({
+        key: group.value,
+        title: group.label,
+        items: families.filter(family => family.variants.some(variant => exerciseGroups(variant).includes(group.value))),
+      }))
       .filter(section => section.items.length > 0);
   }, [visible, filter, muscle]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
+  const detail = sheet?.mode === 'detail'
+    ? sheet.family.variants.find(variant => variant.id === sheet.variantId) ?? sheet.family.variants[0]
+    : null;
 
   const save = async (data) => {
     try {
@@ -165,24 +173,27 @@ export default function ExercisesPage() {
               </h2>
             )}
             <ul className={styles.list}>
-              {section.items.map((exercise, index) => {
-                const meta = (
-                  <>
-                    <span className={styles.itemText}>
-                      <span className={styles.itemName}>{exercise.name}</span>
-                      <span className={styles.itemMeta}>
-                        {muscle ? `${ROLE_LABEL[roleOf(exercise)]} · ` : filter !== 'all' && filter !== 'mine' ? '' : `${groupsLabel(exercise)} · `}
-                        {equipmentLabel(exercise.equipment)}
-                        {exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
-                      </span>
-                    </span>
-                    {exercise.is_custom && <span className={styles.badge}>Seu</span>}
-                  </>
-                );
+              {section.items.map((family, index) => {
+                const first = family.variants[0];
+                const many = family.variants.length > 1;
                 return (
-                  <li key={exercise.id} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
-                    <button type="button" className={`${styles.item} ${styles.itemButton}`} onClick={() => setSheet({ exercise, mode: 'detail' })}>
-                      {meta}
+                  <li key={family.key} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
+                    <button
+                      type="button"
+                      className={`${styles.item} ${styles.itemButton}`}
+                      onClick={() => setSheet({ mode: 'detail', family, variantId: first.id })}
+                    >
+                      <span className={styles.itemText}>
+                        <span className={styles.itemName}>{family.name}</span>
+                        <span className={styles.itemMeta}>
+                          {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
+                        </span>
+                        <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
+                          {many ? familyEquipment(family) : equipmentLabel(first.equipment)}
+                          {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
+                        </span>
+                      </span>
+                      {family.variants.some(variant => variant.is_custom) && <span className={styles.badge}>Seu</span>}
                       <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
                     </button>
                   </li>
@@ -202,17 +213,34 @@ export default function ExercisesPage() {
       <GymSheet
         open={!!sheet}
         onClose={closeSheet}
-        title={sheet?.mode === 'detail' ? sheet.exercise.name : sheet?.exercise ? 'Editar exercício' : 'Novo exercício'}
+        title={sheet?.mode === 'detail' ? sheet.family.name : sheet?.exercise ? 'Editar exercício' : 'Novo exercício'}
       >
-        {sheet?.mode === 'detail' && (
+        {sheet?.mode === 'detail' && detail && (
           <div className={sheetStyles.stack}>
+            {sheet.family.variants.length > 1 && (
+              <div className={styles.variants} role="tablist" aria-label="Equipamento">
+                {sheet.family.variants.map(variant => (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={variant.id === detail.id}
+                    className={`${styles.variant} ${variant.id === detail.id ? styles.variantActive : ''}`}
+                    onClick={() => setSheet(current => ({ ...current, variantId: variant.id }))}
+                  >
+                    {equipmentLabel(variant.equipment)}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className={sheetStyles.text}>
-              {groupsLabel(sheet.exercise)} · {equipmentLabel(sheet.exercise.equipment)}{sheet.exercise.is_custom ? ' · seu' : ''}
-              {sheet.exercise.is_unilateral && <>{' '}<UnilateralTag /></>}
+              {sheet.family.variants.length > 1 && <><strong>{detail.name}</strong><br /></>}
+              {groupsLabel(detail)} · {equipmentLabel(detail.equipment)}{detail.is_custom ? ' · seu' : ''}
+              {detail.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
-            <ExerciseMuscles muscles={sheet.exercise.muscles ?? []} />
-            {sheet.exercise.is_custom && (
-              <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: sheet.exercise, mode: 'edit' })}>
+            <ExerciseMuscles key={detail.id} muscles={detail.muscles ?? []} />
+            {detail.is_custom && (
+              <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: detail, mode: 'edit' })}>
                 <Pencil size={18} /> Editar exercício
               </button>
             )}

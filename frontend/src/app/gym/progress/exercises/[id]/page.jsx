@@ -5,9 +5,9 @@ import { useParams } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle,
 } from 'lucide-react';
-import { getExerciseProgress, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
+import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, familySiblings, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
@@ -210,6 +210,11 @@ const bestSet = (p) => (p.max_weight_kg > 0 ? `${kg(p.max_weight_kg)} × ${p.rep
 export default function ExerciseProgressPage() {
   const { id } = useParams();
   const [data, setData] = useState(() => peekCache(`fitnessProgress:${id}`) ?? null);
+  const [library, setLibrary] = useState(() => peekCache('fitnessExercises') ?? null);
+
+  useEffect(() => {
+    getExercises().then(setLibrary).catch(() => {});
+  }, []);
   const [status, setStatus] = useState(data ? 'ready' : 'loading');
   const [metricKey, setMetricKey] = useState(null);
   const toast = useToast();
@@ -274,6 +279,7 @@ export default function ExerciseProgressPage() {
   }
 
   const { points } = data;
+  const siblings = familySiblings(library?.find(exercise => exercise.id === data.exercise_id), library);
   const metrics = METRICS.filter(m => m.has(points));
   const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
   const series = points
@@ -307,6 +313,21 @@ export default function ExerciseProgressPage() {
           {muscleLabel(data.muscle_group)} · {equipmentLabel(data.equipment)}
           {points.length ? ` · ${plural(points.length, 'treino', 'treinos')}` : ''}
         </p>
+        {siblings.length > 1 && (
+          <nav className={styles.variants} aria-label="Outros equipamentos">
+            {siblings.map(variant => (
+              <Link
+                key={variant.id}
+                href={`/gym/progress/exercises/${variant.id}`}
+                replace
+                className={`${styles.variant} ${variant.id === data.exercise_id ? styles.variantActive : ''}`}
+                aria-current={variant.id === data.exercise_id ? 'page' : undefined}
+              >
+                {equipmentLabel(variant.equipment)}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
 
       {points.length === 0 ? (

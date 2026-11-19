@@ -12,7 +12,7 @@ import {
 } from '../../../../lib/api';
 import {
   apiError, formatClock, formatDuration, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel,
+  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -529,7 +529,10 @@ export default function SessionPage() {
     onDeleteSet: removeSet,
     onStartRest: startRest,
     onOpenRest: it => setSheet({ type: 'rest', item: it }),
-    onOpenMenu: it => setSheet({ type: 'menu', item: it }),
+    onOpenMenu: it => {
+      loadExercises();
+      setSheet({ type: 'menu', item: it });
+    },
     onSaveNote: saveNote,
     onToggleUnilateral: toggleUnilateral,
   };
@@ -725,6 +728,28 @@ export default function SessionPage() {
                 <small>{sheet.item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : 'Anote carga e reps da esquerda e da direita em cada série'}</small>
               </span>
             </button>
+            {familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises).length > 1 && (
+              <div className={s.option} role="group" aria-label="Equipamento">
+                <Dumbbell size={20} />
+                <span>
+                  Equipamento
+                  <small>{sheet.item.sets.length > 0 ? 'Só dá para trocar antes de registrar séries' : 'Mesmo exercício, outro equipamento'}</small>
+                  <span className={styles.equipmentChoices}>
+                    {familySiblings(exercises.find(item => item.id === sheet.item.exercise_id), exercises).map(variant => (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        className={`${styles.equipmentChoice} ${variant.id === sheet.item.exercise_id ? styles.equipmentChoiceOn : ''}`}
+                        disabled={sheet.item.sets.length > 0 || variant.id === sheet.item.exercise_id}
+                        onClick={() => swapExercise(sheet.item, [variant])}
+                      >
+                        {equipmentLabel(variant.equipment)}
+                      </button>
+                    ))}
+                  </span>
+                </span>
+              </div>
+            )}
             <button type="button" className={s.option} onClick={() => openPicker('swap', sheet.item)} disabled={sheet.item.sets.length > 0}>
               <Repeat size={20} />
               <span>Trocar exercício{sheet.item.sets.length > 0 && <small>Só dá para trocar antes de registrar séries</small>}</span>

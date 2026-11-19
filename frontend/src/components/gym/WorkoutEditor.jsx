@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings } from '../../lib/gym';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import GymSheet from './GymSheet';
 import ExercisePicker from './ExercisePicker';
@@ -195,7 +195,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                         <span className={styles.itemText}>
                           <span className={styles.itemName}>{item.exercise.name}</span>
                           <span className={styles.itemMeta}>
-                            {groupsLabel(item.exercise)} · {equipmentLabel(item.exercise.equipment)}
+                            {groupsLabel(item.exercise)}
+                            {familySiblings(item.exercise, exercises).length > 1 ? '' : ` · ${equipmentLabel(item.exercise.equipment)}`}
                           </span>
                         </span>
                         <button
@@ -207,6 +208,25 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                           <Trash2 size={18} />
                         </button>
                       </div>
+                      {familySiblings(item.exercise, exercises).length > 1 && (
+                        <div className={styles.equipmentBlock}>
+                          <span className={styles.targetLabel}>Equipamento</span>
+                          <div className={styles.equipmentChips} role="radiogroup" aria-label={`Equipamento de ${item.exercise.name}`}>
+                            {familySiblings(item.exercise, exercises).map(variant => (
+                              <button
+                                key={variant.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={variant.id === item.exercise.id}
+                                className={`${styles.equipmentChip} ${variant.id === item.exercise.id ? styles.equipmentChipOn : ''}`}
+                                onClick={() => updateItem(item.key, { exercise: variant, unilateral: null })}
+                              >
+                                {equipmentLabel(variant.equipment)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className={styles.targets}>
                         <div className={styles.target}>
                           <span className={styles.targetLabel}>Séries</span>

@@ -294,3 +294,32 @@ export function groupsLabel(exercise) {
   const labels = exerciseGroups(exercise).map(muscleLabel);
   return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} e ${labels.at(-1)}` : labels[0];
 }
+
+const equipmentRank = (value) => {
+  const index = EQUIPMENT.findIndex(item => item.value === value);
+  return index === -1 ? EQUIPMENT.length : index;
+};
+
+export function groupFamilies(exercises, sortByName = true) {
+  const byKey = new Map();
+  const families = [];
+  exercises.forEach(exercise => {
+    const key = exercise.family ? `f:${exercise.family}` : `e:${exercise.id}`;
+    let family = byKey.get(key);
+    if (!family) {
+      family = { key, name: exercise.family ?? exercise.name, variants: [] };
+      byKey.set(key, family);
+      families.push(family);
+    }
+    family.variants.push(exercise);
+  });
+  families.forEach(family => family.variants.sort((a, b) => equipmentRank(a.equipment) - equipmentRank(b.equipment)));
+  return sortByName ? families.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')) : families;
+}
+
+export const familyEquipment = (family) => family.variants.map(variant => equipmentLabel(variant.equipment)).join(' · ');
+
+export function familySiblings(exercise, exercises) {
+  if (!exercise?.family || !exercises) return [];
+  return groupFamilies(exercises.filter(item => item.family === exercise.family))[0]?.variants ?? [];
+}
