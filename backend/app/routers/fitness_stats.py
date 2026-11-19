@@ -94,7 +94,7 @@ def totals(sessions: list[dict], days: int) -> dict:
         "active_days": len({s["day"] for s in sessions}),
         "avg_minutes": round(minutes / count) if count else 0,
         "density_kg_min": density(sum(s["volume"] for s in sessions), minutes),
-        "per_week": round(count / (days / 7), 1) if days else 0,
+        "per_week": round(count / (max(days, 7) / 7), 1) if days else 0,
     }
 
 
@@ -405,9 +405,12 @@ def get_stats(
     days = (today - start).days + 1
     in_period = [s for s in everything if s["day"] >= start]
     previous = [s for s in everything if previous_start and previous_start <= s["day"] < start]
+    active_start = max(start, first_day)
+    active_days = (today - active_start).days + 1
+    previous_days = (start - max(previous_start, first_day)).days if previous_start else 0
 
     by_month = days > 371
-    keys = buckets(start, today, by_month)
+    keys = buckets(active_start, today, by_month)
     timeline = {key: {"sessions": 0, "sets": 0, "volume": 0.0, "minutes": 0.0} for key in keys}
     for s in in_period:
         bucket = timeline[bucket_of(s["day"], by_month)]
@@ -436,8 +439,8 @@ def get_stats(
         "start": start,
         "end": today,
         "bucket": "month" if by_month else "week",
-        "summary": totals(in_period, days),
-        "previous": totals(previous, days) if previous_start else None,
+        "summary": totals(in_period, active_days),
+        "previous": totals(previous, previous_days) if previous_start and previous_days > 0 else None,
         "timeline": [
             {
                 "start": key,

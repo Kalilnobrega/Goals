@@ -42,7 +42,7 @@ def test_stats_for_a_new_user(client, ana):
     _, headers = ana
     data = stats(client, headers, "4w")
     assert data["summary"]["sessions"] == 0
-    assert data["previous"]["sessions"] == 0
+    assert data["previous"] is None
     assert data["bucket"] == "week"
     assert all(bucket["sessions"] == 0 for bucket in data["timeline"])
     assert data["muscles"] == []
@@ -357,3 +357,16 @@ def test_time_stats_per_set_exercise_and_rest(client, library, ana, db_session):
 
     progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["time"]
     assert progress == {"sessions": 1, "avg_seconds": 420, "avg_set_seconds": 210, "avg_rest_seconds": 120}
+
+
+
+def test_stats_per_week_counts_only_since_the_first_session(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    for days in (13, 6):
+        train(client, headers, db_session, workout["id"], [[(60, 10)]], at(days))
+    data = stats(client, headers, "3m")
+    assert data["summary"]["per_week"] == 1.0
+    assert data["previous"] is None
+    assert len(data["timeline"]) <= 3
+    assert data["timeline"][0]["start"] <= (today_br() - timedelta(days=13)).isoformat()
