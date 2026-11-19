@@ -44,7 +44,8 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
     for item in workout_session.exercises:
         if not item.sets:
             continue
-        weights = [(float(entry.weight_kg), entry.reps) for entry in item.sets]
+        strength = (item.tracking or "reps") == "reps"
+        weights = [(float(entry.weight_kg), entry.reps) for entry in item.sets] if strength else [(0.0, 0)]
         factor = (factors or {}).get(item.exercise_id, 1.0)
         loads = [((body.load(weight, item.equipment, day, factor) if body else weight), reps) for weight, reps in weights]
         estimates = [e for e in (estimated_1rm(load, reps) for load, reps in loads) if e is not None]
@@ -64,7 +65,10 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "e1rm": max(estimates) if estimates else None,
             "seconds": timings[item.id]["seconds"],
             "rests": timings[item.id]["rests"],
-            "set_list": [(float(entry.weight_kg), entry.reps) for entry in item.sets],
+            "set_list": [(float(entry.weight_kg), entry.reps) for entry in item.sets] if strength else [],
+            "tracking": item.tracking or "reps",
+            "duration": sum(entry.duration_seconds or 0 for entry in item.sets),
+            "distance": sum(float(entry.distance_km or 0) for entry in item.sets),
         })
     return {
         "id": workout_session.id,
@@ -113,6 +117,36 @@ def buckets(start: date, end: date, by_month: bool) -> list[date]:
 
 def bucket_of(day: date, by_month: bool) -> date:
     return month_start(day) if by_month else week_start(day)
+
+
+def cardio_stats(period: list[dict]) -> dict | None:
+    by_exercise: dict = {}
+    sessions = set()
+    for s in period:
+        for e in s["exercises"]:
+            if e["tracking"] != "cardio" or not e["duration"]:
+                continue
+            sessions.add(s["id"])
+            item = by_exercise.setdefault(exercise_key(e), {
+                "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "sessions": 0,
+            })
+            item["seconds"] += e["duration"]
+            item["distance_km"] += e["distance"]
+            item["sessions"] += 1
+    if not sessions:
+        return None
+    total_seconds = sum(item["seconds"] for item in by_exercise.values())
+    total_distance = sum(item["distance_km"] for item in by_exercise.values())
+    return {
+        "sessions": len(sessions),
+        "minutes": round(total_seconds / 60),
+        "distance_km": round(total_distance, 2),
+        "avg_minutes": round(total_seconds / 60 / len(sessions)),
+        "exercises": sorted(
+            [{**item, "minutes": round(item.pop("seconds") / 60), "distance_km": round(item["distance_km"], 2)} for item in by_exercise.values()],
+            key=lambda item: -item["minutes"],
+        ),
+    }
 
 
 def time_stats(period: list[dict]) -> dict | None:
@@ -278,7 +312,8 @@ def exercise_stats(period: list[dict], everything: list[dict]):
             value = load_value(e)
             if value:
                 timeline[key].append((s["completed_at"], value, e["e1rm"] is not None))
-            reps_timeline[key].append((s["completed_at"], e["max_reps"]))
+            if e["tracking"] == "reps":
+                reps_timeline[key].append((s["completed_at"], e["max_reps"]))
     for item in usage.values():
         item["volume_kg"] = round(item["volume_kg"], 1)
     most_done = sorted(usage.values(), key=lambda i: (-i["sets"], -i["sessions"], i["name"]))[:8]
@@ -442,6 +477,7 @@ def get_stats(
         "adherence": plan_adherence(plan, everything, start, today) if plan else None,
         "relative_strength": relative_strength(in_period, user, db),
         "time": time_stats(in_period),
+        "cardio": cardio_stats(in_period),
         "start": start,
         "end": today,
         "bucket": "month" if by_month else "week",
@@ -809,7 +845,8 @@ def get_workout_progress(
     grouped: dict = {}
     for s in sessions:
         for e in s["exercises"]:
-            grouped.setdefault(exercise_key(e), []).append((s, e))
+            if e["tracking"] == "reps":
+                grouped.setdefault(exercise_key(e), []).append((s, e))
 
     order = [item.exercise_id for item in workout.exercises]
     planned = set(order)

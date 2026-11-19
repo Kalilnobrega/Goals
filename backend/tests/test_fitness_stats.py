@@ -370,3 +370,30 @@ def test_stats_per_week_counts_only_since_the_first_session(client, library, ana
     assert data["previous"] is None
     assert len(data["timeline"]) <= 3
     assert data["timeline"][0]["start"] <= (today_br() - timedelta(days=13)).isoformat()
+
+
+def test_cardio_stats_and_timed_progress(client, ana, db_session):
+    from app.fitness_models import Exercise
+    from tests.test_fitness_sessions import start, finish
+    _, headers = ana
+    bike = Exercise(slug="bike-stats", name="Bike stats", muscle_group="cardio", equipment="cardio", tracking="cardio")
+    plank = Exercise(slug="prancha-stats", name="Prancha stats", muscle_group="abs", equipment="bodyweight", tracking="time", bodyweight_factor=0)
+    db_session.add_all([bike, plank])
+    db_session.commit()
+    session = start(client, headers)
+    for exercise in (bike, plank):
+        client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": exercise.id}, headers=headers)
+    items = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]
+    client.post(f"/fitness/session-exercises/{items[0]['id']}/sets", json={"duration_seconds": 1500, "distance_km": 10}, headers=headers)
+    for seconds in (45, 60):
+        client.post(f"/fitness/session-exercises/{items[1]['id']}/sets", json={"duration_seconds": seconds}, headers=headers)
+    finish(client, headers, session["id"])
+
+    cardio = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["cardio"]
+    assert (cardio["sessions"], cardio["minutes"], cardio["distance_km"]) == (1, 25, 10.0)
+    assert cardio["exercises"][0]["name"] == "Bike stats"
+
+    progress = client.get(f"/fitness/exercises/{plank.id}/progress", headers=headers).json()
+    assert progress["tracking"] == "time"
+    point = progress["points"][0]
+    assert (point["duration_seconds"], point["best_duration_seconds"], point["estimated_1rm_kg"]) == (105, 60, None)

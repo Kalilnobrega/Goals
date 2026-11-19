@@ -16,6 +16,7 @@ class Exercise(Base):
     is_unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     family = Column(String(60), nullable=True, index=True)
     bodyweight_factor = Column(Numeric(3, 2), nullable=True)
+    tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     muscles = relationship(
@@ -129,6 +130,7 @@ class SessionExercise(Base):
     muscles = Column(JSON, nullable=True)
     note = Column(String(200), nullable=True)
     unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
 
     sets = relationship(
         "SetEntry",
@@ -154,6 +156,10 @@ class SetEntry(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)
     client_id = Column(String(36), nullable=True)
     side = Column(String(5), nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+    distance_km = Column(Numeric(6, 2), nullable=True)
+    speed_kmh = Column(Numeric(4, 1), nullable=True)
+    level = Column(Integer, nullable=True)
 
 
 class BodyWeightEntry(Base):

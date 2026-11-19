@@ -55,7 +55,16 @@ def serialize_set(entry: SetEntry) -> dict:
         "created_at": aware(entry.created_at),
         "client_id": entry.client_id,
         "side": entry.side,
+        "duration_seconds": entry.duration_seconds,
+        "distance_km": float(entry.distance_km) if entry.distance_km is not None else None,
+        "speed_kmh": float(entry.speed_kmh) if entry.speed_kmh is not None else None,
+        "level": entry.level,
     }
+
+
+CARDIO = "cardio"
+TIMED = ("time", CARDIO)
+PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level"}
 
 
 def series_count(entries) -> int:
@@ -119,9 +128,10 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "rest_seconds": item.rest_seconds,
             "note": item.note,
             "unilateral": bool(item.unilateral),
+            "tracking": item.tracking or "reps",
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
-                {"weight_kg": float(entry.weight_kg), "reps": entry.reps, "side": entry.side}
+                {key: value for key, value in serialize_set(entry).items() if key in PREVIOUS_FIELDS}
                 for entry in (previous.sets if previous else [])
             ],
             "previous_at": aware(db.get(WorkoutSession, previous.session_id).completed_at) if previous else None,
@@ -388,6 +398,7 @@ def start_session(
                 reps_max=item.reps_max,
                 rest_seconds=item.rest_seconds,
                 unilateral=item.unilateral if item.unilateral is not None else item.exercise.is_unilateral,
+                tracking=item.exercise.tracking,
             )
             for index, item in enumerate(workout.exercises)
         ]
@@ -469,6 +480,7 @@ def add_session_exercise(
             position=position,
             rest_seconds=last_rest(exercise.id, user, db),
             unilateral=exercise.is_unilateral,
+            tracking=exercise.tracking,
         )
     )
     return commit_session(workout_session, db)
@@ -517,6 +529,7 @@ def edit_session_exercise(
         item.muscles = exercise.muscle_list()
         item.workout_exercise_id = None
         item.unilateral = exercise.is_unilateral
+        item.tracking = exercise.tracking
         if "rest_seconds" not in changes:
             item.rest_seconds = last_rest(exercise.id, user, db)
 
@@ -595,12 +608,21 @@ def add_set(
     item = get_own_session_exercise(item_id, user, db)
     if len(item.sets) >= 100 or (not data.side and series_count(item.sets) >= 50):
         raise HTTPException(status_code=400, detail="Um exercício pode ter no máximo 50 séries.")
+    timed = item.tracking in TIMED
+    if timed and not data.duration_seconds:
+        raise HTTPException(status_code=400, detail="Informe a duração.")
+    if not timed and data.reps < 1:
+        raise HTTPException(status_code=400, detail="Informe as repetições.")
     same_side = [s for s in item.sets if s.side == data.side]
     entry = SetEntry(
         position=(len(same_side) if data.side else max((s.position for s in same_side), default=0)) + 1,
         side=data.side,
-        weight_kg=to_kg(data.weight_kg),
-        reps=data.reps,
+        weight_kg=to_kg(0 if item.tracking == CARDIO else data.weight_kg),
+        reps=0 if timed else data.reps,
+        duration_seconds=data.duration_seconds if timed else None,
+        distance_km=to_kg(data.distance_km) if item.tracking == CARDIO and data.distance_km else None,
+        speed_kmh=round(Decimal(str(data.speed_kmh)), 1) if item.tracking == CARDIO and data.speed_kmh else None,
+        level=data.level if item.tracking == CARDIO else None,
         created_at=utcnow(),
         client_id=data.client_id,
     )
@@ -625,10 +647,22 @@ def edit_set(
     db: Session = Depends(get_db),
 ):
     entry = get_own_set(set_id, user, db)
-    if data.weight_kg is not None:
+    item = db.get(SessionExercise, entry.session_exercise_id)
+    timed = item.tracking in TIMED
+    changes = data.model_fields_set
+    if data.weight_kg is not None and item.tracking != CARDIO:
         entry.weight_kg = to_kg(data.weight_kg)
-    if data.reps is not None:
+    if data.reps is not None and not timed:
         entry.reps = data.reps
+    if timed and data.duration_seconds is not None:
+        entry.duration_seconds = data.duration_seconds
+    if item.tracking == CARDIO:
+        if "distance_km" in changes:
+            entry.distance_km = to_kg(data.distance_km) if data.distance_km else None
+        if "speed_kmh" in changes:
+            entry.speed_kmh = round(Decimal(str(data.speed_kmh)), 1) if data.speed_kmh else None
+        if "level" in changes:
+            entry.level = data.level
     db.commit()
     db.refresh(entry)
     return serialize_set(entry)

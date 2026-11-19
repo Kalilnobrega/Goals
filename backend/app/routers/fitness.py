@@ -64,6 +64,7 @@ def create_exercise(
         is_unilateral=data.is_unilateral,
         family=" ".join(data.family.split()) if data.family else None,
         bodyweight_factor=data.bodyweight_factor,
+        tracking=data.tracking,
         muscles=[ExerciseMuscle(muscle=item.muscle, role=item.role) for item in data.muscles],
     )
     session.add(exercise)

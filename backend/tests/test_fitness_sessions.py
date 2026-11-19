@@ -142,7 +142,7 @@ def test_rejects_invalid_sets(client, library, ana, payload):
     response = client.post(
         f"/fitness/session-exercises/{session['exercises'][0]['id']}/sets", json=payload, headers=headers
     )
-    assert response.status_code == 422
+    assert response.status_code in (400, 422)
 
 
 def test_volume_and_totals(client, library, ana):
@@ -230,7 +230,7 @@ def test_previous_performance_comes_from_last_completed_session(client, library,
     second = start(client, headers, workout["id"])
 
     bench, legs = second["exercises"]
-    assert bench["previous"] == [{"weight_kg": 60.0, "reps": 10, "side": None}, {"weight_kg": 60.0, "reps": 9, "side": None}]
+    assert [(p["weight_kg"], p["reps"], p["side"]) for p in bench["previous"]] == [(60.0, 10, None), (60.0, 9, None)]
     assert bench["previous_at"] is not None
     assert legs["previous"] == []
     assert legs["previous_at"] is None
@@ -677,3 +677,34 @@ def test_unilateral_exercises_start_unilateral(client, ana, db_session):
         headers=headers,
     ).json()
     assert created["is_unilateral"] is True
+
+
+
+def test_timed_and_cardio_sets(client, ana, db_session):
+    from app.fitness_models import Exercise
+    _, headers = ana
+    plank = Exercise(slug="prancha-teste", name="Prancha teste", muscle_group="abs", equipment="bodyweight", tracking="time")
+    bike = Exercise(slug="bike-teste", name="Bike teste", muscle_group="cardio", equipment="cardio", tracking="cardio")
+    db_session.add_all([plank, bike])
+    db_session.commit()
+    session = start(client, headers)
+    for exercise in (plank, bike):
+        client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": exercise.id}, headers=headers)
+    items = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]
+    assert [i["tracking"] for i in items] == ["time", "cardio"]
+    plank_id, bike_id = items[0]["id"], items[1]["id"]
+
+    assert client.post(f"/fitness/session-exercises/{plank_id}/sets", json={"weight_kg": 0}, headers=headers).status_code == 400
+    hold = client.post(f"/fitness/session-exercises/{plank_id}/sets", json={"duration_seconds": 75, "weight_kg": 10}, headers=headers).json()
+    assert (hold["duration_seconds"], hold["reps"], hold["weight_kg"]) == (75, 0, 10.0)
+
+    ride = client.post(
+        f"/fitness/session-exercises/{bike_id}/sets",
+        json={"duration_seconds": 1200, "level": 8, "distance_km": 9.5, "weight_kg": 50},
+        headers=headers,
+    ).json()
+    assert (ride["duration_seconds"], ride["level"], ride["distance_km"], ride["weight_kg"], ride["speed_kmh"]) == (1200, 8, 9.5, 0.0, None)
+
+    edited = client.patch(f"/fitness/sets/{ride['id']}", json={"speed_kmh": 28.5, "level": None}, headers=headers).json()
+    assert (edited["speed_kmh"], edited["level"]) == (28.5, None)
+    assert client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["volume_kg"] == 0

@@ -21,6 +21,8 @@ MuscleGroup = Literal[
     "other",
 ]
 
+Tracking = Literal["reps", "time", "cardio"]
+
 Equipment = Literal[
     "barbell",
     "dumbbell",
@@ -66,6 +68,7 @@ class ExerciseSchema(BaseModel):
     is_unilateral: bool = False
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
+    tracking: Tracking = "reps"
     muscles: list[ExerciseMuscleSchema] = Field(default_factory=list, max_length=15)
 
     @field_validator("muscles")
@@ -86,6 +89,7 @@ class EditExerciseSchema(BaseModel):
     is_unilateral: bool | None = None
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
+    tracking: Tracking | None = None
     muscles: list[ExerciseMuscleSchema] | None = Field(default=None, max_length=15)
 
     @field_validator("muscles")
@@ -110,14 +114,15 @@ class ExerciseResponseSchema(BaseModel):
     is_unilateral: bool = False
     family: str | None = None
     bodyweight_factor: float | None = None
+    tracking: str = "reps"
     muscles: list[ExerciseMuscleSchema] = []
 
 
 class WorkoutExerciseSchema(BaseModel):
     exercise_id: int
     target_sets: int = Field(ge=1, le=20)
-    reps_min: int = Field(ge=1, le=100)
-    reps_max: int | None = Field(default=None, ge=1, le=100)
+    reps_min: int = Field(ge=1, le=600)
+    reps_max: int | None = Field(default=None, ge=1, le=600)
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     unilateral: bool | None = None
 
@@ -202,8 +207,12 @@ class EditSessionExerciseSchema(BaseModel):
 
 
 class SetSchema(BaseModel):
-    weight_kg: float = Field(ge=0, le=1000)
-    reps: int = Field(ge=1, le=1000)
+    weight_kg: float = Field(default=0, ge=0, le=1000)
+    reps: int = Field(default=0, ge=0, le=1000)
+    duration_seconds: int | None = Field(default=None, ge=1, le=86400)
+    distance_km: float | None = Field(default=None, gt=0, le=1000)
+    speed_kmh: float | None = Field(default=None, gt=0, le=100)
+    level: int | None = Field(default=None, ge=1, le=100)
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
     side: Literal["left", "right"] | None = None
 
@@ -211,6 +220,10 @@ class SetSchema(BaseModel):
 class EditSetSchema(BaseModel):
     weight_kg: float | None = Field(default=None, ge=0, le=1000)
     reps: int | None = Field(default=None, ge=1, le=1000)
+    duration_seconds: int | None = Field(default=None, ge=1, le=86400)
+    distance_km: float | None = Field(default=None, gt=0, le=1000)
+    speed_kmh: float | None = Field(default=None, gt=0, le=100)
+    level: int | None = Field(default=None, ge=1, le=100)
 
 
 class FinishSessionSchema(BaseModel):
@@ -225,12 +238,20 @@ class SetResponseSchema(BaseModel):
     created_at: datetime
     client_id: str | None = None
     side: str | None = None
+    duration_seconds: int | None = None
+    distance_km: float | None = None
+    speed_kmh: float | None = None
+    level: int | None = None
 
 
 class PreviousSetSchema(BaseModel):
     weight_kg: float
     reps: int
     side: str | None = None
+    duration_seconds: int | None = None
+    distance_km: float | None = None
+    speed_kmh: float | None = None
+    level: int | None = None
 
 
 class SessionExerciseResponseSchema(BaseModel):
@@ -246,6 +267,7 @@ class SessionExerciseResponseSchema(BaseModel):
     rest_seconds: int | None
     note: str | None = None
     unilateral: bool = False
+    tracking: str = "reps"
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
     previous_at: datetime | None
@@ -305,6 +327,11 @@ class ProgressPointSchema(BaseModel):
     max_reps: int
     estimated_1rm_kg: float | None
     volume_kg: float
+    duration_seconds: int = 0
+    best_duration_seconds: int = 0
+    distance_km: float | None = None
+    speed_kmh: float | None = None
+    level: int | None = None
     left_max_weight_kg: float | None = None
     right_max_weight_kg: float | None = None
     left_estimated_1rm_kg: float | None = None
@@ -316,6 +343,7 @@ class ExerciseProgressSchema(BaseModel):
     name: str
     muscle_group: str
     equipment: str
+    tracking: str = "reps"
     points: list[ProgressPointSchema]
     goal: "FitnessGoalResponseSchema | None" = None
     time: "ExerciseTimeSchema | None" = None
@@ -841,9 +869,26 @@ class StatsTimeSchema(BaseModel):
     longest_exercises: list[StatsTimeExerciseSchema]
 
 
+class StatsCardioExerciseSchema(BaseModel):
+    exercise_id: int | None
+    name: str
+    minutes: int
+    distance_km: float
+    sessions: int
+
+
+class StatsCardioSchema(BaseModel):
+    sessions: int
+    minutes: int
+    distance_km: float
+    avg_minutes: int
+    exercises: list[StatsCardioExerciseSchema]
+
+
 class StatsSchema(BaseModel):
     period: str
     time: StatsTimeSchema | None = None
+    cardio: StatsCardioSchema | None = None
     plan_id: int | None = None
     activity: list[StatsActivityDaySchema] = []
     adherence: StatsAdherenceSchema | None = None

@@ -32,7 +32,7 @@ EPLEY_MAX_REPS = 12
 
 
 def estimated_1rm(weight: Decimal, reps: int) -> float | None:
-    if weight <= 0 or reps > EPLEY_MAX_REPS:
+    if weight <= 0 or reps < 1 or reps > EPLEY_MAX_REPS:
         return None
     if reps == 1:
         return float(weight)
@@ -171,7 +171,7 @@ def ready_to_progress(user: User, db: Session, exercise_id: int, rows) -> dict |
     if not plans or not rows:
         return None
     last_session = rows[-1][0]
-    last = [(float(weight), reps, side, position, set_id) for session_id, _, _, weight, reps, side, position, set_id, _ in rows if session_id == last_session]
+    last = [(float(weight), reps, side, position, set_id) for session_id, _, _, weight, reps, side, position, set_id, *_ in rows if session_id == last_session]
     top = max(weight for weight, *_ in last)
     working = [reps for weight, reps, *_ in last if weight == top]
     done = len({("pair", position) if side else ("set", set_id) for _, _, side, position, set_id in last})
@@ -262,6 +262,10 @@ def get_exercise_progress(
             SetEntry.position,
             SetEntry.id,
             SessionExercise.id,
+            SetEntry.duration_seconds,
+            SetEntry.distance_km,
+            SetEntry.speed_kmh,
+            SetEntry.level,
         )
         .order_by(WorkoutSession.completed_at, WorkoutSession.id, SetEntry.id)
         .all()
@@ -270,7 +274,7 @@ def get_exercise_progress(
     points: dict[int, dict] = {}
     series: dict[int, set] = {}
     body = BodyWeights(user.id, db) if exercise.equipment == BODYWEIGHT else None
-    for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id in rows:
+    for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id, duration, distance, speed, level in rows:
         load = Decimal(str(round(body.load(float(weight), BODYWEIGHT, to_br_date(aware(completed_at)), share(exercise.bodyweight_factor)), 2))) if body else weight
         point = points.setdefault(session_id, {
             "session_id": session_id,
@@ -282,6 +286,11 @@ def get_exercise_progress(
             "max_reps": 0,
             "estimated_1rm_kg": None,
             "volume_kg": Decimal(0),
+            "duration_seconds": 0,
+            "best_duration_seconds": 0,
+            "distance_km": None,
+            "speed_kmh": None,
+            "level": None,
             "left_max_weight_kg": None,
             "right_max_weight_kg": None,
             "left_estimated_1rm_kg": None,
@@ -289,6 +298,15 @@ def get_exercise_progress(
         })
         series.setdefault(session_id, set()).add(("pair", item_id, position) if side else ("set", set_id))
         point["volume_kg"] += load * reps
+        if duration:
+            point["duration_seconds"] += duration
+            point["best_duration_seconds"] = max(point["best_duration_seconds"], duration)
+        if distance:
+            point["distance_km"] = round((point["distance_km"] or 0) + float(distance), 2)
+        if speed:
+            point["speed_kmh"] = max(point["speed_kmh"] or 0, float(speed))
+        if level:
+            point["level"] = max(point["level"] or 0, level)
         point["max_reps"] = max(point["max_reps"], reps)
         if weight > point["max_weight_kg"] or (weight == point["max_weight_kg"] and reps > point["reps_at_max"]):
             point["max_weight_kg"] = weight
@@ -313,6 +331,7 @@ def get_exercise_progress(
         "name": exercise.name,
         "muscle_group": exercise.muscle_group,
         "equipment": exercise.equipment,
+        "tracking": exercise.tracking,
         "goal": serialize_goal(find_goal(user, db, EXERCISE, exercise.id), exercise_points(user, db, exercise.id)),
         "time": exercise_time(user, db, exercise.id),
         "rep_records": rep_records(rows),
