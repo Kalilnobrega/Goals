@@ -179,10 +179,6 @@ def test_finish_closes_session_and_blocks_changes(client, library, ana):
     assert data["completed_at"] is not None
     assert client.get("/fitness/sessions/active", headers=headers).json() is None
     assert finish(client, headers, session["id"]).status_code == 409
-    assert client.post(
-        f"/fitness/session-exercises/{item_id}/sets", json={"weight_kg": 1, "reps": 1}, headers=headers
-    ).status_code == 409
-    assert client.patch(f"/fitness/sets/{entry['id']}", json={"reps": 1}, headers=headers).status_code == 409
     assert start(client, headers)["status"] == "in_progress"
 
 
@@ -300,16 +296,18 @@ def test_reorder_rejects_lists_that_do_not_match(client, library, ana, case):
     assert response.status_code == 409
 
 
-def test_cannot_reorder_finished_session(client, library, ana):
+def test_reorder_finished_session(client, library, ana):
     _, headers = ana
     session = start(client, headers, make_workout(client, headers, library)["id"])
-    ids = [e["id"] for e in session["exercises"]]
-    log_set(client, headers, ids[0], 60, 10)
+    for item in session["exercises"]:
+        log_set(client, headers, item["id"], 60, 10)
     assert finish(client, headers, session["id"]).status_code == 200
+    ids = [e["id"] for e in client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]]
     response = client.put(
         f"/fitness/sessions/{session['id']}/order", json={"exercise_ids": ids[::-1]}, headers=headers
     )
-    assert response.status_code == 409
+    assert response.status_code == 200
+    assert [e["id"] for e in response.json()["exercises"]] == ids[::-1]
 
 
 def test_cannot_swap_exercise_with_sets(client, library, ana):
@@ -560,7 +558,8 @@ def test_retry_after_finishing_returns_the_saved_set(client, library, ana):
     fresh = client.post(
         f"/fitness/session-exercises/{item_id}/sets", json={**payload, "client_id": "7f3c2a1e-0000-4000-8000-000000000004"}, headers=headers
     )
-    assert fresh.status_code == 409
+    assert fresh.status_code == 200
+    assert fresh.json()["id"] != saved["id"]
 
 
 def test_client_id_is_scoped_to_the_owner(client, library, ana, bruno):
@@ -708,3 +707,53 @@ def test_timed_and_cardio_sets(client, ana, db_session):
     edited = client.patch(f"/fitness/sets/{ride['id']}", json={"speed_kmh": 28.5, "level": None}, headers=headers).json()
     assert (edited["speed_kmh"], edited["level"]) == (28.5, None)
     assert client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["volume_kg"] == 0
+
+
+
+def test_edit_finished_session_from_history(client, library, ana):
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    item_id = session["exercises"][0]["id"]
+    entry = log_set(client, headers, item_id, 60, 10)
+    finished = finish(client, headers, session["id"]).json()
+
+    edited = client.patch(f"/fitness/sets/{entry['id']}", json={"weight_kg": 62.5, "reps": 8}, headers=headers).json()
+    assert (edited["weight_kg"], edited["reps"]) == (62.5, 8)
+    added = client.post(f"/fitness/session-exercises/{item_id}/sets", json={"weight_kg": 60, "reps": 9}, headers=headers)
+    assert added.status_code == 200
+    assert added.json()["position"] == 2
+    noted = client.patch(f"/fitness/session-exercises/{item_id}", json={"note": "banco 3"}, headers=headers)
+    assert noted.status_code == 200
+    assert client.patch(f"/fitness/session-exercises/{item_id}", json={"rest_seconds": 60}, headers=headers).status_code == 409
+    assert client.delete(f"/fitness/sets/{added.json()['id']}", headers=headers).status_code == 200
+
+    detail = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()
+    assert detail["status"] == "completed"
+    assert detail["completed_at"] == finished["completed_at"]
+    assert detail["volume_kg"] == 500
+    assert detail["exercises"][0]["note"] == "banco 3"
+
+    other = detail["exercises"][1]["id"] if len(detail["exercises"]) > 1 else None
+    if other:
+        assert client.delete(f"/fitness/session-exercises/{other}", headers=headers).status_code == 200
+
+
+
+def test_swap_exercise_with_sets_in_finished_session(client, library, ana, db_session):
+    from app.fitness_models import Exercise
+    _, headers = ana
+    session = start(client, headers, make_workout(client, headers, library)["id"])
+    item = session["exercises"][0]
+    log_set(client, headers, item["id"], 60, 10)
+    finish(client, headers, session["id"])
+
+    swapped = client.patch(f"/fitness/session-exercises/{item['id']}", json={"exercise_id": library["leg-press"]}, headers=headers)
+    assert swapped.status_code == 200
+    first = swapped.json()["exercises"][0]
+    assert first["exercise_id"] == library["leg-press"]
+    assert [(s["weight_kg"], s["reps"]) for s in first["sets"]] == [(60.0, 10)]
+
+    bike = Exercise(slug="bike-troca", name="Bike troca", muscle_group="cardio", equipment="cardio", tracking="cardio")
+    db_session.add(bike)
+    db_session.commit()
+    assert client.patch(f"/fitness/session-exercises/{item['id']}", json={"exercise_id": bike.id}, headers=headers).status_code == 409

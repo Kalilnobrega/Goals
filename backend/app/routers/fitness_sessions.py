@@ -185,7 +185,7 @@ def ensure_in_progress(workout_session: WorkoutSession):
         raise HTTPException(status_code=409, detail="Esse treino já foi finalizado.")
 
 
-def get_own_session_exercise(item_id: int, user: User, db: Session) -> SessionExercise:
+def get_own_session_exercise(item_id: int, user: User, db: Session, allow_completed: bool = False) -> SessionExercise:
     item = (
         db.query(SessionExercise)
         .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
@@ -194,7 +194,8 @@ def get_own_session_exercise(item_id: int, user: User, db: Session) -> SessionEx
     )
     if not item:
         raise HTTPException(status_code=404, detail="Exercício do treino não encontrado")
-    ensure_in_progress(db.get(WorkoutSession, item.session_id))
+    if not allow_completed:
+        ensure_in_progress(db.get(WorkoutSession, item.session_id))
     return item
 
 
@@ -208,7 +209,6 @@ def get_own_set(set_id: int, user: User, db: Session) -> SetEntry:
     )
     if not entry:
         raise HTTPException(status_code=404, detail="Série não encontrada")
-    ensure_in_progress(db.get(WorkoutSession, db.get(SessionExercise, entry.session_exercise_id).session_id))
     return entry
 
 
@@ -494,7 +494,6 @@ def reorder_session_exercises(
     db: Session = Depends(get_db),
 ):
     workout_session = get_own_session(session_id, user, db)
-    ensure_in_progress(workout_session)
     by_id = {item.id: item for item in workout_session.exercises}
     if len(data.exercise_ids) != len(by_id) or set(data.exercise_ids) != set(by_id):
         raise HTTPException(
@@ -512,25 +511,33 @@ def edit_session_exercise(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = get_own_session_exercise(item_id, user, db)
+    item = get_own_session_exercise(item_id, user, db, allow_completed=True)
     workout_session = db.get(WorkoutSession, item.session_id)
     changes = data.model_fields_set
+    finished = workout_session.status != IN_PROGRESS
+    if finished and changes - {"note", "exercise_id"}:
+        raise HTTPException(status_code=409, detail="Num treino finalizado dá para editar só as séries, a anotação e o exercício.")
 
     if "exercise_id" in changes and data.exercise_id is not None and data.exercise_id != item.exercise_id:
-        if item.sets:
+        if item.sets and not finished:
             raise HTTPException(
                 status_code=409, detail="Só dá para trocar um exercício que ainda não tem séries."
             )
         exercise = get_visible_exercise(data.exercise_id, user, db)
+        if item.sets and exercise.tracking != (item.tracking or "reps"):
+            raise HTTPException(
+                status_code=409, detail="Esse exercício é registrado de outro jeito. Escolha um com o mesmo tipo de registro."
+            )
         item.exercise_id = exercise.id
         item.exercise_name = exercise.name
         item.muscle_group = exercise.muscle_group
         item.equipment = exercise.equipment
         item.muscles = exercise.muscle_list()
         item.workout_exercise_id = None
-        item.unilateral = exercise.is_unilateral
-        item.tracking = exercise.tracking
-        if "rest_seconds" not in changes:
+        if not item.sets:
+            item.unilateral = exercise.is_unilateral
+            item.tracking = exercise.tracking
+        if "rest_seconds" not in changes and not finished:
             item.rest_seconds = last_rest(exercise.id, user, db)
 
     if "note" in changes:
@@ -574,7 +581,7 @@ def delete_session_exercise(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = get_own_session_exercise(item_id, user, db)
+    item = get_own_session_exercise(item_id, user, db, allow_completed=True)
     workout_session = db.get(WorkoutSession, item.session_id)
     workout_session.exercises.remove(item)
     return commit_session(workout_session, db)
@@ -594,6 +601,11 @@ def existing_set(item_id: int, client_id: str, user: User, db: Session) -> SetEn
     )
 
 
+def logged_at(item: SessionExercise, workout_session: WorkoutSession):
+    times = [entry.created_at for entry in item.sets if entry.created_at]
+    return max(times) if times else workout_session.completed_at or workout_session.started_at
+
+
 @fitness_sessions_router.post("/session-exercises/{item_id}/sets", response_model=SetResponseSchema)
 def add_set(
     item_id: int,
@@ -605,7 +617,8 @@ def add_set(
         existing = existing_set(item_id, data.client_id, user, db)
         if existing:
             return serialize_set(existing)
-    item = get_own_session_exercise(item_id, user, db)
+    item = get_own_session_exercise(item_id, user, db, allow_completed=True)
+    workout_session = db.get(WorkoutSession, item.session_id)
     if len(item.sets) >= 100 or (not data.side and series_count(item.sets) >= 50):
         raise HTTPException(status_code=400, detail="Um exercício pode ter no máximo 50 séries.")
     timed = item.tracking in TIMED
@@ -623,7 +636,7 @@ def add_set(
         distance_km=to_kg(data.distance_km) if item.tracking == CARDIO and data.distance_km else None,
         speed_kmh=round(Decimal(str(data.speed_kmh)), 1) if item.tracking == CARDIO and data.speed_kmh else None,
         level=data.level if item.tracking == CARDIO else None,
-        created_at=utcnow(),
+        created_at=utcnow() if workout_session.status == IN_PROGRESS else logged_at(item, workout_session),
         client_id=data.client_id,
     )
     item.sets.append(entry)
