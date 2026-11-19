@@ -256,3 +256,34 @@ def test_exercise_frequency_uses_the_weeks_since_the_first_time(client, library,
     frequency = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["frequency"]
     assert frequency["weeks"] == 1
     assert frequency["per_week"] == 2.0
+
+
+def test_bodyweight_exercises_add_body_weight_to_volume_and_1rm(client, ana, db_session):
+    from datetime import timedelta
+    from app.dates import today_br
+    from app.fitness_models import Exercise
+    from tests.test_fitness_sessions import start, log_set, finish
+    _, headers = ana
+    dip = Exercise(slug="paralela-teste", name="Paralela teste", muscle_group="chest", equipment="bodyweight")
+    db_session.add(dip)
+    db_session.commit()
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": (today_br() - timedelta(days=3)).isoformat()}, headers=headers)
+
+    session = start(client, headers)
+    item = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": dip.id}, headers=headers).json()["exercises"][0]
+    log_set(client, headers, item["id"], 10, 8)
+    log_set(client, headers, item["id"], 0, 10)
+    finish(client, headers, session["id"])
+
+    detail = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()
+    assert detail["volume_kg"] == 90 * 8 + 80 * 10
+    assert client.get("/fitness/sessions", headers=headers).json()["items"][0]["volume_kg"] == 1520
+    assert client.get("/fitness/overview", headers=headers).json()["week"]["volume_kg"] == 1520
+
+    point = client.get(f"/fitness/exercises/{dip.id}/progress", headers=headers).json()["points"][0]
+    assert point["max_weight_kg"] == 10.0
+    assert point["volume_kg"] == 1520.0
+    assert point["estimated_1rm_kg"] == 114.0
+
+    stats = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()
+    assert stats["summary"]["volume_kg"] == 1520.0

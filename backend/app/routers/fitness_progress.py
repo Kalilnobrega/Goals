@@ -9,6 +9,7 @@ from app.models import User
 from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
 from app.fitness_forecast import forecast, slope_per_day
 from app.fitness_timing import exercise_timings, mean as average
+from app.fitness_load import BODYWEIGHT, BodyWeights
 from app.fitness_schemas import (
     ProgressExerciseSchema,
     ExerciseProgressSchema,
@@ -268,7 +269,9 @@ def get_exercise_progress(
 
     points: dict[int, dict] = {}
     series: dict[int, set] = {}
+    body = BodyWeights(user.id, db) if exercise.equipment == BODYWEIGHT else None
     for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id in rows:
+        load = Decimal(str(body.load(float(weight), BODYWEIGHT, to_br_date(aware(completed_at))))) if body else weight
         point = points.setdefault(session_id, {
             "session_id": session_id,
             "session_name": session_name,
@@ -285,12 +288,12 @@ def get_exercise_progress(
             "right_estimated_1rm_kg": None,
         })
         series.setdefault(session_id, set()).add(("pair", item_id, position) if side else ("set", set_id))
-        point["volume_kg"] += weight * reps
+        point["volume_kg"] += load * reps
         point["max_reps"] = max(point["max_reps"], reps)
         if weight > point["max_weight_kg"] or (weight == point["max_weight_kg"] and reps > point["reps_at_max"]):
             point["max_weight_kg"] = weight
             point["reps_at_max"] = reps
-        estimate = estimated_1rm(weight, reps)
+        estimate = estimated_1rm(load, reps)
         if estimate is not None and (point["estimated_1rm_kg"] is None or estimate > point["estimated_1rm_kg"]):
             point["estimated_1rm_kg"] = estimate
         if side:

@@ -9,6 +9,7 @@ from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntr
 from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item, series_key
+from app.fitness_load import bodyweight_bonus
 from .fitness_plans import active_plan, workout_muscles
 from .fitness_stats import completed_facts, weight_records
 from .fitness_progress import BODY_WEIGHT, body_points, find_goal, serialize_goal
@@ -70,6 +71,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date
     sets = 0
     volume = 0.0
     seconds = 0.0
+    bonus = bodyweight_bonus([(row[5], row[0]) for row in rows], user.id, db)
     for started_at, completed_at, total_sets, session_volume, workout_id, session_id, name in sorted(rows, key=lambda r: r[0]):
         day = to_br_date(started_at)
         if day not in per_day:
@@ -78,7 +80,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date
         done[day].add(workout_id)
         trained[day].append({"id": session_id, "name": name, "workout_id": workout_id})
         sets += total_sets or 0
-        volume += float(session_volume or 0)
+        volume += float(session_volume or 0) + bonus.get(session_id, 0.0)
         seconds += (aware(completed_at) - aware(started_at)).total_seconds()
     return {
         "days": [
@@ -109,7 +111,11 @@ def last_session(user: User, db: Session) -> dict | None:
         .order_by(WorkoutSession.completed_at.desc(), WorkoutSession.id.desc())
         .first()
     )
-    return history_item(*row) if row else None
+    if not row:
+        return None
+    workout_session, exercise_count, total_sets, volume = row
+    bonus = bodyweight_bonus([(workout_session.id, workout_session.started_at)], user.id, db).get(workout_session.id, 0.0)
+    return history_item(workout_session, exercise_count, total_sets, float(volume or 0) + bonus)
 
 
 def suggested_workout(user: User, db: Session) -> tuple[dict | None, int]:

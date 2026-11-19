@@ -20,6 +20,8 @@ from app.fitness_schemas import (
     SessionHistorySchema,
     SetResponseSchema,
 )
+from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus
+from app.dates import to_br_date
 from .auth import get_current_user
 from .fitness import visible_exercises
 
@@ -94,10 +96,14 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
     exercises = []
     total_sets = 0
     volume = Decimal(0)
+    body = None
+    if any(item.equipment == BODYWEIGHT and item.sets for item in workout_session.exercises):
+        body = BodyWeights(workout_session.user_id, db).on(to_br_date(aware(workout_session.started_at)))
     for item in workout_session.exercises:
         previous = previous_performance(item, workout_session, db)
         total_sets += series_count(item.sets)
-        volume += sum((entry.weight_kg * entry.reps for entry in item.sets), Decimal(0))
+        extra = Decimal(str(body)) if body and item.equipment == BODYWEIGHT else Decimal(0)
+        volume += sum(((entry.weight_kg + extra) * entry.reps for entry in item.sets), Decimal(0))
         exercises.append({
             "id": item.id,
             "exercise_id": item.exercise_id,
@@ -322,10 +328,14 @@ def list_sessions(
         .all()
     )
     muscles = muscle_groups_by_session([row[0].id for row in rows], db) if rows else {}
+    bonus = bodyweight_bonus([(row[0].id, row[0].started_at) for row in rows], user.id, db)
     total = completed.count()
     return {
         "items": [
-            history_item(workout_session, exercise_count, total_sets, volume, muscles.get(workout_session.id))
+            history_item(
+                workout_session, exercise_count, total_sets,
+                float(volume or 0) + bonus.get(workout_session.id, 0.0), muscles.get(workout_session.id),
+            )
             for workout_session, exercise_count, total_sets, volume in rows
         ],
         "total": total,
