@@ -10,7 +10,7 @@ from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, mean as average
-from app.fitness_load import BodyWeights
+from app.fitness_load import BodyWeights, bodyweight_factors
 from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
@@ -35,7 +35,7 @@ def next_month(day: date) -> date:
     return (day.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = None) -> dict:
+def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = None, factors: dict | None = None) -> dict:
     started = aware(workout_session.started_at)
     day = to_br_date(started)
     completed = aware(workout_session.completed_at)
@@ -45,7 +45,8 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
         if not item.sets:
             continue
         weights = [(float(entry.weight_kg), entry.reps) for entry in item.sets]
-        loads = [((body.load(weight, item.equipment, day) if body else weight), reps) for weight, reps in weights]
+        factor = (factors or {}).get(item.exercise_id, 1.0)
+        loads = [((body.load(weight, item.equipment, day, factor) if body else weight), reps) for weight, reps in weights]
         estimates = [e for e in (estimated_1rm(load, reps) for load, reps in loads) if e is not None]
         top_weight, top_reps = max(weights, key=lambda pair: (pair[0], pair[1]))
         exercises.append({
@@ -238,13 +239,14 @@ def weight_records(everything: list[dict], include) -> list[dict]:
 
 def completed_facts(user, db) -> list[dict]:
     body = BodyWeights(user.id, db)
-    return [
-        session_facts(s, body)
-        for s in db.query(WorkoutSession)
+    sessions = (
+        db.query(WorkoutSession)
         .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
         .order_by(WorkoutSession.started_at)
         .all()
-    ]
+    )
+    factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
+    return [session_facts(s, body, factors) for s in sessions]
 
 
 def load_value(e: dict):

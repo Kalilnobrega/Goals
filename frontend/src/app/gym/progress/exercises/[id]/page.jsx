@@ -318,7 +318,9 @@ export default function ExerciseProgressPage() {
           {points.length ? ` · ${plural(points.length, 'treino', 'treinos')}` : ''}
         </p>
         {data.equipment === 'bodyweight' && (
-          <p className={styles.panelNote}>Carga mostrada como extra, além do peso corporal. Volume e 1RM somam o seu peso da última pesagem.</p>
+          <p className={styles.panelNote}>
+            Carga mostrada como extra, além do peso corporal. Volume e 1RM somam {Math.round((library?.find(exercise => exercise.id === data.exercise_id)?.bodyweight_factor ?? 1) * 100)}% do seu peso da última pesagem.
+          </p>
         )}
         {siblings.length > 1 && (
           <nav className={styles.variants} aria-label="Outros equipamentos">

@@ -65,6 +65,7 @@ class ExerciseSchema(BaseModel):
     equipment: Equipment
     is_unilateral: bool = False
     family: str | None = Field(default=None, max_length=60)
+    bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
     muscles: list[ExerciseMuscleSchema] = Field(default_factory=list, max_length=15)
 
     @field_validator("muscles")
@@ -84,6 +85,7 @@ class EditExerciseSchema(BaseModel):
     equipment: Equipment | None = None
     is_unilateral: bool | None = None
     family: str | None = Field(default=None, max_length=60)
+    bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
     muscles: list[ExerciseMuscleSchema] | None = Field(default=None, max_length=15)
 
     @field_validator("muscles")
@@ -107,6 +109,7 @@ class ExerciseResponseSchema(BaseModel):
     is_custom: bool
     is_unilateral: bool = False
     family: str | None = None
+    bodyweight_factor: float | None = None
     muscles: list[ExerciseMuscleSchema] = []
 
 

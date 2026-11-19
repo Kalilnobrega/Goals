@@ -153,3 +153,23 @@ label.field .label {
   font-size: 0.8rem;
   font-weight: 400;
 }
+
+.percent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 140px;
+}
+
+.percent > span {
+  position: absolute;
+  right: 14px;
+  color: var(--gym-muted);
+  pointer-events: none;
+}
+
+.hint {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}

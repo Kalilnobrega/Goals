@@ -3,9 +3,22 @@ from datetime import date, datetime
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.dates import to_br_date
-from app.fitness_models import BodyWeightEntry, SessionExercise, SetEntry
+from app.fitness_models import BodyWeightEntry, Exercise, SessionExercise, SetEntry
 
 BODYWEIGHT = "bodyweight"
+DEFAULT_FACTOR = 1.0
+
+
+def share(factor) -> float:
+    return DEFAULT_FACTOR if factor is None else float(factor)
+
+
+def bodyweight_factors(db: Session, exercise_ids) -> dict[int, float]:
+    ids = {exercise_id for exercise_id in exercise_ids if exercise_id is not None}
+    if not ids:
+        return {}
+    rows = db.query(Exercise.id, Exercise.bodyweight_factor).filter(Exercise.id.in_(ids)).all()
+    return {exercise_id: share(factor) for exercise_id, factor in rows}
 
 
 class BodyWeights:
@@ -25,8 +38,8 @@ class BodyWeights:
         index = bisect_right(self.days, day) - 1
         return self.values[max(index, 0)]
 
-    def load(self, weight: float, equipment: str, day: date) -> float:
-        return weight + self.on(day) if equipment == BODYWEIGHT else weight
+    def load(self, weight: float, equipment: str, day: date, factor: float = DEFAULT_FACTOR) -> float:
+        return weight + factor * self.on(day) if equipment == BODYWEIGHT else weight
 
 
 def bodyweight_bonus(sessions: list[tuple[int, datetime]], user_id: int, db: Session) -> dict[int, float]:
@@ -37,13 +50,14 @@ def bodyweight_bonus(sessions: list[tuple[int, datetime]], user_id: int, db: Ses
     if not weights.days:
         return {}
     rows = (
-        db.query(SessionExercise.session_id, func.sum(SetEntry.reps))
+        db.query(SessionExercise.session_id, func.sum(SetEntry.reps * func.coalesce(Exercise.bodyweight_factor, DEFAULT_FACTOR)))
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        .outerjoin(Exercise, Exercise.id == SessionExercise.exercise_id)
         .filter(SessionExercise.session_id.in_(started), SessionExercise.equipment == BODYWEIGHT)
         .group_by(SessionExercise.session_id)
         .all()
     )
     return {
-        session_id: weights.on(to_br_date(started[session_id])) * (reps or 0)
+        session_id: weights.on(to_br_date(started[session_id])) * float(reps or 0)
         for session_id, reps in rows
     }

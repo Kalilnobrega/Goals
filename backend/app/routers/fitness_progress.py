@@ -9,7 +9,7 @@ from app.models import User
 from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
 from app.fitness_forecast import forecast, slope_per_day
 from app.fitness_timing import exercise_timings, mean as average
-from app.fitness_load import BODYWEIGHT, BodyWeights
+from app.fitness_load import BODYWEIGHT, BodyWeights, share
 from app.fitness_schemas import (
     ProgressExerciseSchema,
     ExerciseProgressSchema,
@@ -271,7 +271,7 @@ def get_exercise_progress(
     series: dict[int, set] = {}
     body = BodyWeights(user.id, db) if exercise.equipment == BODYWEIGHT else None
     for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id in rows:
-        load = Decimal(str(body.load(float(weight), BODYWEIGHT, to_br_date(aware(completed_at))))) if body else weight
+        load = Decimal(str(round(body.load(float(weight), BODYWEIGHT, to_br_date(aware(completed_at)), share(exercise.bodyweight_factor)), 2))) if body else weight
         point = points.setdefault(session_id, {
             "session_id": session_id,
             "session_name": session_name,

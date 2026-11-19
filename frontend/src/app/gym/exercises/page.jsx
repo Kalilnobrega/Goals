@@ -238,6 +238,11 @@ export default function ExercisesPage() {
               {groupsLabel(detail)} · {equipmentLabel(detail.equipment)}{detail.is_custom ? ' · seu' : ''}
               {detail.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
+            {detail.equipment === 'bodyweight' && (
+              <p className={sheetStyles.text}>
+                Conta <strong>{Math.round((detail.bodyweight_factor ?? 1) * 100)}% do peso corporal</strong> no volume e no 1RM, mais a carga extra que você registrar.
+              </p>
+            )}
             <ExerciseMuscles key={detail.id} muscles={detail.muscles ?? []} />
             {detail.is_custom && (
               <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: detail, mode: 'edit' })}>

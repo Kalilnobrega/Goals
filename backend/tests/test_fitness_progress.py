@@ -287,3 +287,34 @@ def test_bodyweight_exercises_add_body_weight_to_volume_and_1rm(client, ana, db_
 
     stats = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()
     assert stats["summary"]["volume_kg"] == 1520.0
+
+
+def test_bodyweight_factor_counts_only_part_of_the_body(client, ana, db_session):
+    from datetime import timedelta
+    from app.dates import today_br
+    from app.fitness_models import Exercise
+    from tests.test_fitness_sessions import start, log_set, finish
+    _, headers = ana
+    extension = Exercise(slug="romano-teste", name="Romano teste", muscle_group="back", equipment="bodyweight", bodyweight_factor=0.5)
+    db_session.add(extension)
+    db_session.commit()
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": (today_br() - timedelta(days=1)).isoformat()}, headers=headers)
+
+    session = start(client, headers)
+    item = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": extension.id}, headers=headers).json()["exercises"][0]
+    log_set(client, headers, item["id"], 10, 10)
+    finish(client, headers, session["id"])
+
+    assert client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["volume_kg"] == 500
+    assert client.get("/fitness/sessions", headers=headers).json()["items"][0]["volume_kg"] == 500
+    point = client.get(f"/fitness/exercises/{extension.id}/progress", headers=headers).json()["points"][0]
+    assert point["volume_kg"] == 500.0
+    assert point["estimated_1rm_kg"] == round(50 * (1 + 10 / 30), 1)
+    assert client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["summary"]["volume_kg"] == 500.0
+
+    created = client.post(
+        "/fitness/exercises",
+        json={"name": "Flexão arqueiro", "muscle_group": "chest", "equipment": "bodyweight", "bodyweight_factor": 0.7},
+        headers=headers,
+    ).json()
+    assert created["bodyweight_factor"] == 0.7

@@ -31,6 +31,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
   const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? null);
   const [equipment, setEquipment] = useState(initial?.equipment ?? null);
   const [unilateral, setUnilateral] = useState(initial?.is_unilateral ?? false);
+  const [factor, setFactor] = useState(String(Math.round((initial?.bodyweight_factor ?? 1) * 100)));
   const [muscles, setMuscles] = useState(initial?.muscles ?? []);
 
   const changeMuscles = (next) => {
@@ -48,7 +49,15 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
     if (!equipment) return setError('Escolha o equipamento.');
     setError('');
     setSaving(true);
-    const message = await onSubmit({ name: name.trim(), muscle_group: muscleGroup, equipment, is_unilateral: unilateral, muscles });
+    const share = Math.min(100, Math.max(0, Number(factor) || 0)) / 100;
+    const message = await onSubmit({
+      name: name.trim(),
+      muscle_group: muscleGroup,
+      equipment,
+      is_unilateral: unilateral,
+      bodyweight_factor: equipment === 'bodyweight' ? share : null,
+      muscles,
+    });
     setSaving(false);
     if (message) setError(message);
   };
@@ -70,6 +79,23 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
 
       <ChoiceGroup label="Grupo muscular" options={MUSCLE_GROUPS} value={muscleGroup} onChange={setMuscleGroup} />
       <ChoiceGroup label="Equipamento" options={EQUIPMENT} value={equipment} onChange={setEquipment} />
+
+      {equipment === 'bodyweight' && (
+        <label className={styles.field}>
+          <span className={styles.label}>Quanto do peso corporal é levantado</span>
+          <span className={styles.percent}>
+            <input
+              className={styles.input}
+              value={factor}
+              onChange={e => setFactor(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              inputMode="numeric"
+              aria-label="Porcentagem do peso corporal"
+            />
+            <span>%</span>
+          </span>
+          <small className={styles.hint}>Barra fixa e paralela ~95%, flexão ~65%, banco romano ~50%, prancha 0%. Usado no volume e no 1RM.</small>
+        </label>
+      )}
 
       <label className={styles.toggle}>
         <input type="checkbox" checked={unilateral} onChange={e => setUnilateral(e.target.checked)} />

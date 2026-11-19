@@ -20,7 +20,7 @@ from app.fitness_schemas import (
     SessionHistorySchema,
     SetResponseSchema,
 )
-from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus
+from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus, bodyweight_factors
 from app.dates import to_br_date
 from .auth import get_current_user
 from .fitness import visible_exercises
@@ -97,12 +97,14 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
     total_sets = 0
     volume = Decimal(0)
     body = None
+    factors = {}
     if any(item.equipment == BODYWEIGHT and item.sets for item in workout_session.exercises):
         body = BodyWeights(workout_session.user_id, db).on(to_br_date(aware(workout_session.started_at)))
+        factors = bodyweight_factors(db, [item.exercise_id for item in workout_session.exercises if item.equipment == BODYWEIGHT])
     for item in workout_session.exercises:
         previous = previous_performance(item, workout_session, db)
         total_sets += series_count(item.sets)
-        extra = Decimal(str(body)) if body and item.equipment == BODYWEIGHT else Decimal(0)
+        extra = Decimal(str(round(body * factors.get(item.exercise_id, 1.0), 2))) if body and item.equipment == BODYWEIGHT else Decimal(0)
         volume += sum(((entry.weight_kg + extra) * entry.reps for entry in item.sets), Decimal(0))
         exercises.append({
             "id": item.id,
