@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Search, X, Check, ChevronDown } from 'lucide-react';
-import { equipmentLabel, plural, groupsLabel, groupFamilies, familyEquipment } from '../../lib/gym';
+import { equipmentLabel, plural, groupsLabel, groupFamilies } from '../../lib/gym';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from './ExerciseFilters';
 import UnilateralTag from './UnilateralTag';
 import styles from './ExercisePicker.module.css';
@@ -70,53 +70,76 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
           const chosen = family.variants.filter(variant => order(variant.id));
           const position = !many ? order(first.id) : 0;
           const open = many && expanded === family.key;
+          const details = (
+            <span className={styles.itemText}>
+              <span className={styles.itemName}>{family.name}</span>
+              <span className={styles.itemMeta}>
+                {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
+              </span>
+              <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
+                {many
+                  ? family.variants.map((variant, i) => (
+                    <span key={variant.id}>
+                      {i > 0 && ' · '}
+                      <span className={order(variant.id) ? styles.equipmentChosen : undefined}>{equipmentLabel(variant.equipment)}</span>
+                    </span>
+                  ))
+                  : equipmentLabel(first.equipment)}
+                {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
+              </span>
+            </span>
+          );
           return (
             <li key={family.key} className={styles.row} style={{ '--i': Math.min(index, 14) }}>
-              <button
-                type="button"
-                className={`${styles.item} ${position || chosen.length ? styles.itemSelected : ''} ${open ? styles.itemOpen : ''}`}
-                aria-pressed={many ? undefined : !!position}
-                aria-expanded={many ? open : undefined}
-                onClick={() => (many ? setExpanded(current => (current === family.key ? null : family.key)) : toggle(first))}
-              >
-                <span className={styles.itemText}>
-                  <span className={styles.itemName}>{family.name}</span>
-                  <span className={styles.itemMeta}>
-                    {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
-                  </span>
-                  <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
-                    {many
-                      ? (chosen.length ? chosen.map(variant => equipmentLabel(variant.equipment)).join(' · ') : familyEquipment(family))
-                      : equipmentLabel(first.equipment)}
-                    {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
-                  </span>
-                </span>
-                {many ? (
-                  <ChevronDown size={18} className={`${styles.expand} ${open ? styles.expandOpen : ''}`} aria-hidden="true" />
-                ) : (
+              {many ? (
+                <div className={`${styles.family} ${chosen.length ? styles.familySelected : ''} ${open ? styles.familyOpen : ''}`}>
+                  <button
+                    type="button"
+                    className={styles.familyHead}
+                    aria-expanded={open}
+                    onClick={() => setExpanded(current => (current === family.key ? null : family.key))}
+                  >
+                    {details}
+                    <ChevronDown size={18} className={`${styles.expand} ${open ? styles.expandOpen : ''}`} aria-hidden="true" />
+                  </button>
+                  <div className={styles.drawer} inert={!open}>
+                    <div className={styles.drawerInner}>
+                      <div className={styles.equipments} role="group" aria-label={`Equipamento para ${family.name}`}>
+                        {family.variants.map(variant => {
+                          const variantPosition = order(variant.id);
+                          return (
+                            <button
+                              key={variant.id}
+                              type="button"
+                              className={`${styles.equipment} ${variantPosition ? styles.equipmentOn : ''}`}
+                              aria-pressed={!!variantPosition}
+                              onClick={() => toggle(variant)}
+                            >
+                              <span className={styles.equipmentName}>{equipmentLabel(variant.equipment)}</span>
+                              <span className={styles.equipmentMark} aria-hidden="true">
+                                {variantPosition > 0 && (selected.length > 1
+                                  ? <span className={styles.equipmentOrder}>{variantPosition}</span>
+                                  : <Check size={16} strokeWidth={2.8} />)}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.item} ${position ? styles.itemSelected : ''}`}
+                  aria-pressed={!!position}
+                  onClick={() => toggle(first)}
+                >
+                  {details}
                   <span className={styles.check} aria-hidden="true">
                     {position ? (selected.length > 1 ? position : <Check size={16} strokeWidth={3} />) : null}
                   </span>
-                )}
-              </button>
-              {open && (
-                <div className={styles.equipments} role="group" aria-label={`Equipamento para ${family.name}`}>
-                  {family.variants.map(variant => {
-                    const variantPosition = order(variant.id);
-                    return (
-                      <button
-                        key={variant.id}
-                        type="button"
-                        className={`${styles.equipment} ${variantPosition ? styles.equipmentOn : ''}`}
-                        aria-pressed={!!variantPosition}
-                        onClick={() => toggle(variant)}
-                      >
-                        {variantPosition && selected.length > 1 && <span className={styles.equipmentOrder}>{variantPosition}</span>}
-                        {equipmentLabel(variant.equipment)}
-                      </button>
-                    );
-                  })}
-                </div>
+                </button>
               )}
             </li>
           );

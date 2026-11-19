@@ -192,9 +192,63 @@
   --filters-gutter: 20px;
 }
 
-.itemOpen {
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+.family {
+  border-radius: 14px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.familySelected {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+}
+
+.familyHead {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-out);
+}
+
+.familyOpen .drawer {
+  grid-template-rows: 1fr;
+}
+
+.drawerInner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+}
+
+.familyOpen .drawerInner {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawerInner {
+    transition: none;
+  }
 }
 
 .expand {
@@ -208,56 +262,62 @@
 }
 
 .equipments {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 6px;
-  margin-top: 4px;
-  padding: 10px;
-  border-radius: 6px 6px 14px 14px;
-  background: var(--gym-surface-2);
-  border: 1px solid var(--gym-border);
-  animation: equipmentsIn var(--dur-base) var(--ease-out);
-}
-
-@keyframes equipmentsIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
+  margin: 0 10px 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gym-border);
 }
 
 .equipment {
-  height: 38px;
-  display: inline-flex;
+  min-height: 48px;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--gym-border-strong);
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gym-border);
   background: var(--gym-surface);
   color: var(--gym-text);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 500;
+  text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
 }
 
+.equipmentName {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.equipmentMark {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
 .equipmentOn {
-  background: var(--gym-accent);
+  background: var(--gym-accent-soft);
   border-color: var(--gym-accent);
-  color: var(--gym-accent-ink);
+  color: var(--gym-accent);
 }
 
 .equipmentOrder {
-  min-width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--gym-accent-ink);
-  color: var(--gym-accent);
-  font-size: 0.7rem;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
@@ -265,4 +325,8 @@
   color: var(--gym-faint);
   white-space: normal;
   line-height: 1.35;
+}
+
+.equipmentChosen {
+  color: var(--gym-accent);
 }
