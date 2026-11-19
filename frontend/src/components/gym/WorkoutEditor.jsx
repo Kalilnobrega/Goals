@@ -6,6 +6,7 @@ import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySi
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
+import GymSelect from './GymSelect';
 import ExercisePicker from './ExercisePicker';
 import WorkoutBodyMap from './WorkoutBodyMap';
 import styles from './WorkoutEditor.module.css';
@@ -35,6 +36,8 @@ const toPayload = (name, description, items) => ({
     unilateral: item.unilateral,
   })),
 });
+
+const REST_CHOICES = [{ value: null, label: 'Nenhum' }, ...REST_OPTIONS.map(seconds => ({ value: seconds, label: formatRest(seconds) }))];
 
 const digits = (value) => value.replace(/\D/g, '').slice(0, 3);
 
@@ -306,19 +309,18 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                           </div>
                         </div>
                         )}
-                        <label className={styles.target}>
+                        <div className={styles.target}>
                           <span className={styles.targetLabel}>Descanso</span>
-                          <select
-                            className={styles.restSelect}
-                            value={item.rest_seconds ?? ''}
-                            onChange={e => updateItem(item.key, { rest_seconds: e.target.value ? Number(e.target.value) : null })}
-                          >
-                            <option value="">—</option>
-                            {REST_OPTIONS.map(seconds => (
-                              <option key={seconds} value={seconds}>{formatRest(seconds)}</option>
-                            ))}
-                          </select>
-                        </label>
+                          <GymSelect
+                            value={item.rest_seconds ?? null}
+                            options={REST_CHOICES}
+                            onChange={seconds => updateItem(item.key, { rest_seconds: seconds })}
+                            title={`Descanso · ${item.exercise.name}`}
+                            label={`Descanso de ${item.exercise.name}`}
+                            hint="Tempo do cronômetro entre as séries deste exercício."
+                            grid
+                          />
+                        </div>
                         <button
                           type="button"
                           className={`${styles.sideToggle} ${(item.unilateral ?? item.exercise.is_unilateral) ? styles.sideToggleOn : ''}`}
