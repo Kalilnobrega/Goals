@@ -2,10 +2,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, TrendingUp, Repeat, Timer, Weight } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Timer, Trophy, ListChecks, Target, ChartBar, LayoutGrid, ArrowUpRight,
+} from 'lucide-react';
 import { getWorkoutProgress, peekCache } from '../../../../../lib/api';
 import {
-  formatDuration, formatKg, formatShortDate, formatVolume, muscleLabel, plural,
+  formatDay, formatDuration, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
 import styles from '../../progress.module.css';
@@ -25,6 +27,161 @@ function Delta({ value }) {
   if (value === null || value === undefined) return null;
   const tone = value > 0 ? styles.up : value < 0 ? styles.down : '';
   return <span className={`${styles.rowDelta} ${tone}`}>{signedPct(value)}</span>;
+}
+
+function Group({ icon: Icon, title, children }) {
+  return (
+    <section className={styles.group} aria-label={title}>
+      <h2 className={styles.groupTitle}><Icon size={17} aria-hidden="true" /> {title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Tiles({ tiles }) {
+  return (
+    <div className={styles.records}>
+      {tiles.map(tile => (
+        <div key={tile.label} className={styles.record}>
+          <span className={styles.recordLabel}>{tile.label}</span>
+          <span className={styles.recordValue}>{tile.value}</span>
+          {tile.note && <span className={styles.recordNote}>{tile.note}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Ready({ items }) {
+  if (!items.length) return null;
+  return (
+    <section className={own.ready} aria-label="Pronto para subir a carga">
+      <h2 className={own.readyTitle}><ArrowUpRight size={18} aria-hidden="true" /> Pronto para subir a carga</h2>
+      <ul className={own.readyList}>
+        {items.map(item => (
+          <li key={item.exercise_id}>
+            <Link href={`/gym/progress/exercises/${item.exercise_id}`} className={own.readyRow}>
+              <span className={own.readyName}>{item.name}</span>
+              <span className={own.readyMeta}>
+                {item.sets} × {item.reps} com {formatKg(item.weight_kg)} kg · topo da faixa: {item.reps_max} reps
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Completion({ data }) {
+  if (!data) return null;
+  return (
+    <Group icon={ListChecks} title="Cumprimento da ficha">
+      <Tiles tiles={[
+        { label: 'Séries feitas', value: data.pct !== null ? `${data.pct}%` : '—', note: `${data.done_sets} de ${data.planned_sets} planejadas` },
+        { label: 'Séries extras', value: String(data.extra_sets), note: data.extra_sets ? 'além do planejado' : 'nenhuma' },
+      ]} />
+      {data.exercises.length > 0 && (
+        <ul className={styles.list}>
+          {data.exercises.map(e => (
+            <li key={e.exercise_id} className={own.line}>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{e.name}</span>
+                <span className={styles.rowMeta}>
+                  {[e.skipped && `pulado ${e.skipped}×`, e.incomplete && `incompleto ${e.incomplete}×`].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+              <span className={own.lineValue}>{formatKg(e.avg_sets)}<small>/{e.target_sets}</small></span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Group>
+  );
+}
+
+function RepRange({ data }) {
+  if (!data) return null;
+  const total = data.in_range + data.below + data.above;
+  const parts = [
+    { key: 'below', label: 'Abaixo', value: data.below, className: own.below },
+    { key: 'in_range', label: 'Dentro', value: data.in_range, className: own.inside },
+    { key: 'above', label: 'Acima', value: data.above, className: own.above },
+  ];
+  return (
+    <Group icon={Target} title="Faixa de repetições">
+      <div className={own.stack} role="img" aria-label={parts.map(p => `${p.label} ${Math.round((p.value / total) * 100)}%`).join(', ')}>
+        {parts.filter(p => p.value).map(p => (
+          <span key={p.key} className={`${own.stackPart} ${p.className}`} style={{ flexGrow: p.value }} />
+        ))}
+      </div>
+      <div className={own.legend}>
+        {parts.map(p => (
+          <span key={p.key}><i className={p.className} /> {p.label} <strong>{Math.round((p.value / total) * 100)}%</strong></span>
+        ))}
+      </div>
+      <p className={own.hint}>Das {plural(total, 'série', 'séries')} feitas com esta ficha, comparadas com a faixa de reps de cada exercício.</p>
+    </Group>
+  );
+}
+
+function TimeGroup({ time }) {
+  if (!time) return null;
+  const longest = time.longest_exercises[0];
+  return (
+    <Group icon={Timer} title="Tempo">
+      <Tiles tiles={[
+        { label: 'Por série', value: formatSeconds(time.avg_set_seconds), note: 'com descanso' },
+        { label: 'Por exercício', value: formatSeconds(time.avg_exercise_seconds), note: 'em média' },
+        { label: 'Descanso real', value: formatSeconds(time.avg_rest_seconds), note: 'entre séries' },
+      ]} />
+      {longest && (
+        <p className={own.hint}>Exercício que mais toma tempo: <strong>{longest.name}</strong>, {formatSeconds(longest.avg_seconds)} em média.</p>
+      )}
+    </Group>
+  );
+}
+
+function VolumeShare({ items }) {
+  if (items.length < 2) return null;
+  return (
+    <Group icon={ChartBar} title="Volume por exercício">
+      <ul className={own.shares}>
+        {items.map(item => (
+          <li key={`${item.exercise_id}-${item.name}`} className={own.share}>
+            <span className={own.shareTop}>
+              <span className={own.shareName}>{item.name}</span>
+              <span className={own.shareValue}>{Math.round(item.share * 100)}%</span>
+            </span>
+            <span className={own.track}><span className={own.fill} style={{ width: `${item.share * 100}%` }} /></span>
+            <span className={styles.rowMeta}>{formatVolume(item.volume_kg)} no total</span>
+          </li>
+        ))}
+      </ul>
+    </Group>
+  );
+}
+
+function Records({ items }) {
+  if (!items.length) return null;
+  return (
+    <Group icon={Trophy} title={`Recordes com esta ficha · ${items.length}`}>
+      <ul className={styles.list}>
+        {items.map(r => (
+          <li key={`${r.session_id}-${r.name}`}>
+            <Link href={`/gym/history/${r.session_id}`} className={styles.row}>
+              <span className={styles.rowDate}>{formatDay(r.date)}</span>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{r.name}</span>
+                <span className={styles.rowMeta}>{formatKg(r.weight_kg)} kg × {r.reps} · antes {formatKg(r.previous_kg)} kg</span>
+              </span>
+              <span className={`${styles.rowDelta} ${styles.up}`}>+{formatKg(Math.round((r.weight_kg - r.previous_kg) * 100) / 100)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Group>
+  );
 }
 
 function lastSet(e) {
@@ -98,10 +255,10 @@ export default function WorkoutProgressPage() {
   const diff = series.length > 1 ? series.at(-1).value - series[0].value : null;
 
   const tiles = [
-    data.load_pct !== null && { icon: TrendingUp, label: 'Progressão de carga', value: signedPct(data.load_pct), note: 'média dos exercícios' },
-    data.reps_pct !== null && { icon: Repeat, label: 'Progressão de reps', value: signedPct(data.reps_pct), note: 'média dos exercícios' },
-    data.avg_volume_kg !== null && { icon: Weight, label: 'Volume médio', value: formatVolume(data.avg_volume_kg), note: 'por treino' },
-    data.avg_minutes !== null && { icon: Timer, label: 'Duração média', value: minutes(data.avg_minutes), note: 'por treino' },
+    data.load_pct !== null && { label: 'Progressão de carga', value: signedPct(data.load_pct), note: 'média dos exercícios' },
+    data.reps_pct !== null && { label: 'Progressão de reps', value: signedPct(data.reps_pct), note: 'média dos exercícios' },
+    data.avg_volume_kg !== null && { label: 'Volume médio', value: formatVolume(data.avg_volume_kg), note: 'por treino' },
+    data.avg_minutes !== null && { label: 'Duração média', value: minutes(data.avg_minutes), note: 'por treino' },
   ].filter(Boolean);
 
   return (
@@ -159,16 +316,17 @@ export default function WorkoutProgressPage() {
           </section>
 
           {tiles.length > 0 && (
-            <section className={styles.records} aria-label="Resumo">
-              {tiles.map(({ icon: Icon, label, value, note }) => (
-                <div key={label} className={styles.record}>
-                  <span className={styles.recordLabel}><Icon size={13} aria-hidden="true" /> {label}</span>
-                  <span className={styles.recordValue}>{value}</span>
-                  <span className={styles.recordNote}>{note}</span>
-                </div>
-              ))}
-            </section>
+            <Group icon={LayoutGrid} title="Resumo">
+              <Tiles tiles={tiles} />
+            </Group>
           )}
+
+          <Ready items={data.ready_to_progress ?? []} />
+          <Completion data={data.completion} />
+          <RepRange data={data.rep_range} />
+          <TimeGroup time={data.time} />
+          <VolumeShare items={data.volume_share ?? []} />
+          <Records items={data.records ?? []} />
 
           {exercises.length > 0 && (
             <section className={styles.sessions}>
