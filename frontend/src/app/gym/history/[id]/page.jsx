@@ -2,15 +2,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Play, Trash2 } from 'lucide-react';
-import { getSession, getSessionInsights, deleteSession } from '../../../../lib/api';
-import { apiError } from '../../../../lib/gym';
+import { ArrowUpDown, Check, ChevronLeft, Dumbbell, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
+import {
+  getSession, getSessionInsights, deleteSession, addSet, updateSet, deleteSet, updateSessionExercise, removeSessionExercise,
+  getExercises, reorderSession,
+} from '../../../../lib/api';
+import { apiError, equipmentLabel, familySiblings, groupsLabel, plural, renumberSets } from '../../../../lib/gym';
+import GymSheet from '../../../../components/gym/GymSheet';
+import ExercisePicker from '../../../../components/gym/ExercisePicker';
+import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import SessionSummary from '../../../../components/gym/SessionSummary';
+import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard';
 import useStartSession from '../../../../components/gym/useStartSession';
 import s from '../../../../components/gym/sheet.module.css';
 import styles from '../../workouts/editor.module.css';
+
+const sameTracking = (item, exercise) => !item.sets.length || (exercise.tracking ?? 'reps') === (item.tracking ?? 'reps');
 
 export default function HistoryDetailPage() {
   const { id } = useParams();
@@ -20,6 +29,10 @@ export default function HistoryDetailPage() {
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('loading');
   const [insights, setInsights] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editPanel, setEditPanel] = useState(null);
+  const [exercises, setExercises] = useState(null);
+  const [exercisesError, setExercisesError] = useState(false);
   const { begin, starting, sheet } = useStartSession();
 
   const loaded = useCallback((data) => {
@@ -39,12 +52,125 @@ export default function HistoryDetailPage() {
     getSession(id).then(loaded).catch(failed);
   }, [id, loaded]);
 
+  const sessionId = session?.id;
   useEffect(() => {
-    if (status !== 'ready' || !session) return;
+    if (status !== 'ready' || !sessionId || editing) return;
     let active = true;
-    getSessionInsights(session.id).then(result => { if (active) setInsights(result); }).catch(() => {});
+    getSessionInsights(sessionId).then(result => { if (active) setInsights(result); }).catch(() => {});
     return () => { active = false; };
-  }, [status, session]);
+  }, [status, sessionId, editing]);
+
+  const fail = (err, message) => {
+    toast({ tone: 'danger', message: apiError(err, message) });
+    return false;
+  };
+
+  const changeItem = (itemId, change) => setSession(current => ({
+    ...current,
+    exercises: current.exercises.map(it => (it.id === itemId ? change(it) : it)),
+  }));
+
+  const logSet = async (item, data) => {
+    try {
+      const entry = await addSet(item.id, data);
+      changeItem(item.id, it => ({ ...it, sets: renumberSets([...it.sets, entry]) }));
+      return true;
+    } catch (err) {
+      return fail(err, 'Não foi possível adicionar a série.');
+    }
+  };
+
+  const editSet = async (item, entry, data) => {
+    try {
+      const updated = await updateSet(entry.id, data);
+      changeItem(item.id, it => ({ ...it, sets: it.sets.map(e => (e.id === updated.id ? updated : e)) }));
+      return true;
+    } catch (err) {
+      return fail(err, 'Não foi possível salvar a série.');
+    }
+  };
+
+  const removeSet = async (item, entry) => {
+    try {
+      await deleteSet(entry.id);
+      changeItem(item.id, it => ({ ...it, sets: renumberSets(it.sets.filter(e => e.id !== entry.id)) }));
+      return true;
+    } catch (err) {
+      return fail(err, 'Não foi possível excluir a série.');
+    }
+  };
+
+  const saveNote = async (item, note) => {
+    try {
+      setSession(await updateSessionExercise(item.id, { note }));
+      return true;
+    } catch (err) {
+      return fail(err, 'Não foi possível salvar a observação.');
+    }
+  };
+
+  const loadExercises = () => {
+    setExercisesError(false);
+    getExercises().then(setExercises).catch(() => setExercisesError(true));
+  };
+
+  const startEditing = () => {
+    setEditing(true);
+    if (!exercises) loadExercises();
+  };
+
+  const swapExercise = async (item, [exercise]) => {
+    setEditPanel(null);
+    if (!exercise || exercise.id === item.exercise_id) return;
+    try {
+      setSession(await updateSessionExercise(item.id, { exercise_id: exercise.id }));
+      toast(`Trocado por ${exercise.name}`);
+    } catch (err) {
+      fail(err, 'Não foi possível trocar o exercício.');
+    }
+  };
+
+  const reorder = async (ids) => {
+    const previous = session;
+    setSession(current => ({ ...current, exercises: ids.map(itemId => current.exercises.find(item => item.id === itemId)) }));
+    try {
+      await reorderSession(previous.id, ids);
+    } catch (err) {
+      setSession(previous);
+      fail(err, 'Não foi possível mudar a ordem.');
+    }
+  };
+
+  const removeItem = async (item) => {
+    setEditPanel(null);
+    const ok = await confirmAction({
+      title: 'Remover exercício',
+      message: [<><strong>{item.exercise_name}</strong> e as séries dele saem deste treino.</>],
+      confirmLabel: 'Remover',
+    });
+    if (!ok) return;
+    try {
+      setSession(await removeSessionExercise(item.id));
+    } catch (err) {
+      fail(err, 'Não foi possível remover o exercício.');
+    }
+  };
+
+  const editSheet = editing ? editPanel : null;
+  const siblings = editSheet?.type === 'menu' && exercises
+    ? familySiblings(exercises.find(exercise => exercise.id === editSheet.item.exercise_id), exercises)
+    : [];
+
+  const finishEditing = async () => {
+    setEditing(false);
+    setInsights(null);
+    try {
+      setSession(await getSession(session.id));
+    } catch {
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const remove = async () => {
     const ok = await confirmAction({
@@ -90,7 +216,37 @@ export default function HistoryDetailPage() {
         </div>
       )}
 
-      {status === 'ready' && (
+      {status === 'ready' && editing && (
+        <>
+          <p className={styles.editHint}>Toque numa série para corrigir, deslize para excluir ou registre as que faltaram. No menu de cada exercício dá para trocar ou remover.</p>
+          {session.exercises.length > 1 && (
+            <button type="button" className={s.secondary} onClick={() => setEditPanel({ type: 'order' })}>
+              <ArrowUpDown size={18} /> Reordenar exercícios
+            </button>
+          )}
+          <div className={styles.editList}>
+            {session.exercises.map((item, index) => (
+              <SessionExerciseCard
+                key={item.id}
+                item={item}
+                index={index}
+                onLogSet={logSet}
+                onEditSet={editSet}
+                onDeleteSet={removeSet}
+                onSaveNote={saveNote}
+                onOpenMenu={item => setEditPanel({ type: 'menu', item })}
+              />
+            ))}
+          </div>
+          <div className={s.actions}>
+            <button type="button" className={s.primary} onClick={finishEditing}>
+              <Check size={18} strokeWidth={2.6} /> Concluir edição
+            </button>
+          </div>
+        </>
+      )}
+
+      {status === 'ready' && !editing && (
         <>
           <SessionSummary session={session} insights={insights} />
           <div className={s.actions}>
@@ -99,6 +255,9 @@ export default function HistoryDetailPage() {
                 <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Treinar de novo'}
               </button>
             )}
+            <button type="button" className={s.secondary} onClick={startEditing}>
+              <Pencil size={18} /> Editar treino
+            </button>
             <button type="button" className={s.danger} onClick={remove}>
               <Trash2 size={18} /> Excluir do histórico
             </button>
@@ -106,6 +265,84 @@ export default function HistoryDetailPage() {
         </>
       )}
       {sheet}
+      <GymSheet
+        open={!!editSheet}
+        onClose={() => setEditPanel(null)}
+        title={{ menu: editSheet?.item?.exercise_name, swap: 'Trocar exercício', order: 'Ordem dos exercícios' }[editSheet?.type] ?? ''}
+      >
+        {editSheet?.type === 'menu' && (
+          <div className={s.actions}>
+            {siblings.length > 1 && (
+              <div className={s.option} role="group" aria-label="Equipamento">
+                <Dumbbell size={20} />
+                <span>
+                  Equipamento
+                  <small>Mesmo exercício, outro equipamento</small>
+                  <span className={styles.equipmentChoices}>
+                    {siblings.map(variant => (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        className={`${styles.equipmentChoice} ${variant.id === editSheet.item.exercise_id ? styles.equipmentChoiceOn : ''}`}
+                        disabled={variant.id === editSheet.item.exercise_id || !sameTracking(editSheet.item, variant)}
+                        onClick={() => swapExercise(editSheet.item, [variant])}
+                      >
+                        {equipmentLabel(variant.equipment)}
+                      </button>
+                    ))}
+                  </span>
+                </span>
+              </div>
+            )}
+            <button type="button" className={s.option} onClick={() => setEditPanel({ type: 'swap', item: editSheet.item })}>
+              <Repeat size={20} />
+              <span>Trocar exercício<small>{editSheet.item.sets.length ? 'As séries registradas continuam' : 'Escolha outro da biblioteca'}</small></span>
+            </button>
+            <button type="button" className={`${s.option} ${s.optionDanger}`} onClick={() => removeItem(editSheet.item)}>
+              <Trash2 size={20} />
+              <span>Remover deste treino<small>As séries dele saem do histórico</small></span>
+            </button>
+          </div>
+        )}
+
+        {editSheet?.type === 'swap' && (
+          <ExercisePicker
+            single
+            exercises={editSheet.item.sets.length ? exercises?.filter(exercise => sameTracking(editSheet.item, exercise)) : exercises}
+            loadError={exercisesError}
+            onRetry={loadExercises}
+            onConfirm={selected => swapExercise(editSheet.item, selected)}
+          />
+        )}
+
+        {editSheet?.type === 'order' && (
+          <div className={s.stack}>
+            <p className={s.text}>Arraste para mudar a ordem.</p>
+            <SortableList ids={session.exercises.map(item => item.id)} onReorder={reorder}>
+              <ol className={s.orderList}>
+                {session.exercises.map((item, index) => (
+                  <SortableItem key={item.id} id={item.id}>
+                    {({ itemProps, handleProps, isDragging }) => (
+                      <li {...itemProps} className={`${s.orderItem} ${isDragging ? s.orderDragging : ''}`}>
+                        <DragHandle handleProps={handleProps} className={s.orderHandle} />
+                        <span className={s.orderIndex}>{index + 1}</span>
+                        <span className={s.orderText}>
+                          <span className={s.orderName}>{item.exercise_name}</span>
+                          <span className={s.orderMeta}>
+                            {groupsLabel(item)}
+                            {item.sets.length ? ` · ${plural(item.sets.length, 'série', 'séries')}` : ''}
+                          </span>
+                        </span>
+                      </li>
+                    )}
+                  </SortableItem>
+                ))}
+              </ol>
+            </SortableList>
+            <button type="button" className={s.primary} onClick={() => setEditPanel(null)}>Pronto</button>
+          </div>
+        )}
+      </GymSheet>
     </div>
   );
 }

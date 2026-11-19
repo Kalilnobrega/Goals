@@ -208,7 +208,7 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
           <Check size={18} strokeWidth={2.8} />
           {saving ? 'Salvando…' : tracking === 'cardio' ? 'Registrar cardio' : `Registrar série ${done + 1}`}
         </button>
-        {tracking === 'time' && (
+        {tracking === 'time' && onStartRest && (
           <button type="button" className={styles.rest} onClick={() => onStartRest(item)} aria-label="Iniciar descanso">
             <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
           </button>

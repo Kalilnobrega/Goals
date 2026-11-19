@@ -741,3 +741,7 @@
   font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
 }
+
+.remove {
+  color: var(--gym-danger);
+}

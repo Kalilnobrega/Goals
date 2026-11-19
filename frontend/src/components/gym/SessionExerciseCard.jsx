@@ -106,6 +106,7 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
           <Check size={18} strokeWidth={2.8} />
           {saving ? 'Salvando…' : `Registrar série ${next}`}
         </button>
+        {onStartRest && (
         <button
           type="button"
           className={styles.rest}
@@ -114,6 +115,7 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
         >
           <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
         </button>
+        )}
       </div>
       {onCancel && (
         <button type="button" className={styles.extraCancel} onClick={onCancel} disabled={saving}>
@@ -192,6 +194,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
           <Check size={18} strokeWidth={2.8} />
           {saving ? 'Salvando…' : missing.length === 2 ? `Registrar série ${pairs + 1}` : `Completar série ${pairs + 1} (${SIDE_NAME[missing[0]].toLowerCase()})`}
         </button>
+        {onStartRest && (
         <button
           type="button"
           className={styles.rest}
@@ -200,6 +203,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
         >
           <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
         </button>
+        )}
       </div>
       {onCancel && (
         <button type="button" className={styles.extraCancel} onClick={onCancel} disabled={saving}>
@@ -496,7 +500,7 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onSaveNote, onToggleUnilateral }) {
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, onToggleUnilateral }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -529,9 +533,16 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           <div className={styles.headerTop}>
             <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
             <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
-            <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
-              <MoreVertical size={18} />
-            </button>
+            {onOpenMenu && (
+              <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
+                <MoreVertical size={18} />
+              </button>
+            )}
+            {onRemove && (
+              <button type="button" className={`${styles.menu} ${styles.remove}`} onClick={() => onRemove(item)} aria-label={`Remover ${item.exercise_name} do treino`}>
+                <Trash2 size={17} />
+              </button>
+            )}
           </div>
           <div className={styles.headerBottom}>
             <p className={styles.meta}>
@@ -553,7 +564,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
               <ArrowLeftRight size={14} /> Unilateral
             </button>
           )}
-          {tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
+          {onOpenRest && tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
             <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
           </button>}
           </div>
