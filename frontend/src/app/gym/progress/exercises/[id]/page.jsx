@@ -2,10 +2,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Trophy, Timer } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle,
+} from 'lucide-react';
 import { getExerciseProgress, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
@@ -68,6 +70,97 @@ const METRICS = [
     unit: 'reps',
   },
 ];
+
+function Tiles({ tiles }) {
+  return (
+    <div className={styles.records}>
+      {tiles.map(tile => (
+        <div key={tile.label} className={styles.record}>
+          <span className={styles.recordLabel}>{tile.label}</span>
+          <span className={`${styles.recordValue} ${tile.tone ?? ''}`}>{tile.value}</span>
+          {tile.note && <span className={styles.recordNote}>{tile.note}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Group({ icon: Icon, title, children }) {
+  return (
+    <section className={styles.group} aria-label={title}>
+      <h2 className={styles.groupTitle}><Icon size={17} aria-hidden="true" /> {title}</h2>
+      {children}
+    </section>
+  );
+}
+
+const signedKg = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatKg(Math.abs(value))} kg`;
+const daysLabel = (days) => (days === 0 ? 'hoje' : days === 1 ? 'ontem' : `há ${days} dias`);
+
+function Insights({ data }) {
+  const { ready, stagnation, pace, rep_records: repRecords = [], frequency } = data;
+  return (
+    <>
+      {ready && (
+        <section className={styles.callout} aria-label="Pronto para subir a carga">
+          <span className={styles.calloutTitle}><ArrowUpRight size={18} aria-hidden="true" /> Pronto para subir a carga</span>
+          <span className={styles.calloutText}>
+            No último treino: {ready.sets} × {ready.reps} com {formatKg(ready.weight_kg)} kg, no topo da faixa ({ready.reps_max} reps) da ficha {ready.workout_name}.
+            Tente {formatKg(ready.weight_kg + 2.5)} kg na próxima.
+          </span>
+        </section>
+      )}
+
+      {stagnation && (
+        <section className={`${styles.callout} ${styles.calloutWarn}`} aria-label="Estagnação">
+          <span className={styles.calloutTitle}><AlertTriangle size={18} aria-hidden="true" /> Sem novo recorde há {stagnation.sessions} treinos</span>
+          <span className={styles.calloutText}>
+            O melhor foi {formatKg(stagnation.best_kg)} kg em {formatDay(stagnation.since)}. Vale mudar o estímulo: outra faixa de reps, uma variação do exercício ou mais séries por algumas semanas.
+          </span>
+        </section>
+      )}
+
+      {pace && (
+        <Group icon={TrendingUp} title="Ritmo de progressão">
+          <Tiles tiles={[
+            { label: 'Por mês', value: signedKg(pace.kg_per_month), note: pace.metric === 'e1rm' ? 'no 1RM estimado' : 'na carga máxima', tone: pace.kg_per_month > 0 ? styles.up : '' },
+            { label: 'Em %', value: pace.pct_per_month !== null ? `${pace.pct_per_month > 0 ? '+' : ''}${formatKg(pace.pct_per_month)}%` : '—', note: 'por mês' },
+            { label: 'Em 3 meses', value: `${formatKg(Math.max(pace.projected_kg, 0))} kg`, note: `hoje ${formatKg(pace.current_kg)} kg` },
+          ]} />
+          <p className={styles.panelNote}>Calculado em {plural(pace.sessions, 'treino', 'treinos')} desde {formatDay(pace.since)}, mantendo o ritmo atual.</p>
+        </Group>
+      )}
+
+      {repRecords.length > 0 && (
+        <Group icon={Repeat} title="Recorde por repetições">
+          <ul className={styles.repRecords}>
+            {repRecords.map(record => (
+              <li key={record.reps}>
+                <Link href={`/gym/history/${record.session_id}`} className={styles.repRecord}>
+                  <span className={styles.repTarget}>{record.reps} {record.reps === 1 ? 'rep' : 'reps'}</span>
+                  <span className={styles.repWeight}>{formatKg(record.weight_kg)} kg</span>
+                  <span className={styles.repNote}>
+                    {record.actual_reps > record.reps ? `feito com ${record.actual_reps} · ` : ''}{formatShortDate(record.date)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Group>
+      )}
+
+      {frequency && (
+        <Group icon={CalendarDays} title="Frequência">
+          <Tiles tiles={[
+            { label: 'Por semana', value: `${formatKg(frequency.per_week)}×`, note: frequency.weeks >= 8 ? 'nas últimas 8 semanas' : 'desde a primeira vez' },
+            { label: 'Intervalo médio', value: frequency.avg_interval_days !== null ? `${formatKg(frequency.avg_interval_days)} ${frequency.avg_interval_days === 1 ? 'dia' : 'dias'}` : '—', note: 'entre os treinos' },
+            { label: 'Última vez', value: daysLabel(frequency.days_since_last), note: formatDay(frequency.last_on) },
+          ]} />
+        </Group>
+      )}
+    </>
+  );
+}
 
 function sideStrength(point) {
   const useOneRm = point.left_estimated_1rm_kg != null && point.right_estimated_1rm_kg != null;
@@ -268,6 +361,8 @@ export default function ExerciseProgressPage() {
           </section>
 
           <Balance points={points} />
+
+          <Insights data={data} />
 
           <TargetGoal
             goal={data.goal}
