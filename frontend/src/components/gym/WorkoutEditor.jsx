@@ -7,6 +7,7 @@ import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
 import GymSelect from './GymSelect';
+import GymSwitch from './GymSwitch';
 import ExercisePicker from './ExercisePicker';
 import WorkoutBodyMap from './WorkoutBodyMap';
 import styles from './WorkoutEditor.module.css';
@@ -42,6 +43,9 @@ const toPayload = (name, description, items) => ({
 });
 
 const REST_CHOICES = [{ value: null, label: 'Nenhum' }, ...REST_OPTIONS.map(seconds => ({ value: seconds, label: formatRest(seconds) }))];
+
+const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
+const LOAD_OPTIONS = [{ value: 'total', label: 'Peso total' }, { value: 'side', label: 'Cada lado' }];
 
 const digits = (value) => value.replace(/\D/g, '').slice(0, 3);
 
@@ -325,24 +329,25 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                             grid
                           />
                         </div>
-                        <button
-                          type="button"
-                          className={`${styles.sideToggle} ${(item.unilateral ?? item.exercise.is_unilateral) ? styles.sideToggleOn : ''}`}
-                          aria-pressed={!!(item.unilateral ?? item.exercise.is_unilateral)}
-                          onClick={() => updateItem(item.key, { unilateral: !(item.unilateral ?? item.exercise.is_unilateral) })}
-                        >
-                          {(item.unilateral ?? item.exercise.is_unilateral) ? 'Unilateral' : 'Bilateral'}
-                        </button>
+                        <div className={styles.target}>
+                          <span className={styles.targetLabel}>Execução</span>
+                          <GymSwitch
+                            label={`Execução de ${item.exercise.name}`}
+                            value={!!(item.unilateral ?? item.exercise.is_unilateral)}
+                            options={SIDE_OPTIONS}
+                            onChange={unilateral => updateItem(item.key, { unilateral })}
+                          />
+                        </div>
                         {sideAllowed(item) && (
-                          <button
-                            type="button"
-                            className={`${styles.sideToggle} ${item.load_mode === 'side' ? styles.sideToggleOn : ''}`}
-                            aria-pressed={item.load_mode === 'side'}
-                            aria-label={item.load_mode === 'side' ? 'Carga anotada de cada lado. Tocar para anotar o peso total' : 'Carga anotada como peso total. Tocar para anotar cada lado'}
-                            onClick={() => updateItem(item.key, { load_mode: item.load_mode === 'side' ? null : 'side' })}
-                          >
-                            {item.load_mode === 'side' ? 'Cada lado' : 'Peso total'}
-                          </button>
+                          <div className={styles.target}>
+                            <span className={styles.targetLabel}>Carga</span>
+                            <GymSwitch
+                              label={`Como anotar a carga de ${item.exercise.name}`}
+                              value={item.load_mode === 'side' ? 'side' : 'total'}
+                              options={LOAD_OPTIONS}
+                              onChange={mode => updateItem(item.key, { load_mode: mode === 'side' ? 'side' : null })}
+                            />
+                          </div>
                         )}
                       </div>
                       {invalid?.field === item.key && <span className={styles.fieldError}>{invalid.message}</span>}

@@ -390,29 +390,7 @@
   }
 }
 
-.sideToggle {
-  align-self: flex-end;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px dashed var(--gym-border-strong);
-  background: transparent;
-  color: var(--gym-muted);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-}
 
-.sideToggleOn {
-  border-style: solid;
-  border-color: var(--gym-accent);
-  background: var(--gym-accent-soft);
-  color: var(--gym-accent);
-}
 
 .equipmentBlock {
   display: flex;
