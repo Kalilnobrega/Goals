@@ -11,6 +11,8 @@ MUSCLES = {
     "chest_mid": "chest",
     "chest_lower": "chest",
     "lats": "back",
+    "infraspinatus": "back",
+    "teres_major": "back",
     "traps_upper": "back",
     "traps_mid": "back",
     "rhomboids": "back",
@@ -42,7 +44,7 @@ MUSCLES = {
 
 MuscleKey = Literal[
     "chest_upper", "chest_mid", "chest_lower",
-    "lats", "traps_upper", "traps_mid", "rhomboids", "lower_back",
+    "lats", "infraspinatus", "teres_major", "traps_upper", "traps_mid", "rhomboids", "lower_back",
     "abs_rectus", "obliques",
     "delts_front", "delts_side", "delts_rear",
     "biceps", "brachialis",
