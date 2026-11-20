@@ -21,9 +21,9 @@ export default function GymSelect({ value, options, onChange, title, label, hint
         className={`${styles.trigger} ${className}`}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={label ? `${label}: ${current?.label ?? '—'}` : undefined}
+        aria-label={label ? `${label}: ${current?.short ?? current?.label ?? '—'}` : undefined}
       >
-        <span className={styles.value}>{current?.label ?? '—'}</span>
+        <span className={styles.value}>{current?.short ?? current?.label ?? '—'}</span>
         <ChevronDown size={16} className={styles.chevron} aria-hidden="true" />
       </button>
       <GymSheet open={open} onClose={close} title={title}>

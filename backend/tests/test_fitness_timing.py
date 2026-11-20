@@ -112,3 +112,54 @@ def test_estimates_never_exceed_the_real_time():
     assert timing["prep"] == 0
     assert timing["rests"] == []
     assert timing["seconds"] == 30
+
+
+def test_users_can_adjust_a_library_exercise_only_for_themselves(client, library, ana, db_session):
+    from tests.test_shared_goals import make_user, headers_for
+    _, headers = ana
+    bench = library["supino-reto"]
+
+    adjusted = client.put(f"/fitness/exercises/{bench}/intensity", json={"intensity": "very_high"}, headers=headers).json()
+    assert (adjusted["intensity"], adjusted["default_intensity"]) == ("very_high", "high")
+    listed = {e["id"]: e for e in client.get("/fitness/exercises", headers=headers).json()}
+    assert listed[bench]["intensity"] == "very_high"
+
+    other = headers_for(make_user(db_session, "Bia"))
+    others = {e["id"]: e for e in client.get("/fitness/exercises", headers=other).json()}
+    assert others[bench]["intensity"] == "high"
+
+    reset = client.put(f"/fitness/exercises/{bench}/intensity", json={"intensity": None}, headers=headers).json()
+    assert reset["intensity"] == "high"
+
+
+def test_adjusted_intensity_changes_the_timing(client, library, ana, db_session):
+    from tests.test_fitness_sessions import start, finish
+    from app.fitness_models import SetEntry
+    user, headers = ana
+    session = start(client, headers)
+    item = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": library["supino-reto"]}, headers=headers).json()["exercises"][0]["id"]
+    for _ in range(2):
+        client.post(f"/fitness/session-exercises/{item}/sets", json={"weight_kg": 60, "reps": 10}, headers=headers)
+    entries = db_session.query(SetEntry).order_by(SetEntry.id).all()
+    started = db_session.get(__import__("app.fitness_models", fromlist=["WorkoutSession"]).WorkoutSession, session["id"]).started_at
+    for entry, minutes in zip(entries, (5, 8)):
+        entry.created_at = started + timedelta(minutes=minutes)
+    db_session.commit()
+    finish(client, headers, session["id"])
+
+    before = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()
+    client.put(f"/fitness/exercises/{library['supino-reto']}/intensity", json={"intensity": "low"}, headers=headers)
+    after = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()
+
+    assert before["time"]["avg_set_seconds"] == 48
+    assert after["time"]["avg_set_seconds"] == 33
+    assert (after["intensity"], after["default_intensity"]) == ("low", "high")
+
+
+def test_custom_exercise_intensity_is_set_on_the_exercise(client, ana):
+    _, headers = ana
+    created = client.post("/fitness/exercises", json={"name": "Remada no banco", "muscle_group": "back", "equipment": "dumbbell"}, headers=headers).json()
+    assert created["intensity"] == "high"
+
+    changed = client.put(f"/fitness/exercises/{created['id']}/intensity", json={"intensity": "moderate"}, headers=headers).json()
+    assert (changed["intensity"], changed["default_intensity"]) == ("moderate", "moderate")

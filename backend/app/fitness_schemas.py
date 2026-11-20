@@ -1,6 +1,6 @@
 from typing import Literal
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.fitness_muscles import MuscleKey, MuscleRole
 from app.fitness_intensity import Intensity
 
@@ -86,6 +86,10 @@ class ExerciseSchema(BaseModel):
         return clean_name(value)
 
 
+class ExerciseIntensitySchema(BaseModel):
+    intensity: Intensity | None = None
+
+
 class EditExerciseSchema(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     muscle_group: MuscleGroup | None = None
@@ -120,7 +124,8 @@ class ExerciseResponseSchema(BaseModel):
     family: str | None = None
     bodyweight_factor: float | None = None
     tracking: str = "reps"
-    intensity: str | None = Field(default=None, validation_alias="level")
+    intensity: str | None = Field(default=None, validation_alias=AliasChoices("user_level", "level"))
+    default_intensity: str | None = Field(default=None, validation_alias="level")
     muscles: list[ExerciseMuscleSchema] = []
 
 
@@ -368,6 +373,8 @@ class ExerciseProgressSchema(BaseModel):
     muscle_group: str
     equipment: str
     tracking: str = "reps"
+    intensity: str | None = None
+    default_intensity: str | None = None
     points: list[ProgressPointSchema]
     goal: "FitnessGoalResponseSchema | None" = None
     time: "ExerciseTimeSchema | None" = None

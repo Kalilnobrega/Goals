@@ -289,7 +289,7 @@ def completed_facts(user, db) -> list[dict]:
         .all()
     )
     factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
-    levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises])
+    levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises], user.id)
     return [session_facts(s, body, factors, levels) for s in sessions]
 
 

@@ -227,11 +227,18 @@ export const MUSCLES = {
 };
 
 export const INTENSITY = [
-  { value: 'low', label: 'Baixo' },
-  { value: 'moderate', label: 'Moderado' },
-  { value: 'high', label: 'Alto' },
-  { value: 'very_high', label: 'Muito alto' },
+  { value: 'low', label: 'Baixo', perRep: 3, fixed: 3 },
+  { value: 'moderate', label: 'Moderado', perRep: 3.75, fixed: 4 },
+  { value: 'high', label: 'Alto', perRep: 4.25, fixed: 5 },
+  { value: 'very_high', label: 'Muito alto', perRep: 5, fixed: 8 },
 ];
+
+export const intensityLabel = (value) => INTENSITY.find(item => item.value === value)?.label ?? '—';
+
+export function setEstimate(value, reps = 10) {
+  const level = INTENSITY.find(item => item.value === value);
+  return level ? Math.round(reps * level.perRep + level.fixed) : null;
+}
 
 export function guessIntensity(muscleGroup, muscles = []) {
   const primary = muscles.filter(item => item.role === 'primary').map(item => item.muscle);

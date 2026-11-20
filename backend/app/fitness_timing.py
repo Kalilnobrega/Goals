@@ -68,12 +68,23 @@ def exercise_timings(workout_session, levels: dict | None = None) -> dict[int, d
     return result
 
 
-def intensity_levels(db, exercise_ids) -> dict[int, str]:
+def intensity_choices(db, user_id: int, exercise_ids=None) -> dict[int, str]:
+    from app.fitness_models import ExerciseIntensity
+    query = db.query(ExerciseIntensity).filter(ExerciseIntensity.user_id == user_id)
+    if exercise_ids is not None:
+        query = query.filter(ExerciseIntensity.exercise_id.in_(exercise_ids))
+    return {choice.exercise_id: choice.intensity for choice in query}
+
+
+def intensity_levels(db, exercise_ids, user_id: int | None = None) -> dict[int, str]:
     from app.fitness_models import Exercise
     ids = {exercise_id for exercise_id in exercise_ids if exercise_id is not None}
     if not ids:
         return {}
-    return {exercise.id: exercise.level for exercise in db.query(Exercise).filter(Exercise.id.in_(ids))}
+    levels = {exercise.id: exercise.level for exercise in db.query(Exercise).filter(Exercise.id.in_(ids))}
+    if user_id is not None:
+        levels.update(intensity_choices(db, user_id, ids))
+    return levels
 
 
 def mean(values) -> float | None:

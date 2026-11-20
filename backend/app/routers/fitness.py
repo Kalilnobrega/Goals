@@ -4,14 +4,16 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, ExerciseMuscle, Workout, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
+from app.fitness_models import Exercise, ExerciseIntensity, ExerciseMuscle, Workout, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
     ExerciseResponseSchema,
+    ExerciseIntensitySchema,
     WorkoutSchema,
     WorkoutResponseSchema,
 )
+from app.fitness_timing import intensity_choices
 from .auth import get_current_user
 
 fitness_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -46,7 +48,47 @@ def ensure_unique_name(name: str, user: User, session: Session, exclude_id: int 
 def list_exercises(
     user: User = Depends(get_current_user), session: Session = Depends(get_db)
 ):
-    return visible_exercises(user, session).order_by(Exercise.name, Exercise.id).all()
+    exercises = visible_exercises(user, session).order_by(Exercise.name, Exercise.id).all()
+    choices = intensity_choices(session, user.id)
+    for exercise in exercises:
+        if exercise.id in choices:
+            exercise.user_level = choices[exercise.id]
+    return exercises
+
+
+@fitness_router.put("/exercises/{exercise_id}/intensity", response_model=ExerciseResponseSchema)
+def set_exercise_intensity(
+    exercise_id: int,
+    data: ExerciseIntensitySchema,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    exercise = visible_exercises(user, session).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercício não encontrado")
+    if (exercise.tracking or "reps") != "reps":
+        raise HTTPException(status_code=400, detail="Exercícios por tempo não usam intensidade.")
+    choice = (
+        session.query(ExerciseIntensity)
+        .filter(ExerciseIntensity.user_id == user.id, ExerciseIntensity.exercise_id == exercise.id)
+        .first()
+    )
+    if exercise.is_custom:
+        exercise.intensity = data.intensity
+        if choice:
+            session.delete(choice)
+    elif data.intensity is None or data.intensity == exercise.level:
+        if choice:
+            session.delete(choice)
+    elif choice:
+        choice.intensity = data.intensity
+    else:
+        session.add(ExerciseIntensity(user_id=user.id, exercise_id=exercise.id, intensity=data.intensity))
+    session.commit()
+    session.refresh(exercise)
+    if not exercise.is_custom and data.intensity and data.intensity != exercise.level:
+        exercise.user_level = data.intensity
+    return exercise
 
 
 @fitness_router.post("/exercises", response_model=ExerciseResponseSchema)

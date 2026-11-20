@@ -6,6 +6,7 @@ import { MUSCLE_GROUPS, equipmentLabel, apiError, groupsLabel, exerciseGroups, g
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
+import ExerciseIntensity from '../../../components/gym/ExerciseIntensity';
 import ExerciseForm from '../../../components/gym/ExerciseForm';
 import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
 import sheetStyles from '../../../components/gym/sheet.module.css';
@@ -246,6 +247,19 @@ export default function ExercisesPage() {
                 Conta <strong>{Math.round((detail.bodyweight_factor ?? 1) * 100)}% do peso corporal</strong> no volume e no 1RM, mais a carga extra que você registrar.
               </p>
             )}
+            <ExerciseIntensity
+              exerciseId={detail.id}
+              name={detail.name}
+              intensity={detail.intensity}
+              defaultIntensity={detail.default_intensity}
+              onChange={updated => {
+                setExercises(list => list.map(e => (e.id === updated.id ? updated : e)));
+                setSheet(current => ({
+                  ...current,
+                  family: { ...current.family, variants: current.family.variants.map(v => (v.id === updated.id ? updated : v)) },
+                }));
+              }}
+            />
             <ExerciseMuscles key={detail.id} muscles={detail.muscles ?? []} />
             {detail.is_custom && (
               <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: detail, mode: 'edit' })}>

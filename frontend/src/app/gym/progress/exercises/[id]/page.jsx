@@ -9,6 +9,7 @@ import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal
 import {
   apiError, equipmentLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
+import ExerciseIntensity from '../../../../../components/gym/ExerciseIntensity';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
@@ -514,6 +515,13 @@ export default function ExerciseProgressPage() {
                   </div>
                 ))}
               </div>
+              <ExerciseIntensity
+                exerciseId={data.exercise_id}
+                name={data.name}
+                intensity={data.intensity}
+                defaultIntensity={data.default_intensity}
+                onChange={load}
+              />
             </section>
           )}
 

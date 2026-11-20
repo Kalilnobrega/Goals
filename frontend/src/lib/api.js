@@ -227,6 +227,8 @@ export const createExercise = (data) =>
   api.post("/fitness/exercises", data).then((r) => r.data);
 export const updateExercise = (id, data) =>
   api.patch(`/fitness/exercises/${id}`, data).then((r) => r.data);
+export const setExerciseIntensity = (id, intensity) =>
+  api.put(`/fitness/exercises/${id}/intensity`, { intensity }).then((r) => r.data);
 export const deleteExercise = (id) =>
   api.delete(`/fitness/exercises/${id}`).then((r) => r.data);
 export const getWorkouts = () => cachedGet("fitnessWorkouts", "/fitness/workouts");

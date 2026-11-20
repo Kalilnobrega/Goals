@@ -217,7 +217,7 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
         .all()
     )
     spans, rests, set_seconds, preps = [], [], [], []
-    levels = intensity_levels(db, [exercise_id])
+    levels = intensity_levels(db, [exercise_id], user.id)
     for workout_session in sessions:
         timings = exercise_timings(workout_session, levels)
         for item in workout_session.exercises:
@@ -335,6 +335,8 @@ def get_exercise_progress(
         "muscle_group": exercise.muscle_group,
         "equipment": exercise.equipment,
         "tracking": exercise.tracking,
+        "intensity": intensity_levels(db, [exercise.id], user.id).get(exercise.id),
+        "default_intensity": exercise.level,
         "goal": serialize_goal(find_goal(user, db, EXERCISE, exercise.id), exercise_points(user, db, exercise.id)),
         "time": exercise_time(user, db, exercise.id),
         "rep_records": rep_records(rows),

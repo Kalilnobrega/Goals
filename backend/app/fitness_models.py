@@ -45,6 +45,16 @@ class Exercise(Base):
         return self.intensity or guess_intensity(self.muscle_group, self.muscle_list(), self.tracking)
 
 
+class ExerciseIntensity(Base):
+    __tablename__ = "fitness_exercise_intensities"
+    __table_args__ = (UniqueConstraint("user_id", "exercise_id", name="uq_fitness_exercise_intensities"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), nullable=False)
+    intensity = Column(String(10), nullable=False)
+
+
 class ExerciseMuscle(Base):
     __tablename__ = "fitness_exercise_muscles"
     __table_args__ = (UniqueConstraint("exercise_id", "muscle", name="uq_fitness_exercise_muscles"),)
