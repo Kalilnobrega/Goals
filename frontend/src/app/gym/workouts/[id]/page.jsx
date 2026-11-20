@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft, Pencil, Timer, TrendingUp } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
-import { equipmentLabel, plural, prescription, formatRest, groupsLabel } from '../../../../lib/gym';
+import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
 import UnilateralTag from '../../../../components/gym/UnilateralTag';
 import styles from './workout.module.css';
@@ -83,6 +83,7 @@ export default function WorkoutDetailPage() {
                   <span className={styles.itemMeta}>
                     {groupsLabel(item.exercise)} · {equipmentLabel(item.exercise.equipment)}
                     {(item.unilateral ?? item.exercise.is_unilateral) && <>{' '}<UnilateralTag /></>}
+                    {item.load_mode === 'side' && canLoadPerSide(item.exercise.equipment, item.unilateral ?? item.exercise.is_unilateral, item.exercise.tracking) && ' · carga de cada lado'}
                   </span>
                 </span>
                 <span className={styles.itemTarget}>

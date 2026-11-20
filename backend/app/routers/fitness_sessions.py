@@ -130,6 +130,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "note": item.note,
             "unilateral": bool(item.unilateral),
             "tracking": item.tracking or "reps",
+            "load_mode": item.load_mode,
             "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
@@ -230,6 +231,17 @@ def last_rest(exercise_id: int, user: User, db: Session) -> int | None:
             SessionExercise.exercise_id == exercise_id,
             SessionExercise.rest_seconds.isnot(None),
         )
+        .order_by(SessionExercise.id.desc())
+        .first()
+    )
+    return row[0] if row else None
+
+
+def last_load_mode(exercise_id: int, user: User, db: Session) -> str | None:
+    row = (
+        db.query(SessionExercise.load_mode)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(WorkoutSession.user_id == user.id, SessionExercise.exercise_id == exercise_id)
         .order_by(SessionExercise.id.desc())
         .first()
     )
@@ -401,6 +413,7 @@ def start_session(
                 rest_seconds=item.rest_seconds,
                 unilateral=item.unilateral if item.unilateral is not None else item.exercise.is_unilateral,
                 tracking=item.exercise.tracking,
+                load_mode=item.load_mode,
             )
             for index, item in enumerate(workout.exercises)
         ]
@@ -483,6 +496,7 @@ def add_session_exercise(
             rest_seconds=last_rest(exercise.id, user, db),
             unilateral=exercise.is_unilateral,
             tracking=exercise.tracking,
+            load_mode=last_load_mode(exercise.id, user, db),
         )
     )
     return commit_session(workout_session, db)
@@ -517,7 +531,7 @@ def edit_session_exercise(
     workout_session = db.get(WorkoutSession, item.session_id)
     changes = data.model_fields_set
     finished = workout_session.status != IN_PROGRESS
-    if finished and changes - {"note", "exercise_id"}:
+    if finished and changes - {"note", "exercise_id", "load_mode"}:
         raise HTTPException(status_code=409, detail="Num treino finalizado dá para editar só as séries, a anotação e o exercício.")
 
     if "exercise_id" in changes and data.exercise_id is not None and data.exercise_id != item.exercise_id:
@@ -544,6 +558,9 @@ def edit_session_exercise(
 
     if "note" in changes:
         item.note = data.note
+
+    if "load_mode" in changes:
+        item.load_mode = data.load_mode
 
     if "unilateral" in changes and data.unilateral is not None and data.unilateral != item.unilateral:
         if item.sets:

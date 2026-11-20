@@ -12,7 +12,7 @@ import {
 } from '../../../../lib/api';
 import {
   apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
+  plural, perSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -178,7 +178,9 @@ export default function SessionPage() {
     } catch {}
     const load = item.equipment === 'bodyweight'
       ? (weight) => (weight > 0 ? `PC + ${formatKg(weight)} kg` : 'peso corporal')
-      : (weight) => `${formatKg(weight)} kg`;
+      : perSide(item)
+        ? (weight) => `${formatKg(weight / 2)} kg de cada lado`
+        : (weight) => `${formatKg(weight)} kg`;
     toast({
       tone: 'record',
       message: record.type === 'weight'
@@ -334,6 +336,26 @@ export default function SessionPage() {
       text: <>A ficha manda fazer <strong>{item.exercise_name}</strong> {item.unilateral ? 'unilateral (esquerda e direita)' : 'bilateral'}. Fazer {item.unilateral ? 'bilateral' : 'unilateral'} só neste treino? A ficha não muda.</>,
       confirmLabel: item.unilateral ? 'Fazer bilateral' : 'Fazer unilateral',
       onConfirm: () => toggleUnilateral(item),
+    });
+  };
+
+  const toggleLoadMode = async (item) => {
+    try {
+      setSession(withPending(await updateSessionExercise(item.id, { load_mode: perSide(item) ? 'total' : 'side' })));
+    } catch (err) {
+      fail(err, 'Não foi possível mudar o jeito de anotar a carga.');
+    }
+  };
+
+  const requestLoadMode = (item) => {
+    if (!planned(item)) return toggleLoadMode(item);
+    const side = perSide(item);
+    setSheet({
+      type: 'confirm',
+      item,
+      text: <>A ficha manda anotar <strong>{item.exercise_name}</strong> {side ? 'com o peso de cada lado' : 'com o peso total'}. Anotar {side ? 'o peso total' : 'cada lado'} só neste treino? A ficha não muda.</>,
+      confirmLabel: side ? 'Anotar peso total' : 'Anotar cada lado',
+      onConfirm: () => toggleLoadMode(item),
     });
   };
 
@@ -576,6 +598,7 @@ export default function SessionPage() {
     },
     onSaveNote: saveNote,
     onToggleUnilateral: requestUnilateral,
+    onToggleLoadMode: requestLoadMode,
   };
 
   return (

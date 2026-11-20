@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide } from '../../lib/gym';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
@@ -22,7 +22,10 @@ const toItem = (row) => ({
   reps_max: row.reps_max ? String(row.reps_max) : '',
   rest_seconds: row.rest_seconds ?? null,
   unilateral: row.unilateral ?? null,
+  load_mode: row.load_mode ?? null,
 });
+
+const sideAllowed = (item) => canLoadPerSide(item.exercise.equipment, item.unilateral ?? item.exercise.is_unilateral, item.exercise.tracking);
 
 const toPayload = (name, description, items) => ({
   name: name.trim(),
@@ -34,6 +37,7 @@ const toPayload = (name, description, items) => ({
     reps_max: item.reps_max ? Number(item.reps_max) : null,
     rest_seconds: item.rest_seconds,
     unilateral: item.unilateral,
+    load_mode: sideAllowed(item) && item.load_mode === 'side' ? 'side' : null,
   })),
 });
 
@@ -105,7 +109,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null })),
+      ...selected.map(exercise => ({ key: newKey(), exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null, load_mode: null })),
     ]);
     setPickerOpen(false);
   };
@@ -329,6 +333,17 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                         >
                           {(item.unilateral ?? item.exercise.is_unilateral) ? 'Unilateral' : 'Bilateral'}
                         </button>
+                        {sideAllowed(item) && (
+                          <button
+                            type="button"
+                            className={`${styles.sideToggle} ${item.load_mode === 'side' ? styles.sideToggleOn : ''}`}
+                            aria-pressed={item.load_mode === 'side'}
+                            aria-label={item.load_mode === 'side' ? 'Carga anotada de cada lado. Tocar para anotar o peso total' : 'Carga anotada como peso total. Tocar para anotar cada lado'}
+                            onClick={() => updateItem(item.key, { load_mode: item.load_mode === 'side' ? null : 'side' })}
+                          >
+                            {item.load_mode === 'side' ? 'Cada lado' : 'Peso total'}
+                          </button>
+                        )}
                       </div>
                       {invalid?.field === item.key && <span className={styles.fieldError}>{invalid.message}</span>}
                     </li>

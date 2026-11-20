@@ -253,6 +253,10 @@ export const formatSets = (value) => `${formatKg(Math.round(value * 10) / 10)} $
 export const SIDE_LABEL = { left: 'E', right: 'D' };
 export const SIDE_NAME = { left: 'Esquerda', right: 'Direita' };
 
+export const SIDE_LOAD_EQUIPMENT = ['barbell', 'dumbbell', 'plate_loaded', 'smith', 'cable'];
+export const canLoadPerSide = (equipment, unilateral, tracking) => SIDE_LOAD_EQUIPMENT.includes(equipment) && !unilateral && (tracking ?? 'reps') === 'reps';
+export const perSide = (item) => item.load_mode === 'side' && canLoadPerSide(item.equipment, item.unilateral, item.tracking);
+
 export const RIR_OPTIONS = [0, 1, 2, 3, 4];
 export const rirLabel = (value) => (value >= 4 ? '4+' : String(value));
 

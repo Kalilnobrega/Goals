@@ -155,6 +155,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
             reps_max=item.reps_max,
             rest_seconds=item.rest_seconds,
             unilateral=item.unilateral,
+            load_mode=item.load_mode,
         )
         for index, item in enumerate(data.exercises)
     ]

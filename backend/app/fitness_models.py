@@ -77,6 +77,7 @@ class WorkoutExercise(Base):
     reps_max = Column(Integer, nullable=True)
     rest_seconds = Column(Integer, nullable=True)
     unilateral = Column(Boolean, nullable=True)
+    load_mode = Column(String(5), nullable=True)
 
     exercise = relationship("Exercise", lazy="joined")
 
@@ -131,6 +132,7 @@ class SessionExercise(Base):
     note = Column(String(200), nullable=True)
     unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
+    load_mode = Column(String(5), nullable=True)
 
     sets = relationship(
         "SetEntry",

@@ -3,7 +3,7 @@ import { createContext, useContext, useRef, useState } from 'react';
 import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel } from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, canLoadPerSide } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -18,6 +18,10 @@ const stepKg = (text, delta) => {
 const stepReps = (text, delta) => String(Math.min(1000, Math.max(1, (Number(text) || 0) + delta)));
 
 const ExtraLoad = createContext(false);
+const PerSide = createContext(false);
+
+const shownKg = (weight, side) => (side ? Math.round((weight / 2) * 100) / 100 : weight);
+const inputKg = (weight, side) => kgInput(shownKg(weight, side));
 
 const loadText = (weight, extra) => {
   if (extra) return weight > 0 ? `PC + ${formatKg(weight)} kg` : 'PC';
@@ -26,10 +30,13 @@ const loadText = (weight, extra) => {
 
 function SetInputs({ weight, reps, onWeight, onReps, autoFocus }) {
   const extra = useContext(ExtraLoad);
+  const side = useContext(PerSide);
+  const step = side ? 1.25 : 2.5;
+  const stepText = side ? '1,25 kg de cada lado' : '2,5 kg';
   return (
     <div className={styles.inputs}>
       <div className={styles.inputGroup}>
-        <button type="button" className={styles.step} onClick={() => onWeight(stepKg(weight, -2.5))} aria-label="Menos 2,5 kg">
+        <button type="button" className={styles.step} onClick={() => onWeight(stepKg(weight, -step))} aria-label={`Menos ${stepText}`}>
           <Minus size={16} strokeWidth={2.6} />
         </button>
         <label className={styles.field}>
@@ -39,12 +46,12 @@ function SetInputs({ weight, reps, onWeight, onReps, autoFocus }) {
             onChange={e => onWeight(cleanKgInput(e.target.value))}
             inputMode="decimal"
             placeholder="0"
-            aria-label={extra ? 'Carga extra em kg, além do peso corporal' : 'Carga em kg'}
+            aria-label={extra ? 'Carga extra em kg, além do peso corporal' : side ? 'Carga de cada lado em kg' : 'Carga em kg'}
             autoFocus={autoFocus}
           />
-          <span className={styles.unit}>{extra ? '+kg' : 'kg'}</span>
+          <span className={styles.unit}>{extra ? '+kg' : side ? 'kg/lado' : 'kg'}</span>
         </label>
-        <button type="button" className={styles.step} onClick={() => onWeight(stepKg(weight, 2.5))} aria-label="Mais 2,5 kg">
+        <button type="button" className={styles.step} onClick={() => onWeight(stepKg(weight, step))} aria-label={`Mais ${stepText}`}>
           <Plus size={16} strokeWidth={2.6} />
         </button>
       </div>
@@ -71,12 +78,12 @@ function SetInputs({ weight, reps, onWeight, onReps, autoFocus }) {
   );
 }
 
-function validate(weight, reps) {
+function validate(weight, reps, side = false) {
   const kg = parseKg(weight === '' ? '0' : weight);
   if (kg === null) return { error: 'Carga inválida. Use até 2 casas decimais, ex.: 62,5.' };
   const count = Number(reps);
   if (!count) return { error: 'Informe as repetições.' };
-  return { data: { weight_kg: kg, reps: count } };
+  return { data: { weight_kg: side ? Math.round(kg * 200) / 100 : kg, reps: count } };
 }
 
 function RirPicker({ value, onChange }) {
@@ -105,7 +112,8 @@ const withRir = (data, rir) => (rir === null ? data : { ...data, rir });
 function NewSet({ item, onLogSet, onStartRest, onCancel }) {
   const next = item.sets.length + 1;
   const reference = item.previous[item.sets.length] ?? item.sets[item.sets.length - 1] ?? null;
-  const [weight, setWeight] = useState(reference ? kgInput(reference.weight_kg) : '');
+  const side = useContext(PerSide);
+  const [weight, setWeight] = useState(reference ? inputKg(reference.weight_kg, side) : '');
   const [reps, setReps] = useState(reference ? String(reference.reps) : item.reps_min ? String(item.reps_min) : '');
   const [rir, setRir] = useState(null);
   const [error, setError] = useState('');
@@ -113,7 +121,7 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    const { data, error: problem } = validate(weight, reps);
+    const { data, error: problem } = validate(weight, reps, side);
     if (problem) return setError(problem);
     setError('');
     setSaving(true);
@@ -335,7 +343,8 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   const extra = useContext(ExtraLoad);
   const tracking = useContext(Tracking);
   const timed = tracking !== 'reps';
-  const [weight, setWeight] = useState(kgInput(entry.weight_kg));
+  const side = useContext(PerSide);
+  const [weight, setWeight] = useState(inputKg(entry.weight_kg, side));
   const [reps, setReps] = useState(String(entry.reps));
   const [rir, setRir] = useState(entry.rir ?? null);
   const [error, setError] = useState('');
@@ -356,7 +365,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           ) : (<>
           <span className={styles.setValue}>
             {entry.weight_kg > 0
-              ? <>{extra && <span className={styles.bodyweightPrefix}>PC +</span>}{formatKg(entry.weight_kg)} <small>kg</small></>
+              ? <>{extra && <span className={styles.bodyweightPrefix}>PC +</span>}{formatKg(shownKg(entry.weight_kg, side))} <small>{side ? 'kg/lado' : 'kg'}</small></>
               : <span className={styles.bodyweight}>Peso corporal</span>}
           </span>
           <span className={styles.setTimes}>×</span>
@@ -376,7 +385,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   }
 
   const save = async () => {
-    const { data, error: problem } = validate(weight, reps);
+    const { data, error: problem } = validate(weight, reps, side);
     if (problem) return setError(problem);
     setBusy(true);
     const ok = await onSave(entry, { ...data, rir });
@@ -530,7 +539,7 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, onToggleUnilateral }) {
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, onToggleUnilateral, onToggleLoadMode }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -542,6 +551,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   const tracking = item.tracking ?? 'reps';
   const timed = tracking !== 'reps';
   const extra = item.equipment === 'bodyweight';
+  const side = perSide(item);
 
   const saveEdit = async (entry, data) => {
     const ok = await onEditSet(item, entry, data);
@@ -557,6 +567,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
 
   return (
     <ExtraLoad.Provider value={extra}>
+    <PerSide.Provider value={side}>
     <Tracking.Provider value={tracking}>
       <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
         <header className={styles.header}>
@@ -595,6 +606,17 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
               <ArrowLeftRight size={14} /> Unilateral
             </button>
           )}
+          {onToggleLoadMode && canLoadPerSide(item.equipment, item.unilateral, tracking) && (
+            <button
+              type="button"
+              className={`${styles.sideChip} ${side ? styles.sideChipOn : ''}`}
+              onClick={() => onToggleLoadMode(item)}
+              aria-pressed={side}
+              aria-label={side ? 'Carga anotada de cada lado. Tocar para anotar o peso total' : 'Carga anotada como peso total. Tocar para anotar cada lado'}
+            >
+              {side ? 'Cada lado' : 'Peso total'}
+            </button>
+          )}
           {onOpenRest && tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
             <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
           </button>}
@@ -603,10 +625,10 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
 
         {item.previous.length > 0 && (
           <p className={styles.previous}>
-            <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}</span>
+            <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}{side ? ' · cada lado' : ''}</span>
             {item.previous.map((entry, i) => (
               <span key={i} className={styles.previousSet}>
-                {timed ? setSummary(entry, tracking, extra) : <>{entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(entry.weight_kg) : 'PC'}×{entry.reps}</>}
+                {timed ? setSummary(entry, tracking, extra) : <>{entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(shownKg(entry.weight_kg, side)) : 'PC'}×{entry.reps}</>}
               </span>
             ))}
             {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
@@ -617,7 +639,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           <ol className={styles.sets}>
             {rows.map(row => (row.entry ? (
               <SetRow
-                key={`${row.entry.id}-${editingId === row.entry.id}`}
+                key={`${row.entry.id}-${editingId === row.entry.id}-${side}`}
                 entry={row.entry}
                 editing={editingId === row.entry.id}
                 onEdit={() => setEditingId(row.entry.id)}
@@ -659,7 +681,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
             />
           ) : (
             <NewSet
-              key={pairedKey}
+              key={`${pairedKey}-${side}`}
               item={item}
               onLogSet={onLogSet}
               onStartRest={onStartRest}
@@ -680,6 +702,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
         {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
       </article>
     </Tracking.Provider>
+    </PerSide.Provider>
     </ExtraLoad.Provider>
   );
 }

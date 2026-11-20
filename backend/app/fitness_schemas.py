@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.fitness_muscles import MuscleKey, MuscleRole
 
 
+LoadMode = Literal["total", "side"]
+
 MuscleGroup = Literal[
     "chest",
     "back",
@@ -125,6 +127,7 @@ class WorkoutExerciseSchema(BaseModel):
     reps_max: int | None = Field(default=None, ge=1, le=600)
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     unilateral: bool | None = None
+    load_mode: LoadMode | None = None
 
     @model_validator(mode="after")
     def reps_range(self):
@@ -167,6 +170,7 @@ class WorkoutExerciseResponseSchema(BaseModel):
     reps_max: int | None
     rest_seconds: int | None
     unilateral: bool | None = None
+    load_mode: str | None = None
 
 
 class WorkoutResponseSchema(BaseModel):
@@ -196,6 +200,7 @@ class EditSessionExerciseSchema(BaseModel):
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     note: str | None = Field(default=None, max_length=200)
     unilateral: bool | None = None
+    load_mode: LoadMode | None = None
 
     @field_validator("note")
     @classmethod
@@ -281,6 +286,7 @@ class SessionExerciseResponseSchema(BaseModel):
     note: str | None = None
     unilateral: bool = False
     tracking: str = "reps"
+    load_mode: str | None = None
     from_plan: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
