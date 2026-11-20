@@ -7,8 +7,9 @@ import {
   getSession, getSessionInsights, deleteSession, addSet, updateSet, deleteSet, updateSessionExercise, removeSessionExercise,
   getExercises, reorderSession,
 } from '../../../../lib/api';
-import { apiError, equipmentLabel, familySiblings, groupsLabel, plural, renumberSets } from '../../../../lib/gym';
+import { apiError, familySiblings, groupsLabel, plural, renumberSets, variantTitle, variantHint } from '../../../../lib/gym';
 import GymSheet from '../../../../components/gym/GymSheet';
+import VariantChoices from '../../../../components/gym/VariantChoices';
 import ExercisePicker from '../../../../components/gym/ExercisePicker';
 import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import { useToast } from '../../../../components/Toast';
@@ -273,24 +274,20 @@ export default function HistoryDetailPage() {
         {editSheet?.type === 'menu' && (
           <div className={s.actions}>
             {siblings.length > 1 && (
-              <div className={s.option} role="group" aria-label="Equipamento">
+              <div className={s.option} role="group" aria-label={variantTitle(siblings)}>
                 <Dumbbell size={20} />
                 <span>
-                  Equipamento
-                  <small>Mesmo exercício, outro equipamento</small>
-                  <span className={styles.equipmentChoices}>
-                    {siblings.map(variant => (
-                      <button
-                        key={variant.id}
-                        type="button"
-                        className={`${styles.equipmentChoice} ${variant.id === editSheet.item.exercise_id ? styles.equipmentChoiceOn : ''}`}
-                        disabled={variant.id === editSheet.item.exercise_id || !sameTracking(editSheet.item, variant)}
-                        onClick={() => swapExercise(editSheet.item, [variant])}
-                      >
-                        {equipmentLabel(variant.equipment)}
-                      </button>
-                    ))}
-                  </span>
+                  {variantTitle(siblings)}
+                  <small>{variantHint(siblings)}</small>
+                  <VariantChoices
+                    spaced
+                    variants={siblings}
+                    current={siblings.find(variant => variant.id === editSheet.item.exercise_id)}
+                    isDisabled={option => option.variant.id === editSheet.item.exercise_id || !sameTracking(editSheet.item, option.variant)}
+                    onSelect={variant => swapExercise(editSheet.item, [variant])}
+                    chipClassName={styles.equipmentChoice}
+                    activeClassName={styles.equipmentChoiceOn}
+                  />
                 </span>
               </div>
             )}

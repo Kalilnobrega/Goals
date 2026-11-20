@@ -14,6 +14,7 @@ class Exercise(Base):
     name = Column(String(60), nullable=False)
     muscle_group = Column(String(20), nullable=False)
     equipment = Column(String(20), nullable=False)
+    grip = Column(String(10), nullable=True)
     is_unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     family = Column(String(60), nullable=True, index=True)
     bodyweight_factor = Column(Numeric(3, 2), nullable=True)

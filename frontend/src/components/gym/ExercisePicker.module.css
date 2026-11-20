@@ -330,3 +330,17 @@
 .equipmentChosen {
   color: var(--gym-accent);
 }
+
+.gripLabel {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  color: var(--gym-faint);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gripLabel:first-child {
+  padding-top: 0;
+}

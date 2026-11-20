@@ -319,11 +319,6 @@
   min-height: 100dvh;
 }
 
-.variants {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
 .variant {
   height: 36px;

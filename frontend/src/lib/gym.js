@@ -29,10 +29,17 @@ export const EQUIPMENT = [
   { value: 'other', label: 'Outro' },
 ];
 
+export const GRIPS = [
+  { value: 'pronated', label: 'Pronada' },
+  { value: 'supinated', label: 'Supinada' },
+  { value: 'neutral', label: 'Neutra' },
+];
+
 const labelOf = (list) => (value) => list.find(item => item.value === value)?.label ?? value;
 
 export const muscleLabel = labelOf(MUSCLE_GROUPS);
 export const equipmentLabel = labelOf(EQUIPMENT);
+export const gripLabel = (value) => (value ? labelOf(GRIPS)(value) : 'Outra');
 
 export const normalize = (text) =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -334,10 +341,15 @@ export function groupsLabel(exercise) {
   return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} e ${labels.at(-1)}` : labels[0];
 }
 
-const equipmentRank = (value) => {
-  const index = EQUIPMENT.findIndex(item => item.value === value);
-  return index === -1 ? EQUIPMENT.length : index;
+const rankIn = (list) => (value) => {
+  const index = list.findIndex(item => item.value === value);
+  return index === -1 ? list.length : index;
 };
+
+const equipmentRank = rankIn(EQUIPMENT);
+const gripRank = rankIn(GRIPS);
+
+const variantOrder = (a, b) => gripRank(a.grip) - gripRank(b.grip) || equipmentRank(a.equipment) - equipmentRank(b.equipment);
 
 export function groupFamilies(exercises, sortByName = true) {
   const byKey = new Map();
@@ -352,11 +364,63 @@ export function groupFamilies(exercises, sortByName = true) {
     }
     family.variants.push(exercise);
   });
-  families.forEach(family => family.variants.sort((a, b) => equipmentRank(a.equipment) - equipmentRank(b.equipment)));
+  families.forEach(family => family.variants.sort(variantOrder));
   return sortByName ? families.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')) : families;
 }
 
-export const familyEquipment = (family) => family.variants.map(variant => equipmentLabel(variant.equipment)).join(' · ');
+const distinct = (values) => [...new Set(values)];
+
+export const hasGrips = (variants) => distinct(variants.map(variant => variant.grip ?? null)).length > 1;
+
+const labelGroup = (variants, labelFor) => distinct(variants.map(labelFor))
+  .map(label => ({ label, ids: variants.filter(variant => labelFor(variant) === label).map(variant => variant.id) }));
+
+export function familyLabelGroups(variants) {
+  const equipment = labelGroup(variants, variant => equipmentLabel(variant.equipment));
+  return hasGrips(variants) ? [labelGroup(variants, variant => gripLabel(variant.grip)), equipment] : [equipment];
+}
+
+export const familyOptions = (variants) => familyLabelGroups(variants)
+  .map(group => group.map(item => item.label).join(' · '))
+  .join(' — ');
+
+export function gripGroups(variants) {
+  if (!hasGrips(variants)) return [{ grip: null, label: null, variants }];
+  return distinct(variants.map(variant => variant.grip ?? null))
+    .map(grip => ({ grip, label: gripLabel(grip), variants: variants.filter(variant => (variant.grip ?? null) === grip) }));
+}
+
+export function variantRows(variants, current) {
+  if (!current || variants.length < 2) return [];
+  const grip = current.grip ?? null;
+  const rows = [];
+  if (hasGrips(variants)) {
+    rows.push({
+      key: 'grip',
+      label: 'Pegada',
+      options: gripGroups(variants).map(group => ({
+        key: group.grip ?? 'other',
+        label: group.label,
+        active: group.grip === grip,
+        variant: group.variants.find(variant => variant.equipment === current.equipment) ?? group.variants[0],
+      })),
+    });
+  }
+  const equipments = distinct(variants.map(variant => variant.equipment));
+  if (equipments.length > 1) {
+    rows.push({
+      key: 'equipment',
+      label: 'Equipamento',
+      options: variants
+        .filter(variant => (variant.grip ?? null) === grip)
+        .map(variant => ({ key: variant.id, label: equipmentLabel(variant.equipment), active: variant.id === current.id, variant })),
+    });
+  }
+  return rows;
+}
+
+export const variantTitle = (variants) => (hasGrips(variants) ? 'Variação' : 'Equipamento');
+export const variantHint = (variants) => (hasGrips(variants) ? 'Mesmo exercício, outra pegada ou equipamento' : 'Mesmo exercício, outro equipamento');
 
 export function familySiblings(exercise, exercises) {
   if (!exercise?.family || !exercises) return [];

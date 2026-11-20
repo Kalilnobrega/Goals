@@ -12,7 +12,7 @@ import {
 } from '../../../../lib/api';
 import {
   apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, perSide, canLoadPerSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
+  plural, perSide, canLoadPerSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel, variantTitle, variantHint,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -28,6 +28,7 @@ import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard'
 import SessionSummary from '../../../../components/gym/SessionSummary';
 import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import RestTimer from '../../../../components/gym/RestTimer';
+import VariantChoices from '../../../../components/gym/VariantChoices';
 import useNow from '../../../../components/gym/useNow';
 import useWakeLock from '../../../../components/gym/useWakeLock';
 import s from '../../../../components/gym/sheet.module.css';
@@ -590,6 +591,7 @@ export default function SessionPage() {
 
   const current = session.exercises[currentIndex];
   const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
+  const menuSiblings = sheet?.type === 'menu' ? familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises) : [];
   const next = session.exercises[currentIndex + 1];
   const cardProps = {
     onLogSet: logSet,
@@ -819,25 +821,21 @@ export default function SessionPage() {
                 </span>
               </div>
             )}
-            {familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises).length > 1 && (
-              <div className={s.option} role="group" aria-label="Equipamento">
+            {menuSiblings.length > 1 && (
+              <div className={s.option} role="group" aria-label={variantTitle(menuSiblings)}>
                 <Dumbbell size={20} />
                 <span>
-                  Equipamento
-                  <small>{sheet.item.sets.length > 0 ? 'Só dá para trocar antes de registrar séries' : 'Mesmo exercício, outro equipamento'}</small>
-                  <span className={styles.equipmentChoices}>
-                    {familySiblings(exercises.find(item => item.id === sheet.item.exercise_id), exercises).map(variant => (
-                      <button
-                        key={variant.id}
-                        type="button"
-                        className={`${styles.equipmentChoice} ${variant.id === sheet.item.exercise_id ? styles.equipmentChoiceOn : ''}`}
-                        disabled={sheet.item.sets.length > 0 || variant.id === sheet.item.exercise_id}
-                        onClick={() => requestSwap(sheet.item, [variant])}
-                      >
-                        {equipmentLabel(variant.equipment)}
-                      </button>
-                    ))}
-                  </span>
+                  {variantTitle(menuSiblings)}
+                  <small>{sheet.item.sets.length > 0 ? 'Só dá para trocar antes de registrar séries' : variantHint(menuSiblings)}</small>
+                  <VariantChoices
+                    spaced
+                    variants={menuSiblings}
+                    current={menuSiblings.find(variant => variant.id === sheet.item.exercise_id)}
+                    isDisabled={option => sheet.item.sets.length > 0 || option.variant.id === sheet.item.exercise_id}
+                    onSelect={variant => requestSwap(sheet.item, [variant])}
+                    chipClassName={styles.equipmentChoice}
+                    activeClassName={styles.equipmentChoiceOn}
+                  />
                 </span>
               </div>
             )}

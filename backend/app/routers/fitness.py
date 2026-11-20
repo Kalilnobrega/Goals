@@ -103,6 +103,7 @@ def create_exercise(
         name=data.name,
         muscle_group=data.muscle_group,
         equipment=data.equipment,
+        grip=data.grip,
         is_unilateral=data.is_unilateral,
         family=" ".join(data.family.split()) if data.family else None,
         bodyweight_factor=data.bodyweight_factor,

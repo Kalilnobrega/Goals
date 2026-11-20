@@ -99,6 +99,22 @@ def test_edit_custom_exercise(client, ana):
     assert response.json()["muscle_group"] == "back"
 
 
+def test_custom_exercise_grip(client, ana):
+    _, headers = ana
+    response = client.post(
+        "/fitness/exercises",
+        json={"name": "Remada cavalinho", "muscle_group": "back", "equipment": "barbell", "grip": "pronated", "family": "Remada cavalinho"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["grip"] == "pronated"
+
+    edited = client.patch(f"/fitness/exercises/{response.json()['id']}", json={"grip": "neutral"}, headers=headers)
+
+    assert edited.json()["grip"] == "neutral"
+    assert create_exercise(client, headers)["grip"] is None
+
+
 def test_delete_custom_exercise(client, ana):
     _, headers = ana
     exercise = create_exercise(client, headers)
@@ -126,6 +142,7 @@ def test_library_exercises_cannot_be_changed(client, library, ana):
         {"name": "Agachamento", "muscle_group": "legs", "equipment": "barbell"},
         {"name": "Remada", "muscle_group": "back", "equipment": "trator"},
         {"name": "x" * 61, "muscle_group": "back", "equipment": "cable"},
+        {"name": "Remada", "muscle_group": "back", "equipment": "cable", "grip": "aberta"},
     ],
 )
 def test_invalid_exercise_is_rejected(client, ana, payload):

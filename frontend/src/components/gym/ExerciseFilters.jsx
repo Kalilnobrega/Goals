@@ -26,7 +26,7 @@ export function useExerciseFilters(exercises) {
       .filter(e => group === 'all' || (group === 'mine' ? e.is_custom : exerciseGroups(e).includes(group)))
       .filter(e => equipment === 'all' || e.equipment === equipment)
       .filter(e => !muscle || role(e))
-      .filter(e => !term || normalize(e.name).includes(term))
+      .filter(e => !term || normalize(e.name).includes(term) || (e.family && normalize(e.family).includes(term)))
       .sort((a, b) => (muscle ? ROLE_ORDER[role(a)] - ROLE_ORDER[role(b)] : 0) || byName(a, b));
   }, [exercises, query, group, equipment, muscle]);
 

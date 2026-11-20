@@ -26,6 +26,8 @@ MuscleGroup = Literal[
 
 Tracking = Literal["reps", "time", "cardio"]
 
+Grip = Literal["pronated", "supinated", "neutral"]
+
 Equipment = Literal[
     "barbell",
     "dumbbell",
@@ -68,6 +70,7 @@ class ExerciseSchema(BaseModel):
     name: str = Field(max_length=60)
     muscle_group: MuscleGroup
     equipment: Equipment
+    grip: Grip | None = None
     is_unilateral: bool = False
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
@@ -94,6 +97,7 @@ class EditExerciseSchema(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     muscle_group: MuscleGroup | None = None
     equipment: Equipment | None = None
+    grip: Grip | None = None
     is_unilateral: bool | None = None
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
@@ -119,6 +123,7 @@ class ExerciseResponseSchema(BaseModel):
     name: str
     muscle_group: str
     equipment: str
+    grip: str | None = None
     is_custom: bool
     is_unilateral: bool = False
     family: str | None = None

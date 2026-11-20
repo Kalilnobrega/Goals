@@ -630,12 +630,6 @@
   line-height: 1.25;
 }
 
-.variants {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
 
 .variant {
   height: 34px;

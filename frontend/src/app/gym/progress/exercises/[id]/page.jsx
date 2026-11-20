@@ -7,12 +7,13 @@ import {
 } from 'lucide-react';
 import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError, equipmentLabel, gripLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import ExerciseIntensity from '../../../../../components/gym/ExerciseIntensity';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
+import VariantChoices from '../../../../../components/gym/VariantChoices';
 import styles from '../../progress.module.css';
 
 const kg = (value) => `${formatKg(value)} kg`;
@@ -357,7 +358,8 @@ export default function ExerciseProgressPage() {
   }
 
   const { points } = data;
-  const siblings = familySiblings(library?.find(exercise => exercise.id === data.exercise_id), library);
+  const current = library?.find(exercise => exercise.id === data.exercise_id);
+  const siblings = familySiblings(current, library);
   const extra = data.equipment === 'bodyweight';
   const tracking = data.tracking ?? 'reps';
   const timed = tracking !== 'reps';
@@ -403,7 +405,7 @@ export default function ExerciseProgressPage() {
         {back}
         <h1 className={styles.detailTitle}>{data.name}</h1>
         <p className={styles.subtitle}>
-          {muscleLabel(data.muscle_group)} · {equipmentLabel(data.equipment)}
+          {muscleLabel(data.muscle_group)}{current?.grip ? ` · pegada ${gripLabel(current.grip).toLowerCase()}` : ''} · {equipmentLabel(data.equipment)}
           {points.length ? ` · ${plural(points.length, 'treino', 'treinos')}` : ''}
         </p>
         {data.equipment === 'bodyweight' && !timed && (
@@ -412,18 +414,15 @@ export default function ExerciseProgressPage() {
           </p>
         )}
         {siblings.length > 1 && (
-          <nav className={styles.variants} aria-label="Outros equipamentos">
-            {siblings.map(variant => (
-              <Link
-                key={variant.id}
-                href={`/gym/progress/exercises/${variant.id}`}
-                replace
-                className={`${styles.variant} ${variant.id === data.exercise_id ? styles.variantActive : ''}`}
-                aria-current={variant.id === data.exercise_id ? 'page' : undefined}
-              >
-                {equipmentLabel(variant.equipment)}
-              </Link>
-            ))}
+          <nav aria-label="Outras variações">
+            <VariantChoices
+              spaced
+              variants={siblings}
+              current={siblings.find(variant => variant.id === data.exercise_id)}
+              href={variant => `/gym/progress/exercises/${variant.id}`}
+              chipClassName={styles.variant}
+              activeClassName={styles.variantActive}
+            />
           </nav>
         )}
       </div>

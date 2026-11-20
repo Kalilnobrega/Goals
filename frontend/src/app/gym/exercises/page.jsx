@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
-import { MUSCLE_GROUPS, equipmentLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyEquipment } from '../../../lib/gym';
+import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyOptions } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
@@ -14,6 +14,7 @@ import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import Floating from '../../../components/gym/Floating';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from '../../../components/gym/ExerciseFilters';
 import UnilateralTag from '../../../components/gym/UnilateralTag';
+import VariantChoices from '../../../components/gym/VariantChoices';
 import styles from './page.module.css';
 
 
@@ -190,7 +191,7 @@ export default function ExercisesPage() {
                           {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
                         </span>
                         <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
-                          {many ? familyEquipment(family) : equipmentLabel(first.equipment)}
+                          {many ? familyOptions(family.variants) : equipmentLabel(first.equipment)}
                           {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
                         </span>
                       </span>
@@ -218,25 +219,16 @@ export default function ExercisesPage() {
       >
         {sheet?.mode === 'detail' && detail && (
           <div className={sheetStyles.stack}>
-            {sheet.family.variants.length > 1 && (
-              <div className={styles.variants} role="tablist" aria-label="Equipamento">
-                {sheet.family.variants.map(variant => (
-                  <button
-                    key={variant.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={variant.id === detail.id}
-                    className={`${styles.variant} ${variant.id === detail.id ? styles.variantActive : ''}`}
-                    onClick={() => setSheet(current => ({ ...current, variantId: variant.id }))}
-                  >
-                    {equipmentLabel(variant.equipment)}
-                  </button>
-                ))}
-              </div>
-            )}
+            <VariantChoices
+              variants={sheet.family.variants}
+              current={detail}
+              onSelect={variant => setSheet(current => ({ ...current, variantId: variant.id }))}
+              chipClassName={styles.variant}
+              activeClassName={styles.variantActive}
+            />
             <p className={sheetStyles.text}>
               {sheet.family.variants.length > 1 && <><strong>{detail.name}</strong><br /></>}
-              {groupsLabel(detail)} · {equipmentLabel(detail.equipment)}{detail.is_custom ? ' · seu' : ''}
+              {groupsLabel(detail)}{detail.grip ? ` · pegada ${gripLabel(detail.grip).toLowerCase()}` : ''} · {equipmentLabel(detail.equipment)}{detail.is_custom ? ' · seu' : ''}
               {detail.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
             {detail.tracking === 'time' && (
