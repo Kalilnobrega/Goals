@@ -8,7 +8,7 @@ from app.dates import today_br, to_br_date
 from app.models import User
 from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
 from app.fitness_forecast import forecast, slope_per_day
-from app.fitness_timing import exercise_timings, mean as average
+from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BODYWEIGHT, BodyWeights, share
 from app.fitness_schemas import (
     ProgressExerciseSchema,
@@ -216,9 +216,10 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
         .distinct()
         .all()
     )
-    spans, rests, set_seconds = [], [], []
+    spans, rests, set_seconds, preps = [], [], [], []
+    levels = intensity_levels(db, [exercise_id])
     for workout_session in sessions:
-        timings = exercise_timings(workout_session)
+        timings = exercise_timings(workout_session, levels)
         for item in workout_session.exercises:
             if item.exercise_id != exercise_id or item.id not in timings:
                 continue
@@ -226,9 +227,10 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
             rests.extend(timing["rests"])
             if timing["seconds"] is not None:
                 spans.append(timing["seconds"])
+                preps.append(timing["prep"])
                 count = len({("pair", s.position) if s.side else ("set", s.id) for s in item.sets})
                 if count:
-                    set_seconds.append(timing["seconds"] / count)
+                    set_seconds.append(timing["work"] / count)
     if not spans and not rests:
         return None
     return {
@@ -236,6 +238,7 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
         "avg_seconds": round(average(spans)) if spans else None,
         "avg_set_seconds": round(average(set_seconds)) if set_seconds else None,
         "avg_rest_seconds": round(average(rests)) if rests else None,
+        "avg_prep_seconds": round(average(preps)) if preps else None,
     }
 
 

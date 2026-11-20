@@ -131,7 +131,8 @@ function TimeGroup({ time }) {
   return (
     <Group icon={Timer} title="Tempo">
       <Tiles tiles={[
-        { label: 'Por série', value: formatSeconds(time.avg_set_seconds), note: 'com descanso' },
+        { label: 'Por série', value: formatSeconds(time.avg_set_seconds), note: 'execução estimada' },
+        { label: 'Preparação', value: formatSeconds(time.avg_prep_seconds), note: 'por exercício' },
         { label: 'Por exercício', value: formatSeconds(time.avg_exercise_seconds), note: 'em média' },
         { label: 'Descanso real', value: formatSeconds(time.avg_rest_seconds), note: 'entre séries' },
       ]} />

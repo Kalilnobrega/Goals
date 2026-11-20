@@ -2,6 +2,7 @@ from typing import Literal
 from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.fitness_muscles import MuscleKey, MuscleRole
+from app.fitness_intensity import Intensity
 
 
 LoadMode = Literal["total", "side"]
@@ -71,6 +72,7 @@ class ExerciseSchema(BaseModel):
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
     tracking: Tracking = "reps"
+    intensity: Intensity | None = None
     muscles: list[ExerciseMuscleSchema] = Field(default_factory=list, max_length=15)
 
     @field_validator("muscles")
@@ -92,6 +94,7 @@ class EditExerciseSchema(BaseModel):
     family: str | None = Field(default=None, max_length=60)
     bodyweight_factor: float | None = Field(default=None, ge=0, le=1)
     tracking: Tracking | None = None
+    intensity: Intensity | None = None
     muscles: list[ExerciseMuscleSchema] | None = Field(default=None, max_length=15)
 
     @field_validator("muscles")
@@ -117,6 +120,7 @@ class ExerciseResponseSchema(BaseModel):
     family: str | None = None
     bodyweight_factor: float | None = None
     tracking: str = "reps"
+    intensity: str | None = Field(default=None, validation_alias="level")
     muscles: list[ExerciseMuscleSchema] = []
 
 
@@ -419,6 +423,7 @@ class ExerciseTimeSchema(BaseModel):
     avg_seconds: int | None
     avg_set_seconds: int | None
     avg_rest_seconds: int | None
+    avg_prep_seconds: int | None = None
 
 
 class BodyWeightSchema(BaseModel):
@@ -878,11 +883,13 @@ class StatsTimeExerciseSchema(BaseModel):
     sessions: int
     avg_seconds: int
     set_seconds: int | None
+    prep_seconds: int | None = None
 
 
 class StatsTimeSchema(BaseModel):
     avg_session_seconds: int
     avg_set_seconds: int | None
+    avg_prep_seconds: int | None = None
     avg_exercise_seconds: int | None
     avg_rest_seconds: int | None
     exercises_per_session: float
@@ -990,7 +997,14 @@ class SessionExerciseInsightSchema(BaseModel):
     current: SessionPerformanceSchema
     previous: SessionPerformanceSchema | None
     seconds: int | None = None
+    prep_seconds: int | None = None
     rest_seconds: int | None = None
+
+
+class SessionTimeSchema(BaseModel):
+    prep_seconds: int
+    work_seconds: int
+    rest_seconds: int
 
 
 class PreviousSessionSchema(BaseModel):
@@ -1011,6 +1025,7 @@ class SessionInsightsSchema(BaseModel):
     minutes: int
     set_seconds: int | None = None
     rest_seconds: int | None = None
+    time: SessionTimeSchema | None = None
     exercises: list[SessionExerciseInsightSchema]
     records: list[StatsRecordSchema]
     muscle_sets: list[MuscleSetsSchema]

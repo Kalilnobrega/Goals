@@ -124,11 +124,20 @@ export default function SessionSummary({ session, insights }) {
         </div>
       </div>
 
-      {(insights?.set_seconds || insights?.rest_seconds) && (
-        <p className={styles.timing}>
-          {insights.set_seconds && <span><strong>{formatSeconds(insights.set_seconds)}</strong> por série</span>}
-          {insights.rest_seconds && <span><strong>{formatSeconds(insights.rest_seconds)}</strong> de descanso médio</span>}
-        </p>
+      {insights?.time && (
+        <div className={styles.split} aria-label="Divisão do tempo do treino">
+          {[
+            { label: 'Preparação', value: insights.time.prep_seconds, hint: 'troca, espera e ajuste' },
+            { label: 'Séries', value: insights.time.work_seconds, hint: insights.set_seconds ? `${formatSeconds(insights.set_seconds)} por série` : null },
+            { label: 'Descanso', value: insights.time.rest_seconds, hint: insights.rest_seconds ? `${formatSeconds(insights.rest_seconds)} em média` : null },
+          ].map(part => (
+            <div key={part.label} className={styles.splitPart}>
+              <span className={styles.splitValue}>{formatSeconds(part.value)}</span>
+              <span className={styles.splitLabel}>{part.label}</span>
+              {part.hint && <span className={styles.splitHint}>{part.hint}</span>}
+            </div>
+          ))}
+        </div>
       )}
 
       {previous && (
@@ -171,7 +180,7 @@ export default function SessionSummary({ session, insights }) {
                 <span className={styles.itemName}>{item.exercise_name}</span>
                 <span className={styles.itemMeta}>
                   {groupsLabel(item)} · {plural(seriesCount(item.sets), 'série', 'séries')}
-                  {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}` : ''}
+                  {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}${insight.prep_seconds >= 60 ? ` (${formatSeconds(insight.prep_seconds)} de preparação)` : ''}` : ''}
                   {insight?.rest_seconds ? ` · descanso ${formatSeconds(insight.rest_seconds)}` : ''}
                   {item.unilateral && <>{' '}<UnilateralTag /></>}
                 </span>

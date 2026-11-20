@@ -503,7 +503,8 @@ export default function ExerciseProgressPage() {
               <div className={styles.records}>
                 {[
                   { label: 'Tempo no exercício', value: formatSeconds(data.time.avg_seconds), note: `média de ${plural(data.time.sessions, 'treino', 'treinos')}` },
-                  { label: 'Tempo por série', value: formatSeconds(data.time.avg_set_seconds), note: 'incluindo descanso' },
+                  { label: 'Preparação', value: formatSeconds(data.time.avg_prep_seconds), note: 'troca, espera e ajuste' },
+                  { label: 'Tempo por série', value: formatSeconds(data.time.avg_set_seconds), note: 'execução estimada' },
                   { label: 'Descanso real', value: formatSeconds(data.time.avg_rest_seconds), note: 'entre séries' },
                 ].map(tile => (
                   <div key={tile.label} className={styles.record}>

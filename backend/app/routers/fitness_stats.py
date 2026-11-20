@@ -9,7 +9,7 @@ from app.models import User
 from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema
 from app.fitness_muscles import muscle_credit
-from app.fitness_timing import exercise_timings, mean as average
+from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BodyWeights, bodyweight_factors
 from .auth import get_current_user
 from .fitness import get_own_workout
@@ -35,11 +35,11 @@ def next_month(day: date) -> date:
     return (day.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = None, factors: dict | None = None) -> dict:
+def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = None, factors: dict | None = None, levels: dict | None = None) -> dict:
     started = aware(workout_session.started_at)
     day = to_br_date(started)
     completed = aware(workout_session.completed_at)
-    timings = exercise_timings(workout_session)
+    timings = exercise_timings(workout_session, levels)
     exercises = []
     for item in workout_session.exercises:
         if not item.sets:
@@ -64,6 +64,9 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "max_reps": max(reps for _, reps in weights),
             "e1rm": max(estimates) if estimates else None,
             "seconds": timings[item.id]["seconds"],
+            "prep": timings[item.id]["prep"],
+            "work": timings[item.id]["work"],
+            "rest": timings[item.id]["rest"],
             "rests": timings[item.id]["rests"],
             "set_list": [(float(entry.weight_kg), entry.reps) for entry in item.sets] if strength else [],
             "tracking": item.tracking or "reps",
@@ -162,9 +165,11 @@ def time_stats(period: list[dict]) -> dict | None:
         if e["seconds"] is None:
             continue
         item = per_exercise.setdefault(exercise_key(e), {
-            "exercise_id": e["exercise_id"], "name": e["name"], "muscle_group": e["muscle_group"], "seconds": [], "sets": 0,
+            "exercise_id": e["exercise_id"], "name": e["name"], "muscle_group": e["muscle_group"], "seconds": [], "prep": [], "work": 0.0, "sets": 0,
         })
         item["seconds"].append(e["seconds"])
+        item["work"] += e["work"]
+        item["prep"].append(e["prep"])
         item["sets"] += e["sets"]
     longest = sorted(
         (
@@ -174,16 +179,20 @@ def time_stats(period: list[dict]) -> dict | None:
                 "muscle_group": item["muscle_group"],
                 "sessions": len(item["seconds"]),
                 "avg_seconds": round(average(item["seconds"])),
-                "set_seconds": round(sum(item["seconds"]) / item["sets"]) if item["sets"] else None,
+                "set_seconds": round(item["work"] / item["sets"]) if item["sets"] else None,
+                "prep_seconds": round(average(item["prep"])),
             }
             for item in per_exercise.values()
         ),
         key=lambda item: -item["avg_seconds"],
     )[:5]
     exercise_seconds = [e["seconds"] for e in exercises if e["seconds"] is not None]
+    timed = [e for e in exercises if e["seconds"] is not None]
+    total_work = sum(e["work"] for e in exercises)
     return {
         "avg_session_seconds": round(total_seconds / len(sessions)),
-        "avg_set_seconds": round(total_seconds / total_sets) if total_sets else None,
+        "avg_set_seconds": round(total_work / total_sets) if total_sets else None,
+        "avg_prep_seconds": round(average([e["prep"] for e in timed])) if timed else None,
         "avg_exercise_seconds": round(average(exercise_seconds)) if exercise_seconds else None,
         "avg_rest_seconds": round(average(rests)) if rests else None,
         "exercises_per_session": round(sum(len([e for e in s["exercises"]]) for s in sessions) / len(sessions), 1),
@@ -280,7 +289,8 @@ def completed_facts(user, db) -> list[dict]:
         .all()
     )
     factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
-    return [session_facts(s, body, factors) for s in sessions]
+    levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises])
+    return [session_facts(s, body, factors, levels) for s in sessions]
 
 
 def load_value(e: dict):
@@ -701,6 +711,7 @@ def get_session_insights(
             "current": performance(current, e),
             "previous": earlier,
             "seconds": round(e["seconds"]) if e["seconds"] is not None else None,
+            "prep_seconds": round(e["prep"]) if e["seconds"] is not None else None,
             "rest_seconds": round(average(e["rests"])) if e["rests"] else None,
         })
 
@@ -718,7 +729,12 @@ def get_session_insights(
             "volume_kg": round(previous["volume"], 1),
         } if previous else None,
         "minutes": round(current["minutes"]),
-        "set_seconds": round(current["minutes"] * 60 / current["sets"]) if current["sets"] else None,
+        "set_seconds": round(sum(e["work"] for e in current["exercises"]) / current["sets"]) if current["sets"] else None,
+        "time": {
+            "prep_seconds": round(sum(e["prep"] for e in current["exercises"])),
+            "work_seconds": round(sum(e["work"] for e in current["exercises"])),
+            "rest_seconds": round(sum(e["rest"] for e in current["exercises"])),
+        },
         "rest_seconds": round(average([r for e in current["exercises"] for r in e["rests"]])) if any(e["rests"] for e in current["exercises"]) else None,
         "exercises": exercises,
         "records": weight_records(everything, lambda s: s["id"] == session_id),

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES, TRACKING } from '../../lib/gym';
+import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES, TRACKING, INTENSITY, guessIntensity } from '../../lib/gym';
 import { MusclePicker } from './ExerciseMuscles';
 import styles from './ExerciseForm.module.css';
 
@@ -34,6 +34,8 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
   const [tracking, setTracking] = useState(initial?.tracking ?? 'reps');
   const [factor, setFactor] = useState(String(Math.round((initial?.bodyweight_factor ?? 1) * 100)));
   const [muscles, setMuscles] = useState(initial?.muscles ?? []);
+  const [intensity, setIntensity] = useState(initial?.intensity ?? null);
+  const shownIntensity = intensity ?? guessIntensity(muscleGroup, muscles);
 
   const changeMuscles = (next) => {
     setMuscles(next);
@@ -58,6 +60,7 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
       is_unilateral: unilateral,
       bodyweight_factor: equipment === 'bodyweight' ? share : null,
       tracking,
+      intensity: tracking === 'reps' ? shownIntensity : null,
       muscles,
     });
     setSaving(false);
@@ -108,6 +111,16 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
           ))}
         </div>
       </div>
+
+      {tracking === 'reps' && (
+        <div className={styles.field}>
+          <ChoiceGroup label="Intensidade" options={INTENSITY} value={shownIntensity} onChange={setIntensity} />
+          <small className={styles.hint}>
+            {intensity ? 'Usada para estimar quanto dura cada série.' : 'Sugestão pelos músculos. Usada para estimar quanto dura cada série.'}
+            {' '}Baixo: rosca, tríceps. Moderado: extensora, pulldown. Alto: supino, remada. Muito alto: agachamento, terra.
+          </small>
+        </div>
+      )}
 
       {equipment === 'bodyweight' && (
         <label className={styles.field}>

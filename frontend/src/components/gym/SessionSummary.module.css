@@ -313,15 +313,36 @@
   overflow-wrap: anywhere;
 }
 
-.timing {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  color: var(--gym-muted);
-  font-size: 0.85rem;
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
 }
 
-.timing strong {
+.splitPart {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.splitValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.splitLabel {
   color: var(--gym-text);
+  font-size: 0.8rem;
   font-weight: 600;
+}
+
+.splitHint {
+  color: var(--gym-muted);
+  font-size: 0.72rem;
 }

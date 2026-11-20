@@ -611,7 +611,8 @@ function TimeCard({ data }) {
   if (!time) return null;
   const tiles = [
     { label: 'Duração média do treino', value: formatSeconds(time.avg_session_seconds) },
-    { label: 'Tempo médio por série', value: formatSeconds(time.avg_set_seconds), note: 'incluindo descanso' },
+    { label: 'Tempo médio por série', value: formatSeconds(time.avg_set_seconds), note: 'execução estimada' },
+    { label: 'Preparação por exercício', value: formatSeconds(time.avg_prep_seconds), note: 'troca, espera e ajuste' },
     { label: 'Tempo médio por exercício', value: formatSeconds(time.avg_exercise_seconds), note: `${formatKg(time.exercises_per_session)} exercícios por treino` },
     { label: 'Descanso real entre séries', value: formatSeconds(time.avg_rest_seconds), note: 'medido pelo app' },
   ];
@@ -636,7 +637,7 @@ function TimeCard({ data }) {
                   <span className={styles.rowMain}>
                     <span className={styles.rowName}>{e.name}</span>
                     <span className={styles.rowMeta}>
-                      {plural(e.sessions, 'treino', 'treinos')}{e.set_seconds ? ` · ${formatSeconds(e.set_seconds)} por série` : ''}
+                      {plural(e.sessions, 'treino', 'treinos')}{e.prep_seconds >= 60 ? ` · ${formatSeconds(e.prep_seconds)} de preparação` : ''}{e.set_seconds ? ` · ${formatSeconds(e.set_seconds)} por série` : ''}
                     </span>
                   </span>
                   <span className={styles.strengthValue}>{formatSeconds(e.avg_seconds)}</span>

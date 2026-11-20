@@ -226,6 +226,23 @@ export const MUSCLES = {
   soleus: { group: 'calves', label: 'Sóleo' },
 };
 
+export const INTENSITY = [
+  { value: 'low', label: 'Baixo' },
+  { value: 'moderate', label: 'Moderado' },
+  { value: 'high', label: 'Alto' },
+  { value: 'very_high', label: 'Muito alto' },
+];
+
+export function guessIntensity(muscleGroup, muscles = []) {
+  const primary = muscles.filter(item => item.role === 'primary').map(item => item.muscle);
+  const groups = new Set(primary.map(muscle => MUSCLES[muscle]?.group));
+  const legs = ['quads', 'hamstrings', 'glutes', 'adductors'].filter(group => groups.has(group)).length;
+  if (legs >= 2 || (primary.includes('lower_back') && groups.size >= 2)) return 'very_high';
+  if (['abs', 'biceps', 'triceps', 'forearms', 'calves', 'shoulders'].includes(muscleGroup)) return 'low';
+  if (['chest', 'back'].includes(muscleGroup)) return 'high';
+  return 'moderate';
+}
+
 export const muscleName = (key) => MUSCLES[key]?.label ?? key;
 
 export const VOLUME_BANDS = [

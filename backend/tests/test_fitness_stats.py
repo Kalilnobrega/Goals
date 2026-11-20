@@ -344,19 +344,23 @@ def test_time_stats_per_set_exercise_and_rest(client, library, ana, db_session):
 
     time = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["time"]
     assert time["avg_session_seconds"] == 1800
-    assert time["avg_set_seconds"] == 600
+    assert time["avg_set_seconds"] == 46
     assert time["avg_exercise_seconds"] == 600
-    assert time["avg_rest_seconds"] == 120
+    assert time["avg_rest_seconds"] == 72
+    assert time["avg_prep_seconds"] == 496
     assert time["longest_exercises"][0]["name"] == "Leg press"
     assert time["longest_exercises"][0]["avg_seconds"] == 780
+    assert time["longest_exercises"][0]["prep_seconds"] == 738
 
     insights = client.get(f"/fitness/sessions/{session['id']}/insights", headers=headers).json()
     assert [e["seconds"] for e in insights["exercises"]] == [420, 780]
-    assert insights["exercises"][0]["rest_seconds"] == 120
-    assert insights["set_seconds"] == 600
+    assert [e["prep_seconds"] for e in insights["exercises"]] == [252, 738]
+    assert insights["exercises"][0]["rest_seconds"] == 72
+    assert insights["set_seconds"] == 46
+    assert insights["time"] == {"prep_seconds": 991, "work_seconds": 136, "rest_seconds": 72}
 
     progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()["time"]
-    assert progress == {"sessions": 1, "avg_seconds": 420, "avg_set_seconds": 210, "avg_rest_seconds": 120}
+    assert progress == {"sessions": 1, "avg_seconds": 420, "avg_set_seconds": 48, "avg_rest_seconds": 72, "avg_prep_seconds": 252}
 
 
 

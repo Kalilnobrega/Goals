@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateT
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+from .fitness_intensity import guess_intensity
 
 
 class Exercise(Base):
@@ -17,6 +18,7 @@ class Exercise(Base):
     family = Column(String(60), nullable=True, index=True)
     bodyweight_factor = Column(Numeric(3, 2), nullable=True)
     tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
+    intensity = Column(String(10), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     muscles = relationship(
@@ -35,6 +37,12 @@ class Exercise(Base):
 
     def muscle_list(self) -> list[dict]:
         return [{"muscle": item.muscle, "role": item.role} for item in self.muscles]
+
+    @property
+    def level(self) -> str | None:
+        if (self.tracking or "reps") != "reps":
+            return None
+        return self.intensity or guess_intensity(self.muscle_group, self.muscle_list(), self.tracking)
 
 
 class ExerciseMuscle(Base):
