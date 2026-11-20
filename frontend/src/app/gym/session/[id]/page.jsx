@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight
 } from 'lucide-react';
 import {
   getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
@@ -12,7 +12,7 @@ import {
 } from '../../../../lib/api';
 import {
   apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, perSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
+  plural, perSide, canLoadPerSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -23,6 +23,7 @@ import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../components/gym/ExercisePicker';
+import GymSwitch from '../../../../components/gym/GymSwitch';
 import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard';
 import SessionSummary from '../../../../components/gym/SessionSummary';
 import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
@@ -42,6 +43,9 @@ const totals = (session) => session.exercises.reduce(
   },
   { sets: 0, volume: 0 },
 );
+
+const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
+const LOAD_OPTIONS = [{ value: 'total', label: 'Peso total' }, { value: 'side', label: 'Cada lado' }];
 
 const withItem = (session, itemId, change) => ({
   ...session,
@@ -585,6 +589,7 @@ export default function SessionPage() {
   const pending = session.exercises.filter(item => item.sets.length === 0).length;
 
   const current = session.exercises[currentIndex];
+  const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
   const next = session.exercises[currentIndex + 1];
   const cardProps = {
     onLogSet: logSet,
@@ -597,8 +602,6 @@ export default function SessionPage() {
       setSheet({ type: 'menu', item: it });
     },
     onSaveNote: saveNote,
-    onToggleUnilateral: requestUnilateral,
-    onToggleLoadMode: requestLoadMode,
   };
 
   return (
@@ -763,7 +766,7 @@ export default function SessionPage() {
           />
         )}
 
-        {sheet?.type === 'menu' && (
+        {sheet?.type === 'menu' && menuItem && (
           <div className={s.actions}>
             {session.exercises.length > 1 && (
               <>
@@ -781,18 +784,41 @@ export default function SessionPage() {
                 </button>
               </>
             )}
-            <button
-              type="button"
-              className={s.option}
-              onClick={() => { const item = sheet.item; setSheet(null); requestUnilateral(item); }}
-              disabled={sheet.item.sets.length > 0}
-            >
-              <ArrowLeftRight size={20} />
-              <span>
-                {sheet.item.unilateral ? 'Fazer bilateral' : 'Fazer unilateral (E/D)'}
-                <small>{sheet.item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : 'Anote carga e reps da esquerda e da direita em cada série'}</small>
-              </span>
-            </button>
+            {(menuItem.tracking ?? 'reps') === 'reps' && (
+              <div className={s.option} role="group" aria-label="Execução">
+                <ArrowLeftRight size={20} />
+                <span className={styles.menuSetting}>
+                  Execução
+                  <small>{menuItem.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : 'Unilateral anota carga e reps da esquerda e da direita'}</small>
+                  <span className={styles.menuSwitch}>
+                    <GymSwitch
+                      label={`Execução de ${menuItem.exercise_name}`}
+                      value={!!menuItem.unilateral}
+                      options={SIDE_OPTIONS}
+                      onChange={() => requestUnilateral(menuItem)}
+                      disabled={menuItem.sets.length > 0}
+                    />
+                  </span>
+                </span>
+              </div>
+            )}
+            {canLoadPerSide(menuItem.equipment, menuItem.unilateral, menuItem.tracking) && (
+              <div className={s.option} role="group" aria-label="Carga">
+                <Weight size={20} />
+                <span className={styles.menuSetting}>
+                  Carga
+                  <small>Cada lado: anote o peso de um lado; o app guarda o total</small>
+                  <span className={styles.menuSwitch}>
+                    <GymSwitch
+                      label={`Como anotar a carga de ${menuItem.exercise_name}`}
+                      value={perSide(menuItem) ? 'side' : 'total'}
+                      options={LOAD_OPTIONS}
+                      onChange={() => requestLoadMode(menuItem)}
+                    />
+                  </span>
+                </span>
+              </div>
+            )}
             {familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises).length > 1 && (
               <div className={s.option} role="group" aria-label="Equipamento">
                 <Dumbbell size={20} />

@@ -1,9 +1,9 @@
 'use client';
 import { createContext, useContext, useRef, useState } from 'react';
-import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil, ArrowLeftRight } from 'lucide-react';
+import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, canLoadPerSide } from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -539,7 +539,7 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, onToggleUnilateral, onToggleLoadMode }) {
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -593,30 +593,6 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
                 {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
               </span>
             </p>
-          {onToggleUnilateral && !timed && (item.unilateral || item.sets.length === 0) && (
-            <button
-              type="button"
-              className={`${styles.sideChip} ${item.unilateral ? styles.sideChipOn : ''}`}
-              onClick={() => onToggleUnilateral(item)}
-              disabled={item.sets.length > 0}
-              aria-pressed={!!item.unilateral}
-              aria-label={item.unilateral ? 'Unilateral ativado' : 'Tornar unilateral (esquerda e direita)'}
-              title={item.sets.length > 0 ? 'Só dá para mudar antes de registrar séries' : undefined}
-            >
-              <ArrowLeftRight size={14} /> Unilateral
-            </button>
-          )}
-          {onToggleLoadMode && canLoadPerSide(item.equipment, item.unilateral, tracking) && (
-            <button
-              type="button"
-              className={`${styles.sideChip} ${side ? styles.sideChipOn : ''}`}
-              onClick={() => onToggleLoadMode(item)}
-              aria-pressed={side}
-              aria-label={side ? 'Carga anotada de cada lado. Tocar para anotar o peso total' : 'Carga anotada como peso total. Tocar para anotar cada lado'}
-            >
-              {side ? 'Cada lado' : 'Peso total'}
-            </button>
-          )}
           {onOpenRest && tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
             <Timer size={14} /> {item.rest_seconds ? formatRest(item.rest_seconds) : '—'}
           </button>}

@@ -466,3 +466,15 @@
   border-color: var(--gym-accent);
   color: var(--gym-accent-ink);
 }
+
+.menuSetting {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+}
+
+.menuSwitch {
+  display: block;
+  max-width: 260px;
+  margin-top: 10px;
+}

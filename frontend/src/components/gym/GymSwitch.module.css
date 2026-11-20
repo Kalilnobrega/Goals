@@ -49,3 +49,11 @@
     transition: none;
   }
 }
+
+.disabled {
+  opacity: 0.5;
+}
+
+.disabled .option {
+  cursor: default;
+}
