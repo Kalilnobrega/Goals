@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
-import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyOptions } from '../../../lib/gym';
+import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyLabelGroups } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
@@ -190,10 +190,12 @@ export default function ExercisesPage() {
                         <span className={styles.itemMeta}>
                           {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
                         </span>
-                        <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
-                          {many ? familyOptions(family.variants) : equipmentLabel(first.equipment)}
-                          {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
-                        </span>
+                        {(many ? familyLabelGroups(family.variants) : [[{ label: equipmentLabel(first.equipment) }]]).map((group, g, groups) => (
+                          <span key={g} className={`${styles.itemMeta} ${g === groups.length - 1 ? styles.itemEquipment : styles.itemGrip}`}>
+                            {group.map(item => item.label).join(' · ')}
+                            {g === groups.length - 1 && family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
+                          </span>
+                        ))}
                       </span>
                       {family.variants.some(variant => variant.is_custom) && <span className={styles.badge}>Seu</span>}
                       <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />

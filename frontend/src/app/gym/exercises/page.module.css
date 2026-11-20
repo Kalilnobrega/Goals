@@ -340,6 +340,10 @@
   color: var(--gym-accent-ink);
 }
 
+.itemGrip {
+  color: var(--gym-faint);
+}
+
 .itemEquipment {
   color: var(--gym-faint);
   white-space: normal;

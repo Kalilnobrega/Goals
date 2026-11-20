@@ -380,10 +380,6 @@ export function familyLabelGroups(variants) {
   return hasGrips(variants) ? [labelGroup(variants, variant => gripLabel(variant.grip)), equipment] : [equipment];
 }
 
-export const familyOptions = (variants) => familyLabelGroups(variants)
-  .map(group => group.map(item => item.label).join(' · '))
-  .join(' — ');
-
 export function gripGroups(variants) {
   if (!hasGrips(variants)) return [{ grip: null, label: null, variants }];
   return distinct(variants.map(variant => variant.grip ?? null))

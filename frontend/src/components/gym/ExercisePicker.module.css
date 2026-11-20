@@ -321,6 +321,10 @@
   font-weight: 800;
 }
 
+.itemGrip {
+  color: var(--gym-faint);
+}
+
 .itemEquipment {
   color: var(--gym-faint);
   white-space: normal;

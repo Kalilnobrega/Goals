@@ -76,22 +76,17 @@ export default function ExercisePicker({ exercises, loadError, onRetry, onConfir
               <span className={styles.itemMeta}>
                 {muscle ? `${ROLE_LABEL[roleOf(first)]} · ${groupsLabel(first)}` : groupsLabel(first)}
               </span>
-              <span className={`${styles.itemMeta} ${styles.itemEquipment}`}>
-                {many
-                  ? familyLabelGroups(family.variants).map((group, g) => (
-                    <Fragment key={g}>
-                      {g > 0 && ' — '}
-                      {group.map((item, i) => (
-                        <span key={item.label}>
-                          {i > 0 && ' · '}
-                          <span className={item.ids.some(order) ? styles.equipmentChosen : undefined}>{item.label}</span>
-                        </span>
-                      ))}
-                    </Fragment>
-                  ))
-                  : equipmentLabel(first.equipment)}
-                {family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
-              </span>
+              {(many ? familyLabelGroups(family.variants) : [[{ label: equipmentLabel(first.equipment), ids: [] }]]).map((group, g, groups) => (
+                <span key={g} className={`${styles.itemMeta} ${g === groups.length - 1 ? styles.itemEquipment : styles.itemGrip}`}>
+                  {group.map((item, i) => (
+                    <span key={item.label}>
+                      {i > 0 && ' · '}
+                      <span className={item.ids.some(order) ? styles.equipmentChosen : undefined}>{item.label}</span>
+                    </span>
+                  ))}
+                  {g === groups.length - 1 && family.variants.every(variant => variant.is_unilateral) && <>{' '}<UnilateralTag /></>}
+                </span>
+              ))}
             </span>
           );
           return (
