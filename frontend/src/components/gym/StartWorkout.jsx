@@ -1,9 +1,12 @@
 'use client';
 import { createContext, useCallback, useContext, useState } from 'react';
 import Link from 'next/link';
-import { CalendarCheck, ChevronRight, ClipboardList, Play, Zap } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, ChevronRight, ClipboardList, Play, Timer, Zap } from 'lucide-react';
 import { getFitnessOverview, getWorkouts, peekCache } from '../../lib/api';
-import { muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote } from '../../lib/gym';
+import {
+  muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote, prescription, formatRest, equipmentLabel, gripLabel,
+  canLoadPerSide, cardioMinutes,
+} from '../../lib/gym';
 import GymSheet from './GymSheet';
 import useStartSession from './useStartSession';
 import s from './sheet.module.css';
@@ -29,6 +32,79 @@ function fichaMeta(workout) {
   if (!workout?.exercises?.length) return `Sem exercícios${cardioNote(workout)}`;
   const groups = [...new Set(workout.exercises.map(item => item.exercise.muscle_group))].slice(0, 3).map(muscleLabel);
   return `${plural(workout.exercises.length, 'exercício', 'exercícios')}${cardioNote(workout)} · ${groups.join(', ')}`;
+}
+
+function exerciseDetails(item) {
+  const { exercise } = item;
+  const unilateral = item.unilateral ?? exercise.is_unilateral;
+  return [
+    exercise.grip && `Pegada ${gripLabel(exercise.grip).toLowerCase()}`,
+    equipmentLabel(exercise.equipment),
+    unilateral && 'Unilateral',
+    item.load_mode === 'side' && canLoadPerSide(exercise.equipment, unilateral, exercise.tracking) && 'Carga por lado',
+  ].filter(Boolean).join(' · ');
+}
+
+function CardioRows({ workout, phase, label }) {
+  return (workout.cardio ?? []).filter(item => item.phase === phase).map(item => (
+    <li key={`c${item.id}`} className={styles.row}>
+      <span className={styles.rowMain}>
+        <span className={styles.rowName}>{item.exercise?.name ?? 'Qualquer cardio'}</span>
+        <span className={styles.rowTarget}>{item.minutes} min</span>
+      </span>
+      <span className={styles.rowDetails}>{label}</span>
+    </li>
+  ));
+}
+
+function WorkoutPreview({ workout, starting, onStart, onBack }) {
+  if (!workout) {
+    return (
+      <div className={styles.group} aria-busy="true" aria-label="Carregando ficha">
+        <div className={styles.skeleton} />
+        <div className={styles.skeleton} />
+      </div>
+    );
+  }
+  const exercises = workout.exercises ?? [];
+  const totalSets = exercises.reduce((sum, item) => sum + item.target_sets, 0);
+  const minutes = cardioMinutes(workout);
+  const summary = [
+    plural(exercises.length, 'exercício', 'exercícios'),
+    plural(totalSets, 'série', 'séries'),
+    minutes && `${minutes} min de cardio`,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <div className={s.stack}>
+      <p className={styles.summary}>{summary}</p>
+      <ol className={styles.list}>
+        <CardioRows workout={workout} phase="start" label="Cardio no início" />
+        {exercises.map(item => (
+          <li key={item.id} className={styles.row}>
+            <span className={styles.rowMain}>
+              <span className={styles.rowName}>{item.exercise.name}</span>
+              <span className={styles.rowTarget}>{prescription(item)}</span>
+            </span>
+            <span className={styles.rowDetails}>
+              {exerciseDetails(item)}
+              {item.rest_seconds ? <span className={styles.rowRest}><Timer size={11} aria-hidden="true" /> {formatRest(item.rest_seconds)}</span> : null}
+            </span>
+          </li>
+        ))}
+        <CardioRows workout={workout} phase="end" label="Cardio no final" />
+      </ol>
+      {workout.description && <p className={styles.note}>{workout.description}</p>}
+      <div className={s.actions}>
+        <button type="button" className={s.primary} onClick={onStart} disabled={starting}>
+          <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Começar treino'}
+        </button>
+        <button type="button" className={s.secondary} onClick={onBack} disabled={starting}>
+          <ArrowLeft size={18} /> Voltar
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function StartPicker({ overview, workouts, loadError, onRetry, starting, onChoose, onClose }) {
@@ -102,6 +178,7 @@ export function StartWorkoutProvider({ children }) {
   const [overview, setOverview] = useState(() => peekCache('fitnessOverview') ?? null);
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
+  const [previewId, setPreviewId] = useState(null);
   const { begin, starting, sheet } = useStartSession();
 
   const load = useCallback(() => {
@@ -111,22 +188,38 @@ export function StartWorkoutProvider({ children }) {
   }, []);
 
   const show = useCallback(() => {
+    setPreviewId(null);
     setOpen(true);
     load();
   }, [load]);
 
   const close = useCallback(() => setOpen(false), []);
 
-  const choose = (workoutId) => {
+  const startNow = (workoutId) => {
     setOpen(false);
     begin(workoutId);
   };
 
+  const choose = (workoutId) => {
+    if (workoutId === null) return startNow(null);
+    setPreviewId(workoutId);
+  };
+
+  const previewWorkout = previewId === null ? null : (workouts ?? []).find(w => w.id === previewId);
+
   return (
     <StartWorkoutContext.Provider value={show}>
       {children}
-      <GymSheet open={open} onClose={close} title="Iniciar treino">
-        {open && (
+      <GymSheet open={open} onClose={close} title={previewId === null ? 'Iniciar treino' : (previewWorkout?.name ?? 'Ficha')}>
+        {open && previewId !== null && (
+          <WorkoutPreview
+            workout={previewWorkout}
+            starting={starting}
+            onStart={() => startNow(previewId)}
+            onBack={() => setPreviewId(null)}
+          />
+        )}
+        {open && previewId === null && (
           <StartPicker
             overview={overview}
             workouts={workouts}
