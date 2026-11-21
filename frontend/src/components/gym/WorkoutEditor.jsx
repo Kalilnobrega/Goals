@@ -1,9 +1,10 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Minus, Trash2, Dumbbell, HeartPulse } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
 import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide } from '../../lib/gym';
 import VariantChoices from './VariantChoices';
+import { clearDraft, draftKey, readDraft, writeDraft } from '../../lib/workoutDraft';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
@@ -60,6 +61,17 @@ const toPayload = (name, description, items, cardio) => ({
   })),
 });
 
+const toDraft = (name, description, items, cardio, base) => ({
+  name,
+  description,
+  items: items.map(({ key, ...rest }) => rest),
+  cardio: cardio.map(({ key, ...rest }) => rest),
+  base,
+  saved_at: new Date().toISOString(),
+});
+
+const withKeys = (rows) => (rows ?? []).map(row => ({ ...row, key: newKey() }));
+
 const REST_CHOICES = [{ value: null, label: 'Nenhum' }, ...REST_OPTIONS.map(seconds => ({ value: seconds, label: formatRest(seconds) }))];
 
 const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
@@ -87,11 +99,24 @@ const TRACKING_DEFAULTS = {
   cardio: { target_sets: 1, reps_min: '20' },
 };
 
-export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
-  const [name, setName] = useState(initial?.name ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [items, setItems] = useState(() => (initial?.exercises ?? []).map(toItem));
-  const [cardio, setCardio] = useState(() => (initial?.cardio ?? []).map(toCardio));
+const subscribeNothing = () => () => {};
+
+export default function WorkoutEditor(props) {
+  const client = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  return client ? <Editor {...props} /> : null;
+}
+
+function Editor({ initial, onSubmit, onDelete }) {
+  const storageKey = draftKey(initial?.id);
+  const base = initial?.updated_at ?? null;
+  const [draft] = useState(() => readDraft(storageKey));
+  const stale = !!draft && !!initial && draft.base !== base;
+  const restoring = !!draft && !stale;
+  const [banner, setBanner] = useState(draft ? (stale ? 'stale' : 'restored') : null);
+  const [name, setName] = useState(restoring ? draft.name ?? '' : initial?.name ?? '');
+  const [description, setDescription] = useState(restoring ? draft.description ?? '' : initial?.description ?? '');
+  const [items, setItems] = useState(() => (restoring ? withKeys(draft.items) : (initial?.exercises ?? []).map(toItem)));
+  const [cardio, setCardio] = useState(() => (restoring ? withKeys(draft.cardio) : (initial?.cardio ?? []).map(toCardio)));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [loadError, setLoadError] = useState(false);
@@ -126,6 +151,36 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
+
+  useEffect(() => {
+    if (submitted.current || banner === 'stale') return;
+    if (dirty) writeDraft(storageKey, toDraft(name, description, items, cardio, base));
+    else clearDraft(storageKey);
+  }, [dirty, name, description, items, cardio, banner, storageKey, base]);
+
+  const applySource = (source) => {
+    setName(source.name);
+    setDescription(source.description);
+    setItems(source.items);
+    setCardio(source.cardio);
+    setInvalid(null);
+  };
+
+  const discardDraft = () => {
+    clearDraft(storageKey);
+    applySource({
+      name: initial?.name ?? '',
+      description: initial?.description ?? '',
+      items: (initial?.exercises ?? []).map(toItem),
+      cardio: (initial?.cardio ?? []).map(toCardio),
+    });
+    setBanner(null);
+  };
+
+  const restoreDraft = () => {
+    applySource({ name: draft.name ?? '', description: draft.description ?? '', items: withKeys(draft.items), cardio: withKeys(draft.cardio) });
+    setBanner('restored');
+  };
 
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
@@ -201,6 +256,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
     setSaving(true);
     submitted.current = true;
     const message = await onSubmit(toPayload(name, description, items, cardio));
+    if (!message) clearDraft(storageKey);
     if (message) {
       submitted.current = false;
       setSaving(false);
@@ -283,6 +339,29 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
 
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
+      {banner === 'restored' && (
+        <div className={styles.draft} role="status">
+          <History size={18} aria-hidden="true" />
+          <span className={styles.draftText}>
+            Continuando de onde você parou
+            <small>Rascunho salvo automaticamente</small>
+          </span>
+          <button type="button" className={styles.draftAction} onClick={discardDraft}>Descartar rascunho</button>
+        </div>
+      )}
+      {banner === 'stale' && (
+        <div className={styles.draft} role="status">
+          <History size={18} aria-hidden="true" />
+          <span className={styles.draftText}>
+            Você tem um rascunho desta ficha
+            <small>A ficha foi alterada depois que o rascunho foi salvo.</small>
+          </span>
+          <span className={styles.draftActions}>
+            <button type="button" className={styles.draftAction} onClick={discardDraft}>Descartar</button>
+            <button type="button" className={`${styles.draftAction} ${styles.draftPrimary}`} onClick={restoreDraft}>Restaurar</button>
+          </span>
+        </div>
+      )}
       <div className={styles.fields}>
         <label className={styles.field}>
           <span className={styles.label}>Nome da ficha</span>
