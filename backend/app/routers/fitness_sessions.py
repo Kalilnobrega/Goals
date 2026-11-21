@@ -21,6 +21,7 @@ from app.fitness_schemas import (
     SetResponseSchema,
 )
 from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus, bodyweight_factors
+from app.fitness_cardio import cardio_numbers
 from app.dates import to_br_date
 from .auth import get_current_user
 from .fitness import visible_exercises
@@ -316,7 +317,31 @@ def session_stats(db: Session):
     )
 
 
-def history_item(workout_session: WorkoutSession, exercise_count, total_sets, volume, muscle_groups=None, cardio_seconds=None) -> dict:
+def cardio_by_session(session_ids: list[int], user_id: int, db: Session) -> dict[int, dict]:
+    if not session_ids:
+        return {}
+    items = (
+        db.query(SessionExercise, WorkoutSession.started_at)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(SessionExercise.session_id.in_(session_ids), SessionExercise.tracking == CARDIO, SessionExercise.sets.any())
+        .all()
+    )
+    if not items:
+        return {}
+    weights = BodyWeights(user_id, db)
+    result: dict[int, dict] = {}
+    for item, started_at in items:
+        numbers = cardio_numbers(item.exercise_name, item.sets, weights.on(to_br_date(aware(started_at))))
+        totals = result.setdefault(item.session_id, {"km": 0.0, "km_estimated": False, "calories": None, "calories_estimated": False})
+        totals["km"] = round(totals["km"] + numbers["km"], 2)
+        totals["km_estimated"] = totals["km_estimated"] or numbers["km_estimated"]
+        if numbers["calories"] is not None:
+            totals["calories"] = (totals["calories"] or 0) + numbers["calories"]
+            totals["calories_estimated"] = totals["calories_estimated"] or numbers["calories_estimated"]
+    return result
+
+
+def history_item(workout_session: WorkoutSession, exercise_count, total_sets, volume, muscle_groups=None, cardio_seconds=None, cardio=None) -> dict:
     return {
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
@@ -327,6 +352,10 @@ def history_item(workout_session: WorkoutSession, exercise_count, total_sets, vo
         "total_sets": total_sets or 0,
         "volume_kg": float(volume or 0),
         "cardio_seconds": int(cardio_seconds or 0),
+        "cardio_km": (cardio or {}).get("km", 0.0),
+        "cardio_km_estimated": (cardio or {}).get("km_estimated", False),
+        "cardio_calories": (cardio or {}).get("calories"),
+        "cardio_calories_estimated": (cardio or {}).get("calories_estimated", False),
         "muscle_groups": muscle_groups or [],
     }
 
@@ -386,6 +415,7 @@ def list_sessions(
         .all()
     )
     muscles = muscle_groups_by_session([row[0].id for row in rows], db) if rows else {}
+    cardio = cardio_by_session([row[0].id for row in rows if row[4]], user.id, db)
     bonus = bodyweight_bonus([(row[0].id, row[0].started_at) for row in rows], user.id, db)
     total = completed.count()
     return {
@@ -393,6 +423,7 @@ def list_sessions(
             history_item(
                 workout_session, exercise_count, total_sets,
                 float(volume or 0) + bonus.get(workout_session.id, 0.0), muscles.get(workout_session.id), cardio_seconds,
+                cardio.get(workout_session.id),
             )
             for workout_session, exercise_count, total_sets, volume, cardio_seconds in rows
         ],

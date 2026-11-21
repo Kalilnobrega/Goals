@@ -183,6 +183,7 @@ def test_cardio_stats_track_plan_skips_and_phases(client, library, ana):
     assert cardio["longest"]["minutes"] == 35
     assert sum(bucket["minutes"] for bucket in cardio["timeline"]) == 45
     assert (progress["planned_minutes"], progress["sessions"], progress["skipped"], progress["avg_done_minutes"]) == (30, 2, 1, 22)
+    assert (progress["avg_km"], progress["avg_calories"]) == (None, None)
 
 
 def test_cardio_stats_estimate_distance_speed_and_calories(client, library, ana):
@@ -210,3 +211,5 @@ def test_cardio_stats_estimate_distance_speed_and_calories(client, library, ana)
     assert (point["distance_km"], point["km_estimated"], point["calories"], point["pace_seconds_per_km"]) == (5.0, True, 401, 360)
     insights = client.get(f"/fitness/sessions/{session['id']}/insights", headers=headers).json()["cardio"]
     assert (insights["minutes"], insights["km"], insights["calories"], insights["calories_estimated"]) == (50, 5.0, 651, True)
+    history = client.get("/fitness/sessions", headers=headers).json()["items"][0]
+    assert (history["cardio_km"], history["cardio_km_estimated"], history["cardio_calories"], history["cardio_calories_estimated"]) == (5.0, True, 651, True)

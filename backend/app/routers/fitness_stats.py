@@ -796,6 +796,8 @@ def plan_details(plan, sessions: list[dict], start: date, today: date) -> dict:
         key=lambda row: (-row["planned_sets"], -row["done_sets"], row["muscle_group"]),
     )
     done_cardio = sum(e["duration"] for s in sessions for e in s["cardio"]) / 60
+    cardio_entries = [e for s in sessions for e in s["cardio"]]
+    calorie_entries = [e for e in cardio_entries if e.get("calories") is not None]
     return {
         "weeks": weeks,
         "current_streak": current_streak,
@@ -804,7 +806,14 @@ def plan_details(plan, sessions: list[dict], start: date, today: date) -> dict:
         "most_skipped_weekday": most_skipped,
         "workouts": workout_rows,
         "muscles": muscles,
-        "cardio": {"planned_minutes": planned_cardio, "done_minutes": round(done_cardio / span_weeks, 1)} if planned_cardio or done_cardio else None,
+        "cardio": {
+            "planned_minutes": planned_cardio,
+            "done_minutes": round(done_cardio / span_weeks, 1),
+            "done_km": round(sum(e.get("km", 0.0) for e in cardio_entries) / span_weeks, 2),
+            "km_estimated": any(e.get("km_estimated") for e in cardio_entries),
+            "done_calories": round(sum(e["calories"] for e in calorie_entries) / span_weeks) if calorie_entries else None,
+            "calories_estimated": any(e["calories_estimated"] for e in calorie_entries),
+        } if planned_cardio or done_cardio else None,
     }
 
 
@@ -1199,7 +1208,14 @@ def workout_cardio(workout: Workout, sessions: list[dict]) -> dict | None:
         return None
     summary = cardio_plan_summary(with_plan)
     done = [sum(item["done"] for item in s["cardio_plan"]) for s in with_plan]
+    entries = [e for s in with_plan for e in s["cardio"]]
+    calorie_entries = [e for e in entries if e.get("calories") is not None]
+    km_total = sum(e.get("km", 0.0) for e in entries)
     return {
+        "avg_km": round(km_total / len(with_plan), 2) if with_plan and km_total else None,
+        "km_estimated": any(e.get("km_estimated") for e in entries),
+        "avg_calories": round(sum(e["calories"] for e in calorie_entries) / len(with_plan)) if calorie_entries and with_plan else None,
+        "calories_estimated": any(e["calories_estimated"] for e in calorie_entries),
         "planned_minutes": planned_minutes,
         "sessions": len(with_plan),
         "avg_done_minutes": round(sum(done) / len(done) / 60) if done else None,

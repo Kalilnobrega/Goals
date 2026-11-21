@@ -342,6 +342,10 @@ class SessionHistoryItemSchema(BaseModel):
     total_sets: int
     volume_kg: float
     cardio_seconds: int = 0
+    cardio_km: float = 0
+    cardio_km_estimated: bool = False
+    cardio_calories: int | None = None
+    cardio_calories_estimated: bool = False
     muscle_groups: list[str]
 
 
@@ -924,6 +928,10 @@ class StatsPlanMuscleSchema(BaseModel):
 class StatsPlanCardioSchema(BaseModel):
     planned_minutes: int
     done_minutes: float
+    done_km: float = 0
+    km_estimated: bool = False
+    done_calories: float | None = None
+    calories_estimated: bool = False
 
 
 class StatsPlanDetailsSchema(BaseModel):
@@ -1064,6 +1072,10 @@ class WorkoutCardioProgressSchema(BaseModel):
     planned_minutes: int
     sessions: int
     avg_done_minutes: int | None
+    avg_km: float | None = None
+    km_estimated: bool = False
+    avg_calories: int | None = None
+    calories_estimated: bool = False
     skipped: int
     completion_pct: float | None
     phases: list[StatsCardioPhaseSchema] = []
