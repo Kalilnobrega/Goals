@@ -331,7 +331,9 @@ export default function ExerciseProgressPage() {
     }
   };
 
-  const back = <Link href="/gym/progress/exercises" className={styles.back}><ChevronLeft size={18} /> Exercícios</Link>;
+  const back = data?.tracking === 'cardio'
+    ? <Link href="/gym/progress/cardio" className={styles.back}><ChevronLeft size={18} /> Cardio</Link>
+    : <Link href="/gym/progress/exercises" className={styles.back}><ChevronLeft size={18} /> Exercícios</Link>;
 
   if (status === 'missing' || (status === 'error' && !data)) {
     return (
