@@ -7,7 +7,7 @@ import hub from './hub.module.css';
 const AREAS = [
   { href: '/gym/progress/geral', icon: Activity, title: 'Geral', text: 'Resumo, frequência, constância e recordes' },
   { href: '/gym/progress/planos', icon: CalendarCheck, title: 'Planos', text: 'Aderência ao plano e dias treinados' },
-  { href: '/gym/progress/workouts', icon: ClipboardList, title: 'Fichas', text: 'Evolução e cumprimento de cada ficha' },
+  { href: '/gym/progress/workouts', icon: ClipboardList, title: 'Fichas', text: 'Cumprimento e evolução das fichas' },
   { href: '/gym/progress/exercises', icon: Dumbbell, title: 'Exercícios', text: 'Cargas, recordes e progressão' },
   { href: '/gym/progress/cardio', icon: HeartPulse, title: 'Cardio', text: 'Tempo, metas cumpridas e aparelhos' },
   { href: '/gym/progress/body', icon: Scale, title: 'Peso corporal', text: 'Pesagens, tendência e meta' },
