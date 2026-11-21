@@ -957,6 +957,46 @@ class StatsRelativeStrengthItemSchema(BaseModel):
     ratio: float
     first_ratio: float | None
     sessions: int
+    series: list["StatsRelativeStrengthPointSchema"] = []
+
+
+class StatsRelativeStrengthPointSchema(BaseModel):
+    session_id: int
+    completed_at: datetime
+    date: date
+    ratio: float
+    e1rm_kg: float
+    body_weight_kg: float
+
+
+class WeightWeekSchema(BaseModel):
+    start: date
+    weight_kg: float | None
+    sessions: int
+    sets: int
+    volume_kg: float
+    cardio_minutes: int
+    cardio_calories: int
+
+
+class WeightMonthSchema(BaseModel):
+    start: date
+    first_kg: float | None
+    last_kg: float | None
+    change_kg: float | None
+    weighings: int
+    sessions: int
+    sets: int
+    volume_kg: float
+    cardio_minutes: int
+    cardio_calories: int
+
+
+class WeightComparisonSchema(BaseModel):
+    period: str
+    weighings: int
+    weeks: list[WeightWeekSchema]
+    months: list[WeightMonthSchema]
 
 
 class StatsRelativeStrengthSchema(BaseModel):

@@ -427,3 +427,34 @@ def test_cardio_stats_and_timed_progress(client, ana, db_session):
     assert progress["tracking"] == "time"
     point = progress["points"][0]
     assert (point["duration_seconds"], point["best_duration_seconds"], point["estimated_1rm_kg"]) == (105, 60, None)
+
+
+def test_weight_comparison_groups_weeks_and_months(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    for days_ago, weight in ((20, 82), (13, 81.5), (6, 81), (1, 80.4)):
+        client.post("/fitness/body-weight", json={"weight_kg": weight, "measured_on": (today_br() - timedelta(days=days_ago)).isoformat()}, headers=headers)
+    train(client, headers, db_session, workout["id"], [[(60, 10)], [(100, 8)]], at(2))
+
+    data = client.get("/fitness/body-weight/comparison", params={"period": "3m"}, headers=headers).json()
+
+    assert data["weighings"] == 4
+    assert sum(week["sessions"] for week in data["weeks"]) == 1
+    assert [week["weight_kg"] for week in data["weeks"] if week["weight_kg"] is not None][-1] == 80.4
+    assert sum(month["weighings"] for month in data["months"]) == 4
+    assert data["months"][0]["start"] >= data["months"][-1]["start"]
+    assert client.get("/fitness/body-weight/comparison", params={"period": "4w"}, headers=headers).status_code == 422
+
+
+def test_relative_strength_includes_a_series(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": (today_br() - timedelta(days=10)).isoformat()}, headers=headers)
+    train(client, headers, db_session, workout["id"], [[(80, 5)]], at(8))
+    train(client, headers, db_session, workout["id"], [[(90, 5)]], at(2))
+
+    item = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["relative_strength"]["items"][0]
+
+    assert len(item["series"]) == 2
+    assert item["series"][-1]["ratio"] == item["ratio"]
+    assert item["series"][0]["body_weight_kg"] == 80

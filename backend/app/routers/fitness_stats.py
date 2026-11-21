@@ -7,7 +7,7 @@ from app.database import get_db
 from app.dates import BRT, today_br, to_br_date
 from app.models import User
 from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
-from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema
+from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema, WeightComparisonSchema
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BodyWeights, bodyweight_factors
@@ -662,7 +662,7 @@ def get_stats(
 
 
 HEATMAP_DAYS = 371
-RELATIVE_STRENGTH_LIMIT = 5
+RELATIVE_STRENGTH_LIMIT = 20
 
 
 def plan_adherence(plan, sessions: list[dict], start: date, today: date) -> dict:
@@ -840,13 +840,13 @@ def relative_strength(period: list[dict], user, db) -> dict:
                 continue
             key = exercise_key(e)
             names[key] = e
-            points[key].append((s["completed_at"], s["day"], e["e1rm"]))
+            points[key].append((s["completed_at"], s["day"], e["e1rm"], s["id"]))
 
     items = []
     for key, values in points.items():
         values.sort(key=lambda p: p[0])
-        _, first_day, first_e1rm = values[0]
-        _, last_day, last_e1rm = values[-1]
+        _, first_day, first_e1rm, _ = values[0]
+        _, last_day, last_e1rm, _ = values[-1]
         body = weight_on(last_day)
         ratio = round(last_e1rm / body, 2)
         first_ratio = round(first_e1rm / weight_on(first_day), 2) if len(values) > 1 else None
@@ -859,6 +859,17 @@ def relative_strength(period: list[dict], user, db) -> dict:
             "ratio": ratio,
             "first_ratio": first_ratio,
             "sessions": len(values),
+            "series": [
+                {
+                    "session_id": session_id,
+                    "completed_at": completed_at,
+                    "date": day,
+                    "ratio": round(e1rm / weight_on(day), 2),
+                    "e1rm_kg": round(e1rm, 1),
+                    "body_weight_kg": weight_on(day),
+                }
+                for completed_at, day, e1rm, session_id in values
+            ],
         })
     items.sort(key=lambda i: (-i["sessions"], -i["ratio"]))
     return {"has_body_weight": True, "items": items[:RELATIVE_STRENGTH_LIMIT]}
@@ -1230,3 +1241,63 @@ def list_workout_progress(user: User = Depends(get_current_user), db: Session = 
     own = {w.id: w.name for w in db.query(Workout).filter(Workout.user_id == user.id)}
     sessions = [{**s, "name": own[s["workout_id"]]} for s in completed_facts(user, db) if s["workout_id"] in own]
     return sorted(workout_stats(sessions), key=lambda i: i["last_done_on"], reverse=True)
+
+
+@fitness_stats_router.get("/body-weight/comparison", response_model=WeightComparisonSchema)
+def get_weight_comparison(
+    period: str = Query(default="3m", pattern="^(3m|6m|1y|all)$"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    today = today_br()
+    entries = (
+        db.query(BodyWeightEntry.measured_on, BodyWeightEntry.weight_kg)
+        .filter(BodyWeightEntry.user_id == user.id)
+        .order_by(BodyWeightEntry.measured_on)
+        .all()
+    )
+    everything = completed_facts(user, db)
+    firsts = [day for day, _ in entries[:1]] + [s["day"] for s in everything[:1]]
+    first_day = min(firsts) if firsts else today
+    start = first_day if period == "all" else max(today - timedelta(days=PERIOD_DAYS[period] - 1), first_day)
+    entries = [(day, float(weight)) for day, weight in entries if start <= day <= today]
+    sessions = [s for s in everything if start <= s["day"] <= today]
+
+    def activity(group: list[dict]) -> dict:
+        return {
+            "sessions": len(group),
+            "sets": sum(s["sets"] for s in group),
+            "volume_kg": round(sum(s["volume"] for s in group), 1),
+            "cardio_minutes": round(sum(e["duration"] for s in group for e in s["cardio"]) / 60),
+            "cardio_calories": round(sum(e.get("calories") or 0 for s in group for e in s["cardio"])),
+        }
+
+    weeks = []
+    key = week_start(start)
+    while key <= today:
+        end = key + timedelta(days=6)
+        weights = [weight for day, weight in entries if key <= day <= end]
+        weeks.append({
+            "start": key,
+            "weight_kg": round(sum(weights) / len(weights), 1) if weights else None,
+            **activity([s for s in sessions if key <= s["day"] <= end]),
+        })
+        key += timedelta(days=7)
+
+    months = []
+    key = month_start(start)
+    while key <= today:
+        following = next_month(key)
+        weights = [weight for day, weight in entries if key <= day < following]
+        months.append({
+            "start": key,
+            "first_kg": weights[0] if weights else None,
+            "last_kg": weights[-1] if weights else None,
+            "change_kg": round(weights[-1] - weights[0], 1) if len(weights) > 1 else None,
+            "weighings": len(weights),
+            **activity([s for s in sessions if key <= s["day"] < following]),
+        })
+        key = following
+    months.reverse()
+
+    return {"period": period, "weighings": len(entries), "weeks": weeks, "months": months}
