@@ -20,6 +20,15 @@ const PERIODS = [
 const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
 const minutesLabel = (value) => `${value.toLocaleString('pt-BR')} min`;
+const kmLabel = (value) => `${formatKg(Math.round(value * 10) / 10)} km`;
+const kcalLabel = (value) => `${value.toLocaleString('pt-BR')} kcal`;
+const paceLabel = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} /km`;
+
+const TIMELINE_METRICS = [
+  { key: 'minutes', label: 'Minutos', format: minutesLabel, axis: v => `${v}` },
+  { key: 'km', label: 'Km', format: kmLabel, axis: v => formatKg(v) },
+  { key: 'calories', label: 'Calorias', format: kcalLabel, axis: v => `${v}` },
+];
 
 function Card({ icon: Icon, title, hint, children }) {
   return (
@@ -50,7 +59,11 @@ function Summary({ cardio }) {
     { label: 'Tempo de cardio', value: minutesLabel(cardio.minutes), delta: change(cardio.minutes, cardio.previous_minutes) },
     { label: 'Treinos com cardio', value: cardio.sessions },
     { label: 'Média por treino', value: cardio.sessions ? minutesLabel(cardio.avg_minutes) : '—' },
-    cardio.distance_km > 0 && { label: 'Distância', value: `${formatKg(cardio.distance_km)} km` },
+    cardio.distance_km > 0 && { label: cardio.km_estimated ? 'Distância (estimada)' : 'Distância', value: `${cardio.km_estimated ? '≈ ' : ''}${kmLabel(cardio.distance_km)}` },
+    cardio.calories !== null && { label: cardio.calories_estimated ? 'Calorias (estimativa)' : 'Calorias', value: `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.calories)}` },
+    cardio.avg_calories !== null && { label: 'Calorias por treino', value: `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.avg_calories)}` },
+    cardio.avg_speed_kmh && { label: 'Velocidade média', value: `${formatKg(cardio.avg_speed_kmh)} km/h` },
+    cardio.pace_seconds_per_km && { label: 'Ritmo médio', value: paceLabel(cardio.pace_seconds_per_km) },
   ].filter(Boolean);
   return (
     <section className={styles.kpis} aria-label="Resumo do cardio">
@@ -66,19 +79,39 @@ function Summary({ cardio }) {
 }
 
 function Timeline({ cardio, monthly }) {
+  const [metricKey, setMetricKey] = useState('minutes');
   if (!cardio.timeline.length) return null;
+  const metrics = TIMELINE_METRICS.filter(m => m.key === 'minutes' || cardio.timeline.some(bucket => bucket[m.key] > 0));
+  const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
   const bars = cardio.timeline.map(bucket => {
     const start = parseDay(bucket.start);
     return {
       key: bucket.start,
       label: monthly ? monthLabel.format(start).replace('.', '') : formatDay(bucket.start),
-      value: bucket.minutes,
+      value: bucket[metric.key] ?? 0,
       detail: `${monthly ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(start) : `Semana de ${formatDay(bucket.start)}`} · ${plural(bucket.sessions, 'treino', 'treinos')}`,
     };
   });
   return (
-    <Card icon={BarChart3} title="Minutos de cardio" hint={monthly ? 'por mês' : 'por semana'}>
-      <BarChart bars={bars} format={minutesLabel} axisFormat={v => `${v}`} label={`Minutos de cardio ${monthly ? 'por mês' : 'por semana'}`} />
+    <Card icon={BarChart3} title="Evolução do cardio" hint={monthly ? 'por mês' : 'por semana'}>
+      {metrics.length > 1 && (
+        <div className={styles.chips} role="tablist" aria-label="Métrica">
+          {metrics.map(m => (
+            <button
+              key={m.key}
+              type="button"
+              role="tab"
+              aria-selected={m === metric}
+              className={`${styles.chip} ${m === metric ? styles.chipActive : ''}`}
+              onClick={() => setMetricKey(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <BarChart key={metric.key} bars={bars} format={metric.format} axisFormat={metric.axis} label={`${metric.label} de cardio ${monthly ? 'por mês' : 'por semana'}`} />
+      {metric.key === 'calories' && cardio.calories_estimated && <p className={styles.empty}>Calorias estimadas pelo tempo, aparelho e seu peso, ou o valor do aparelho quando você registra.</p>}
     </Card>
   );
 }
@@ -133,7 +166,8 @@ function Phases({ phases }) {
   );
 }
 
-function Devices({ exercises }) {
+function Devices({ cardio }) {
+  const exercises = cardio.exercises;
   if (!exercises.length) return null;
   return (
     <Card icon={HeartPulse} title="Aparelhos">
@@ -143,7 +177,12 @@ function Devices({ exercises }) {
               <span className={styles.rowMain}>
                 <span className={styles.rowName}>{e.name}</span>
                 <span className={styles.rowMeta}>
-                  {plural(e.sessions, 'treino', 'treinos')}{e.distance_km > 0 ? ` · ${formatKg(e.distance_km)} km` : ''}
+                  {[
+                    plural(e.sessions, 'treino', 'treinos'),
+                    e.distance_km > 0 ? kmLabel(e.distance_km) : null,
+                    e.avg_speed_kmh ? `${formatKg(e.avg_speed_kmh)} km/h` : null,
+                    e.calories ? `${e.calories_estimated ? '≈ ' : ''}${kcalLabel(e.calories)}` : null,
+                  ].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span className={styles.strengthValue}>{minutesLabel(e.minutes)}</span>
@@ -162,7 +201,7 @@ function Devices({ exercises }) {
 }
 
 function Records({ cardio }) {
-  if (!cardio.longest && !cardio.best_week) return null;
+  if (!cardio.longest && !cardio.best_week && !cardio.farthest && !cardio.fastest) return null;
   return (
     <Card icon={Medal} title="Recordes de cardio">
       <div className={styles.records}>
@@ -171,6 +210,20 @@ function Records({ cardio }) {
             <span className={styles.recordLabel}>Mais cardio num treino</span>
             <span className={styles.recordValue}>{minutesLabel(cardio.longest.minutes)}</span>
             <span className={styles.recordNote}>{cardio.longest.name} · {formatDay(cardio.longest.date)}</span>
+          </Link>
+        )}
+        {cardio.farthest && (
+          <Link href={`/gym/history/${cardio.farthest.session_id}`} className={styles.record}>
+            <span className={styles.recordLabel}>Maior distância</span>
+            <span className={styles.recordValue}>{kmLabel(cardio.farthest.km)}</span>
+            <span className={styles.recordNote}>{cardio.farthest.name} · {formatDay(cardio.farthest.date)}</span>
+          </Link>
+        )}
+        {cardio.fastest && (
+          <Link href={`/gym/history/${cardio.fastest.session_id}`} className={styles.record}>
+            <span className={styles.recordLabel}>Maior velocidade</span>
+            <span className={styles.recordValue}>{formatKg(cardio.fastest.kmh)} km/h</span>
+            <span className={styles.recordNote}>{cardio.fastest.name} · {formatDay(cardio.fastest.date)}</span>
           </Link>
         )}
         {cardio.best_week && (
@@ -256,7 +309,7 @@ export default function CardioDetails() {
           <Timeline cardio={cardio} monthly={ready.bucket === 'month'} />
           <Plan plan={cardio.plan} />
           <Phases phases={cardio.phases} />
-          <Devices exercises={cardio.exercises} />
+          <Devices cardio={cardio} />
           <Records cardio={cardio} />
         </>
       )}

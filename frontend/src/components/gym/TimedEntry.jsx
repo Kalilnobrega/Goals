@@ -137,11 +137,12 @@ function initialValues(tracking, reference, item) {
     distance: reference?.distance_km ? kgInput(reference.distance_km) : '',
     speed: reference?.speed_kmh ? kgInput(reference.speed_kmh) : '',
     level: reference?.level ? String(reference.level) : '',
+    calories: '',
   };
 }
 
 function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
-  const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level));
+  const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level || values.calories));
   const set = (key) => (value) => setValues(current => ({ ...current, [key]: value }));
   return (
     <>
@@ -158,7 +159,7 @@ function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
       {tracking === 'cardio' && (
         <>
           <button type="button" className={styles.detailsToggle} onClick={() => setDetails(open => !open)} aria-expanded={details}>
-            Velocidade, nível e distância <em>opcional</em>
+            Velocidade, nível, distância e calorias <em>opcional</em>
             <ChevronDown size={16} className={details ? styles.open : ''} />
           </button>
           {details && (
@@ -183,6 +184,13 @@ function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
                   <small>km</small>
                 </span>
               </label>
+              <label className={styles.optional}>
+                <span>Calorias do aparelho</span>
+                <span className={styles.inputWrap}>
+                  <input value={values.calories} onChange={e => set('calories')(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="—" />
+                  <small>kcal</small>
+                </span>
+              </label>
             </div>
           )}
         </>
@@ -202,6 +210,7 @@ function payload(tracking, values) {
     data.distance_km = toNumber(values.distance);
     data.speed_kmh = toNumber(values.speed);
     data.level = values.level ? Number(values.level) : null;
+    data.calories = values.calories ? Number(values.calories) : null;
   }
   return { data };
 }
@@ -249,7 +258,7 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
 }
 
 export function TimedEditSet({ entry, tracking, extra, onSave, onDelete, onCancel }) {
-  const [values, setValues] = useState(() => initialValues(tracking, entry, {}));
+  const [values, setValues] = useState(() => ({ ...initialValues(tracking, entry, {}), calories: entry.calories ? String(entry.calories) : '' }));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 

@@ -439,6 +439,7 @@ export function setSummary(entry, tracking = 'reps', extra = false) {
       entry.distance_km ? `${formatKg(entry.distance_km)} km` : null,
       entry.speed_kmh ? `${formatKg(entry.speed_kmh)} km/h` : null,
       entry.level ? `nível ${entry.level}` : null,
+      entry.calories ? `${entry.calories} kcal` : null,
     ].filter(Boolean).join(' · ');
   }
   if (tracking === 'time') {
