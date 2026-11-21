@@ -126,6 +126,19 @@ def test_body_weight_defaults_to_today_and_replaces_same_day(client, ana):
     assert len(client.get("/fitness/body-weight", headers=headers).json()) == 1
 
 
+def test_body_weight_keeps_an_optional_time(client, ana):
+    _, headers = ana
+    yesterday = (today_br() - timedelta(days=1)).isoformat()
+    entry = client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": yesterday, "measured_time": "07:30"}, headers=headers).json()
+    assert entry["measured_time"] == "07:30"
+
+    edited = client.patch(f"/fitness/body-weight/{entry['id']}", json={"measured_time": "21:05:40"}, headers=headers).json()
+    assert edited["measured_time"] == "21:05"
+    cleared = client.patch(f"/fitness/body-weight/{entry['id']}", json={"measured_time": None}, headers=headers).json()
+    assert cleared["measured_time"] is None
+    assert client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": yesterday}, headers=headers).json()["measured_time"] is None
+
+
 def test_body_weight_lists_newest_first(client, ana):
     _, headers = ana
     today = today_br()

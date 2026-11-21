@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dates import today_br, to_br_date
+from datetime import datetime
+from app.dates import BRT, today_br, to_br_date
 from app.models import User
 from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
 from app.fitness_forecast import forecast, slope_per_day
@@ -382,14 +383,17 @@ def serialize_body_weight(entry: BodyWeightEntry) -> dict:
     return {
         "id": entry.id,
         "measured_on": entry.measured_on,
+        "measured_time": entry.measured_time.strftime("%H:%M") if entry.measured_time else None,
         "weight_kg": float(entry.weight_kg),
         "note": entry.note,
     }
 
 
-def check_day(day: date):
+def check_day(day: date, moment=None):
     if day > today_br():
         raise HTTPException(status_code=400, detail="A data não pode ser no futuro.")
+    if moment is not None and day == today_br() and moment > datetime.now(BRT).time():
+        raise HTTPException(status_code=400, detail="A hora não pode ser no futuro.")
 
 
 def entry_on(day: date, user: User, db: Session) -> BodyWeightEntry | None:
@@ -418,13 +422,14 @@ def log_body_weight(
     db: Session = Depends(get_db),
 ):
     day = data.measured_on or today_br()
-    check_day(day)
+    check_day(day, data.measured_time)
     entry = entry_on(day, user, db)
     if entry is None:
         entry = BodyWeightEntry(user_id=user.id, measured_on=day)
         db.add(entry)
     entry.weight_kg = to_kg(data.weight_kg)
     entry.note = data.note
+    entry.measured_time = data.measured_time.replace(second=0, microsecond=0) if data.measured_time else None
     db.commit()
     db.refresh(entry)
     return serialize_body_weight(entry)
@@ -461,6 +466,9 @@ def edit_body_weight(
         entry.weight_kg = to_kg(data.weight_kg)
     if "note" in changes:
         entry.note = data.note
+    if "measured_time" in changes:
+        check_day(entry.measured_on, data.measured_time)
+        entry.measured_time = data.measured_time.replace(second=0, microsecond=0) if data.measured_time else None
     db.commit()
     db.refresh(entry)
     return serialize_body_weight(entry)

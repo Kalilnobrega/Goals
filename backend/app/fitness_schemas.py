@@ -1,5 +1,5 @@
 from typing import Literal
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.fitness_muscles import MuscleKey, MuscleRole
 from app.fitness_intensity import Intensity
@@ -475,6 +475,7 @@ class ExerciseTimeSchema(BaseModel):
 class BodyWeightSchema(BaseModel):
     weight_kg: float = Field(ge=20, le=400)
     measured_on: date | None = None
+    measured_time: time | None = None
     note: str | None = Field(default=None, max_length=140)
 
     @field_validator("note")
@@ -489,6 +490,7 @@ class BodyWeightSchema(BaseModel):
 class EditBodyWeightSchema(BaseModel):
     weight_kg: float | None = Field(default=None, ge=20, le=400)
     measured_on: date | None = None
+    measured_time: time | None = None
     note: str | None = Field(default=None, max_length=140)
 
     @field_validator("note")
@@ -503,6 +505,7 @@ class EditBodyWeightSchema(BaseModel):
 class BodyWeightResponseSchema(BaseModel):
     id: int
     measured_on: date
+    measured_time: str | None = None
     weight_kg: float
     note: str | None
 

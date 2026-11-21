@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Numeric, Index, UniqueConstraint, JSON, case, text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, DateTime, Time, Numeric, Index, UniqueConstraint, JSON, case, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -212,6 +212,7 @@ class BodyWeightEntry(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     measured_on = Column(Date, nullable=False)
+    measured_time = Column(Time, nullable=True)
     weight_kg = Column(Numeric(5, 2), nullable=False)
     note = Column(String(140), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
