@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Target, ChevronRight, Scale, CalendarDays, ListChecks, Timer,
+  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Target, ChevronRight, Scale, CalendarDays, ListChecks, Timer, HeartPulse,
 } from 'lucide-react';
 import { getFitnessStats, getPlans, peekCache } from '../../lib/api';
 import {
@@ -410,6 +410,132 @@ function Adherence({ data }) {
   );
 }
 
+function PlanWeeks({ details }) {
+  if (!details.weeks.length) return null;
+  const bars = details.weeks.map(week => ({
+    key: week.start,
+    label: formatDay(week.start),
+    value: week.pct ?? 0,
+    detail: week.planned ? `${week.done} de ${plural(week.planned, 'dia', 'dias')} · semana de ${formatDay(week.start)}` : `Semana de ${formatDay(week.start)} · nada planejado`,
+  }));
+  return (
+    <Card icon={BarChart3} title="Aderência semana a semana">
+      <div className={styles.records}>
+        <div className={`${styles.record} ${styles.recordStatic}`}>
+          <span className={styles.recordLabel}>Sequência atual</span>
+          <span className={styles.recordValue}>{plural(details.current_streak, 'semana', 'semanas')}</span>
+          <span className={styles.recordNote}>cumprindo 100%</span>
+        </div>
+        <div className={`${styles.record} ${styles.recordStatic}`}>
+          <span className={styles.recordLabel}>Melhor sequência</span>
+          <span className={styles.recordValue}>{plural(details.best_streak, 'semana', 'semanas')}</span>
+          <span className={styles.recordNote}>cumprindo 100%</span>
+        </div>
+      </div>
+      <BarChart bars={bars} format={v => `${v}%`} axisFormat={v => `${v}%`} label="Aderência ao plano por semana" />
+    </Card>
+  );
+}
+
+function PlanSkipped({ details }) {
+  return (
+    <Card icon={CalendarDays} title="Dias pulados" hint={details.skipped.length ? plural(details.skipped.length, 'dia', 'dias') : null}>
+      {details.skipped.length ? (
+        <>
+          {details.most_skipped_weekday !== null && (
+            <p className={styles.empty}>Você mais pula às <strong>{WEEKDAY_LONG[details.most_skipped_weekday]}</strong>.</p>
+          )}
+          <LimitedList className={styles.rows} items={details.skipped} render={item => (
+            <li key={item.date} className={styles.row}>
+              <span className={styles.rowDate}>{formatDay(item.date)}</span>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{WEEKDAYS[(parseDay(item.date).getDay() + 6) % 7]}</span>
+                <span className={styles.rowMeta}>{item.workouts.join(' · ')}</span>
+              </span>
+            </li>
+          )} />
+        </>
+      ) : (
+        <p className={styles.empty}>Nenhum dia planejado pulado neste período.</p>
+      )}
+    </Card>
+  );
+}
+
+function PlanWorkouts({ details }) {
+  if (!details.workouts.length) return null;
+  return (
+    <Card icon={ListChecks} title="Fichas do plano">
+      <LimitedList className={styles.rows} items={details.workouts} render={w => (
+        <li key={w.workout_id}>
+          <Link href={`/gym/progress/workouts/${w.workout_id}`} className={styles.row}>
+            <span className={styles.rowMain}>
+              <span className={styles.rowName}>{w.name}</span>
+              <span className={styles.rowMeta}>
+                feita {w.done} de {plural(w.planned, 'vez planejada', 'vezes planejadas')}
+                {w.avg_minutes ? ` · ${formatDuration(w.avg_minutes * 60000)} em média` : ''}
+              </span>
+            </span>
+            {w.completion_pct !== null && <span className={styles.strengthValue}>{formatKg(w.completion_pct)}%</span>}
+            <ChevronRight size={16} className={styles.chevron} aria-hidden="true" />
+          </Link>
+        </li>
+      )} />
+      <p className={styles.empty}>A porcentagem é das séries da ficha feitas nos treinos dela.</p>
+    </Card>
+  );
+}
+
+const missingSets = (value) => {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded === 1 ? 'falta' : 'faltam'} ${formatKg(rounded)} ${rounded === 1 ? 'série' : 'séries'} por semana`;
+};
+
+function PlanMuscles({ details }) {
+  const rows = details.muscles.filter(m => m.planned_sets > 0 || m.done_sets > 0);
+  if (!rows.length) return null;
+  return (
+    <Card icon={Target} title="Séries por grupo" hint="por semana · feito × planejado">
+      <LimitedList className={styles.muscles} items={rows} render={m => {
+        const pct = m.planned_sets ? Math.min((m.done_sets / m.planned_sets) * 100, 100) : 100;
+        return (
+          <li key={m.muscle_group} className={styles.muscle}>
+            <div className={styles.muscleTop}>
+              <span className={styles.muscleName}>{muscleLabel(m.muscle_group)}</span>
+              <span className={styles.muscleValue}>{formatKg(m.done_sets)} de {m.planned_sets}</span>
+            </div>
+            <span className={styles.track}><span className={styles.fill} style={{ width: `${pct}%` }} /></span>
+            <span className={styles.muscleMeta}>
+              {!m.planned_sets ? 'fora do plano' : m.done_sets >= m.planned_sets ? 'no planejado' : missingSets(m.planned_sets - m.done_sets)}
+            </span>
+          </li>
+        );
+      }} />
+    </Card>
+  );
+}
+
+function PlanCardio({ details }) {
+  const cardio = details.cardio;
+  if (!cardio) return null;
+  const pct = cardio.planned_minutes ? Math.round((cardio.done_minutes / cardio.planned_minutes) * 100) : null;
+  return (
+    <Card icon={HeartPulse} title="Cardio do plano" hint="por semana">
+      <div className={styles.records}>
+        <div className={`${styles.record} ${styles.recordStatic}`}>
+          <span className={styles.recordLabel}>Planejado</span>
+          <span className={styles.recordValue}>{cardio.planned_minutes} min</span>
+        </div>
+        <div className={`${styles.record} ${styles.recordStatic}`}>
+          <span className={styles.recordLabel}>Feito em média</span>
+          <span className={styles.recordValue}>{formatKg(Math.round(cardio.done_minutes))} min</span>
+          {pct !== null && <span className={styles.recordNote}>{pct}% do planejado</span>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function RelativeStrength({ data }) {
   const strength = data.relative_strength;
   if (!strength) return null;
@@ -721,12 +847,21 @@ export function PlanStats() {
       {!ready && <Loading loadError={loadError} onRetry={retry} label="Carregando plano" />}
       {ready && (
         <>
+          {ready.summary.sessions > 0 && <Summary data={ready} />}
           <Adherence data={ready} />
+          {ready.plan_details && <PlanWeeks details={ready.plan_details} />}
           {ready.summary.sessions > 0 && (
             <>
-              <Summary data={ready} />
               <Timeline data={ready} />
               <Consistency data={ready} />
+            </>
+          )}
+          {ready.plan_details && (
+            <>
+              <PlanWorkouts details={ready.plan_details} />
+              <PlanMuscles details={ready.plan_details} />
+              <PlanCardio details={ready.plan_details} />
+              <PlanSkipped details={ready.plan_details} />
             </>
           )}
         </>
