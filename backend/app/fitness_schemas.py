@@ -259,6 +259,7 @@ class SetSchema(BaseModel):
     distance_km: float | None = Field(default=None, gt=0, le=1000)
     speed_kmh: float | None = Field(default=None, gt=0, le=100)
     level: int | None = Field(default=None, ge=1, le=100)
+    calories: int | None = Field(default=None, ge=1, le=5000)
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
     side: Literal["left", "right"] | None = None
     rir: int | None = Field(default=None, ge=0, le=4)
@@ -271,6 +272,7 @@ class EditSetSchema(BaseModel):
     distance_km: float | None = Field(default=None, gt=0, le=1000)
     speed_kmh: float | None = Field(default=None, gt=0, le=100)
     level: int | None = Field(default=None, ge=1, le=100)
+    calories: int | None = Field(default=None, ge=1, le=5000)
     rir: int | None = Field(default=None, ge=0, le=4)
 
 
@@ -290,6 +292,7 @@ class SetResponseSchema(BaseModel):
     distance_km: float | None = None
     speed_kmh: float | None = None
     level: int | None = None
+    calories: int | None = None
     rir: int | None = None
     record: SetRecordSchema | None = None
 
@@ -303,6 +306,7 @@ class PreviousSetSchema(BaseModel):
     distance_km: float | None = None
     speed_kmh: float | None = None
     level: int | None = None
+    calories: int | None = None
 
 
 class SessionExerciseResponseSchema(BaseModel):
@@ -980,12 +984,17 @@ class StatsCardioExerciseSchema(BaseModel):
     minutes: int
     distance_km: float
     sessions: int
+    calories: int | None = None
+    calories_estimated: bool = False
+    avg_speed_kmh: float | None = None
 
 
 class StatsCardioBucketSchema(BaseModel):
     start: date
     minutes: int
     sessions: int
+    km: float = 0
+    calories: int = 0
 
 
 class StatsCardioPlanSchema(BaseModel):
@@ -1012,6 +1021,14 @@ class StatsCardioRecordSchema(BaseModel):
     session_id: int | None = None
     name: str | None = None
     date: date
+    km: float | None = None
+
+
+class StatsCardioSpeedSchema(BaseModel):
+    kmh: float
+    session_id: int
+    name: str
+    date: date
 
 
 class StatsCardioSchema(BaseModel):
@@ -1020,6 +1037,15 @@ class StatsCardioSchema(BaseModel):
     distance_km: float
     avg_minutes: int
     exercises: list[StatsCardioExerciseSchema]
+    km_estimated: bool = False
+    avg_km: float | None = None
+    avg_speed_kmh: float | None = None
+    pace_seconds_per_km: int | None = None
+    calories: int | None = None
+    avg_calories: int | None = None
+    calories_estimated: bool = False
+    farthest: StatsCardioRecordSchema | None = None
+    fastest: StatsCardioSpeedSchema | None = None
     previous_minutes: int | None = None
     timeline: list[StatsCardioBucketSchema] = []
     plan: StatsCardioPlanSchema | None = None

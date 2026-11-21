@@ -183,3 +183,26 @@ def test_cardio_stats_track_plan_skips_and_phases(client, library, ana):
     assert cardio["longest"]["minutes"] == 35
     assert sum(bucket["minutes"] for bucket in cardio["timeline"]) == 45
     assert (progress["planned_minutes"], progress["sessions"], progress["skipped"], progress["avg_done_minutes"]) == (30, 2, 1, 22)
+
+
+def test_cardio_stats_estimate_distance_speed_and_calories(client, library, ana):
+    from app.dates import today_br
+    _, headers = ana
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "date": today_br().isoformat()}, headers=headers)
+    session = start(client, headers)
+    for exercise in ("esteira", "bike"):
+        client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": library[exercise]}, headers=headers)
+    items = {item["exercise_name"]: item for item in client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]}
+    client.post(f"/fitness/session-exercises/{items['Esteira']['id']}/sets", json={"duration_seconds": 1800, "speed_kmh": 10}, headers=headers)
+    logged = client.post(f"/fitness/session-exercises/{items['Bicicleta']['id']}/sets", json={"duration_seconds": 1200, "calories": 250}, headers=headers)
+    assert logged.json()["calories"] == 250
+    assert finish(client, headers, session["id"]).status_code == 200
+
+    cardio = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["cardio"]
+    devices = {device["name"]: device for device in cardio["exercises"]}
+
+    assert (cardio["distance_km"], cardio["km_estimated"], cardio["avg_speed_kmh"], cardio["pace_seconds_per_km"]) == (5.0, True, 10.0, 360)
+    assert (cardio["calories"], cardio["calories_estimated"]) == (651, True)
+    assert cardio["fastest"]["kmh"] == 10.0
+    assert cardio["farthest"]["km"] == 5.0
+    assert (devices["Esteira"]["calories"], devices["Bicicleta"]["calories"]) == (401, 250)

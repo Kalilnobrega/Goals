@@ -59,13 +59,14 @@ def serialize_set(entry: SetEntry) -> dict:
         "distance_km": float(entry.distance_km) if entry.distance_km is not None else None,
         "speed_kmh": float(entry.speed_kmh) if entry.speed_kmh is not None else None,
         "level": entry.level,
+        "calories": entry.calories,
         "rir": entry.rir,
     }
 
 
 CARDIO = "cardio"
 TIMED = ("time", CARDIO)
-PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "rir"}
+PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "calories", "rir"}
 
 
 def series_count(entries) -> int:
@@ -734,6 +735,7 @@ def add_set(
         distance_km=to_kg(data.distance_km) if item.tracking == CARDIO and data.distance_km else None,
         speed_kmh=round(Decimal(str(data.speed_kmh)), 1) if item.tracking == CARDIO and data.speed_kmh else None,
         level=data.level if item.tracking == CARDIO else None,
+        calories=data.calories if item.tracking == CARDIO else None,
         created_at=utcnow() if workout_session.status == IN_PROGRESS else logged_at(item, workout_session),
         client_id=data.client_id,
         rir=None if timed else data.rir,
@@ -775,6 +777,8 @@ def edit_set(
             entry.speed_kmh = round(Decimal(str(data.speed_kmh)), 1) if data.speed_kmh else None
         if "level" in changes:
             entry.level = data.level
+        if "calories" in changes:
+            entry.calories = data.calories
     if "rir" in changes and not timed:
         entry.rir = data.rir
     db.commit()

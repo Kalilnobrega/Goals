@@ -11,6 +11,7 @@ from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkout
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BodyWeights, bodyweight_factors
+from app.fitness_cardio import cardio_numbers
 from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
@@ -72,6 +73,7 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "tracking": item.tracking or "reps",
             "duration": sum(entry.duration_seconds or 0 for entry in item.sets),
             "distance": sum(float(entry.distance_km or 0) for entry in item.sets),
+            **(cardio_numbers(item.exercise_name, item.sets, body.on(day) if body else 0.0) if item.tracking == "cardio" else {}),
         })
     cardio = [e for e in exercises if e["tracking"] == "cardio"]
     exercises = [e for e in exercises if e["tracking"] != "cardio"]
@@ -172,63 +174,107 @@ def cardio_phases(sessions: list[dict]) -> list[dict]:
 
 def cardio_stats(period: list[dict], previous: list[dict] | None = None, keys: list[date] | None = None, by_month: bool = False) -> dict | None:
     by_exercise: dict = {}
-    sessions = set()
     per_session: dict = {}
+    km_seconds = 0
+    km_estimated = calories_estimated = False
+    calorie_sessions = set()
+    max_speed = None
     for s in period:
         for e in s["cardio"]:
             if not e["duration"]:
                 continue
-            sessions.add(s["id"])
-            per_session[s["id"]] = per_session.get(s["id"], 0) + e["duration"]
+            totals = per_session.setdefault(s["id"], {"seconds": 0, "km": 0.0, "calories": 0, "has_calories": False})
+            totals["seconds"] += e["duration"]
+            totals["km"] += e.get("km", 0.0)
+            if e.get("calories") is not None:
+                totals["calories"] += e["calories"]
+                totals["has_calories"] = True
+                calorie_sessions.add(s["id"])
+                calories_estimated = calories_estimated or e["calories_estimated"]
+            if e.get("km"):
+                km_seconds += e["duration"]
+                km_estimated = km_estimated or e["km_estimated"]
+            if e.get("max_speed") and (max_speed is None or e["max_speed"] > max_speed["kmh"]):
+                max_speed = {"kmh": e["max_speed"], "session_id": s["id"], "name": e["name"], "date": s["day"]}
             item = by_exercise.setdefault(exercise_key(e), {
-                "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "sessions": 0,
+                "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "calories": 0, "calories_estimated": False, "km_seconds": 0, "sessions": 0,
             })
             item["seconds"] += e["duration"]
-            item["distance_km"] += e["distance"]
+            item["distance_km"] += e.get("km", 0.0)
+            item["calories"] += e.get("calories") or 0
+            item["calories_estimated"] = item["calories_estimated"] or (e.get("calories") is not None and e["calories_estimated"])
+            item["km_seconds"] += e["duration"] if e.get("km") else 0
             item["sessions"] += 1
     plan = cardio_plan_summary(period)
-    if not sessions and not plan:
+    if not per_session and not plan:
         return None
-    total_seconds = sum(item["seconds"] for item in by_exercise.values())
-    total_distance = sum(item["distance_km"] for item in by_exercise.values())
+    sessions = len(per_session)
+    total_seconds = sum(t["seconds"] for t in per_session.values())
+    total_km = sum(t["km"] for t in per_session.values())
+    total_calories = sum(t["calories"] for t in per_session.values())
+    by_id = {s["id"]: s for s in period}
     timeline = []
     if keys:
-        minutes = {key: 0 for key in keys}
-        counts = {key: 0 for key in keys}
-        for s in period:
-            if s["id"] in per_session:
-                bucket = bucket_of(s["day"], by_month)
-                if bucket in minutes:
-                    minutes[bucket] += per_session[s["id"]]
-                    counts[bucket] += 1
-        timeline = [{"start": key, "minutes": round(minutes[key] / 60), "sessions": counts[key]} for key in keys]
+        buckets_map = {key: {"minutes": 0.0, "sessions": 0, "km": 0.0, "calories": 0} for key in keys}
+        for session_id, totals in per_session.items():
+            bucket = buckets_map.get(bucket_of(by_id[session_id]["day"], by_month))
+            if bucket:
+                bucket["minutes"] += totals["seconds"] / 60
+                bucket["sessions"] += 1
+                bucket["km"] += totals["km"]
+                bucket["calories"] += totals["calories"]
+        timeline = [
+            {"start": key, "minutes": round(b["minutes"]), "sessions": b["sessions"], "km": round(b["km"], 1), "calories": round(b["calories"])}
+            for key, b in buckets_map.items()
+        ]
     weeks: dict = {}
-    for s in period:
-        if s["id"] in per_session:
-            week = week_start(s["day"])
-            weeks[week] = weeks.get(week, 0) + per_session[s["id"]]
-    longest_session = max((s for s in period if s["id"] in per_session), key=lambda s: per_session[s["id"]], default=None)
+    for session_id, totals in per_session.items():
+        week = week_start(by_id[session_id]["day"])
+        weeks[week] = weeks.get(week, 0) + totals["seconds"]
+
+    def session_record(session_id, value):
+        session = by_id[session_id]
+        return {"minutes": value, "session_id": session_id, "name": session["name"], "date": session["day"]}
+
+    longest = max(per_session, key=lambda sid: per_session[sid]["seconds"], default=None)
+    farthest = max((sid for sid in per_session if per_session[sid]["km"] > 0), key=lambda sid: per_session[sid]["km"], default=None)
     best_week = max(weeks.items(), key=lambda pair: pair[1], default=None)
     previous_seconds = sum(e["duration"] for s in previous for e in s["cardio"]) if previous is not None else None
     return {
-        "sessions": len(sessions),
+        "sessions": sessions,
         "minutes": round(total_seconds / 60),
-        "distance_km": round(total_distance, 2),
-        "avg_minutes": round(total_seconds / 60 / len(sessions)) if sessions else 0,
+        "distance_km": round(total_km, 2),
+        "km_estimated": km_estimated,
+        "avg_km": round(total_km / sessions, 2) if sessions and total_km else None,
+        "avg_speed_kmh": round(total_km / (km_seconds / 3600), 1) if km_seconds and total_km else None,
+        "pace_seconds_per_km": round(km_seconds / total_km) if total_km else None,
+        "calories": round(total_calories) if calorie_sessions else None,
+        "avg_calories": round(total_calories / len(calorie_sessions)) if calorie_sessions else None,
+        "calories_estimated": calories_estimated,
+        "avg_minutes": round(total_seconds / 60 / sessions) if sessions else 0,
         "exercises": sorted(
-            [{**item, "minutes": round(item.pop("seconds") / 60), "distance_km": round(item["distance_km"], 2)} for item in by_exercise.values()],
+            [
+                {
+                    "exercise_id": item["exercise_id"],
+                    "name": item["name"],
+                    "sessions": item["sessions"],
+                    "minutes": round(item["seconds"] / 60),
+                    "distance_km": round(item["distance_km"], 2),
+                    "calories": round(item["calories"]) or None,
+                    "calories_estimated": item["calories_estimated"],
+                    "avg_speed_kmh": round(item["distance_km"] / (item["km_seconds"] / 3600), 1) if item["km_seconds"] and item["distance_km"] else None,
+                }
+                for item in by_exercise.values()
+            ],
             key=lambda item: -item["minutes"],
         ),
         "previous_minutes": round(previous_seconds / 60) if previous_seconds is not None else None,
         "timeline": timeline,
         "plan": plan,
         "phases": cardio_phases(period),
-        "longest": {
-            "minutes": round(per_session[longest_session["id"]] / 60),
-            "session_id": longest_session["id"],
-            "name": longest_session["name"],
-            "date": longest_session["day"],
-        } if longest_session else None,
+        "longest": session_record(longest, round(per_session[longest]["seconds"] / 60)) if longest else None,
+        "farthest": {**session_record(farthest, 0), "km": round(per_session[farthest]["km"], 2)} if farthest else None,
+        "fastest": max_speed,
         "best_week": {"minutes": round(best_week[1] / 60), "date": best_week[0]} if best_week else None,
     }
 
