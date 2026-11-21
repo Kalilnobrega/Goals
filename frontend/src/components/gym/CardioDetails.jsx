@@ -5,6 +5,7 @@ import { BarChart3, CalendarCheck, HeartPulse, Medal, Repeat } from 'lucide-reac
 import { getFitnessStats, peekCache } from '../../lib/api';
 import { formatDay, formatKg, parseDay, plural } from '../../lib/gym';
 import BarChart from './BarChart';
+import LimitedList from './LimitedList';
 import styles from '../../app/gym/progress/stats.module.css';
 import own from './CardioDetails.module.css';
 
@@ -136,8 +137,7 @@ function Devices({ exercises }) {
   if (!exercises.length) return null;
   return (
     <Card icon={HeartPulse} title="Aparelhos">
-      <ul className={styles.rows}>
-        {exercises.map(e => {
+      <LimitedList className={styles.rows} items={exercises} render={e => {
           const content = (
             <>
               <span className={styles.rowMain}>
@@ -156,8 +156,7 @@ function Devices({ exercises }) {
                 : <div className={styles.row}>{content}</div>}
             </li>
           );
-        })}
-      </ul>
+        }} />
     </Card>
   );
 }

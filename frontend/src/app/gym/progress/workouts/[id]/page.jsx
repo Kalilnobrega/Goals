@@ -10,6 +10,7 @@ import {
   formatDay, formatDuration, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
+import LimitedList from '../../../../../components/gym/LimitedList';
 import styles from '../../progress.module.css';
 import own from './workoutProgress.module.css';
 
@@ -86,8 +87,7 @@ function Ready({ items }) {
   return (
     <section className={own.ready} aria-label="Pronto para subir a carga">
       <h2 className={own.readyTitle}><ArrowUpRight size={18} aria-hidden="true" /> Pronto para subir a carga</h2>
-      <ul className={own.readyList}>
-        {items.map(item => (
+      <LimitedList className={own.readyList} items={items} render={item => (
           <li key={item.exercise_id}>
             <Link href={`/gym/progress/exercises/${item.exercise_id}`} className={own.readyRow}>
               <span className={own.readyName}>{item.name}</span>
@@ -96,8 +96,7 @@ function Ready({ items }) {
               </span>
             </Link>
           </li>
-        ))}
-      </ul>
+        )} />
     </section>
   );
 }
@@ -111,8 +110,7 @@ function Completion({ data }) {
         { label: 'Séries extras', value: String(data.extra_sets), note: data.extra_sets ? 'além do planejado' : 'nenhuma' },
       ]} />
       {data.exercises.length > 0 && (
-        <ul className={styles.list}>
-          {data.exercises.map(e => (
+        <LimitedList className={styles.list} items={data.exercises} render={e => (
             <li key={e.exercise_id} className={own.line}>
               <span className={styles.rowMain}>
                 <span className={styles.rowName}>{e.name}</span>
@@ -122,8 +120,7 @@ function Completion({ data }) {
               </span>
               <span className={own.lineValue}>{formatKg(e.avg_sets)}<small>/{e.target_sets}</small></span>
             </li>
-          ))}
-        </ul>
+          )} />
       )}
     </Group>
   );
@@ -176,8 +173,7 @@ function VolumeShare({ items }) {
   if (items.length < 2) return null;
   return (
     <Group icon={ChartBar} title="Volume por exercício">
-      <ul className={own.shares}>
-        {items.map(item => (
+      <LimitedList className={own.shares} items={items} render={item => (
           <li key={`${item.exercise_id}-${item.name}`} className={own.share}>
             <span className={own.shareTop}>
               <span className={own.shareName}>{item.name}</span>
@@ -186,8 +182,7 @@ function VolumeShare({ items }) {
             <span className={own.track}><span className={own.fill} style={{ width: `${item.share * 100}%` }} /></span>
             <span className={styles.rowMeta}>{formatVolume(item.volume_kg)} no total</span>
           </li>
-        ))}
-      </ul>
+        )} />
     </Group>
   );
 }
@@ -196,8 +191,7 @@ function Records({ items }) {
   if (!items.length) return null;
   return (
     <Group icon={Trophy} title={`Recordes com esta ficha · ${items.length}`}>
-      <ul className={styles.list}>
-        {items.map(r => (
+      <LimitedList className={styles.list} items={items} render={r => (
           <li key={`${r.session_id}-${r.name}`}>
             <Link href={`/gym/history/${r.session_id}`} className={styles.row}>
               <span className={styles.rowDate}>{formatDay(r.date)}</span>
@@ -208,8 +202,7 @@ function Records({ items }) {
               <span className={`${styles.rowDelta} ${styles.up}`}>+{formatKg(Math.round((r.weight_kg - r.previous_kg) * 100) / 100)}</span>
             </Link>
           </li>
-        ))}
-      </ul>
+        )} />
     </Group>
   );
 }
@@ -362,8 +355,7 @@ export default function WorkoutProgressPage() {
           {exercises.length > 0 && (
             <section className={styles.sessions}>
               <h2 className={styles.sectionTitle}>Exercícios</h2>
-              <ul className={styles.list}>
-                {exercises.map(e => {
+              <LimitedList className={styles.list} items={exercises} render={e => {
                   const content = (
                     <>
                       <span className={styles.rowMain}>
@@ -387,8 +379,7 @@ export default function WorkoutProgressPage() {
                         : <div className={`${styles.row} ${own.static}`}>{content}</div>}
                     </li>
                   );
-                })}
-              </ul>
+                }} />
             </section>
           )}
 

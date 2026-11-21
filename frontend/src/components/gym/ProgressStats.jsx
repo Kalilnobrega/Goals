@@ -11,6 +11,7 @@ import {
 import BarChart from './BarChart';
 import Sparkline from './Sparkline';
 import TrainingHeatmap from './TrainingHeatmap';
+import LimitedList from './LimitedList';
 import styles from '../../app/gym/progress/stats.module.css';
 
 const PERIODS = [
@@ -330,12 +331,12 @@ function Progressions({ data }) {
       {mode === 'load' && (
         <>
           {data.progressions.length > 0
-            ? <ul className={styles.rows}>{data.progressions.map(loadRow)}</ul>
+            ? <LimitedList className={styles.rows} items={data.progressions} render={loadRow} />
             : <p className={styles.empty}>Nenhum exercício subiu de carga neste período.</p>}
           {data.declines.length > 0 && (
             <>
               <h3 className={styles.subTitle}><TrendingDown size={14} aria-hidden="true" /> Em queda</h3>
-              <ul className={styles.rows}>{data.declines.map(loadRow)}</ul>
+              <LimitedList className={styles.rows} items={data.declines} render={loadRow} />
             </>
           )}
         </>
@@ -343,7 +344,7 @@ function Progressions({ data }) {
 
       {mode === 'reps' && (
         hasReps
-          ? <ul className={styles.rows}>{data.rep_progressions.map(repRow)}</ul>
+          ? <LimitedList className={styles.rows} items={data.rep_progressions} render={repRow} />
           : <p className={styles.empty}>Nenhum exercício aumentou as repetições neste período.</p>
       )}
     </Card>
@@ -355,8 +356,7 @@ function MostDone({ data }) {
   const max = Math.max(...data.most_done.map(e => e.sets), 1);
   return (
     <Card icon={Dumbbell} title="Exercícios mais feitos">
-      <ul className={styles.muscles}>
-        {data.most_done.map(e => (
+      <LimitedList className={styles.muscles} items={data.most_done} render={e => (
           <li key={`${e.exercise_id}-${e.name}`} className={styles.muscle}>
             <div className={styles.muscleTop}>
               <span className={styles.muscleName}>{e.name}</span>
@@ -365,8 +365,7 @@ function MostDone({ data }) {
             <span className={styles.track}><span className={styles.fill} style={{ width: `${(e.sets / max) * 100}%` }} /></span>
             <span className={styles.muscleMeta}>{muscleLabel(e.muscle_group)} · {plural(e.sessions, 'treino', 'treinos')} · {formatVolume(e.volume_kg)}</span>
           </li>
-        ))}
-      </ul>
+        )} />
     </Card>
   );
 }
@@ -429,8 +428,7 @@ function RelativeStrength({ data }) {
 
   return (
     <Card icon={Scale} title="Força relativa" hint="1RM estimado ÷ peso corporal">
-      <ul className={styles.rows}>
-        {strength.items.map(item => {
+      <LimitedList className={styles.rows} items={strength.items} render={item => {
           const diff = item.first_ratio !== null ? Math.round((item.ratio - item.first_ratio) * 100) / 100 : null;
           const content = (
             <>
@@ -453,8 +451,7 @@ function RelativeStrength({ data }) {
                 : <div className={styles.row}>{content}</div>}
             </li>
           );
-        })}
-      </ul>
+        }} />
     </Card>
   );
 }
@@ -509,8 +506,7 @@ function TimeCard({ data }) {
       {time.longest_exercises.length > 0 && (
         <>
           <h3 className={styles.subTitle}>Exercícios que mais tomam tempo</h3>
-          <ul className={styles.rows}>
-            {time.longest_exercises.map(e => {
+          <LimitedList className={styles.rows} items={time.longest_exercises} render={e => {
               const content = (
                 <>
                   <span className={styles.rowMain}>
@@ -529,8 +525,7 @@ function TimeCard({ data }) {
                     : <div className={styles.row}>{content}</div>}
                 </li>
               );
-            })}
-          </ul>
+            }} />
         </>
       )}
     </Card>

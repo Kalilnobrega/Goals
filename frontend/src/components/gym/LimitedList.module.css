@@ -1,0 +1,25 @@
+.more {
+  align-self: stretch;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--gym-border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.more:hover {
+  border-color: var(--gym-border-strong);
+}
+
+.up {
+  transform: rotate(180deg);
+}
