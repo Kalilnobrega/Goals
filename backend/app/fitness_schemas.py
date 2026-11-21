@@ -313,6 +313,14 @@ class PreviousSetSchema(BaseModel):
     calories: int | None = None
 
 
+class PreviousPerformanceSchema(BaseModel):
+    scope: Literal["workout", "any"]
+    workout_name: str
+    at: datetime | None
+    note: str | None = None
+    sets: list[PreviousSetSchema]
+
+
 class SessionExerciseResponseSchema(BaseModel):
     id: int
     exercise_id: int | None
@@ -334,6 +342,8 @@ class SessionExerciseResponseSchema(BaseModel):
     previous: list[PreviousSetSchema]
     previous_at: datetime | None
     previous_note: str | None = None
+    previous_scope: Literal["workout", "any"] | None = None
+    history: list[PreviousPerformanceSchema] = []
 
 
 class SessionHistoryItemSchema(BaseModel):
@@ -1207,6 +1217,8 @@ class SessionPerformanceSchema(BaseModel):
     volume_kg: float
     estimated_1rm_kg: float | None
     sets: int
+    scope: Literal["workout", "any"] | None = None
+    workout_name: str | None = None
 
 
 class SessionExerciseInsightSchema(BaseModel):

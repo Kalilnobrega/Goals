@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import pytest
-from app.fitness_models import Exercise, SetEntry
+from app.fitness_models import Exercise, SetEntry, WorkoutSession
 from tests.test_shared_goals import make_user, headers_for
 
 
@@ -230,6 +230,61 @@ def test_previous_performance_comes_from_last_completed_session(client, library,
     assert bench["previous_at"] is not None
     assert legs["previous"] == []
     assert legs["previous_at"] is None
+
+
+def run_bench(client, headers, workout_id, weight):
+    session = start(client, headers, workout_id)
+    log_set(client, headers, session["exercises"][0]["id"], weight, 10)
+    finish(client, headers, session["id"])
+    return session["id"]
+
+
+def test_previous_shows_same_workout_first_then_latest_elsewhere(client, library, ana):
+    _, headers = ana
+    workout_a = make_workout(client, headers, library, "Treino A")
+    workout_b = make_workout(client, headers, library, "Treino B")
+    run_bench(client, headers, workout_a["id"], 60)
+    run_bench(client, headers, workout_b["id"], 70)
+
+    bench = start(client, headers, workout_a["id"])["exercises"][0]
+
+    assert [(h["scope"], h["workout_name"], h["sets"][0]["weight_kg"]) for h in bench["history"]] == [
+        ("workout", "Treino A", 60.0),
+        ("any", "Treino B", 70.0),
+    ]
+    assert bench["previous_scope"] == "workout"
+    assert bench["previous"][0]["weight_kg"] == 60.0
+
+
+def test_previous_falls_back_to_latest_when_same_workout_is_older_than_two_weeks(client, library, ana, db_session):
+    _, headers = ana
+    workout_a = make_workout(client, headers, library, "Treino A")
+    workout_b = make_workout(client, headers, library, "Treino B")
+    old_id = run_bench(client, headers, workout_a["id"], 60)
+    old = db_session.get(WorkoutSession, old_id)
+    old.started_at -= timedelta(days=20)
+    old.completed_at -= timedelta(days=20)
+    db_session.commit()
+    run_bench(client, headers, workout_b["id"], 70)
+
+    bench = start(client, headers, workout_a["id"])["exercises"][0]
+
+    assert [h["scope"] for h in bench["history"]] == ["workout", "any"]
+    assert bench["previous_scope"] == "any"
+    assert bench["previous"][0]["weight_kg"] == 70.0
+
+
+def test_previous_has_one_entry_when_latest_is_the_same_workout(client, library, ana):
+    _, headers = ana
+    workout_a = make_workout(client, headers, library, "Treino A")
+    workout_b = make_workout(client, headers, library, "Treino B")
+    run_bench(client, headers, workout_b["id"], 70)
+    run_bench(client, headers, workout_a["id"], 60)
+
+    bench = start(client, headers, workout_a["id"])["exercises"][0]
+
+    assert [h["scope"] for h in bench["history"]] == ["workout"]
+    assert bench["previous_scope"] == "workout"
 
 
 def test_add_swap_and_remove_exercises_mid_session(client, library, ana):

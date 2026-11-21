@@ -97,6 +97,21 @@ def test_insights_compare_with_the_previous_time(client, library, ana, db_sessio
     assert [(r["name"], r["weight_kg"], r["previous_kg"]) for r in data["records"]] == [("Supino reto", 70.0, 60.0)]
 
 
+@pytest.mark.parametrize("days_ago, scope, weight", [(10, "workout", 60), (20, "any", 70)])
+def test_insights_prefer_the_same_workout_within_two_weeks(client, library, ana, db_session, days_ago, scope, weight):
+    _, headers = ana
+    workout_a = make_workout(client, headers, library, name="Treino A")
+    workout_b = make_workout(client, headers, library, name="Treino B")
+    train(client, headers, db_session, workout_a["id"], [[(60, 10)]], at(days_ago))
+    train(client, headers, db_session, workout_b["id"], [[(70, 10)]], at(3))
+    current = train(client, headers, db_session, workout_a["id"], [[(80, 10)]], at(1))
+
+    bench = client.get(f"/fitness/sessions/{current['id']}/insights", headers=headers).json()["exercises"][0]
+
+    assert bench["previous"]["scope"] == scope
+    assert bench["previous"]["weight_kg"] == weight
+
+
 def test_insights_first_time_has_no_previous(client, library, ana):
     _, headers = ana
     session = start(client, headers, make_workout(client, headers, library)["id"])

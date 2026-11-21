@@ -82,22 +82,57 @@ def series_key():
     )
 
 
-def previous_performance(item: SessionExercise, workout_session: WorkoutSession, db: Session):
+SAME_WORKOUT_WINDOW = timedelta(days=14)
+
+
+def previous_performance(item: SessionExercise, workout_session: WorkoutSession, db: Session, same_workout: bool = False):
     if item.exercise_id is None:
         return None
-    return (
-        db.query(SessionExercise)
+    if same_workout and workout_session.workout_id is None:
+        return None
+    query = (
+        db.query(SessionExercise, WorkoutSession)
         .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
         .filter(
             WorkoutSession.user_id == workout_session.user_id,
             WorkoutSession.status == COMPLETED,
             WorkoutSession.id != workout_session.id,
+            WorkoutSession.started_at < workout_session.started_at,
             SessionExercise.exercise_id == item.exercise_id,
             SessionExercise.sets.any(),
         )
-        .order_by(WorkoutSession.completed_at.desc(), SessionExercise.id.desc())
-        .first()
     )
+    if same_workout:
+        query = query.filter(WorkoutSession.workout_id == workout_session.workout_id)
+    return query.order_by(WorkoutSession.completed_at.desc(), SessionExercise.id.desc()).first()
+
+
+def performance_entry(found, scope: str) -> dict:
+    item, owner = found
+    return {
+        "scope": scope,
+        "workout_name": owner.name,
+        "at": aware(owner.completed_at),
+        "note": item.note,
+        "sets": [
+            {key: value for key, value in serialize_set(entry).items() if key in PREVIOUS_FIELDS}
+            for entry in item.sets
+        ],
+    }
+
+
+def previous_history(item: SessionExercise, workout_session: WorkoutSession, db: Session) -> tuple[list[dict], dict | None]:
+    same = previous_performance(item, workout_session, db, same_workout=True)
+    latest = previous_performance(item, workout_session, db)
+    history = []
+    if same:
+        history.append(performance_entry(same, "workout"))
+    if latest and (not same or latest[1].id != same[1].id):
+        history.append(performance_entry(latest, "any"))
+    if not history:
+        return history, None
+    recent = same and aware(workout_session.started_at) - aware(same[1].completed_at) <= SAME_WORKOUT_WINDOW
+    return history, history[0] if recent or len(history) == 1 else history[-1]
 
 
 def last_activity(workout_session: WorkoutSession) -> datetime:
@@ -115,7 +150,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
         body = BodyWeights(workout_session.user_id, db).on(to_br_date(aware(workout_session.started_at)))
         factors = bodyweight_factors(db, [item.exercise_id for item in workout_session.exercises if item.equipment == BODYWEIGHT])
     for item in workout_session.exercises:
-        previous = previous_performance(item, workout_session, db)
+        history, reference = previous_history(item, workout_session, db)
         if item.tracking != CARDIO:
             total_sets += series_count(item.sets)
         extra = Decimal(str(round(body * factors.get(item.exercise_id, 1.0), 2))) if body and item.equipment == BODYWEIGHT else Decimal(0)
@@ -138,12 +173,11 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "phase": item.phase,
             "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
-            "previous": [
-                {key: value for key, value in serialize_set(entry).items() if key in PREVIOUS_FIELDS}
-                for entry in (previous.sets if previous else [])
-            ],
-            "previous_at": aware(db.get(WorkoutSession, previous.session_id).completed_at) if previous else None,
-            "previous_note": previous.note if previous else None,
+            "previous": reference["sets"] if reference else [],
+            "previous_at": reference["at"] if reference else None,
+            "previous_note": reference["note"] if reference else None,
+            "previous_scope": reference["scope"] if reference else None,
+            "history": history,
         })
     return {
         "id": workout_session.id,

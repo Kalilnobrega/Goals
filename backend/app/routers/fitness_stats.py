@@ -23,6 +23,8 @@ fitness_stats_router = APIRouter(prefix="/fitness", tags=["fitness"])
 PERIOD_DAYS = {"4w": 28, "3m": 91, "6m": 182, "1y": 365}
 DAY_PARTS = [("dawn", 0, 6), ("morning", 6, 12), ("afternoon", 12, 18), ("night", 18, 24)]
 
+SAME_WORKOUT_WINDOW = timedelta(days=14)
+
 
 def week_start(day: date) -> date:
     return day - timedelta(days=day.weekday())
@@ -968,12 +970,17 @@ def get_session_insights(
 
     exercises = []
     for e in current["exercises"]:
-        earlier = None
-        for s in before:
-            match = next((x for x in s["exercises"] if exercise_key(x) == exercise_key(e)), None)
-            if match:
-                earlier = performance(s, match)
-                break
+        found = [(s, x) for s in before for x in s["exercises"] if exercise_key(x) == exercise_key(e)]
+        latest = found[0] if found else None
+        same_workout = next(
+            (pair for pair in found if current["workout_id"] is not None and pair[0]["workout_id"] == current["workout_id"]),
+            None,
+        )
+        if same_workout and current["started_at"] - same_workout[0]["completed_at"] <= SAME_WORKOUT_WINDOW:
+            chosen, scope = same_workout, "workout"
+        else:
+            chosen, scope = latest, "any"
+        earlier = {**performance(*chosen), "scope": scope, "workout_name": chosen[0]["name"]} if chosen else None
         exercises.append({
             "item_id": e["item_id"],
             "current": performance(current, e),
