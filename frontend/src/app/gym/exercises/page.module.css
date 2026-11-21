@@ -334,6 +334,13 @@
   transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
 }
 
+.variantName {
+  display: block;
+  font-size: 1.08rem;
+  line-height: 1.35;
+  margin-bottom: 2px;
+}
+
 .variantActive {
   background: var(--gym-accent);
   border-color: var(--gym-accent);

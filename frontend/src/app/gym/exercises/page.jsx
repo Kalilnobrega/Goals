@@ -229,7 +229,7 @@ export default function ExercisesPage() {
               activeClassName={styles.variantActive}
             />
             <p className={sheetStyles.text}>
-              {sheet.family.variants.length > 1 && <><strong>{detail.name}</strong><br /></>}
+              {sheet.family.variants.length > 1 && <strong className={styles.variantName}>{detail.name}</strong>}
               {groupsLabel(detail)}{detail.grip ? ` · pegada ${gripLabel(detail.grip).toLowerCase()}` : ''} · {equipmentLabel(detail.equipment)}{detail.is_custom ? ' · seu' : ''}
               {detail.is_unilateral && <>{' '}<UnilateralTag /></>}
             </p>
