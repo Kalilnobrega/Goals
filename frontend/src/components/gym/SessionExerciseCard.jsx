@@ -8,6 +8,10 @@ import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
 
+const previousHistory = (item) => (item.history?.length
+  ? item.history
+  : item.previous.length ? [{ scope: item.previous_scope ?? 'any', at: item.previous_at, note: item.previous_note, sets: item.previous }] : []);
+
 const digits = (value) => value.replace(/\D/g, '').slice(0, 4);
 
 const stepKg = (text, delta) => {
@@ -572,6 +576,8 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
     return ok;
   };
 
+  const past = previousHistory(item);
+
   return (
     <ExtraLoad.Provider value={extra}>
     <PerSide.Provider value={side}>
@@ -607,16 +613,25 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           </div>
         </header>
 
-        {item.previous.length > 0 && (
-          <p className={styles.previous}>
-            <span>Última vez{item.previous_at ? ` · ${formatShortDate(item.previous_at)}` : ''}{side ? ' · cada lado' : ''}</span>
-            {item.previous.map((entry, i) => (
-              <span key={i} className={styles.previousSet}>
-                {timed ? setSummary(entry, tracking, extra) : <>{entry.side ? `${SIDE_LABEL[entry.side]} ` : ''}{item.equipment === 'bodyweight' && entry.weight_kg > 0 ? `PC+${formatKg(entry.weight_kg)}` : entry.weight_kg > 0 ? formatKg(shownKg(entry.weight_kg, side)) : 'PC'}×{entry.reps}</>}
-              </span>
+        {past.length > 0 && (
+          <div className={styles.previousBox}>
+            <span className={styles.previousTitle}>Última vez{side ? ' · cada lado' : ''}</span>
+            {past.map(entry => (
+              <p key={entry.scope} className={`${styles.previous} ${past.length > 1 && entry.scope === item.previous_scope ? styles.previousReference : ''}`}>
+                <span className={styles.previousLabel}>
+                  {[entry.workout_name, entry.at && formatShortDate(entry.at)].filter(Boolean).join(' · ')}
+                </span>
+                <span className={styles.previousSets}>
+                  {entry.sets.map((set, i) => (
+                    <span key={i} className={styles.previousSet}>
+                      {timed ? setSummary(set, tracking, extra) : <>{set.side ? `${SIDE_LABEL[set.side]} ` : ''}{item.equipment === 'bodyweight' && set.weight_kg > 0 ? `PC+${formatKg(set.weight_kg)}` : set.weight_kg > 0 ? formatKg(shownKg(set.weight_kg, side)) : 'PC'}×{set.reps}</>}
+                    </span>
+                  ))}
+                </span>
+                {entry.note && <span className={styles.previousNote}>“{entry.note}”</span>}
+              </p>
             ))}
-            {item.previous_note && <span className={styles.previousNote}>“{item.previous_note}”</span>}
-          </p>
+          </div>
         )}
 
         {item.sets.length > 0 && (

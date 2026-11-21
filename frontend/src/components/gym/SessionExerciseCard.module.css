@@ -110,10 +110,9 @@
   cursor: pointer;
 }
 
-.previous {
+.previousBox {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
   border-radius: 12px;
@@ -122,8 +121,35 @@
   font-size: 0.8rem;
 }
 
-.previous > span:first-child {
+.previousTitle {
+  color: var(--gym-faint);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.previous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.previousLabel {
   margin-right: 2px;
+}
+
+.previousReference .previousLabel {
+  color: var(--gym-accent);
+  font-weight: 600;
+}
+
+.previousSets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
 }
 
 .previousSet {

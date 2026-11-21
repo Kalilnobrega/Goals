@@ -236,7 +236,7 @@ export default function SessionSummary({ session, insights }) {
               {insight && (
                 <p className={styles.perfNote}>
                   {before
-                    ? <>Antes, em <Link href={`/gym/history/${before.session_id}`}>{formatDay(before.date)}</Link>: {setLabel(before.weight_kg, before.reps)} · {formatVolume(before.volume_kg)}</>
+                    ? <>Antes, em <Link href={`/gym/history/${before.session_id}`}>{formatDay(before.date)}</Link>{before.scope === 'any' && before.workout_name && before.workout_name !== session.name ? ` (${before.workout_name})` : ''}: {setLabel(before.weight_kg, before.reps)} · {formatVolume(before.volume_kg)}</>
                     : 'Primeira vez registrando este exercício'}
                 </p>
               )}
