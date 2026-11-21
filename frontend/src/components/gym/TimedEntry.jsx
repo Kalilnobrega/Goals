@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Minus, Pause, Play, Plus, RotateCcw, Timer, Trash2 } from 'lucide-react';
 import { cleanKgInput, formatClock, formatRest, kgInput, parseKg } from '../../lib/gym';
 import useNow from './useNow';
+import { useToast } from '../Toast';
 import styles from './TimedEntry.module.css';
 
 const STORAGE_PREFIX = 'gymStopwatch:';
@@ -28,25 +29,41 @@ const decimal = (value) => value.replace(/[^\d,.]/g, '').replace('.', ',').slice
 const toNumber = (value) => (value ? Number(value.replace(',', '.')) || null : null);
 const splitClock = (seconds) => ({ minutes: String(Math.floor(seconds / 60)), seconds: String(seconds % 60).padStart(2, '0') });
 
-function DurationField({ seconds, onChange, step, watchKey }) {
+function DurationField({ seconds, onChange, step, watchKey, target = 0 }) {
   const now = useNow();
+  const toast = useToast();
   const [watch, setWatch] = useState(() => (watchKey ? readWatch(watchKey) : null));
   const [confirming, setConfirming] = useState(false);
+  const alerted = useRef(!!watch?.alerted);
   const running = !!watch?.startedAt;
-  const live = running && now ? seconds + Math.max(0, Math.round((now - watch.startedAt) / 1000)) : seconds;
+  const goal = target > 0;
+  const used = !goal || !!watch?.used;
+  const base = running ? watch.base ?? seconds : seconds;
+  const live = running && now ? base + Math.max(0, Math.round((now - watch.startedAt) / 1000)) : seconds;
   const parts = splitClock(live);
+  const tracked = goal && (running || watch?.used);
+  const reached = tracked && live >= target;
 
   useEffect(() => {
     if (watchKey) writeWatch(watchKey, watch);
   }, [watch, watchKey]);
 
-  const start = () => setWatch({ startedAt: Date.now() });
+  useEffect(() => {
+    if (!running || !reached || alerted.current) return;
+    alerted.current = true;
+    if (watchKey) writeWatch(watchKey, { ...watch, alerted: true });
+    navigator.vibrate?.([200, 100, 200]);
+    toast(`Meta de ${formatRest(target)} atingida`);
+  }, [running, reached, watch, watchKey, target, toast]);
+
+  const start = () => setWatch({ startedAt: Date.now(), base: used ? seconds : 0, used: true, alerted: alerted.current });
   const pause = () => {
     onChange(live);
-    setWatch(null);
+    setWatch(goal ? { used: true, alerted: alerted.current } : null);
   };
   const reset = () => {
-    setWatch(null);
+    alerted.current = false;
+    setWatch(goal ? { used: true } : null);
     onChange(0);
     setConfirming(false);
   };
@@ -82,6 +99,16 @@ function DurationField({ seconds, onChange, step, watchKey }) {
           <Plus size={16} strokeWidth={2.6} />
         </button>
       </div>
+      {tracked && (
+        <div className={styles.goal}>
+          <span className={styles.goalBar} aria-hidden="true">
+            <span className={styles.goalFill} style={{ width: `${Math.min(100, (live / target) * 100)}%` }} />
+          </span>
+          <span className={styles.goalText}>
+            {reached ? <strong>+{formatClock(live - target)}</strong> : `faltam ${formatClock(target - live)}`} · meta {formatClock(target)}
+          </span>
+        </div>
+      )}
       {confirming ? (
         <div className={styles.controls} role="group" aria-label="Confirmar zerar cronômetro">
           <span className={styles.confirmText}>Zerar o cronômetro?</span>
@@ -93,7 +120,7 @@ function DurationField({ seconds, onChange, step, watchKey }) {
         {running ? (
           <button type="button" className={styles.pause} onClick={pause}><Pause size={17} fill="currentColor" /> Pausar</button>
         ) : (
-          <button type="button" className={styles.start} onClick={start}><Play size={17} fill="currentColor" /> {seconds ? 'Continuar' : 'Iniciar cronômetro'}</button>
+          <button type="button" className={styles.start} onClick={start}><Play size={17} fill="currentColor" /> {seconds && used ? 'Continuar' : 'Iniciar cronômetro'}</button>
         )}
         <button type="button" className={styles.reset} onClick={() => setConfirming(true)} disabled={!live} aria-label="Zerar cronômetro"><RotateCcw size={17} /></button>
       </div>
@@ -113,12 +140,12 @@ function initialValues(tracking, reference, item) {
   };
 }
 
-function TimedFields({ tracking, extra, values, setValues, watchKey }) {
+function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
   const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level));
   const set = (key) => (value) => setValues(current => ({ ...current, [key]: value }));
   return (
     <>
-      <DurationField seconds={values.seconds} onChange={set('seconds')} step={tracking === 'cardio' ? 60 : 5} watchKey={watchKey} />
+      <DurationField seconds={values.seconds} onChange={set('seconds')} step={tracking === 'cardio' ? 60 : 5} watchKey={watchKey} target={target} />
       {tracking === 'time' && (
         <label className={styles.optional}>
           <span>{extra ? 'Carga extra' : 'Carga'} <em>opcional</em></span>
@@ -201,7 +228,7 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
 
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
-      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} watchKey={watchKey} />
+      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} watchKey={watchKey} target={tracking === 'cardio' ? (item.reps_min ?? 0) * 60 : 0} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.actions}>
         <button type="submit" className={styles.log} disabled={saving}>
