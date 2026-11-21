@@ -126,3 +126,33 @@
   opacity: 0.6;
   cursor: default;
 }
+
+.when {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 14px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+}
+
+.when span {
+  flex: 1;
+  color: var(--gym-text);
+}
+
+.whenEdit {
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}

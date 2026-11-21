@@ -650,3 +650,37 @@
   border-color: var(--gym-accent);
   color: var(--gym-accent-ink);
 }
+
+.addWeight {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--gym-tabbar-h) + 16px + var(--gym-pill-space, 0px) + env(safe-area-inset-bottom));
+  z-index: 40;
+  height: 54px;
+  padding: 0 20px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 18px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  box-shadow: var(--gym-accent-glow);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-instant) var(--ease-out), bottom var(--dur-base) var(--ease-out);
+}
+
+.addWeight:active {
+  transform: scale(0.96);
+}
+
+@media (min-width: 768px) {
+  .addWeight {
+    right: max(24px, calc((100vw - 760px) / 2));
+    bottom: calc(24px + var(--gym-pill-space, 0px));
+  }
+}

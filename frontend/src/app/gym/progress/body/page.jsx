@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Scale, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Scale, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import {
   getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, getBodyGoal, saveBodyGoal, deleteBodyGoal, peekCache,
 } from '../../../../lib/api';
@@ -12,6 +12,8 @@ import ProgressChart from '../../../../components/gym/ProgressChart';
 import BodyWeightForm from '../../../../components/gym/BodyWeightForm';
 import GymSheet from '../../../../components/gym/GymSheet';
 import TargetGoal from '../../../../components/gym/TargetGoal';
+import Floating from '../../../../components/gym/Floating';
+import LimitedList from '../../../../components/gym/LimitedList';
 import styles from '../progress.module.css';
 
 const DAY = 86400000;
@@ -32,6 +34,7 @@ export default function BodyWeightPage() {
   const [loadError, setLoadError] = useState(false);
   const [rangeKey, setRangeKey] = useState('90');
   const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
   const [goal, setGoal] = useState(() => peekCache('fitnessBodyGoal') ?? null);
 
   const refreshGoal = useCallback(() => getBodyGoal().then(setGoal).catch(() => {}), []);
@@ -69,6 +72,7 @@ export default function BodyWeightPage() {
   };
 
   const closeSheet = useCallback(() => setEditing(null), []);
+  const closeAdd = useCallback(() => setAdding(false), []);
 
   const save = async (data) => {
     const replacing = entries.some(e => e.measured_on === data.measured_on);
@@ -76,6 +80,7 @@ export default function BodyWeightPage() {
       const entry = await logBodyWeight(data);
       setEntries(list => sortDesc([...list.filter(e => e.id !== entry.id), entry]));
       refreshGoal();
+      setAdding(false);
       toast(replacing ? `Peso de ${formatDay(entry.measured_on)} atualizado` : 'Peso registrado');
       return null;
     } catch (err) {
@@ -204,10 +209,6 @@ export default function BodyWeightPage() {
         />
       )}
 
-      {entries && (
-        <BodyWeightForm takenDays={new Set(entries.map(e => e.measured_on))} onSubmit={save} />
-      )}
-
       {entries?.length === 0 && (
         <div className={styles.state}>
           <Scale size={34} className={styles.stateIcon} aria-hidden="true" />
@@ -219,8 +220,7 @@ export default function BodyWeightPage() {
       {entries?.length > 0 && (
         <section className={styles.sessions}>
           <h2 className={styles.sectionTitle}>Registros</h2>
-          <ul className={styles.list}>
-            {entries.map((entry, index) => {
+          <LimitedList className={styles.list} items={entries} render={(entry, index) => {
               const before = entries[index + 1];
               return (
                 <li key={entry.id}>
@@ -228,17 +228,30 @@ export default function BodyWeightPage() {
                     <span className={styles.rowDate}>{formatDay(entry.measured_on)}</span>
                     <span className={styles.rowMain}>
                       <span className={styles.rowName}>{kg(entry.weight_kg)}</span>
-                      {entry.note && <span className={styles.rowMeta}>{entry.note}</span>}
+                      {(entry.measured_time || entry.note) && <span className={styles.rowMeta}>{[entry.measured_time, entry.note].filter(Boolean).join(' · ')}</span>}
                     </span>
                     {before && <span className={styles.rowDelta}>{formatDelta(entry.weight_kg - before.weight_kg)}</span>}
                     <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
                   </button>
                 </li>
               );
-            })}
-          </ul>
+            }} />
         </section>
       )}
+
+      {entries && (
+        <Floating>
+          <button type="button" className={styles.addWeight} onClick={() => setAdding(true)}>
+            <Plus size={20} strokeWidth={2.6} /> Registrar peso
+          </button>
+        </Floating>
+      )}
+
+      <GymSheet open={adding} onClose={closeAdd} title="Registrar peso">
+        {adding && (
+          <BodyWeightForm compact takenDays={new Set(entries.map(e => e.measured_on))} onSubmit={save} />
+        )}
+      </GymSheet>
 
       <GymSheet open={!!editing} onClose={closeSheet} title="Editar registro">
         {editing && (
