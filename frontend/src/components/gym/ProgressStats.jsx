@@ -11,6 +11,7 @@ import {
 import BarChart from './BarChart';
 import Sparkline from './Sparkline';
 import TrainingHeatmap from './TrainingHeatmap';
+import ProgressChart from './ProgressChart';
 import LimitedList from './LimitedList';
 import styles from '../../app/gym/progress/stats.module.css';
 
@@ -548,6 +549,47 @@ function PlanCardio({ details }) {
   );
 }
 
+function StrengthTrend({ items }) {
+  const charted = items.filter(item => item.series.length > 1);
+  const [chosen, setChosen] = useState(null);
+  if (!charted.length) return null;
+  const item = charted.find(i => `${i.exercise_id}-${i.name}` === chosen) ?? charted[0];
+  return (
+    <>
+      <h3 className={styles.subTitle}>Força relativa ao longo do tempo</h3>
+      {charted.length > 1 && (
+        <div className={styles.chips} role="tablist" aria-label="Exercício">
+          {charted.slice(0, 5).map(i => (
+            <button
+              key={`${i.exercise_id}-${i.name}`}
+              type="button"
+              role="tab"
+              aria-selected={i === item}
+              className={`${styles.chip} ${i === item ? styles.chipActive : ''}`}
+              onClick={() => setChosen(`${i.exercise_id}-${i.name}`)}
+            >
+              {i.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <ProgressChart
+        key={`${item.exercise_id}-${item.name}`}
+        points={item.series.map(point => ({
+          key: point.session_id,
+          time: new Date(point.completed_at).getTime(),
+          value: point.ratio,
+          detail: `${kg(point.e1rm_kg)} de 1RM · peso ${kg(point.body_weight_kg)}`,
+        }))}
+        format={ratio}
+        axisFormat={v => `${formatKg(v)}×`}
+        label={`Força relativa em ${item.name}`}
+      />
+      <p className={styles.empty}>Sobe quando você fica mais forte, quando perde peso mantendo a força, ou os dois.</p>
+    </>
+  );
+}
+
 function RelativeStrength({ data }) {
   const strength = data.relative_strength;
   if (!strength) return null;
@@ -590,6 +632,7 @@ function RelativeStrength({ data }) {
             </li>
           );
         }} />
+      <StrengthTrend items={strength.items} />
     </Card>
   );
 }

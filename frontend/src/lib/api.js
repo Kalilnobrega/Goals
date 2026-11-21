@@ -276,6 +276,7 @@ export const getProgressWorkouts = () => cachedGet("fitnessProgressWorkouts", "/
 export const getWorkoutProgress = (id) =>
   cachedGet(`fitnessWorkoutProgress:${id}`, `/fitness/workouts/${id}/progress`);
 export const getBodyGoal = () => cachedGet("fitnessBodyGoal", "/fitness/body-weight-goal");
+export const getWeightComparison = (period) => cachedGet(`fitnessWeightComparison:${period}`, `/fitness/body-weight/comparison?period=${period}`);
 export const saveBodyGoal = (data) => api.put("/fitness/body-weight-goal", data).then((r) => r.data);
 export const deleteBodyGoal = () => api.delete("/fitness/body-weight-goal").then((r) => r.data);
 export const saveExerciseGoal = (id, data) => api.put(`/fitness/exercises/${id}/goal`, data).then((r) => r.data);
