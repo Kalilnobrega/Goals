@@ -511,10 +511,6 @@ export default function ExerciseProgressPage() {
             />
           </section>
 
-          {!timed && <Balance points={points} />}
-
-          {!timed && <Insights data={data} />}
-
           {!timed && <TargetGoal
             goal={data.goal}
             title="Meta de carga"
@@ -526,6 +522,10 @@ export default function ExerciseProgressPage() {
             onSave={saveGoal}
             onDelete={removeGoal}
           />}
+
+          {!timed && <Balance points={points} />}
+
+          {!timed && <Insights data={data} />}
 
           {data.time && tracking !== 'cardio' && (
             <section className={styles.group} aria-labelledby="exercise-time-title">
