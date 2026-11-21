@@ -1,0 +1,91 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.card {
+  min-height: 176px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 16px 16px;
+  border-radius: 22px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--gym-border-strong);
+}
+
+.card:active {
+  background: var(--gym-surface-2);
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.chevron {
+  color: var(--gym-faint);
+}
+
+.title {
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.text {
+  min-height: 2.7em;
+  color: var(--gym-muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+@media (min-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    min-height: 200px;
+    padding: 22px 20px 20px;
+  }
+
+  .icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+  }
+
+  .title {
+    font-size: 1.35rem;
+  }
+
+  .text {
+    font-size: 0.9rem;
+  }
+}
