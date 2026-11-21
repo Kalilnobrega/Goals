@@ -531,6 +531,18 @@ function PlanCardio({ details }) {
           <span className={styles.recordValue}>{formatKg(Math.round(cardio.done_minutes))} min</span>
           {pct !== null && <span className={styles.recordNote}>{pct}% do planejado</span>}
         </div>
+        {cardio.done_km > 0 && (
+          <div className={`${styles.record} ${styles.recordStatic}`}>
+            <span className={styles.recordLabel}>Distância</span>
+            <span className={styles.recordValue}>{cardio.km_estimated ? '≈ ' : ''}{formatKg(Math.round(cardio.done_km * 10) / 10)} km</span>
+          </div>
+        )}
+        {cardio.done_calories !== null && (
+          <div className={`${styles.record} ${styles.recordStatic}`}>
+            <span className={styles.recordLabel}>Calorias</span>
+            <span className={styles.recordValue}>{cardio.calories_estimated ? '≈ ' : ''}{cardio.done_calories} kcal</span>
+          </div>
+        )}
       </div>
     </Card>
   );

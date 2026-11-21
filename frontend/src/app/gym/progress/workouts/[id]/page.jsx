@@ -63,6 +63,8 @@ function CardioGroup({ data }) {
         { label: 'Planejado por treino', value: `${data.planned_minutes} min` },
         data.avg_done_minutes !== null && { label: 'Feito em média', value: `${data.avg_done_minutes} min`, note: plural(data.sessions, 'treino', 'treinos') },
         data.completion_pct !== null && { label: 'Do tempo planejado', value: `${formatKg(data.completion_pct)}%` },
+        data.avg_km && { label: 'Distância em média', value: `${data.km_estimated ? '≈ ' : ''}${formatKg(Math.round(data.avg_km * 10) / 10)} km` },
+        data.avg_calories && { label: 'Calorias em média', value: `${data.calories_estimated ? '≈ ' : ''}${data.avg_calories} kcal` },
         data.sessions > 0 && { label: 'Vezes pulado', value: data.skipped, note: `de ${plural(data.phases.reduce((sum, phase) => sum + phase.planned, 0), 'cardio planejado', 'cardios planejados')}` },
       ].filter(Boolean)} />
       {data.phases.length > 1 && (

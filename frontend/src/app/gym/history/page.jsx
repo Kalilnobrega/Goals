@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { History, Search, X, ChevronDown, SearchX } from 'lucide-react';
 import { getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
 import {
-  addDays, formatDay, formatDuration, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
+  addDays, formatDay, formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
   MUSCLE_GROUPS,
 } from '../../../lib/gym';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
@@ -67,6 +67,8 @@ function HistoryCard({ item }) {
           <span className={styles.cardMeta}>
             {formatDuration(duration)} · {plural(item.exercise_count, 'exercício', 'exercícios')} · {plural(item.total_sets, 'série', 'séries')}
             {item.cardio_seconds >= 60 ? ` · ${Math.round(item.cardio_seconds / 60)} min de cardio` : ''}
+            {item.cardio_km > 0 ? ` · ${item.cardio_km_estimated ? '≈ ' : ''}${formatKg(Math.round(item.cardio_km * 10) / 10)} km` : ''}
+            {item.cardio_calories ? ` · ${item.cardio_calories_estimated ? '≈ ' : ''}${item.cardio_calories} kcal` : ''}
           </span>
           <span className={styles.cardBottom}>
             <span className={styles.muscles}>
