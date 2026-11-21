@@ -2,9 +2,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Pencil, Timer, TrendingUp } from 'lucide-react';
+import { ChevronLeft, HeartPulse, Pencil, Timer, TrendingUp } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
-import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide } from '../../../../lib/gym';
+import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide, cardioNote } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
 import UnilateralTag from '../../../../components/gym/UnilateralTag';
 import styles from './workout.module.css';
@@ -62,6 +62,7 @@ export default function WorkoutDetailPage() {
           {exercises.length
             ? `${plural(exercises.length, 'exercício', 'exercícios')} · ${plural(totalSets, 'série', 'séries')}`
             : 'Sem exercícios'}
+          {cardioNote(workout)}
         </p>
         {workout.description && <p className={styles.description}>{workout.description}</p>}
       </div>
@@ -70,6 +71,8 @@ export default function WorkoutDetailPage() {
         <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
         <Link href={`/gym/progress/workouts/${workout.id}`} className={styles.edit}><TrendingUp size={18} /> Evolução</Link>
       </div>
+
+      {cardioCard(workout, 'start', 'Cardio no início')}
 
       {exercises.length > 0 ? (
         <section className={styles.card} aria-labelledby="workout-exercises-title">
@@ -103,7 +106,33 @@ export default function WorkoutDetailPage() {
         </div>
       )}
 
+      {cardioCard(workout, 'end', 'Cardio no final')}
+
       <WorkoutBodyMap exercises={exercises} />
     </div>
+  );
+}
+
+function cardioCard(workout, phase, title) {
+  const rows = (workout.cardio ?? []).filter(item => item.phase === phase);
+  if (!rows.length) return null;
+  return (
+    <section className={styles.card} aria-label={title}>
+      <h2 className={styles.cardTitle}>{title}</h2>
+      <ol className={styles.list}>
+        {rows.map(item => (
+          <li key={item.id} className={styles.item}>
+            <span className={styles.index}><HeartPulse size={14} aria-hidden="true" /></span>
+            <span className={styles.itemText}>
+              <span className={styles.itemName}>{item.exercise?.name ?? 'Qualquer cardio'}</span>
+              <span className={styles.itemMeta}>{item.exercise ? 'Cardio' : 'Você escolhe o aparelho na hora'}</span>
+            </span>
+            <span className={styles.itemTarget}>
+              <span className={styles.prescription}>{item.minutes} min</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

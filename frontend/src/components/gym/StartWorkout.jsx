@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useState } from 'react';
 import Link from 'next/link';
 import { CalendarCheck, ChevronRight, ClipboardList, Play, Zap } from 'lucide-react';
 import { getFitnessOverview, getWorkouts, peekCache } from '../../lib/api';
-import { muscleLabel, plural, WEEKDAY_NAMES, weekdayOf } from '../../lib/gym';
+import { muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote } from '../../lib/gym';
 import GymSheet from './GymSheet';
 import useStartSession from './useStartSession';
 import s from './sheet.module.css';
@@ -26,9 +26,9 @@ function todayOptions(overview) {
 }
 
 function fichaMeta(workout) {
-  if (!workout?.exercises?.length) return 'Sem exercícios';
+  if (!workout?.exercises?.length) return `Sem exercícios${cardioNote(workout)}`;
   const groups = [...new Set(workout.exercises.map(item => item.exercise.muscle_group))].slice(0, 3).map(muscleLabel);
-  return `${plural(workout.exercises.length, 'exercício', 'exercícios')} · ${groups.join(', ')}`;
+  return `${plural(workout.exercises.length, 'exercício', 'exercícios')}${cardioNote(workout)} · ${groups.join(', ')}`;
 }
 
 function StartPicker({ overview, workouts, loadError, onRetry, starting, onChoose, onClose }) {

@@ -226,11 +226,11 @@ export default function HistoryDetailPage() {
             </button>
           )}
           <div className={styles.editList}>
-            {session.exercises.map((item, index) => (
+            {session.exercises.map(item => (
               <SessionExerciseCard
                 key={item.id}
                 item={item}
-                index={index}
+                index={session.exercises.filter(other => other.tracking !== 'cardio').indexOf(item)}
                 onLogSet={logSet}
                 onEditSet={editSet}
                 onDeleteSet={removeSet}

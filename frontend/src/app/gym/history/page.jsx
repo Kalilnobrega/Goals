@@ -66,6 +66,7 @@ function HistoryCard({ item }) {
           <span className={styles.cardName}>{item.name}</span>
           <span className={styles.cardMeta}>
             {formatDuration(duration)} · {plural(item.exercise_count, 'exercício', 'exercícios')} · {plural(item.total_sets, 'série', 'séries')}
+            {item.cardio_seconds >= 60 ? ` · ${Math.round(item.cardio_seconds / 60)} min de cardio` : ''}
           </span>
           <span className={styles.cardBottom}>
             <span className={styles.muscles}>

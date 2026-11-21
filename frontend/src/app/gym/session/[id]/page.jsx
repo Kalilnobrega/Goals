@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse
 } from 'lucide-react';
 import {
   getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
@@ -34,7 +34,21 @@ import useWakeLock from '../../../../components/gym/useWakeLock';
 import s from '../../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
-const totals = (session) => session.exercises.reduce(
+const isCardio = (item) => item.tracking === 'cardio';
+
+const exerciseNumbers = (session) => {
+  const numbers = {};
+  session.exercises.filter(item => !isCardio(item)).forEach((item, index) => { numbers[item.id] = index; });
+  return numbers;
+};
+
+const withCardioInPlace = (session, mainIds) => [
+  ...session.exercises.filter(item => isCardio(item) && item.phase === 'start').map(item => item.id),
+  ...mainIds,
+  ...session.exercises.filter(item => isCardio(item) && item.phase !== 'start').map(item => item.id),
+];
+
+const totals = (session) => session.exercises.filter(item => !isCardio(item)).reduce(
   (acc, item) => {
     item.sets.forEach(entry => {
       acc.sets += 1;
@@ -155,6 +169,11 @@ export default function SessionPage() {
   }, [id, loaded, failed]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
+
+  const hasCardio = !!session?.exercises.some(isCardio);
+  useEffect(() => {
+    if (hasCardio) getExercises().then(setExercises).catch(() => setExercisesError(true));
+  }, [hasCardio]);
 
   const loadExercises = () => {
     setExercisesError(false);
@@ -389,11 +408,12 @@ export default function SessionPage() {
   const addExercises = async (selected) => {
     setSheet(null);
     try {
-      const before = session.exercises.length;
+      const known = new Set(session.exercises.map(item => item.id));
       let latest = session;
       for (const exercise of selected) latest = await addSessionExercise(session.id, exercise.id);
       setSession(withPending(latest));
-      if (latest.exercises[before]) setCurrentId(latest.exercises[before].id);
+      const added = latest.exercises.find(item => !known.has(item.id));
+      if (added) setCurrentId(added.id);
     } catch (err) {
       fail(err, 'Não foi possível adicionar o exercício.');
       load();
@@ -423,9 +443,9 @@ export default function SessionPage() {
   const moveToEnd = (item) => {
     setSheet(null);
     const all = session.exercises.map(e => e.id);
-    const ids = all.filter(itemId => itemId !== item.id);
+    const main = session.exercises.filter(e => !isCardio(e) && e.id !== item.id).map(e => e.id);
     if (item.id === currentId) setCurrentId(all[all.indexOf(item.id) + 1] ?? item.id);
-    reorder([...ids, item.id]);
+    reorder(withCardioInPlace(session, [...main, item.id]));
     toast(`${item.exercise_name} foi para o fim do treino`);
   };
 
@@ -587,13 +607,18 @@ export default function SessionPage() {
   const { sets: totalSets, volume } = totals(session);
   const elapsed = now ? (now - new Date(session.started_at).getTime()) / 1000 : null;
   const lastAt = lastActivity(session);
-  const pending = session.exercises.filter(item => item.sets.length === 0).length;
+  const pending = session.exercises.filter(item => item.sets.length === 0 && !isCardio(item)).length;
+  const pendingCardio = session.exercises.some(item => item.sets.length === 0 && isCardio(item));
 
   const current = session.exercises[currentIndex];
   const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
   const menuSiblings = sheet?.type === 'menu' ? familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises) : [];
   const next = session.exercises[currentIndex + 1];
+  const numbers = exerciseNumbers(session);
+  const mainItems = session.exercises.filter(item => !isCardio(item));
   const cardProps = {
+    cardioOptions: (exercises ?? []).filter(isCardio),
+    onPickCardio: (item, exercise) => swapExercise(item, [exercise]),
     onLogSet: logSet,
     onEditSet: editSet,
     onDeleteSet: removeSet,
@@ -674,7 +699,7 @@ export default function SessionPage() {
                 className={`${styles.chip} ${index === currentIndex ? styles.chipCurrent : ''} ${isDone(item) ? styles.chipDone : ''}`}
                 onClick={() => goTo(index)}
               >
-                <span className={styles.chipIndex}>{isDone(item) ? <Check size={13} strokeWidth={3} /> : index + 1}</span>
+                <span className={styles.chipIndex}>{isDone(item) ? <Check size={13} strokeWidth={3} /> : isCardio(item) ? <HeartPulse size={13} /> : numbers[item.id] + 1}</span>
                 <span className={styles.chipName}>{item.exercise_name}</span>
               </button>
             ))}
@@ -686,7 +711,7 @@ export default function SessionPage() {
           <div className={styles.carousel} ref={carouselRef} onScroll={handleCarouselScroll}>
             {session.exercises.map((item, index) => (
               <div key={item.id} className={styles.slide} aria-hidden={index !== currentIndex} inert={index !== currentIndex}>
-                <SessionExerciseCard item={item} index={index} {...cardProps} />
+                <SessionExerciseCard item={item} index={numbers[item.id] ?? 0} {...cardProps} />
               </div>
             ))}
           </div>
@@ -696,8 +721,8 @@ export default function SessionPage() {
       {!focus && session.exercises.length > 0 && (
         <>
           <div className={styles.cards}>
-            {session.exercises.map((item, index) => (
-              <SessionExerciseCard key={item.id} item={item} index={index} {...cardProps} />
+            {session.exercises.map(item => (
+              <SessionExerciseCard key={item.id} item={item} index={numbers[item.id] ?? 0} {...cardProps} />
             ))}
           </div>
           <button type="button" className={styles.add} onClick={() => openPicker('add')}>
@@ -725,7 +750,7 @@ export default function SessionPage() {
             onClick={() => goTo(currentIndex + 1)}
           >
             <span className={styles.barText}>
-              <small>Próximo · {currentIndex + 2} de {ids.length}</small>
+              <small>{isCardio(next) ? 'Próximo' : `Próximo · ${numbers[next.id] + 1} de ${mainItems.length}`}</small>
               <span>{next.exercise_name}</span>
             </span>
             <ChevronRight size={22} />
@@ -761,7 +786,7 @@ export default function SessionPage() {
         {sheet?.type === 'swap' && (
           <ExercisePicker
             single
-            exercises={exercises}
+            exercises={exercises?.filter(exercise => !isCardio(exercise)) ?? null}
             loadError={exercisesError}
             onRetry={loadExercises}
             onConfirm={selected => requestSwap(sheet.item, selected)}
@@ -770,13 +795,13 @@ export default function SessionPage() {
 
         {sheet?.type === 'menu' && menuItem && (
           <div className={s.actions}>
-            {session.exercises.length > 1 && (
+            {!isCardio(menuItem) && mainItems.length > 1 && (
               <>
                 <button
                   type="button"
                   className={s.option}
                   onClick={() => moveToEnd(sheet.item)}
-                  disabled={session.exercises.at(-1).id === sheet.item.id}
+                  disabled={mainItems.at(-1).id === sheet.item.id}
                 >
                   <ArrowDownToLine size={20} />
                   <span>Deixar para depois<small>Vai para o fim do treino, útil se o aparelho estiver ocupado</small></span>
@@ -839,10 +864,12 @@ export default function SessionPage() {
                 </span>
               </div>
             )}
-            <button type="button" className={s.option} onClick={() => openPicker('swap', sheet.item)} disabled={sheet.item.sets.length > 0}>
-              <Repeat size={20} />
-              <span>Trocar exercício{sheet.item.sets.length > 0 && <small>Só dá para trocar antes de registrar séries</small>}</span>
-            </button>
+            {!isCardio(menuItem) && (
+              <button type="button" className={s.option} onClick={() => openPicker('swap', sheet.item)} disabled={sheet.item.sets.length > 0}>
+                <Repeat size={20} />
+                <span>Trocar exercício{sheet.item.sets.length > 0 && <small>Só dá para trocar antes de registrar séries</small>}</span>
+              </button>
+            )}
             <button type="button" className={`${s.option} ${s.optionDanger}`} onClick={() => removeExercise(sheet.item)}>
               <Trash2 size={20} />
               <span>Remover deste treino<small>A ficha não muda</small></span>
@@ -853,9 +880,9 @@ export default function SessionPage() {
         {sheet?.type === 'order' && (
           <div className={s.stack}>
             <p className={s.text}>Arraste para mudar a ordem. A ficha não muda.</p>
-            <SortableList ids={session.exercises.map(item => item.id)} onReorder={reorder}>
+            <SortableList ids={mainItems.map(item => item.id)} onReorder={ids => reorder(withCardioInPlace(session, ids))}>
               <ol className={s.orderList}>
-                {session.exercises.map((item, index) => (
+                {mainItems.map((item, index) => (
                   <SortableItem key={item.id} id={item.id}>
                     {({ itemProps, handleProps, isDragging }) => (
                       <li {...itemProps} className={`${s.orderItem} ${isDragging ? s.orderDragging : ''}`}>
@@ -925,6 +952,7 @@ export default function SessionPage() {
                 {pending > 0 && (
                   <p className={s.text}>{plural(pending, 'exercício ficou', 'exercícios ficaram')} sem séries e não {pending === 1 ? 'entra' : 'entram'} no resumo.</p>
                 )}
+                {pendingCardio && <p className={s.text}>O cardio que ficou sem registro não entra no resumo.</p>}
               </>
             )}
             <div className={s.actions}>

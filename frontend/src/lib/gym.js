@@ -74,6 +74,9 @@ export function workoutMuscles(workout) {
 
 export const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
+export const cardioMinutes = (workout) => (workout?.cardio ?? []).reduce((sum, item) => sum + item.minutes, 0);
+export const cardioNote = (workout) => (cardioMinutes(workout) ? ` · ${cardioMinutes(workout)} min de cardio` : '');
+
 const kgFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
 const volumeFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 

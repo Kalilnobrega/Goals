@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, ClipboardList } from 'lucide-react';
 import { getWorkouts, peekCache } from '../../../lib/api';
-import { prescription, workoutMuscles, plural } from '../../../lib/gym';
+import { prescription, workoutMuscles, plural, cardioNote } from '../../../lib/gym';
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
@@ -77,6 +77,7 @@ export default function WorkoutsPage() {
                       {workout.exercises.length
                         ? plural(workout.exercises.length, 'exercício', 'exercícios')
                         : 'Sem exercícios'}
+                      {cardioNote(workout)}
                       {muscles.length > 0 && ` · ${muscles.slice(0, 3).join(', ')}`}
                     </span>
                     {workout.exercises.length > 0 && (

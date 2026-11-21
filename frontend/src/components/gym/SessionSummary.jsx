@@ -92,6 +92,8 @@ function MusclesWorked({ muscleSets }) {
 
 export default function SessionSummary({ session, insights }) {
   const done = session.exercises.filter(item => item.sets.length > 0);
+  const strength = done.filter(item => item.tracking !== 'cardio');
+  const cardioMinutes = Math.round(done.filter(item => item.tracking === 'cardio').reduce((sum, item) => sum + item.sets.reduce((total, entry) => total + (entry.duration_seconds ?? 0), 0), 0) / 60);
   const duration = new Date(session.completed_at) - new Date(session.started_at);
   const previous = insights?.previous_session ?? null;
   const byItem = new Map((insights?.exercises ?? []).map(e => [e.item_id, e]));
@@ -102,16 +104,22 @@ export default function SessionSummary({ session, insights }) {
         {formatLongDate(session.started_at)} · {formatTime(session.started_at)}–{formatTime(session.completed_at)}
       </p>
 
-      <div className={styles.stats}>
+      <div className={`${styles.stats} ${cardioMinutes > 0 ? styles.statsCardio : ''}`}>
         <div className={styles.stat}>
           <span className={styles.statValue}>{formatDuration(duration)}</span>
           <span className={styles.statLabel}>Duração</span>
           {previous && <Delta value={insights.minutes - previous.minutes} minutes />}
         </div>
         <div className={styles.stat}>
-          <span className={styles.statValue}>{done.length}</span>
-          <span className={styles.statLabel}>{done.length === 1 ? 'Exercício' : 'Exercícios'}</span>
+          <span className={styles.statValue}>{strength.length}</span>
+          <span className={styles.statLabel}>{strength.length === 1 ? 'Exercício' : 'Exercícios'}</span>
         </div>
+        {cardioMinutes > 0 && (
+          <div className={styles.stat}>
+            <span className={styles.statValue}>{cardioMinutes} min</span>
+            <span className={styles.statLabel}>Cardio</span>
+          </div>
+        )}
         <div className={styles.stat}>
           <span className={styles.statValue}>{session.total_sets}</span>
           <span className={styles.statLabel}>{session.total_sets === 1 ? 'Série' : 'Séries'}</span>
@@ -179,7 +187,7 @@ export default function SessionSummary({ session, insights }) {
               <div className={styles.itemHeader}>
                 <span className={styles.itemName}>{item.exercise_name}</span>
                 <span className={styles.itemMeta}>
-                  {groupsLabel(item)} · {plural(seriesCount(item.sets), 'série', 'séries')}
+                  {item.tracking === 'cardio' ? 'Cardio' : `${groupsLabel(item)} · ${plural(seriesCount(item.sets), 'série', 'séries')}`}
                   {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}${insight.prep_seconds >= 60 ? ` (${formatSeconds(insight.prep_seconds)} de preparação)` : ''}` : ''}
                   {insight?.rest_seconds ? ` · descanso ${formatSeconds(insight.rest_seconds)}` : ''}
                   {item.unilateral && <>{' '}<UnilateralTag /></>}

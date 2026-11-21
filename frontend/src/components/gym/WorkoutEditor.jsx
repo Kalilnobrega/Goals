@@ -1,8 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Minus, Trash2, Dumbbell } from 'lucide-react';
+import { Plus, Minus, Trash2, Dumbbell, HeartPulse } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
 import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide } from '../../lib/gym';
+import VariantChoices from './VariantChoices';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
 import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
@@ -26,9 +27,21 @@ const toItem = (row) => ({
   load_mode: row.load_mode ?? null,
 });
 
+const toCardio = (row) => ({
+  key: newKey(),
+  phase: row.phase,
+  exercise: row.exercise ?? null,
+  minutes: String(row.minutes),
+});
+
+const CARDIO_PHASES = [
+  { value: 'start', title: 'Cardio no início', hint: 'Antes dos exercícios, como aquecimento' },
+  { value: 'end', title: 'Cardio no final', hint: 'Depois dos exercícios' },
+];
+
 const sideAllowed = (item) => canLoadPerSide(item.exercise.equipment, item.unilateral ?? item.exercise.is_unilateral, item.exercise.tracking);
 
-const toPayload = (name, description, items) => ({
+const toPayload = (name, description, items, cardio) => ({
   name: name.trim(),
   description: description.trim() || null,
   exercises: items.map(item => ({
@@ -39,6 +52,11 @@ const toPayload = (name, description, items) => ({
     rest_seconds: item.rest_seconds,
     unilateral: item.unilateral,
     load_mode: sideAllowed(item) && item.load_mode === 'side' ? 'side' : null,
+  })),
+  cardio: CARDIO_PHASES.flatMap(phase => cardio.filter(item => item.phase === phase.value)).map(item => ({
+    exercise_id: item.exercise?.id ?? null,
+    phase: item.phase,
+    minutes: Number(item.minutes),
   })),
 });
 
@@ -73,6 +91,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [items, setItems] = useState(() => (initial?.exercises ?? []).map(toItem));
+  const [cardio, setCardio] = useState(() => (initial?.cardio ?? []).map(toCardio));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
   const [loadError, setLoadError] = useState(false);
@@ -80,7 +99,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   const [saving, setSaving] = useState(false);
   const nameRef = useRef(null);
   const toast = useToast();
-  const [savedPayload] = useState(() => JSON.stringify(toPayload(initial?.name ?? '', initial?.description ?? '', (initial?.exercises ?? []).map(toItem))));
+  const [savedPayload] = useState(() => JSON.stringify(toPayload(initial?.name ?? '', initial?.description ?? '', (initial?.exercises ?? []).map(toItem), (initial?.cardio ?? []).map(toCardio))));
   const submitted = useRef(false);
 
   const fetchExercises = useCallback(() => {
@@ -93,8 +112,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   }, []);
 
   const dirty = useMemo(
-    () => JSON.stringify(toPayload(name, description, items)) !== savedPayload,
-    [name, description, items, savedPayload],
+    () => JSON.stringify(toPayload(name, description, items, cardio)) !== savedPayload,
+    [name, description, items, cardio, savedPayload],
   );
 
   useEffect(() => {
@@ -125,6 +144,18 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
 
   const removeItem = (key) => setItems(list => list.filter(item => item.key !== key));
 
+  const cardioOptions = useMemo(() => (exercises ?? []).filter(exercise => exercise.tracking === 'cardio'), [exercises]);
+  const strengthExercises = useMemo(() => exercises?.filter(exercise => exercise.tracking !== 'cardio') ?? null, [exercises]);
+
+  const addCardio = (phase) => setCardio(list => [...list, { key: newKey(), phase, exercise: null, minutes: '20' }]);
+
+  const updateCardio = (key, changes) => {
+    setCardio(list => list.map(item => (item.key === key ? { ...item, ...changes } : item)));
+    if (invalid?.field === key) setInvalid(null);
+  };
+
+  const removeCardio = (key) => setCardio(list => list.filter(item => item.key !== key));
+
   const reorder = (keys) => {
     setItems(list => keys.map(key => list.find(item => item.key === key)));
   };
@@ -141,6 +172,12 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
             ? `Em ${item.exercise.name}, o máximo de repetições é menor que o mínimo.`
             : '';
       if (problem) return { field: item.key, message: problem };
+    }
+    for (const item of cardio) {
+      const minutes = Number(item.minutes);
+      const label = item.exercise?.name ?? 'cardio';
+      if (!minutes) return { field: item.key, message: `Informe a duração do ${label}.` };
+      if (minutes > 300) return { field: item.key, message: `No ${label}, use no máximo 300 minutos.` };
     }
     return null;
   };
@@ -163,7 +200,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
     setInvalid(null);
     setSaving(true);
     submitted.current = true;
-    const message = await onSubmit(toPayload(name, description, items));
+    const message = await onSubmit(toPayload(name, description, items, cardio));
     if (message) {
       submitted.current = false;
       setSaving(false);
@@ -172,6 +209,77 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
   };
 
   const totalSets = items.reduce((sum, item) => sum + item.target_sets, 0);
+
+  const cardioBlock = (phase) => {
+    const rows = cardio.filter(item => item.phase === phase.value);
+    if (!rows.length) {
+      return (
+        <button type="button" className={styles.cardioAdd} onClick={() => addCardio(phase.value)}>
+          <HeartPulse size={18} aria-hidden="true" /> {phase.title}
+        </button>
+      );
+    }
+    return (
+      <section className={styles.cardio} aria-label={phase.title}>
+        <div className={styles.exercisesHeader}>
+          <h2 className={styles.sectionTitle}>{phase.title}</h2>
+          <span className={styles.summary}>{phase.hint}</span>
+        </div>
+        <ol className={styles.list}>
+          {rows.map(item => (
+            <li key={item.key} data-item={item.key} className={`${styles.item} ${invalid?.field === item.key ? styles.itemInvalid : ''}`}>
+              <div className={styles.itemTop}>
+                <HeartPulse size={18} className={styles.cardioIcon} aria-hidden="true" />
+                <span className={styles.itemText}>
+                  <span className={styles.itemName}>{item.exercise?.name ?? 'Qualquer cardio'}</span>
+                  <span className={styles.itemMeta}>{item.exercise ? 'Cardio' : 'Você escolhe o aparelho na hora'}</span>
+                </span>
+                <button type="button" className={styles.remove} onClick={() => removeCardio(item.key)} aria-label={`Remover ${item.exercise?.name ?? 'cardio'}`}>
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              <div className={styles.equipmentBlock}>
+                <span className={styles.targetLabel}>Aparelho</span>
+                <div className={styles.equipmentChips} role="radiogroup" aria-label={`Aparelho do ${phase.title.toLowerCase()}`}>
+                  {[null, ...cardioOptions].map(option => (
+                    <button
+                      key={option?.id ?? 'any'}
+                      type="button"
+                      role="radio"
+                      aria-checked={(item.exercise?.id ?? null) === (option?.id ?? null)}
+                      className={`${styles.equipmentChip} ${(item.exercise?.id ?? null) === (option?.id ?? null) ? styles.equipmentChipOn : ''}`}
+                      onClick={() => updateCardio(item.key, { exercise: option })}
+                    >
+                      {option?.name ?? 'Qualquer'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className={styles.targets}>
+                <div className={styles.target}>
+                  <span className={styles.targetLabel}>Duração (min)</span>
+                  <div className={styles.reps}>
+                    <input
+                      className={styles.repsInput}
+                      value={item.minutes}
+                      onChange={e => updateCardio(item.key, { minutes: digits(e.target.value) })}
+                      inputMode="numeric"
+                      aria-label={`Minutos do ${phase.title.toLowerCase()}`}
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
+              </div>
+              {invalid?.field === item.key && <span className={styles.fieldError}>{invalid.message}</span>}
+            </li>
+          ))}
+        </ol>
+        <button type="button" className={styles.add} onClick={() => addCardio(phase.value)}>
+          <Plus size={18} strokeWidth={2.4} /> Adicionar outro cardio
+        </button>
+      </section>
+    );
+  };
 
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
@@ -206,6 +314,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
           />
         </label>
       </div>
+
+      {cardioBlock(CARDIO_PHASES[0])}
 
       <section className={styles.exercises}>
         <div className={styles.exercisesHeader}>
@@ -251,21 +361,13 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
                       </div>
                       {familySiblings(item.exercise, exercises).length > 1 && (
                         <div className={styles.equipmentBlock}>
-                          <span className={styles.targetLabel}>Equipamento</span>
-                          <div className={styles.equipmentChips} role="radiogroup" aria-label={`Equipamento de ${item.exercise.name}`}>
-                            {familySiblings(item.exercise, exercises).map(variant => (
-                              <button
-                                key={variant.id}
-                                type="button"
-                                role="radio"
-                                aria-checked={variant.id === item.exercise.id}
-                                className={`${styles.equipmentChip} ${variant.id === item.exercise.id ? styles.equipmentChipOn : ''}`}
-                                onClick={() => updateItem(item.key, { exercise: variant, unilateral: null })}
-                              >
-                                {equipmentLabel(variant.equipment)}
-                              </button>
-                            ))}
-                          </div>
+                          <VariantChoices
+                            variants={familySiblings(item.exercise, exercises)}
+                            current={familySiblings(item.exercise, exercises).find(variant => variant.id === item.exercise.id)}
+                            onSelect={variant => updateItem(item.key, { exercise: variant, unilateral: null })}
+                            chipClassName={styles.equipmentChip}
+                            activeClassName={styles.equipmentChipOn}
+                          />
                         </div>
                       )}
                       <div className={styles.targets}>
@@ -366,6 +468,8 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
         )}
       </section>
 
+      {cardioBlock(CARDIO_PHASES[1])}
+
       <WorkoutBodyMap exercises={items} />
 
 
@@ -382,7 +486,7 @@ export default function WorkoutEditor({ initial, onSubmit, onDelete }) {
 
       <GymSheet open={pickerOpen} onClose={closePicker} title="Adicionar exercícios">
         {pickerOpen && (
-          <ExercisePicker exercises={exercises} loadError={loadError} onRetry={fetchExercises} onConfirm={addExercises} />
+          <ExercisePicker exercises={strengthExercises} loadError={loadError} onRetry={fetchExercises} onConfirm={addExercises} />
         )}
       </GymSheet>
     </form>

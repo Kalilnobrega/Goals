@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useRef, useState } from 'react';
-import { Check, CloudOff, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
+import { Check, CloudOff, HeartPulse, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
   parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide } from '../../lib/gym';
@@ -539,7 +539,9 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
   );
 }
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote }) {
+const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
+
+export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -552,6 +554,9 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
   const timed = tracking !== 'reps';
   const extra = item.equipment === 'bodyweight';
   const side = perSide(item);
+  const cardio = tracking === 'cardio';
+  const picking = cardio && !!onPickCardio && item.sets.length === 0 && cardioOptions?.length > 0;
+  const needsDevice = cardio && item.exercise_id === null;
 
   const saveEdit = async (entry, data) => {
     const ok = await onEditSet(item, entry, data);
@@ -572,7 +577,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
       <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
         <header className={styles.header}>
           <div className={styles.headerTop}>
-            <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : index + 1}</span>
+            <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : cardio ? <HeartPulse size={16} /> : index + 1}</span>
             <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
             {onOpenMenu && (
               <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
@@ -589,8 +594,8 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
             <p className={styles.meta}>
               {target ? <span className={styles.target}>{target}</span> : null}
               <span className={styles.metaLine}>
-                {groupsLabel(item)}
-                {item.target_sets ? ` · ${done}/${item.target_sets}` : ''}
+                {cardio ? PHASE_LABEL[item.phase] ?? 'Cardio' : groupsLabel(item)}
+                {item.target_sets && !cardio ? ` · ${done}/${item.target_sets}` : ''}
               </span>
             </p>
           {onOpenRest && tracking !== 'cardio' && <button type="button" className={styles.restChip} onClick={() => onOpenRest(item)} aria-label={`Descanso: ${formatRest(item.rest_seconds)}`}>
@@ -637,7 +642,27 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
           </ol>
         )}
 
-        {!complete || addingExtra ? (
+        {picking && (
+          <div className={styles.cardioPick} role="radiogroup" aria-label={`Aparelho do ${item.exercise_name}`}>
+            <span className={styles.cardioPickLabel}>{needsDevice ? 'Escolha o aparelho' : 'Aparelho'}</span>
+            <div className={styles.cardioChips}>
+              {cardioOptions.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={option.id === item.exercise_id}
+                  className={`${styles.cardioChip} ${option.id === item.exercise_id ? styles.cardioChipOn : ''}`}
+                  onClick={() => option.id !== item.exercise_id && onPickCardio(item, option)}
+                >
+                  {option.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {needsDevice && onPickCardio ? null : !complete || addingExtra ? (
           timed ? (
             <TimedNewSet
               key={`t-${item.sets.length}`}
