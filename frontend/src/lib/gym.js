@@ -432,6 +432,8 @@ export const TRACKING = [
   { value: 'cardio', label: 'Cardio' },
 ];
 
+export const hasIncline = (name) => /esteira|corrida|caminhada/i.test(name ?? '');
+
 export function setSummary(entry, tracking = 'reps', extra = false) {
   if (tracking === 'cardio') {
     return [
@@ -439,6 +441,7 @@ export function setSummary(entry, tracking = 'reps', extra = false) {
       entry.distance_km ? `${formatKg(entry.distance_km)} km` : null,
       entry.speed_kmh ? `${formatKg(entry.speed_kmh)} km/h` : null,
       entry.level ? `nível ${entry.level}` : null,
+      entry.incline_pct ? `inclinação ${formatKg(entry.incline_pct)}%` : null,
       entry.calories ? `${entry.calories} kcal` : null,
     ].filter(Boolean).join(' · ');
   }

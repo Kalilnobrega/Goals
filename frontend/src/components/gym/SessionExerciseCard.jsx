@@ -3,7 +3,7 @@ import { createContext, useContext, useRef, useState } from 'react';
 import { Check, CloudOff, HeartPulse, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide } from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, hasIncline } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -338,10 +338,12 @@ function SwipeToDelete({ onDelete, children }) {
 }
 
 const Tracking = createContext('reps');
+const Incline = createContext(false);
 
 function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   const extra = useContext(ExtraLoad);
   const tracking = useContext(Tracking);
+  const incline = useContext(Incline);
   const timed = tracking !== 'reps';
   const side = useContext(PerSide);
   const [weight, setWeight] = useState(inputKg(entry.weight_kg, side));
@@ -381,7 +383,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   }
 
   if (timed) {
-    return <TimedEditSet entry={entry} tracking={tracking} extra={extra} onSave={onSave} onDelete={onDelete} onCancel={onCancel} />;
+    return <TimedEditSet entry={entry} tracking={tracking} extra={extra} onSave={onSave} onDelete={onDelete} onCancel={onCancel} incline={incline} />;
   }
 
   const save = async () => {
@@ -574,6 +576,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
     <ExtraLoad.Provider value={extra}>
     <PerSide.Provider value={side}>
     <Tracking.Provider value={tracking}>
+    <Incline.Provider value={cardio && hasIncline(item.exercise_name)}>
       <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
         <header className={styles.header}>
           <div className={styles.headerTop}>
@@ -702,6 +705,7 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
 
         {onSaveNote && <ExerciseNote key={item.note ?? ''} item={item} onSave={onSaveNote} />}
       </article>
+    </Incline.Provider>
     </Tracking.Provider>
     </PerSide.Provider>
     </ExtraLoad.Provider>

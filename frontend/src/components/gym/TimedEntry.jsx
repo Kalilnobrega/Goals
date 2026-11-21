@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Minus, Pause, Play, Plus, RotateCcw, Timer, Trash2 } from 'lucide-react';
-import { cleanKgInput, formatClock, formatRest, kgInput, parseKg } from '../../lib/gym';
+import { cleanKgInput, formatClock, formatRest, hasIncline, kgInput, parseKg } from '../../lib/gym';
 import useNow from './useNow';
 import { useToast } from '../Toast';
 import styles from './TimedEntry.module.css';
@@ -137,12 +137,13 @@ function initialValues(tracking, reference, item) {
     distance: reference?.distance_km ? kgInput(reference.distance_km) : '',
     speed: reference?.speed_kmh ? kgInput(reference.speed_kmh) : '',
     level: reference?.level ? String(reference.level) : '',
+    incline: reference?.incline_pct ? kgInput(reference.incline_pct) : '',
     calories: '',
   };
 }
 
-function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
-  const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level || values.calories));
+function TimedFields({ tracking, extra, values, setValues, watchKey, target, incline = false }) {
+  const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level || values.calories || values.incline));
   const set = (key) => (value) => setValues(current => ({ ...current, [key]: value }));
   return (
     <>
@@ -159,7 +160,7 @@ function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
       {tracking === 'cardio' && (
         <>
           <button type="button" className={styles.detailsToggle} onClick={() => setDetails(open => !open)} aria-expanded={details}>
-            Velocidade, nível, distância e calorias <em>opcional</em>
+            {incline ? 'Velocidade, inclinação, distância e calorias' : 'Velocidade, nível, distância e calorias'} <em>opcional</em>
             <ChevronDown size={16} className={details ? styles.open : ''} />
           </button>
           {details && (
@@ -171,6 +172,15 @@ function TimedFields({ tracking, extra, values, setValues, watchKey, target }) {
                   <small>km/h</small>
                 </span>
               </label>
+              {incline && (
+                <label className={styles.optional}>
+                  <span>Inclinação</span>
+                  <span className={styles.inputWrap}>
+                    <input value={values.incline} onChange={e => set('incline')(decimal(e.target.value))} inputMode="decimal" placeholder="—" />
+                    <small>%</small>
+                  </span>
+                </label>
+              )}
               <label className={styles.optional}>
                 <span>Nível</span>
                 <span className={styles.inputWrap}>
@@ -211,6 +221,7 @@ function payload(tracking, values) {
     data.speed_kmh = toNumber(values.speed);
     data.level = values.level ? Number(values.level) : null;
     data.calories = values.calories ? Number(values.calories) : null;
+    data.incline_pct = values.incline ? toNumber(values.incline) : null;
   }
   return { data };
 }
@@ -237,7 +248,7 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
 
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
-      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} watchKey={watchKey} target={tracking === 'cardio' ? (item.reps_min ?? 0) * 60 : 0} />
+      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} watchKey={watchKey} target={tracking === 'cardio' ? (item.reps_min ?? 0) * 60 : 0} incline={tracking === 'cardio' && hasIncline(item.exercise_name)} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.actions}>
         <button type="submit" className={styles.log} disabled={saving}>
@@ -257,7 +268,7 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
   );
 }
 
-export function TimedEditSet({ entry, tracking, extra, onSave, onDelete, onCancel }) {
+export function TimedEditSet({ entry, tracking, extra, onSave, onDelete, onCancel, incline = false }) {
   const [values, setValues] = useState(() => ({ ...initialValues(tracking, entry, {}), calories: entry.calories ? String(entry.calories) : '' }));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -278,7 +289,7 @@ export function TimedEditSet({ entry, tracking, extra, onSave, onDelete, onCance
 
   return (
     <li className={styles.edit}>
-      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} />
+      <TimedFields tracking={tracking} extra={extra} values={values} setValues={setValues} incline={incline || entry.incline_pct != null} />
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.editActions}>
         <button type="button" className={styles.editDelete} onClick={remove} disabled={busy} aria-label="Excluir"><Trash2 size={18} /></button>
