@@ -73,6 +73,8 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "duration": sum(entry.duration_seconds or 0 for entry in item.sets),
             "distance": sum(float(entry.distance_km or 0) for entry in item.sets),
         })
+    cardio = [e for e in exercises if e["tracking"] == "cardio"]
+    exercises = [e for e in exercises if e["tracking"] != "cardio"]
     return {
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
@@ -83,6 +85,7 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
         "hour": started.astimezone(BRT).hour,
         "minutes": max((completed - started).total_seconds() / 60, 0),
         "exercises": exercises,
+        "cardio": cardio,
         "sets": sum(e["sets"] for e in exercises),
         "reps": sum(e["reps"] for e in exercises),
         "volume": sum(e["volume"] for e in exercises),
@@ -126,8 +129,8 @@ def cardio_stats(period: list[dict]) -> dict | None:
     by_exercise: dict = {}
     sessions = set()
     for s in period:
-        for e in s["exercises"]:
-            if e["tracking"] != "cardio" or not e["duration"]:
+        for e in s["cardio"]:
+            if not e["duration"]:
                 continue
             sessions.add(s["id"])
             item = by_exercise.setdefault(exercise_key(e), {

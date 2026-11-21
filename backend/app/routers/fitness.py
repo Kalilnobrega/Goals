@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, ExerciseIntensity, ExerciseMuscle, Workout, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
+from app.fitness_models import Exercise, ExerciseIntensity, ExerciseMuscle, Workout, WorkoutCardio, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
@@ -149,8 +149,9 @@ def delete_exercise(
     used_in = [
         name
         for (name,) in session.query(Workout.name)
-        .join(WorkoutExercise, WorkoutExercise.workout_id == Workout.id)
-        .filter(WorkoutExercise.exercise_id == exercise.id)
+        .outerjoin(WorkoutExercise, WorkoutExercise.workout_id == Workout.id)
+        .outerjoin(WorkoutCardio, WorkoutCardio.workout_id == Workout.id)
+        .filter(or_(WorkoutExercise.exercise_id == exercise.id, WorkoutCardio.exercise_id == exercise.id))
         .distinct()
         .order_by(Workout.name)
     ]
@@ -180,16 +181,23 @@ def get_own_workout(workout_id: int, user: User, session: Session) -> Workout:
     return workout
 
 
+CARDIO = "cardio"
+
+
 def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -> list[WorkoutExercise]:
-    ids = {item.exercise_id for item in data.exercises}
-    found = {
-        exercise_id
-        for (exercise_id,) in visible_exercises(user, session)
+    ids = {item.exercise_id for item in data.exercises} | {item.exercise_id for item in data.cardio if item.exercise_id is not None}
+    tracking = dict(
+        visible_exercises(user, session)
         .filter(Exercise.id.in_(ids))
-        .with_entities(Exercise.id)
-    } if ids else set()
-    if ids - found:
+        .with_entities(Exercise.id, Exercise.tracking)
+        .all()
+    ) if ids else {}
+    if ids - set(tracking):
         raise HTTPException(status_code=400, detail="Algum exercício da ficha não foi encontrado.")
+    if any(tracking[item.exercise_id] == CARDIO for item in data.exercises):
+        raise HTTPException(status_code=400, detail="Cardio vai no bloco de cardio da ficha, não entre os exercícios.")
+    if any(item.exercise_id is not None and tracking[item.exercise_id] != CARDIO for item in data.cardio):
+        raise HTTPException(status_code=400, detail="O bloco de cardio aceita só exercícios de cardio.")
     return [
         WorkoutExercise(
             exercise_id=item.exercise_id,
@@ -203,6 +211,15 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
         )
         for index, item in enumerate(data.exercises)
     ]
+
+
+def build_workout_cardio(data: WorkoutSchema) -> list[WorkoutCardio]:
+    positions = {"start": 0, "end": 0}
+    items = []
+    for item in data.cardio:
+        items.append(WorkoutCardio(exercise_id=item.exercise_id, phase=item.phase, position=positions[item.phase], minutes=item.minutes))
+        positions[item.phase] += 1
+    return items
 
 
 @fitness_router.get("/workouts", response_model=List[WorkoutResponseSchema])
@@ -237,6 +254,7 @@ def create_workout(
         name=data.name,
         description=data.description,
         exercises=build_workout_exercises(data, user, session),
+        cardio=build_workout_cardio(data),
     )
     session.add(workout)
     session.commit()
@@ -256,8 +274,10 @@ def replace_workout(
     workout.name = data.name
     workout.description = data.description
     workout.exercises.clear()
+    workout.cardio.clear()
     session.flush()
     workout.exercises.extend(items)
+    workout.cardio.extend(build_workout_cardio(data))
     workout.updated_at = func.now()
     session.commit()
     session.refresh(workout)

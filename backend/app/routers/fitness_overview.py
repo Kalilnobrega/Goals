@@ -29,7 +29,7 @@ def active_summary(user: User, db: Session) -> dict | None:
     total_sets = (
         db.query(func.count(func.distinct(series_key())))
         .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
-        .filter(SessionExercise.session_id == workout_session.id)
+        .filter(SessionExercise.session_id == workout_session.id, SessionExercise.tracking != "cardio")
         .scalar()
     )
     return {
@@ -105,7 +105,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date
 def last_session(user: User, db: Session) -> dict | None:
     stats = session_stats(db)
     row = (
-        db.query(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume)
+        db.query(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume, stats.c.cardio_seconds)
         .outerjoin(stats, stats.c.session_id == WorkoutSession.id)
         .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
         .order_by(WorkoutSession.completed_at.desc(), WorkoutSession.id.desc())
@@ -113,9 +113,9 @@ def last_session(user: User, db: Session) -> dict | None:
     )
     if not row:
         return None
-    workout_session, exercise_count, total_sets, volume = row
+    workout_session, exercise_count, total_sets, volume, cardio_seconds = row
     bonus = bodyweight_bonus([(workout_session.id, workout_session.started_at)], user.id, db).get(workout_session.id, 0.0)
-    return history_item(workout_session, exercise_count, total_sets, float(volume or 0) + bonus)
+    return history_item(workout_session, exercise_count, total_sets, float(volume or 0) + bonus, cardio_seconds=cardio_seconds)
 
 
 def suggested_workout(user: User, db: Session) -> tuple[dict | None, int]:

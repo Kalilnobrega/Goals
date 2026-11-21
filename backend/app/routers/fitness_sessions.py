@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc
 from app.models import User
-from app.fitness_models import Exercise, Workout, WorkoutExercise, WorkoutSession, SessionExercise, SetEntry
+from app.fitness_models import Exercise, Workout, WorkoutCardio, WorkoutExercise, WorkoutSession, SessionExercise, SetEntry
 from app.fitness_schemas import (
     StartSessionSchema,
     AddSessionExerciseSchema,
@@ -113,7 +113,8 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
         factors = bodyweight_factors(db, [item.exercise_id for item in workout_session.exercises if item.equipment == BODYWEIGHT])
     for item in workout_session.exercises:
         previous = previous_performance(item, workout_session, db)
-        total_sets += series_count(item.sets)
+        if item.tracking != CARDIO:
+            total_sets += series_count(item.sets)
         extra = Decimal(str(round(body * factors.get(item.exercise_id, 1.0), 2))) if body and item.equipment == BODYWEIGHT else Decimal(0)
         volume += sum(((entry.weight_kg + extra) * entry.reps for entry in item.sets), Decimal(0))
         exercises.append({
@@ -131,6 +132,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "unilateral": bool(item.unilateral),
             "tracking": item.tracking or "reps",
             "load_mode": item.load_mode,
+            "phase": item.phase,
             "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": [
@@ -248,6 +250,33 @@ def last_load_mode(exercise_id: int, user: User, db: Session) -> str | None:
     return row[0] if row else None
 
 
+def last_cardio(user: User, db: Session) -> Exercise | None:
+    return (
+        db.query(Exercise)
+        .join(SessionExercise, SessionExercise.exercise_id == Exercise.id)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(WorkoutSession.user_id == user.id, SessionExercise.tracking == CARDIO, SessionExercise.sets.any())
+        .order_by(WorkoutSession.started_at.desc(), SessionExercise.id.desc())
+        .first()
+    )
+
+
+def cardio_item(planned: WorkoutCardio, fallback: Exercise | None, phase: str) -> SessionExercise:
+    exercise = planned.exercise or fallback
+    return SessionExercise(
+        exercise_id=exercise.id if exercise else None,
+        exercise_name=exercise.name if exercise else "Cardio",
+        muscle_group=exercise.muscle_group if exercise else CARDIO,
+        equipment=exercise.equipment if exercise else CARDIO,
+        muscles=exercise.muscle_list() if exercise else [],
+        position=0,
+        target_sets=1,
+        reps_min=planned.minutes,
+        tracking=CARDIO,
+        phase=phase,
+    )
+
+
 def commit_session(workout_session: WorkoutSession, db: Session) -> dict:
     db.commit()
     db.refresh(workout_session)
@@ -258,7 +287,7 @@ def muscle_groups_by_session(session_ids: list[int], db: Session) -> dict[int, l
     rows = (
         db.query(SessionExercise.session_id, SessionExercise.muscle_group, func.count(SetEntry.id))
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
-        .filter(SessionExercise.session_id.in_(session_ids))
+        .filter(SessionExercise.session_id.in_(session_ids), SessionExercise.tracking != CARDIO)
         .group_by(SessionExercise.session_id, SessionExercise.muscle_group)
         .all()
     )
@@ -275,9 +304,10 @@ def session_stats(db: Session):
     return (
         db.query(
             SessionExercise.session_id.label("session_id"),
-            func.count(func.distinct(SessionExercise.id)).label("exercise_count"),
-            func.count(func.distinct(series_key())).label("total_sets"),
+            func.count(func.distinct(case((SessionExercise.tracking != CARDIO, SessionExercise.id)))).label("exercise_count"),
+            func.count(func.distinct(case((SessionExercise.tracking != CARDIO, series_key())))).label("total_sets"),
             func.sum(SetEntry.weight_kg * SetEntry.reps).label("volume"),
+            func.sum(case((SessionExercise.tracking == CARDIO, SetEntry.duration_seconds), else_=0)).label("cardio_seconds"),
         )
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
         .group_by(SessionExercise.session_id)
@@ -285,7 +315,7 @@ def session_stats(db: Session):
     )
 
 
-def history_item(workout_session: WorkoutSession, exercise_count, total_sets, volume, muscle_groups=None) -> dict:
+def history_item(workout_session: WorkoutSession, exercise_count, total_sets, volume, muscle_groups=None, cardio_seconds=None) -> dict:
     return {
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
@@ -295,6 +325,7 @@ def history_item(workout_session: WorkoutSession, exercise_count, total_sets, vo
         "exercise_count": exercise_count or 0,
         "total_sets": total_sets or 0,
         "volume_kg": float(volume or 0),
+        "cardio_seconds": int(cardio_seconds or 0),
         "muscle_groups": muscle_groups or [],
     }
 
@@ -346,7 +377,7 @@ def list_sessions(
     if date_to:
         completed = completed.filter(WorkoutSession.started_at < br_day_start_utc(date_to + timedelta(days=1)))
     rows = (
-        completed.with_entities(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume)
+        completed.with_entities(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume, stats.c.cardio_seconds)
         .outerjoin(stats, stats.c.session_id == WorkoutSession.id)
         .order_by(WorkoutSession.completed_at.desc(), WorkoutSession.id.desc())
         .offset(offset)
@@ -360,9 +391,9 @@ def list_sessions(
         "items": [
             history_item(
                 workout_session, exercise_count, total_sets,
-                float(volume or 0) + bonus.get(workout_session.id, 0.0), muscles.get(workout_session.id),
+                float(volume or 0) + bonus.get(workout_session.id, 0.0), muscles.get(workout_session.id), cardio_seconds,
             )
-            for workout_session, exercise_count, total_sets, volume in rows
+            for workout_session, exercise_count, total_sets, volume, cardio_seconds in rows
         ],
         "total": total,
         "has_more": offset + len(rows) < total,
@@ -398,7 +429,10 @@ def start_session(
             raise HTTPException(status_code=404, detail="Ficha não encontrada")
         workout_session.workout_id = workout.id
         workout_session.name = workout.name
-        workout_session.exercises = [
+        fallback = last_cardio(user, db)
+        starts = [cardio_item(item, fallback, "start") for item in workout.cardio if item.phase == "start"]
+        ends = [cardio_item(item, fallback, "end") for item in workout.cardio if item.phase == "end"]
+        exercises = [
             SessionExercise(
                 exercise_id=item.exercise_id,
                 workout_exercise_id=item.id,
@@ -406,7 +440,7 @@ def start_session(
                 muscle_group=item.exercise.muscle_group,
                 equipment=item.exercise.equipment,
                 muscles=item.exercise.muscle_list(),
-                position=index,
+                position=0,
                 target_sets=item.target_sets,
                 reps_min=item.reps_min,
                 reps_max=item.reps_max,
@@ -415,8 +449,11 @@ def start_session(
                 tracking=item.exercise.tracking,
                 load_mode=item.load_mode,
             )
-            for index, item in enumerate(workout.exercises)
+            for item in workout.exercises
         ]
+        workout_session.exercises = starts + exercises + ends
+        for index, item in enumerate(workout_session.exercises):
+            item.position = index
 
     db.add(workout_session)
     try:
@@ -484,7 +521,14 @@ def add_session_exercise(
     if len(workout_session.exercises) >= 40:
         raise HTTPException(status_code=400, detail="Um treino pode ter no máximo 40 exercícios.")
     exercise = get_visible_exercise(data.exercise_id, user, db)
+    cardio = exercise.tracking == CARDIO
     position = max((item.position for item in workout_session.exercises), default=-1) + 1
+    if not cardio:
+        ends = [item for item in workout_session.exercises if item.phase == "end"]
+        if ends:
+            position = min(item.position for item in ends)
+            for item in ends:
+                item.position += 1
     workout_session.exercises.append(
         SessionExercise(
             exercise_id=exercise.id,
@@ -497,6 +541,8 @@ def add_session_exercise(
             unilateral=exercise.is_unilateral,
             tracking=exercise.tracking,
             load_mode=last_load_mode(exercise.id, user, db),
+            target_sets=1 if cardio else None,
+            phase="end" if cardio else None,
         )
     )
     return commit_session(workout_session, db)
@@ -540,6 +586,10 @@ def edit_session_exercise(
                 status_code=409, detail="Só dá para trocar um exercício que ainda não tem séries."
             )
         exercise = get_visible_exercise(data.exercise_id, user, db)
+        if (exercise.tracking == CARDIO) != (item.tracking == CARDIO):
+            raise HTTPException(
+                status_code=409, detail="Cardio só troca por outro cardio, e exercício só por outro exercício."
+            )
         if item.sets and exercise.tracking != (item.tracking or "reps"):
             raise HTTPException(
                 status_code=409, detail="Esse exercício é registrado de outro jeito. Escolha um com o mesmo tipo de registro."

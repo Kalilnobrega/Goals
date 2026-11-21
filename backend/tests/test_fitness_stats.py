@@ -387,10 +387,10 @@ def test_cardio_stats_and_timed_progress(client, ana, db_session):
     session = start(client, headers)
     for exercise in (bike, plank):
         client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": exercise.id}, headers=headers)
-    items = client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]
-    client.post(f"/fitness/session-exercises/{items[0]['id']}/sets", json={"duration_seconds": 1500, "distance_km": 10}, headers=headers)
+    items = {item["exercise_id"]: item for item in client.get(f"/fitness/sessions/{session['id']}", headers=headers).json()["exercises"]}
+    client.post(f"/fitness/session-exercises/{items[bike.id]['id']}/sets", json={"duration_seconds": 1500, "distance_km": 10}, headers=headers)
     for seconds in (45, 60):
-        client.post(f"/fitness/session-exercises/{items[1]['id']}/sets", json={"duration_seconds": seconds}, headers=headers)
+        client.post(f"/fitness/session-exercises/{items[plank.id]['id']}/sets", json={"duration_seconds": seconds}, headers=headers)
     finish(client, headers, session["id"])
 
     cardio = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["cardio"]

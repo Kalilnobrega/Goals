@@ -28,6 +28,8 @@ Tracking = Literal["reps", "time", "cardio"]
 
 Grip = Literal["pronated", "supinated", "neutral"]
 
+CardioPhase = Literal["start", "end"]
+
 Equipment = Literal[
     "barbell",
     "dumbbell",
@@ -155,10 +157,17 @@ class WorkoutExerciseSchema(BaseModel):
         return self
 
 
+class WorkoutCardioSchema(BaseModel):
+    exercise_id: int | None = None
+    phase: CardioPhase
+    minutes: int = Field(ge=1, le=300)
+
+
 class WorkoutSchema(BaseModel):
     name: str = Field(max_length=60)
     description: str | None = Field(default=None, max_length=300)
     exercises: list[WorkoutExerciseSchema] = Field(default_factory=list, max_length=40)
+    cardio: list[WorkoutCardioSchema] = Field(default_factory=list, max_length=6)
 
     @field_validator("name")
     @classmethod
@@ -187,6 +196,15 @@ class WorkoutExerciseResponseSchema(BaseModel):
     load_mode: str | None = None
 
 
+class WorkoutCardioResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    exercise: ExerciseResponseSchema | None = None
+    phase: str
+    minutes: int
+
+
 class WorkoutResponseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -194,6 +212,7 @@ class WorkoutResponseSchema(BaseModel):
     name: str
     description: str | None
     exercises: list[WorkoutExerciseResponseSchema]
+    cardio: list[WorkoutCardioResponseSchema] = []
     updated_at: datetime | None
 
 
@@ -301,6 +320,7 @@ class SessionExerciseResponseSchema(BaseModel):
     unilateral: bool = False
     tracking: str = "reps"
     load_mode: str | None = None
+    phase: str | None = None
     from_plan: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]
@@ -317,6 +337,7 @@ class SessionHistoryItemSchema(BaseModel):
     exercise_count: int
     total_sets: int
     volume_kg: float
+    cardio_seconds: int = 0
     muscle_groups: list[str]
 
 

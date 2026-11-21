@@ -82,6 +82,25 @@ class Workout(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    cardio = relationship(
+        "WorkoutCardio",
+        order_by="(WorkoutCardio.phase.desc(), WorkoutCardio.position)",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class WorkoutCardio(Base):
+    __tablename__ = "fitness_workout_cardio"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    workout_id = Column(ForeignKey("fitness_workouts.id", ondelete="CASCADE"), nullable=False, index=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="SET NULL"), nullable=True, index=True)
+    phase = Column(String(5), nullable=False)
+    position = Column(Integer, nullable=False)
+    minutes = Column(Integer, nullable=False)
+
+    exercise = relationship("Exercise", lazy="joined")
 
 
 class WorkoutExercise(Base):
@@ -152,6 +171,7 @@ class SessionExercise(Base):
     unilateral = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
     load_mode = Column(String(5), nullable=True)
+    phase = Column(String(5), nullable=True)
 
     sets = relationship(
         "SetEntry",
