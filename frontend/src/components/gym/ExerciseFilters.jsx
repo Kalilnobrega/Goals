@@ -61,7 +61,7 @@ function Chips({ options, value, onChange, label }) {
   );
 }
 
-export default function ExerciseFilters({ filters, exercises, allowMine = false, onlyUsed = false }) {
+export default function ExerciseFilters({ filters, exercises, allowMine = false }) {
   const [bodyOpen, setBodyOpen] = useState(false);
   const [bodyType, setBodyType] = useBodyType();
   const { group, setGroup, equipment, setEquipment, muscle, setMuscle } = filters;
@@ -70,7 +70,7 @@ export default function ExerciseFilters({ filters, exercises, allowMine = false,
   const groupOptions = [
     { value: 'all', label: 'Todos' },
     ...(allowMine ? [{ value: 'mine', label: 'Meus' }] : []),
-    ...(onlyUsed ? MUSCLE_GROUPS.filter(item => usedGroups.has(item.value)) : MUSCLE_GROUPS),
+    ...MUSCLE_GROUPS.filter(item => usedGroups.has(item.value)),
   ];
 
   const equipmentOptions = useMemo(() => {

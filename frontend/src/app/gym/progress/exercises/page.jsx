@@ -83,7 +83,7 @@ export default function ProgressPage() {
             )}
           </label>
 
-          <ExerciseFilters filters={filters} exercises={trained} onlyUsed />
+          <ExerciseFilters filters={filters} exercises={trained} />
 
           {filtering && visible.length > 0 && (
             <p className={styles.filterCount}>
