@@ -960,7 +960,7 @@ export default function SessionPage() {
                 </div>
                 {missing.length > 0 && (
                   <div className={styles.missing}>
-                    <p className={styles.missingTitle}>Ficou faltando</p>
+                    <p className={styles.missingTitle}>{missing.length === 1 ? 'Ficou faltando' : 'Ficaram faltando'}</p>
                     <ul className={styles.missingList}>
                       {missing.map(item => (
                         <li key={item.id} className={styles.missingItem}>
