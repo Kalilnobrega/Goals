@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES, TRACKING, INTENSITY, guessIntensity } from '../../lib/gym';
 import { MusclePicker } from './ExerciseMuscles';
+import GymSwitch from './GymSwitch';
 import styles from './ExerciseForm.module.css';
+
+const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
 
 function ChoiceGroup({ label, options, value, onChange }) {
   return (
@@ -139,13 +142,13 @@ export default function ExerciseForm({ initial, onSubmit, onDelete }) {
         </label>
       )}
 
-      <label className={styles.toggle}>
-        <input type="checkbox" checked={unilateral} onChange={e => setUnilateral(e.target.checked)} />
-        <span>
-          Unilateral (um lado de cada vez)
-          <small>No treino, cada série tem carga e reps da esquerda e da direita</small>
-        </span>
-      </label>
+      <div className={styles.field}>
+        <span className={styles.label}>Execução</span>
+        <GymSwitch label="Execução" value={unilateral} options={SIDE_OPTIONS} onChange={setUnilateral} />
+        <small className={styles.hint}>
+          {unilateral ? 'Um lado de cada vez: no treino, cada série tem carga e reps da esquerda e da direita.' : 'Os dois lados juntos: cada série tem uma carga e um número de reps.'}
+        </small>
+      </div>
 
       <fieldset className={styles.field}>
         <legend className={styles.label}>Músculos <small>opcional</small></legend>

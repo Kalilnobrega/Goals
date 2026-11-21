@@ -123,37 +123,6 @@ label.field .label {
   cursor: pointer;
 }
 
-.toggle {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--gym-surface-2);
-  cursor: pointer;
-}
-
-.toggle input {
-  width: 20px;
-  height: 20px;
-  margin-top: 1px;
-  flex-shrink: 0;
-  accent-color: var(--gym-accent);
-}
-
-.toggle span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-weight: 500;
-}
-
-.toggle small {
-  color: var(--gym-muted);
-  font-size: 0.8rem;
-  font-weight: 400;
-}
-
 .percent {
   position: relative;
   display: flex;
