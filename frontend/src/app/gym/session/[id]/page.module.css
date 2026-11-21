@@ -472,3 +472,57 @@
   max-width: 260px;
   margin-top: 10px;
 }
+
+.missing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--gym-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--gym-warning) 8%, var(--gym-surface-2));
+}
+
+.missingTitle {
+  color: var(--gym-warning);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.missingList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.missingItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.missingName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.missingDetail {
+  flex-shrink: 0;
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.missingNote {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}

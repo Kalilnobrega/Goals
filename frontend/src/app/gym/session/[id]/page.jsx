@@ -609,6 +609,15 @@ export default function SessionPage() {
   const lastAt = lastActivity(session);
   const pending = session.exercises.filter(item => item.sets.length === 0 && !isCardio(item)).length;
   const pendingCardio = session.exercises.some(item => item.sets.length === 0 && isCardio(item));
+  const missing = session.exercises.filter(item => !isDone(item)).map(item => ({
+    id: item.id,
+    name: item.exercise_name,
+    detail: isCardio(item)
+      ? 'Cardio sem registro'
+      : item.target_sets
+      ? `${seriesCount(item.sets)} de ${plural(item.target_sets, 'série', 'séries')}`
+      : 'Sem séries',
+  }));
 
   const current = session.exercises[currentIndex];
   const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
@@ -949,16 +958,28 @@ export default function SessionPage() {
                     <span className={s.statLabel}>Volume</span>
                   </div>
                 </div>
-                {pending > 0 && (
-                  <p className={s.text}>{plural(pending, 'exercício ficou', 'exercícios ficaram')} sem séries e não {pending === 1 ? 'entra' : 'entram'} no resumo.</p>
+                {missing.length > 0 && (
+                  <div className={styles.missing}>
+                    <p className={styles.missingTitle}>Ficou faltando</p>
+                    <ul className={styles.missingList}>
+                      {missing.map(item => (
+                        <li key={item.id} className={styles.missingItem}>
+                          <span className={styles.missingName}>{item.name}</span>
+                          <span className={styles.missingDetail}>{item.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {(pending > 0 || pendingCardio) && (
+                      <p className={styles.missingNote}>O que ficou sem nenhum registro não entra no resumo.</p>
+                    )}
+                  </div>
                 )}
-                {pendingCardio && <p className={s.text}>O cardio que ficou sem registro não entra no resumo.</p>}
               </>
             )}
             <div className={s.actions}>
               {totalSets > 0 && (
                 <button type="button" className={s.primary} onClick={() => finish(null)} disabled={busy}>
-                  <Flag size={18} /> {busy ? 'Finalizando…' : 'Finalizar agora'}
+                  <Flag size={18} /> {busy ? 'Finalizando…' : missing.length ? 'Finalizar mesmo assim' : 'Finalizar agora'}
                 </button>
               )}
               <button type="button" className={s.secondary} onClick={closeSheet}>Continuar treinando</button>
