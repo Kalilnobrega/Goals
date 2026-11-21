@@ -61,6 +61,13 @@ function cachedGet(key, url) {
 // Se o access token expirar (401), tenta renovar com o refresh token antes de deslogar
 let refreshPromise = null;
 
+function redirectToLogin() {
+  const { pathname, search } = window.location;
+  if (pathname.startsWith("/login")) return;
+  const from = pathname === "/" ? "" : `?from=${encodeURIComponent(pathname + search)}`;
+  window.location.href = `/login${from}`;
+}
+
 api.interceptors.response.use(
   (res) => {
     if (res.config?.method && res.config.method !== "get") clearCache();
@@ -95,13 +102,13 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch {
           clearToken();
-          window.location.href = "/login";
+          redirectToLogin();
           return Promise.reject(err);
         }
       }
 
       clearToken();
-      window.location.href = "/login";
+      redirectToLogin();
     }
 
     return Promise.reject(err);
