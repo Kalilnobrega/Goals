@@ -266,7 +266,7 @@ def time_stats(period: list[dict]) -> dict | None:
             for item in per_exercise.values()
         ),
         key=lambda item: -item["avg_seconds"],
-    )[:5]
+    )[:20]
     exercise_seconds = [e["seconds"] for e in exercises if e["seconds"] is not None]
     timed = [e for e in exercises if e["seconds"] is not None]
     total_work = sum(e["work"] for e in exercises)
@@ -407,7 +407,7 @@ def exercise_stats(period: list[dict], everything: list[dict]):
                 reps_timeline[key].append((s["completed_at"], e["max_reps"]))
     for item in usage.values():
         item["volume_kg"] = round(item["volume_kg"], 1)
-    most_done = sorted(usage.values(), key=lambda i: (-i["sets"], -i["sessions"], i["name"]))[:8]
+    most_done = sorted(usage.values(), key=lambda i: (-i["sets"], -i["sessions"], i["name"]))[:20]
 
     progressions = []
     for key, points in timeline.items():
@@ -427,8 +427,8 @@ def exercise_stats(period: list[dict], everything: list[dict]):
             "change_pct": pct(first, last),
             "sessions": len(points),
         })
-    gains = sorted([p for p in progressions if p["change_kg"] > 0], key=lambda p: -p["change_pct"])[:5]
-    drops = sorted([p for p in progressions if p["change_kg"] < 0], key=lambda p: p["change_pct"])[:3]
+    gains = sorted([p for p in progressions if p["change_kg"] > 0], key=lambda p: -p["change_pct"])[:20]
+    drops = sorted([p for p in progressions if p["change_kg"] < 0], key=lambda p: p["change_pct"])[:20]
 
     rep_progressions = []
     for key, points in reps_timeline.items():
@@ -446,7 +446,7 @@ def exercise_stats(period: list[dict], everything: list[dict]):
             "change_pct": pct(first, last),
             "sessions": len(points),
         })
-    rep_gains = sorted([p for p in rep_progressions if p["change_reps"] > 0], key=lambda p: -p["change_pct"])[:5]
+    rep_gains = sorted([p for p in rep_progressions if p["change_reps"] > 0], key=lambda p: -p["change_pct"])[:20]
 
     average = {
         "load_pct": mean([p["change_pct"] for p in progressions]),
@@ -924,7 +924,7 @@ def workout_insights(workout, sessions: list[dict], everything: list[dict]) -> d
         "rep_range": {"in_range": in_range, "below": below, "above": above} if in_range + below + above else None,
         "completion": completion,
         "time": time_stats(sessions),
-        "records": weight_records(everything, lambda s: s["id"] in session_ids)[:8],
+        "records": weight_records(everything, lambda s: s["id"] in session_ids)[:20],
         "volume_share": volume_share,
     }
 
