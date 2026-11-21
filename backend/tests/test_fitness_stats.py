@@ -293,6 +293,32 @@ def test_stats_plan_adherence_counts_planned_days(client, library, ana, db_sessi
     assert client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["adherence"] is None
 
 
+def test_stats_plan_details_cover_weeks_skips_workouts_and_muscles(client, library, ana, db_session):
+    from app.fitness_models import Plan
+    _, headers = ana
+    upper = make_workout(client, headers, library, name="Upper")
+    today = today_br()
+    days = [{"weekday": (today - timedelta(days=offset)).weekday(), "workout_id": upper["id"]} for offset in (1, 2)]
+    plan = client.post("/fitness/plans", json={"name": "Treino 1", "days": days}, headers=headers).json()
+    stored = db_session.get(Plan, plan["id"])
+    stored.created_at = datetime.combine(today - timedelta(days=13), time(8), tzinfo=BRT).astimezone(timezone.utc)
+    db_session.commit()
+    for days_ago in (1, 8, 3):
+        train(client, headers, db_session, upper["id"], [[(60, 10)]], at(days_ago))
+
+    details = client.get("/fitness/stats", params={"period": "4w", "plan_id": plan["id"]}, headers=headers).json()["plan_details"]
+    muscles = {row["muscle_group"]: row for row in details["muscles"]}
+
+    assert sum(week["planned"] for week in details["weeks"]) == 4
+    assert sum(week["done"] for week in details["weeks"]) == 2
+    assert [row["date"] for row in details["skipped"]] == [(today - timedelta(days=d)).isoformat() for d in (2, 9)]
+    assert details["skipped"][0]["workouts"] == ["Upper"]
+    assert details["most_skipped_weekday"] in {(today - timedelta(days=2)).weekday()}
+    assert (details["workouts"][0]["planned"], details["workouts"][0]["done"], details["workouts"][0]["completion_pct"]) == (4, 3, 14.3)
+    assert (muscles["chest"]["planned_sets"], muscles["chest"]["done_sets"], muscles["quads"]["planned_sets"]) == (6, 1.5, 8)
+    assert details["cardio"] is None
+
+
 def test_stats_relative_strength_uses_the_body_weight_of_the_day(client, library, ana, db_session):
     _, headers = ana
     workout = make_workout(client, headers, library)

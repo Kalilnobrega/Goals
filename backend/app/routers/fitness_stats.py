@@ -566,6 +566,7 @@ def get_stats(
         "plan_id": plan_id,
         "activity": activity_days(everything, today),
         "adherence": plan_adherence(plan, everything, start, today) if plan else None,
+        "plan_details": plan_details(plan, everything, start, today) if plan else None,
         "relative_strength": relative_strength(in_period, user, db),
         "time": time_stats(in_period),
         "cardio": cardio_stats(in_period, previous if previous_start else None, keys, by_month),
@@ -638,6 +639,122 @@ def plan_adherence(plan, sessions: list[dict], start: date, today: date) -> dict
         "pct": round(done / planned * 100) if planned else None,
         "extra_days": extra,
         "weekdays": list(by_weekday.values()),
+    }
+
+
+def plan_slots(plan, begin: date, today: date, trained: set) -> list[tuple[date, list]]:
+    by_weekday: dict = defaultdict(list)
+    for item in plan.days:
+        by_weekday[item.weekday].append(item.workout)
+    slots = []
+    day = begin
+    while day <= today:
+        workouts = by_weekday.get(day.weekday())
+        if workouts and (day < today or day in trained):
+            slots.append((day, workouts))
+        day += timedelta(days=1)
+    return slots
+
+
+def week_streaks_of(weeks: list[dict], today: date) -> tuple[int, int]:
+    best = run = 0
+    for week in weeks:
+        if week["planned"] and week["done"] >= week["planned"]:
+            run += 1
+            best = max(best, run)
+        elif week["start"] != week_start(today):
+            run = 0
+    current = 0
+    for week in reversed(weeks):
+        full = week["planned"] and week["done"] >= week["planned"]
+        if full:
+            current += 1
+        elif week["start"] == week_start(today):
+            continue
+        else:
+            break
+    return current, best
+
+
+def plan_details(plan, sessions: list[dict], start: date, today: date) -> dict:
+    created = to_br_date(aware(plan.created_at)) if plan.created_at else start
+    begin = max(start, created)
+    sessions = [s for s in sessions if begin <= s["day"] <= today]
+    trained = {s["day"] for s in sessions}
+    slots = plan_slots(plan, begin, today, trained)
+
+    weeks_map: dict = {}
+    key = week_start(begin)
+    while key <= today:
+        weeks_map[key] = {"start": key, "planned": 0, "done": 0}
+        key += timedelta(days=7)
+    for day, _ in slots:
+        week = weeks_map[week_start(day)]
+        week["planned"] += 1
+        if day in trained:
+            week["done"] += 1
+    weeks = [{**week, "pct": round(week["done"] / week["planned"] * 100) if week["planned"] else None} for week in weeks_map.values()]
+    current_streak, best_streak = week_streaks_of(weeks, today)
+
+    missed = [(day, workouts) for day, workouts in slots if day not in trained]
+    skipped_by_weekday: dict = defaultdict(int)
+    for day, _ in missed:
+        skipped_by_weekday[day.weekday()] += 1
+    most_skipped = max(skipped_by_weekday.items(), key=lambda pair: pair[1])[0] if skipped_by_weekday else None
+
+    span_weeks = max(((today - begin).days + 1) / 7, 1)
+    workouts = {}
+    for day, items in slots:
+        for workout in items:
+            entry = workouts.setdefault(workout.id, {"workout": workout, "planned": 0})
+            entry["planned"] += 1
+    workout_rows = []
+    for workout_id, entry in workouts.items():
+        workout = entry["workout"]
+        done = [s for s in sessions if s["workout_id"] == workout_id]
+        targets = {item.exercise_id: item.target_sets for item in workout.exercises}
+        planned_sets = sum(targets.values()) * len(done)
+        done_sets = sum(
+            min(next((e["sets"] for e in s["exercises"] if e["exercise_id"] == exercise_id), 0), target)
+            for s in done for exercise_id, target in targets.items()
+        )
+        workout_rows.append({
+            "workout_id": workout_id,
+            "name": workout.name,
+            "planned": entry["planned"],
+            "done": len(done),
+            "completion_pct": round(done_sets / planned_sets * 100, 1) if planned_sets else None,
+            "avg_minutes": round(sum(s["minutes"] for s in done) / len(done)) if done else None,
+        })
+    workout_rows.sort(key=lambda row: (row["done"] / row["planned"] if row["planned"] else 1, row["name"]))
+
+    planned_groups: dict = defaultdict(int)
+    planned_cardio = 0
+    for item in plan.days:
+        for exercise in item.workout.exercises:
+            planned_groups[exercise.exercise.muscle_group] += exercise.target_sets
+        planned_cardio += sum(cardio.minutes for cardio in item.workout.cardio)
+    done_groups: dict = defaultdict(int)
+    for s in sessions:
+        for e in s["exercises"]:
+            done_groups[e["muscle_group"]] += e["sets"]
+    muscles = sorted(
+        (
+            {"muscle_group": group, "planned_sets": planned_groups.get(group, 0), "done_sets": round(done_groups.get(group, 0) / span_weeks, 1)}
+            for group in set(planned_groups) | set(done_groups)
+        ),
+        key=lambda row: (-row["planned_sets"], -row["done_sets"], row["muscle_group"]),
+    )
+    done_cardio = sum(e["duration"] for s in sessions for e in s["cardio"]) / 60
+    return {
+        "weeks": weeks,
+        "current_streak": current_streak,
+        "best_streak": best_streak,
+        "skipped": [{"date": day, "workouts": [workout.name for workout in items]} for day, items in reversed(missed)][:20],
+        "most_skipped_weekday": most_skipped,
+        "workouts": workout_rows,
+        "muscles": muscles,
+        "cardio": {"planned_minutes": planned_cardio, "done_minutes": round(done_cardio / span_weeks, 1)} if planned_cardio or done_cardio else None,
     }
 
 

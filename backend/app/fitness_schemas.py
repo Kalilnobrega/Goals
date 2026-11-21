@@ -886,6 +886,49 @@ class StatsAdherenceSchema(BaseModel):
     weekdays: list[StatsAdherenceWeekdaySchema]
 
 
+class StatsPlanWeekSchema(BaseModel):
+    start: date
+    planned: int
+    done: int
+    pct: int | None
+
+
+class StatsPlanSkippedSchema(BaseModel):
+    date: date
+    workouts: list[str]
+
+
+class StatsPlanWorkoutSchema(BaseModel):
+    workout_id: int
+    name: str
+    planned: int
+    done: int
+    completion_pct: float | None
+    avg_minutes: int | None
+
+
+class StatsPlanMuscleSchema(BaseModel):
+    muscle_group: str
+    planned_sets: int
+    done_sets: float
+
+
+class StatsPlanCardioSchema(BaseModel):
+    planned_minutes: int
+    done_minutes: float
+
+
+class StatsPlanDetailsSchema(BaseModel):
+    weeks: list[StatsPlanWeekSchema]
+    current_streak: int
+    best_streak: int
+    skipped: list[StatsPlanSkippedSchema]
+    most_skipped_weekday: int | None
+    workouts: list[StatsPlanWorkoutSchema]
+    muscles: list[StatsPlanMuscleSchema]
+    cardio: StatsPlanCardioSchema | None
+
+
 class StatsRelativeStrengthItemSchema(BaseModel):
     exercise_id: int | None
     name: str
@@ -1001,6 +1044,7 @@ class StatsSchema(BaseModel):
     plan_id: int | None = None
     activity: list[StatsActivityDaySchema] = []
     adherence: StatsAdherenceSchema | None = None
+    plan_details: StatsPlanDetailsSchema | None = None
     relative_strength: StatsRelativeStrengthSchema | None = None
     start: date
     end: date
