@@ -256,3 +256,54 @@
   }
 }
 
+
+.draftCard {
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  border: 1px dashed var(--gym-accent);
+  background: var(--gym-accent-soft);
+}
+
+.draftLink {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 4px 16px 18px;
+  color: var(--gym-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.draftIcon {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+.draftLabel {
+  color: var(--gym-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.draftDiscard {
+  width: 44px;
+  height: 44px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.draftDiscard:hover {
+  color: var(--gym-text);
+}

@@ -1,19 +1,30 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { Plus, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList, History, ChevronRight, X } from 'lucide-react';
 import { getWorkouts, peekCache } from '../../../lib/api';
 import { prescription, workoutMuscles, plural, cardioNote } from '../../../lib/gym';
+import { clearDraft, draftKey, readDraftRaw, subscribeDrafts } from '../../../lib/workoutDraft';
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import Floating from '../../../components/gym/Floating';
+import { useConfirm } from '../../../components/ConfirmDialog';
 import styles from './page.module.css';
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
   const [bodyType] = useBodyType();
+  const confirmAction = useConfirm();
+  const draftRaw = useSyncExternalStore(subscribeDrafts, () => readDraftRaw(draftKey()), () => null);
+  const draft = useMemo(() => {
+    try {
+      return draftRaw ? JSON.parse(draftRaw) : null;
+    } catch {
+      return null;
+    }
+  }, [draftRaw]);
 
   const fetchWorkouts = useCallback(() => {
     setLoadError(false);
@@ -23,6 +34,15 @@ export default function WorkoutsPage() {
   useEffect(() => {
     getWorkouts().then(setWorkouts).catch(() => setLoadError(true));
   }, []);
+
+  const discardDraft = async () => {
+    const ok = await confirmAction({
+      title: 'Descartar ficha em criação',
+      message: ['O que você montou até agora será perdido.'],
+      confirmLabel: 'Descartar',
+    });
+    if (ok) clearDraft(draftKey());
+  };
 
   return (
     <div className={styles.page}>
@@ -39,6 +59,26 @@ export default function WorkoutsPage() {
       </header>
 
       <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
+
+      {draft && (
+        <div className={styles.draftCard}>
+          <Link href="/gym/workouts/new" className={styles.draftLink}>
+            <History size={20} className={styles.draftIcon} aria-hidden="true" />
+            <span className={styles.cardMain}>
+              <span className={styles.draftLabel}>Continuar ficha em criação</span>
+              <span className={styles.cardName}>{draft.name?.trim() || 'Ficha sem nome'}</span>
+              <span className={styles.cardMeta}>
+                {draft.items?.length ? plural(draft.items.length, 'exercício', 'exercícios') : 'Sem exercícios'}
+                {draft.cardio?.length ? ` · ${plural(draft.cardio.length, 'cardio', 'cardios')}` : ''}
+              </span>
+            </span>
+            <ChevronRight size={20} className={styles.draftIcon} aria-hidden="true" />
+          </Link>
+          <button type="button" className={styles.draftDiscard} onClick={discardDraft} aria-label="Descartar ficha em criação">
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       {loadError && !workouts && (
         <div className={styles.state}>
