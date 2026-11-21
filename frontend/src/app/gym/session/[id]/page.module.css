@@ -477,14 +477,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--gym-warning) 40%, transparent);
-  background: color-mix(in srgb, var(--gym-warning) 8%, var(--gym-surface-2));
 }
 
 .missingTitle {
-  color: var(--gym-warning);
+  color: var(--gym-muted);
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -494,22 +490,35 @@
 .missingList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
 }
 
 .missingItem {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.missingItem + .missingItem {
+  border-top: 1px solid var(--gym-border);
+}
+
+.missingRow {
+  display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  font-size: 0.9rem;
 }
 
 .missingName {
   min-width: 0;
+  font-weight: 500;
+  font-size: 0.92rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -518,11 +527,26 @@
 .missingDetail {
   flex-shrink: 0;
   color: var(--gym-muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 
+.missingBar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gym-surface-3);
+  overflow: hidden;
+}
+
+.missingBar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gym-accent);
+}
+
 .missingNote {
-  color: var(--gym-muted);
+  color: var(--gym-faint);
   font-size: 0.8rem;
 }

@@ -609,15 +609,16 @@ export default function SessionPage() {
   const lastAt = lastActivity(session);
   const pending = session.exercises.filter(item => item.sets.length === 0 && !isCardio(item)).length;
   const pendingCardio = session.exercises.some(item => item.sets.length === 0 && isCardio(item));
-  const missing = session.exercises.filter(item => !isDone(item)).map(item => ({
-    id: item.id,
-    name: item.exercise_name,
-    detail: isCardio(item)
-      ? 'Cardio sem registro'
-      : item.target_sets
-      ? `${seriesCount(item.sets)} de ${plural(item.target_sets, 'série', 'séries')}`
-      : 'Sem séries',
-  }));
+  const missing = session.exercises.filter(item => !isDone(item)).map(item => {
+    const done = isCardio(item) ? 0 : seriesCount(item.sets);
+    const target = isCardio(item) ? null : item.target_sets;
+    return {
+      id: item.id,
+      name: item.exercise_name,
+      progress: target ? done / target : 0,
+      detail: isCardio(item) ? 'Sem registro' : target ? `${done}/${target} séries` : 'Sem séries',
+    };
+  });
 
   const current = session.exercises[currentIndex];
   const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
@@ -959,20 +960,25 @@ export default function SessionPage() {
                   </div>
                 </div>
                 {missing.length > 0 && (
-                  <div className={styles.missing}>
-                    <p className={styles.missingTitle}>{missing.length === 1 ? 'Ficou faltando' : 'Ficaram faltando'}</p>
+                  <section className={styles.missing} aria-label="Exercícios incompletos">
+                    <h3 className={styles.missingTitle}>{missing.length === 1 ? 'Ficou faltando' : 'Ficaram faltando'}</h3>
                     <ul className={styles.missingList}>
                       {missing.map(item => (
                         <li key={item.id} className={styles.missingItem}>
-                          <span className={styles.missingName}>{item.name}</span>
-                          <span className={styles.missingDetail}>{item.detail}</span>
+                          <span className={styles.missingRow}>
+                            <span className={styles.missingName}>{item.name}</span>
+                            <span className={styles.missingDetail}>{item.detail}</span>
+                          </span>
+                          <span className={styles.missingBar} aria-hidden="true">
+                            <span style={{ width: `${Math.round(item.progress * 100)}%` }} />
+                          </span>
                         </li>
                       ))}
                     </ul>
                     {(pending > 0 || pendingCardio) && (
                       <p className={styles.missingNote}>O que ficou sem nenhum registro não entra no resumo.</p>
                     )}
-                  </div>
+                  </section>
                 )}
               </>
             )}
