@@ -26,6 +26,7 @@ export default function useStartSession() {
       } else {
         toast({ tone: 'danger', message: apiError(err, 'Não foi possível iniciar o treino.') });
       }
+    } finally {
       setStarting(false);
     }
   }, [router, toast]);
