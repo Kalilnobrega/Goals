@@ -93,6 +93,12 @@ function MusclesWorked({ muscleSets }) {
 export default function SessionSummary({ session, insights }) {
   const done = session.exercises.filter(item => item.sets.length > 0);
   const strength = done.filter(item => item.tracking !== 'cardio');
+  const cardioByItem = new Map((insights?.cardio?.items ?? []).map(item => [item.item_id, item]));
+  const cardioExtras = (data) => [
+    data?.km > 0 ? `${data.km_estimated ? '≈ ' : ''}${formatKg(Math.round(data.km * 10) / 10)} km` : null,
+    data?.calories ? `${data.calories_estimated ? '≈ ' : ''}${data.calories} kcal` : null,
+  ].filter(Boolean).join(' · ');
+  const cardioNote = cardioExtras(insights?.cardio);
   const cardioMinutes = Math.round(done.filter(item => item.tracking === 'cardio').reduce((sum, item) => sum + item.sets.reduce((total, entry) => total + (entry.duration_seconds ?? 0), 0), 0) / 60);
   const duration = new Date(session.completed_at) - new Date(session.started_at);
   const previous = insights?.previous_session ?? null;
@@ -116,8 +122,9 @@ export default function SessionSummary({ session, insights }) {
         </div>
         {cardioMinutes > 0 && (
           <div className={styles.stat}>
-            <span className={styles.statValue}>{cardioMinutes} min</span>
+            <span className={styles.statValue}>{insights?.cardio?.minutes ?? cardioMinutes} min</span>
             <span className={styles.statLabel}>Cardio</span>
+            {cardioNote && <span className={styles.statNote}>{cardioNote}</span>}
           </div>
         )}
         <div className={styles.stat}>
@@ -187,7 +194,7 @@ export default function SessionSummary({ session, insights }) {
               <div className={styles.itemHeader}>
                 <span className={styles.itemName}>{item.exercise_name}</span>
                 <span className={styles.itemMeta}>
-                  {item.tracking === 'cardio' ? 'Cardio' : `${groupsLabel(item)} · ${plural(seriesCount(item.sets), 'série', 'séries')}`}
+                  {item.tracking === 'cardio' ? ['Cardio', cardioExtras(cardioByItem.get(item.id))].filter(Boolean).join(' · ') : `${groupsLabel(item)} · ${plural(seriesCount(item.sets), 'série', 'séries')}`}
                   {insight?.seconds ? ` · ${formatSeconds(insight.seconds)}${insight.prep_seconds >= 60 ? ` (${formatSeconds(insight.prep_seconds)} de preparação)` : ''}` : ''}
                   {insight?.rest_seconds ? ` · descanso ${formatSeconds(insight.rest_seconds)}` : ''}
                   {item.unilateral && <>{' '}<UnilateralTag /></>}

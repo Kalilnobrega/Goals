@@ -42,6 +42,12 @@
   font-size: 0.82rem;
 }
 
+.statNote {
+  color: var(--gym-accent);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 .list {
   list-style: none;
   margin: 0;

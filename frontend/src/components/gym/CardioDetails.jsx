@@ -182,6 +182,7 @@ function Devices({ cardio }) {
                     e.distance_km > 0 ? kmLabel(e.distance_km) : null,
                     e.avg_speed_kmh ? `${formatKg(e.avg_speed_kmh)} km/h` : null,
                     e.calories ? `${e.calories_estimated ? '≈ ' : ''}${kcalLabel(e.calories)}` : null,
+                    e.avg_level ? `nível ${formatKg(e.avg_level)}${e.level_change ? ` (${e.level_change > 0 ? '+' : '−'}${Math.abs(e.level_change)})` : ''}` : null,
                   ].filter(Boolean).join(' · ')}
                 </span>
               </span>

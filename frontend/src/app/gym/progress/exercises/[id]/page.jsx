@@ -21,6 +21,10 @@ const compactKg = (value) => (value >= 10000 ? `${formatKg(Math.round(value / 10
 
 const minutes = (seconds) => Math.round((seconds / 60) * 10) / 10;
 const formatMinutes = (value) => `${formatKg(value)} min`;
+const formatPace = (value) => {
+  const total = Math.round(value * 60);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')} /km`;
+};
 
 const CARDIO_METRICS = [
   {
@@ -40,8 +44,29 @@ const CARDIO_METRICS = [
     has: points => points.some(p => p.distance_km > 0),
     format: v => `${formatKg(v)} km`,
     axis: v => formatKg(v),
-    detail: p => formatMinutes(minutes(p.duration_seconds)),
+    detail: p => `${formatMinutes(minutes(p.duration_seconds))}${p.km_estimated ? ' · estimada pela velocidade' : ''}`,
     unit: 'km',
+  },
+  {
+    key: 'pace',
+    label: 'Ritmo',
+    lowerIsBetter: true,
+    value: p => (p.pace_seconds_per_km ? Math.round((p.pace_seconds_per_km / 60) * 100) / 100 : null),
+    has: points => points.some(p => p.pace_seconds_per_km > 0),
+    format: formatPace,
+    axis: v => formatPace(v).replace(' /km', ''),
+    detail: p => `${p.distance_km ? `${formatKg(p.distance_km)} km` : ''} · menor é mais rápido`,
+    unit: '/km',
+  },
+  {
+    key: 'calories',
+    label: 'Calorias',
+    value: p => p.calories,
+    has: points => points.some(p => p.calories > 0),
+    format: v => `${Math.round(v)} kcal`,
+    axis: v => String(Math.round(v)),
+    detail: p => `${formatMinutes(minutes(p.duration_seconds))}${p.calories_estimated ? ' · estimativa' : ' · do aparelho'}`,
+    unit: 'kcal',
   },
   {
     key: 'speed',
@@ -386,11 +411,14 @@ export default function ExerciseProgressPage() {
   const mostReps = bestOf(points, p => p.max_reps);
 
   const longest = bestOf(points, p => p.best_duration_seconds || null);
+  const bestPace = points.filter(p => p.pace_seconds_per_km > 0).sort((a, b) => a.pace_seconds_per_km - b.pace_seconds_per_km)[0] ?? null;
   const records = tracking === 'cardio' ? [
     longest && { label: 'Mais longo', value: formatMinutes(minutes(bestOf(points, p => p.duration_seconds || null).duration_seconds)), note: formatShortDate(bestOf(points, p => p.duration_seconds || null).completed_at) },
     bestOf(points, p => p.distance_km) && { label: 'Maior distância', value: `${formatKg(bestOf(points, p => p.distance_km).distance_km)} km`, note: formatShortDate(bestOf(points, p => p.distance_km).completed_at) },
     bestOf(points, p => p.speed_kmh) && { label: 'Maior velocidade', value: `${formatKg(bestOf(points, p => p.speed_kmh).speed_kmh)} km/h`, note: formatShortDate(bestOf(points, p => p.speed_kmh).completed_at) },
     bestOf(points, p => p.level) && { label: 'Maior nível', value: `nível ${bestOf(points, p => p.level).level}`, note: formatShortDate(bestOf(points, p => p.level).completed_at) },
+    bestPace && { label: 'Melhor ritmo', value: formatPace(bestPace.pace_seconds_per_km / 60), note: formatShortDate(bestPace.completed_at) },
+    bestOf(points, p => p.calories) && { label: 'Mais calorias', value: `${bestOf(points, p => p.calories).calories_estimated ? '≈ ' : ''}${bestOf(points, p => p.calories).calories} kcal`, note: formatShortDate(bestOf(points, p => p.calories).completed_at) },
   ].filter(Boolean) : tracking === 'time' ? [
     longest && { label: 'Melhor tempo', value: formatClock(longest.best_duration_seconds), note: formatShortDate(longest.completed_at) },
     heaviest && { label: extra ? 'Maior carga extra' : 'Maior carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: formatShortDate(heaviest.completed_at) },
@@ -459,8 +487,8 @@ export default function ExerciseProgressPage() {
               <span className={styles.headlineLabel}>
                 {metric.label} no último treino
                 {change !== null && (
-                  <span className={change > 0 ? styles.up : change < 0 ? styles.down : ''}>
-                    {' · '}{formatDelta(change, metric.unit)} desde {formatShortDate(points.find(p => metric.value(p) !== null).completed_at)}
+                  <span className={(metric.lowerIsBetter ? -change : change) > 0 ? styles.up : change !== 0 ? styles.down : ''}>
+                    {' · '}{metric.key === 'pace' ? `${change < 0 ? '−' : '+'}${formatPace(Math.abs(change)).replace(' /km', '')} /km` : formatDelta(change, metric.unit)} desde {formatShortDate(points.find(p => metric.value(p) !== null).completed_at)}
                   </span>
                 )}
               </span>
