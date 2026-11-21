@@ -1,0 +1,75 @@
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.completion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.completionValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+  color: var(--gym-accent);
+}
+
+.completionLabel {
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.track {
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--gym-surface-3);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gym-accent);
+}
+
+.lines {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+}
+
+.lineValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.lineLabel {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.bad {
+  color: var(--gym-danger);
+}
+
+@media (min-width: 560px) {
+  .lines {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

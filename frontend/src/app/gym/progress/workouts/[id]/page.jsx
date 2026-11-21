@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  ChevronLeft, ChevronRight, Timer, Trophy, ListChecks, Target, ChartBar, LayoutGrid, ArrowUpRight,
+  ChevronLeft, ChevronRight, Timer, Trophy, ListChecks, Target, ChartBar, LayoutGrid, ArrowUpRight, HeartPulse,
 } from 'lucide-react';
 import { getWorkoutProgress, peekCache } from '../../../../../lib/api';
 import {
@@ -49,6 +49,35 @@ function Tiles({ tiles }) {
         </div>
       ))}
     </div>
+  );
+}
+
+const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
+
+function CardioGroup({ data }) {
+  if (!data) return null;
+  return (
+    <Group icon={HeartPulse} title="Cardio">
+      <Tiles tiles={[
+        { label: 'Planejado por treino', value: `${data.planned_minutes} min` },
+        data.avg_done_minutes !== null && { label: 'Feito em média', value: `${data.avg_done_minutes} min`, note: plural(data.sessions, 'treino', 'treinos') },
+        data.completion_pct !== null && { label: 'Do tempo planejado', value: `${formatKg(data.completion_pct)}%` },
+        data.sessions > 0 && { label: 'Vezes pulado', value: data.skipped, note: `de ${plural(data.phases.reduce((sum, phase) => sum + phase.planned, 0), 'cardio planejado', 'cardios planejados')}` },
+      ].filter(Boolean)} />
+      {data.phases.length > 1 && (
+        <ul className={styles.list}>
+          {data.phases.map(phase => (
+            <li key={phase.phase} className={`${styles.row} ${own.static}`}>
+              <span className={styles.rowMain}>
+                <span className={styles.rowName}>{PHASE_LABEL[phase.phase]}</span>
+                <span className={styles.rowMeta}>pulado {plural(phase.skipped, 'vez', 'vezes')} de {phase.planned}</span>
+              </span>
+              <span className={styles.rowVolume}>{phase.minutes} min</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Group>
   );
 }
 
@@ -326,6 +355,7 @@ export default function WorkoutProgressPage() {
           <Completion data={data.completion} />
           <RepRange data={data.rep_range} />
           <TimeGroup time={data.time} />
+          <CardioGroup data={data.cardio} />
           <VolumeShare items={data.volume_share ?? []} />
           <Records items={data.records ?? []} />
 

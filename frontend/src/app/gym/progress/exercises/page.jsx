@@ -1,13 +1,26 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Search, TrendingUp, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { getExercises, getProgressExercises, peekCache } from '../../../../lib/api';
 import { equipmentLabel, formatKg, formatShortDate, groupsLabel, plural } from '../../../../lib/gym';
 import ExerciseFilters, { useExerciseFilters } from '../../../../components/gym/ExerciseFilters';
+import GymSwitch from '../../../../components/gym/GymSwitch';
+import CardioDetails from '../../../../components/gym/CardioDetails';
 import styles from '../progress.module.css';
 
+const SECTIONS = [{ value: 'exercises', label: 'Exercícios' }, { value: 'cardio', label: 'Cardio' }];
+const subscribeNothing = () => () => {};
+const tabFromUrl = () => (new URLSearchParams(window.location.search).get('tab') === 'cardio' ? 'cardio' : 'exercises');
+
 export default function ProgressPage() {
+  const urlTab = useSyncExternalStore(subscribeNothing, tabFromUrl, () => 'exercises');
+  const [chosenTab, setChosenTab] = useState(null);
+  const tab = chosenTab ?? urlTab;
+  const chooseTab = (value) => {
+    setChosenTab(value);
+    window.history.replaceState(null, '', value === 'cardio' ? '?tab=cardio' : window.location.pathname);
+  };
   const [items, setItems] = useState(() => peekCache('fitnessProgress') ?? null);
   const [loadError, setLoadError] = useState(false);
   const [library, setLibrary] = useState(() => peekCache('fitnessExercises') ?? null);
@@ -25,7 +38,9 @@ export default function ProgressPage() {
   const trained = useMemo(() => {
     if (!items) return null;
     const byId = new Map((library ?? []).map(exercise => [exercise.id, exercise]));
-    return items.map((item, order) => ({ ...byId.get(item.exercise_id), ...item, id: item.exercise_id, order }));
+    return items
+      .map((item, order) => ({ ...byId.get(item.exercise_id), ...item, id: item.exercise_id, order }))
+      .filter(item => item.tracking !== 'cardio');
   }, [items, library]);
 
   const filters = useExerciseFilters(trained);
@@ -37,24 +52,28 @@ export default function ProgressPage() {
     <div className={styles.page}>
       <div className={styles.top}>
         <Link href="/gym/progress" className={styles.back}><ChevronLeft size={18} /> Evolução</Link>
-        <h1 className={styles.detailTitle}>Exercícios</h1>
-        <p className={styles.subtitle}>Como suas cargas mudam em cada exercício</p>
+        <h1 className={styles.detailTitle}>{tab === 'cardio' ? 'Cardio' : 'Exercícios'}</h1>
+        <p className={styles.subtitle}>{tab === 'cardio' ? 'Tempo, metas e aparelhos do seu cardio' : 'Como suas cargas mudam em cada exercício'}</p>
       </div>
 
-      {loadError && !items && (
+      <GymSwitch label="Seção" value={tab} options={SECTIONS} onChange={chooseTab} />
+
+      {tab === 'cardio' && <CardioDetails />}
+
+      {tab === 'exercises' && loadError && !items && (
         <div className={styles.state}>
           <p className={styles.stateTitle}>Não foi possível carregar sua evolução.</p>
           <button type="button" className={styles.stateAction} onClick={fetchItems}>Tentar de novo</button>
         </div>
       )}
 
-      {!items && !loadError && (
+      {tab === 'exercises' && !items && !loadError && (
         <div className={styles.skeletonList} aria-busy="true" aria-label="Carregando exercícios">
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
         </div>
       )}
 
-      {items?.length === 0 && (
+      {tab === 'exercises' && trained?.length === 0 && (
         <div className={styles.state}>
           <TrendingUp size={34} className={styles.stateIcon} aria-hidden="true" />
           <p className={styles.stateTitle}>Nada para comparar ainda.</p>
@@ -63,7 +82,7 @@ export default function ProgressPage() {
         </div>
       )}
 
-      {items?.length > 0 && (
+      {tab === 'exercises' && trained?.length > 0 && (
         <>
           <label className={styles.searchWrap}>
             <Search size={18} className={styles.searchIcon} aria-hidden="true" />

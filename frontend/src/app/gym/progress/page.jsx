@@ -663,7 +663,9 @@ function CardioCard({ data }) {
   if (!cardio) return null;
   const tiles = [
     { label: 'Tempo de cardio', value: `${cardio.minutes.toLocaleString('pt-BR')} min`, note: plural(cardio.sessions, 'treino', 'treinos') },
-    { label: 'Média por treino', value: `${cardio.avg_minutes} min` },
+    cardio.sessions > 0 && { label: 'Média por treino', value: `${cardio.avg_minutes} min` },
+    cardio.plan?.completion_pct != null && { label: 'Do planejado', value: `${formatKg(cardio.plan.completion_pct)}%`, note: `${cardio.plan.done_minutes} de ${cardio.plan.planned_minutes} min` },
+    cardio.plan && { label: 'Pulados', value: cardio.plan.skipped, note: `de ${plural(cardio.plan.planned, 'planejado', 'planejados')}` },
     cardio.distance_km > 0 && { label: 'Distância', value: `${formatKg(cardio.distance_km)} km` },
   ].filter(Boolean);
   return (
@@ -699,6 +701,7 @@ function CardioCard({ data }) {
           );
         })}
       </ul>
+      <Link href="/gym/progress/exercises?tab=cardio" className={styles.cardLink}>Ver detalhes do cardio <ChevronRight size={16} /></Link>
     </Card>
   );
 }
