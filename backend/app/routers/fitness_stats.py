@@ -75,6 +75,16 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
         })
     cardio = [e for e in exercises if e["tracking"] == "cardio"]
     exercises = [e for e in exercises if e["tracking"] != "cardio"]
+    cardio_plan = [
+        {
+            "phase": item.phase or "end",
+            "planned": item.reps_min * 60 if item.reps_min else None,
+            "done": sum(entry.duration_seconds or 0 for entry in item.sets),
+            "skipped": not item.sets,
+        }
+        for item in workout_session.exercises
+        if item.tracking == "cardio"
+    ]
     return {
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
@@ -86,6 +96,7 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
         "minutes": max((completed - started).total_seconds() / 60, 0),
         "exercises": exercises,
         "cardio": cardio,
+        "cardio_plan": cardio_plan,
         "sets": sum(e["sets"] for e in exercises),
         "reps": sum(e["reps"] for e in exercises),
         "volume": sum(e["volume"] for e in exercises),
@@ -125,33 +136,100 @@ def bucket_of(day: date, by_month: bool) -> date:
     return month_start(day) if by_month else week_start(day)
 
 
-def cardio_stats(period: list[dict]) -> dict | None:
+def cardio_plan_summary(sessions: list[dict]) -> dict | None:
+    items = [item for s in sessions for item in s["cardio_plan"] if item["planned"]]
+    if not items:
+        return None
+    planned_seconds = sum(item["planned"] for item in items)
+    done_seconds = sum(min(item["done"], item["planned"]) for item in items)
+    return {
+        "planned": len(items),
+        "done": sum(1 for item in items if not item["skipped"]),
+        "skipped": sum(1 for item in items if item["skipped"]),
+        "short": sum(1 for item in items if not item["skipped"] and item["done"] < item["planned"] * 0.9),
+        "over": sum(1 for item in items if item["done"] > item["planned"] * 1.1),
+        "planned_minutes": round(planned_seconds / 60),
+        "done_minutes": round(sum(item["done"] for item in items) / 60),
+        "completion_pct": round(done_seconds / planned_seconds * 100, 1) if planned_seconds else None,
+    }
+
+
+def cardio_phases(sessions: list[dict]) -> list[dict]:
+    result = []
+    for phase in ("start", "end"):
+        items = [(s, item) for s in sessions for item in s["cardio_plan"] if item["phase"] == phase]
+        if not items:
+            continue
+        result.append({
+            "phase": phase,
+            "minutes": round(sum(item["done"] for _, item in items) / 60),
+            "sessions": len({s["id"] for s, item in items if not item["skipped"]}),
+            "planned": sum(1 for _, item in items if item["planned"]),
+            "skipped": sum(1 for _, item in items if item["planned"] and item["skipped"]),
+        })
+    return result
+
+
+def cardio_stats(period: list[dict], previous: list[dict] | None = None, keys: list[date] | None = None, by_month: bool = False) -> dict | None:
     by_exercise: dict = {}
     sessions = set()
+    per_session: dict = {}
     for s in period:
         for e in s["cardio"]:
             if not e["duration"]:
                 continue
             sessions.add(s["id"])
+            per_session[s["id"]] = per_session.get(s["id"], 0) + e["duration"]
             item = by_exercise.setdefault(exercise_key(e), {
                 "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "sessions": 0,
             })
             item["seconds"] += e["duration"]
             item["distance_km"] += e["distance"]
             item["sessions"] += 1
-    if not sessions:
+    plan = cardio_plan_summary(period)
+    if not sessions and not plan:
         return None
     total_seconds = sum(item["seconds"] for item in by_exercise.values())
     total_distance = sum(item["distance_km"] for item in by_exercise.values())
+    timeline = []
+    if keys:
+        minutes = {key: 0 for key in keys}
+        counts = {key: 0 for key in keys}
+        for s in period:
+            if s["id"] in per_session:
+                bucket = bucket_of(s["day"], by_month)
+                if bucket in minutes:
+                    minutes[bucket] += per_session[s["id"]]
+                    counts[bucket] += 1
+        timeline = [{"start": key, "minutes": round(minutes[key] / 60), "sessions": counts[key]} for key in keys]
+    weeks: dict = {}
+    for s in period:
+        if s["id"] in per_session:
+            week = week_start(s["day"])
+            weeks[week] = weeks.get(week, 0) + per_session[s["id"]]
+    longest_session = max((s for s in period if s["id"] in per_session), key=lambda s: per_session[s["id"]], default=None)
+    best_week = max(weeks.items(), key=lambda pair: pair[1], default=None)
+    previous_seconds = sum(e["duration"] for s in previous for e in s["cardio"]) if previous is not None else None
     return {
         "sessions": len(sessions),
         "minutes": round(total_seconds / 60),
         "distance_km": round(total_distance, 2),
-        "avg_minutes": round(total_seconds / 60 / len(sessions)),
+        "avg_minutes": round(total_seconds / 60 / len(sessions)) if sessions else 0,
         "exercises": sorted(
             [{**item, "minutes": round(item.pop("seconds") / 60), "distance_km": round(item["distance_km"], 2)} for item in by_exercise.values()],
             key=lambda item: -item["minutes"],
         ),
+        "previous_minutes": round(previous_seconds / 60) if previous_seconds is not None else None,
+        "timeline": timeline,
+        "plan": plan,
+        "phases": cardio_phases(period),
+        "longest": {
+            "minutes": round(per_session[longest_session["id"]] / 60),
+            "session_id": longest_session["id"],
+            "name": longest_session["name"],
+            "date": longest_session["day"],
+        } if longest_session else None,
+        "best_week": {"minutes": round(best_week[1] / 60), "date": best_week[0]} if best_week else None,
     }
 
 
@@ -490,7 +568,7 @@ def get_stats(
         "adherence": plan_adherence(plan, everything, start, today) if plan else None,
         "relative_strength": relative_strength(in_period, user, db),
         "time": time_stats(in_period),
-        "cardio": cardio_stats(in_period),
+        "cardio": cardio_stats(in_period, previous if previous_start else None, keys, by_month),
         "start": start,
         "end": today,
         "bucket": "month" if by_month else "week",
@@ -922,6 +1000,24 @@ def get_workout_progress(
         "reps_pct": mean([e["reps_change_pct"] for e in exercises if e["reps_change_pct"] is not None]),
         "exercises": exercises,
         **workout_insights(workout, sessions, everything),
+        "cardio": workout_cardio(workout, sessions),
+    }
+
+
+def workout_cardio(workout: Workout, sessions: list[dict]) -> dict | None:
+    planned_minutes = sum(item.minutes for item in workout.cardio)
+    with_plan = [s for s in sessions if any(item["planned"] for item in s["cardio_plan"])]
+    if not planned_minutes and not with_plan:
+        return None
+    summary = cardio_plan_summary(with_plan)
+    done = [sum(item["done"] for item in s["cardio_plan"]) for s in with_plan]
+    return {
+        "planned_minutes": planned_minutes,
+        "sessions": len(with_plan),
+        "avg_done_minutes": round(sum(done) / len(done) / 60) if done else None,
+        "skipped": summary["skipped"] if summary else 0,
+        "completion_pct": summary["completion_pct"] if summary else None,
+        "phases": cardio_phases(with_plan),
     }
 
 

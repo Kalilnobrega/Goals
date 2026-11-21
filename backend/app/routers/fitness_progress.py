@@ -78,6 +78,7 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
             "name": exercises[exercise_id].name,
             "muscle_group": exercises[exercise_id].muscle_group,
             "equipment": exercises[exercise_id].equipment,
+            "tracking": exercises[exercise_id].tracking,
             "sessions": sessions,
             "last_at": aware(last_at),
             "best_weight_kg": float(best_weight),

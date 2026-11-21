@@ -149,3 +149,37 @@ def test_cardio_does_not_count_as_exercise_or_set(client, library, ana):
     assert stats["cardio"]["minutes"] == 25
     assert stats["summary"]["sets"] == 2
     assert stats["time"]["exercises_per_session"] == 2
+
+
+def test_cardio_stats_track_plan_skips_and_phases(client, library, ana):
+    _, headers = ana
+    workout = save_workout(client, headers, library, [
+        {"exercise_id": library["esteira"], "phase": "start", "minutes": 10},
+        {"exercise_id": library["bike"], "phase": "end", "minutes": 20},
+    ]).json()
+
+    first = start(client, headers, workout["id"])
+    items = first["exercises"]
+    log_cardio(client, headers, items[0]["id"], 600)
+    log_set(client, headers, items[1]["id"], 60, 10)
+    log_cardio(client, headers, items[3]["id"], 1500)
+    assert finish(client, headers, first["id"]).status_code == 200
+
+    second = start(client, headers, workout["id"])
+    items = second["exercises"]
+    log_set(client, headers, items[1]["id"], 60, 10)
+    log_cardio(client, headers, items[3]["id"], 600)
+    assert finish(client, headers, second["id"]).status_code == 200
+
+    cardio = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["cardio"]
+    plan = cardio["plan"]
+    phases = {phase["phase"]: phase for phase in cardio["phases"]}
+    progress = client.get(f"/fitness/workouts/{workout['id']}/progress", headers=headers).json()["cardio"]
+
+    assert (plan["planned"], plan["done"], plan["skipped"], plan["short"], plan["over"]) == (4, 3, 1, 1, 1)
+    assert (plan["planned_minutes"], plan["done_minutes"]) == (60, 45)
+    assert plan["completion_pct"] == 66.7
+    assert (phases["start"]["skipped"], phases["end"]["skipped"]) == (1, 0)
+    assert cardio["longest"]["minutes"] == 35
+    assert sum(bucket["minutes"] for bucket in cardio["timeline"]) == 45
+    assert (progress["planned_minutes"], progress["sessions"], progress["skipped"], progress["avg_done_minutes"]) == (30, 2, 1, 22)

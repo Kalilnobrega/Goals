@@ -365,6 +365,7 @@ class ProgressExerciseSchema(BaseModel):
     name: str
     muscle_group: str
     equipment: str
+    tracking: str = "reps"
     sessions: int
     last_at: datetime
     best_weight_kg: float
@@ -823,6 +824,7 @@ class WorkoutProgressSchema(BaseModel):
     time: "StatsTimeSchema | None" = None
     records: list["StatsRecordSchema"] = []
     volume_share: list[WorkoutVolumeShareSchema] = []
+    cardio: "WorkoutCardioProgressSchema | None" = None
 
 
 class StatsSessionRefSchema(BaseModel):
@@ -937,12 +939,59 @@ class StatsCardioExerciseSchema(BaseModel):
     sessions: int
 
 
+class StatsCardioBucketSchema(BaseModel):
+    start: date
+    minutes: int
+    sessions: int
+
+
+class StatsCardioPlanSchema(BaseModel):
+    planned: int
+    done: int
+    skipped: int
+    short: int
+    over: int
+    planned_minutes: int
+    done_minutes: int
+    completion_pct: float | None
+
+
+class StatsCardioPhaseSchema(BaseModel):
+    phase: str
+    minutes: int
+    sessions: int
+    planned: int
+    skipped: int
+
+
+class StatsCardioRecordSchema(BaseModel):
+    minutes: int
+    session_id: int | None = None
+    name: str | None = None
+    date: date
+
+
 class StatsCardioSchema(BaseModel):
     sessions: int
     minutes: int
     distance_km: float
     avg_minutes: int
     exercises: list[StatsCardioExerciseSchema]
+    previous_minutes: int | None = None
+    timeline: list[StatsCardioBucketSchema] = []
+    plan: StatsCardioPlanSchema | None = None
+    phases: list[StatsCardioPhaseSchema] = []
+    longest: StatsCardioRecordSchema | None = None
+    best_week: StatsCardioRecordSchema | None = None
+
+
+class WorkoutCardioProgressSchema(BaseModel):
+    planned_minutes: int
+    sessions: int
+    avg_done_minutes: int | None
+    skipped: int
+    completion_pct: float | None
+    phases: list[StatsCardioPhaseSchema] = []
 
 
 class StatsSchema(BaseModel):
