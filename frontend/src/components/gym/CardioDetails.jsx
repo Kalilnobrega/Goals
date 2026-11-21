@@ -59,14 +59,14 @@ function Summary({ cardio }) {
     { label: 'Tempo de cardio', value: minutesLabel(cardio.minutes), delta: change(cardio.minutes, cardio.previous_minutes) },
     { label: 'Treinos com cardio', value: cardio.sessions },
     { label: 'Média por treino', value: cardio.sessions ? minutesLabel(cardio.avg_minutes) : '—' },
-    cardio.distance_km > 0 && { label: cardio.km_estimated ? 'Distância (estimada)' : 'Distância', value: `${cardio.km_estimated ? '≈ ' : ''}${kmLabel(cardio.distance_km)}` },
-    cardio.calories !== null && { label: cardio.calories_estimated ? 'Calorias (estimativa)' : 'Calorias', value: `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.calories)}` },
-    cardio.avg_calories !== null && { label: 'Calorias por treino', value: `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.avg_calories)}` },
-    cardio.avg_speed_kmh && { label: 'Velocidade média', value: `${formatKg(cardio.avg_speed_kmh)} km/h` },
-    cardio.pace_seconds_per_km && { label: 'Ritmo médio', value: paceLabel(cardio.pace_seconds_per_km) },
-  ].filter(Boolean);
+    { label: cardio.km_estimated ? 'Distância (estimada)' : 'Distância', value: cardio.distance_km > 0 ? `${cardio.km_estimated ? '≈ ' : ''}${kmLabel(cardio.distance_km)}` : '—' },
+    { label: cardio.calories_estimated ? 'Calorias (estimativa)' : 'Calorias', value: cardio.calories !== null ? `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.calories)}` : '—' },
+    { label: 'Velocidade média', value: cardio.avg_speed_kmh ? `${formatKg(cardio.avg_speed_kmh)} km/h` : '—' },
+    { label: 'Calorias por treino', value: cardio.avg_calories !== null ? `${cardio.calories_estimated ? '≈ ' : ''}${kcalLabel(cardio.avg_calories)}` : '—' },
+    { label: 'Ritmo médio', value: cardio.pace_seconds_per_km ? paceLabel(cardio.pace_seconds_per_km) : '—' },
+  ];
   return (
-    <section className={styles.kpis} aria-label="Resumo do cardio">
+    <section className={`${styles.kpis} ${own.kpis}`} aria-label="Resumo do cardio">
       {tiles.map(tile => (
         <div key={tile.label} className={styles.kpi}>
           <span className={styles.kpiValue}>{tile.value}</span>
