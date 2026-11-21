@@ -58,7 +58,10 @@ def cardio_numbers(name: str, entries, weight_kg: float) -> dict:
     has_calories = False
     calories_estimated = False
     speeds = []
+    levels = []
     for entry in entries:
+        if entry.level:
+            levels.append(entry.level)
         distance, guessed = entry_distance(entry)
         km += distance
         km_estimated = km_estimated or (guessed and distance > 0)
@@ -76,4 +79,5 @@ def cardio_numbers(name: str, entries, weight_kg: float) -> dict:
         "calories": round(calories) if has_calories else None,
         "calories_estimated": calories_estimated,
         "max_speed": round(max(speeds), 1) if speeds else None,
+        "level": max(levels) if levels else None,
     }

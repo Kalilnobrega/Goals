@@ -197,13 +197,15 @@ def cardio_stats(period: list[dict], previous: list[dict] | None = None, keys: l
             if e.get("max_speed") and (max_speed is None or e["max_speed"] > max_speed["kmh"]):
                 max_speed = {"kmh": e["max_speed"], "session_id": s["id"], "name": e["name"], "date": s["day"]}
             item = by_exercise.setdefault(exercise_key(e), {
-                "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "calories": 0, "calories_estimated": False, "km_seconds": 0, "sessions": 0,
+                "exercise_id": e["exercise_id"], "name": e["name"], "seconds": 0, "distance_km": 0.0, "calories": 0, "calories_estimated": False, "km_seconds": 0, "sessions": 0, "levels": [],
             })
             item["seconds"] += e["duration"]
             item["distance_km"] += e.get("km", 0.0)
             item["calories"] += e.get("calories") or 0
             item["calories_estimated"] = item["calories_estimated"] or (e.get("calories") is not None and e["calories_estimated"])
             item["km_seconds"] += e["duration"] if e.get("km") else 0
+            if e.get("level"):
+                item["levels"].append(e["level"])
             item["sessions"] += 1
     plan = cardio_plan_summary(period)
     if not per_session and not plan:
@@ -262,6 +264,8 @@ def cardio_stats(period: list[dict], previous: list[dict] | None = None, keys: l
                     "distance_km": round(item["distance_km"], 2),
                     "calories": round(item["calories"]) or None,
                     "calories_estimated": item["calories_estimated"],
+                    "avg_level": round(sum(item["levels"]) / len(item["levels"]), 1) if item["levels"] else None,
+                    "level_change": item["levels"][-1] - item["levels"][0] if len(item["levels"]) > 1 else None,
                     "avg_speed_kmh": round(item["distance_km"] / (item["km_seconds"] / 3600), 1) if item["km_seconds"] and item["distance_km"] else None,
                 }
                 for item in by_exercise.values()
@@ -964,7 +968,28 @@ def get_session_insights(
         for muscle, credit in muscle_credit(e["muscles"]).items():
             muscle_sets[muscle] = muscle_sets.get(muscle, 0.0) + credit * e["sets"]
 
+    cardio_items = [e for e in current["cardio"] if e["duration"]]
+    calorie_items = [e for e in cardio_items if e.get("calories") is not None]
+    cardio = {
+        "minutes": round(sum(e["duration"] for e in cardio_items) / 60),
+        "km": round(sum(e.get("km", 0.0) for e in cardio_items), 2),
+        "km_estimated": any(e.get("km_estimated") for e in cardio_items),
+        "calories": round(sum(e["calories"] for e in calorie_items)) if calorie_items else None,
+        "calories_estimated": any(e["calories_estimated"] for e in calorie_items),
+        "items": [
+            {
+                "item_id": e["item_id"],
+                "km": e.get("km", 0.0),
+                "km_estimated": e.get("km_estimated", False),
+                "calories": e.get("calories"),
+                "calories_estimated": e.get("calories_estimated", False),
+            }
+            for e in cardio_items
+        ],
+    } if cardio_items else None
+
     return {
+        "cardio": cardio,
         "previous_session": {
             "id": previous["id"],
             "date": previous["day"],

@@ -10,6 +10,7 @@ from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEnt
 from app.fitness_forecast import forecast, slope_per_day
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BODYWEIGHT, BodyWeights, share
+from app.fitness_cardio import cardio_numbers
 from app.fitness_schemas import (
     ProgressExerciseSchema,
     ExerciseProgressSchema,
@@ -327,6 +328,8 @@ def get_exercise_progress(
                 point[key] = estimate
     for session_id, point in points.items():
         point["sets"] = len(series[session_id])
+    if exercise.tracking == "cardio" and points:
+        add_cardio_numbers(points, exercise, user, db)
 
     ordered = sorted(points.values(), key=lambda p: p["completed_at"])
 
@@ -350,6 +353,29 @@ def get_exercise_progress(
             for point in points.values()
         ],
     }
+
+
+def add_cardio_numbers(points: dict, exercise: Exercise, user: User, db: Session):
+    weights = BodyWeights(user.id, db)
+    entries: dict = {}
+    for session_id, entry in (
+        completed_sets(user, db)
+        .filter(SessionExercise.exercise_id == exercise.id)
+        .with_entities(WorkoutSession.id, SetEntry)
+        .order_by(SetEntry.id)
+    ):
+        entries.setdefault(session_id, []).append(entry)
+    for session_id, items in entries.items():
+        point = points.get(session_id)
+        if not point:
+            continue
+        numbers = cardio_numbers(exercise.name, items, weights.on(to_br_date(point["completed_at"])))
+        point["distance_km"] = numbers["km"] or None
+        point["km_estimated"] = numbers["km_estimated"]
+        point["calories"] = numbers["calories"]
+        point["calories_estimated"] = numbers["calories_estimated"]
+        seconds = sum(entry.duration_seconds or 0 for entry in items if entry.distance_km or entry.speed_kmh)
+        point["pace_seconds_per_km"] = round(seconds / numbers["km"]) if numbers["km"] and seconds else None
 
 
 def serialize_body_weight(entry: BodyWeightEntry) -> dict:

@@ -390,8 +390,12 @@ class ProgressPointSchema(BaseModel):
     duration_seconds: int = 0
     best_duration_seconds: int = 0
     distance_km: float | None = None
+    km_estimated: bool = False
     speed_kmh: float | None = None
     level: int | None = None
+    calories: int | None = None
+    calories_estimated: bool = False
+    pace_seconds_per_km: int | None = None
     left_max_weight_kg: float | None = None
     right_max_weight_kg: float | None = None
     left_estimated_1rm_kg: float | None = None
@@ -987,6 +991,8 @@ class StatsCardioExerciseSchema(BaseModel):
     calories: int | None = None
     calories_estimated: bool = False
     avg_speed_kmh: float | None = None
+    avg_level: float | None = None
+    level_change: int | None = None
 
 
 class StatsCardioBucketSchema(BaseModel):
@@ -1172,8 +1178,26 @@ class MuscleSetsSchema(BaseModel):
     sets: float
 
 
+class SessionCardioItemSchema(BaseModel):
+    item_id: int
+    km: float = 0
+    km_estimated: bool = False
+    calories: int | None = None
+    calories_estimated: bool = False
+
+
+class SessionCardioSchema(BaseModel):
+    minutes: int
+    km: float
+    km_estimated: bool
+    calories: int | None
+    calories_estimated: bool
+    items: list[SessionCardioItemSchema] = []
+
+
 class SessionInsightsSchema(BaseModel):
     previous_session: PreviousSessionSchema | None
+    cardio: SessionCardioSchema | None = None
     minutes: int
     set_seconds: int | None = None
     rest_seconds: int | None = None

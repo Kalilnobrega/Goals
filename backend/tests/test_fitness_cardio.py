@@ -206,3 +206,7 @@ def test_cardio_stats_estimate_distance_speed_and_calories(client, library, ana)
     assert cardio["fastest"]["kmh"] == 10.0
     assert cardio["farthest"]["km"] == 5.0
     assert (devices["Esteira"]["calories"], devices["Bicicleta"]["calories"]) == (401, 250)
+    point = client.get(f"/fitness/exercises/{library['esteira']}/progress", headers=headers).json()["points"][0]
+    assert (point["distance_km"], point["km_estimated"], point["calories"], point["pace_seconds_per_km"]) == (5.0, True, 401, 360)
+    insights = client.get(f"/fitness/sessions/{session['id']}/insights", headers=headers).json()["cardio"]
+    assert (insights["minutes"], insights["km"], insights["calories"], insights["calories_estimated"]) == (50, 5.0, 651, True)
