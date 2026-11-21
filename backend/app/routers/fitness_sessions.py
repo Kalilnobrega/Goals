@@ -60,6 +60,7 @@ def serialize_set(entry: SetEntry) -> dict:
         "distance_km": float(entry.distance_km) if entry.distance_km is not None else None,
         "speed_kmh": float(entry.speed_kmh) if entry.speed_kmh is not None else None,
         "level": entry.level,
+        "incline_pct": float(entry.incline_pct) if entry.incline_pct is not None else None,
         "calories": entry.calories,
         "rir": entry.rir,
     }
@@ -67,7 +68,7 @@ def serialize_set(entry: SetEntry) -> dict:
 
 CARDIO = "cardio"
 TIMED = ("time", CARDIO)
-PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "calories", "rir"}
+PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "incline_pct", "calories", "rir"}
 
 
 def series_count(entries) -> int:
@@ -766,6 +767,7 @@ def add_set(
         distance_km=to_kg(data.distance_km) if item.tracking == CARDIO and data.distance_km else None,
         speed_kmh=round(Decimal(str(data.speed_kmh)), 1) if item.tracking == CARDIO and data.speed_kmh else None,
         level=data.level if item.tracking == CARDIO else None,
+        incline_pct=round(Decimal(str(data.incline_pct)), 1) if item.tracking == CARDIO and data.incline_pct is not None else None,
         calories=data.calories if item.tracking == CARDIO else None,
         created_at=utcnow() if workout_session.status == IN_PROGRESS else logged_at(item, workout_session),
         client_id=data.client_id,
@@ -810,6 +812,8 @@ def edit_set(
             entry.level = data.level
         if "calories" in changes:
             entry.calories = data.calories
+        if "incline_pct" in changes:
+            entry.incline_pct = round(Decimal(str(data.incline_pct)), 1) if data.incline_pct is not None else None
     if "rir" in changes and not timed:
         entry.rir = data.rir
     db.commit()

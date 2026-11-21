@@ -201,6 +201,7 @@ class SetEntry(Base):
     distance_km = Column(Numeric(6, 2), nullable=True)
     speed_kmh = Column(Numeric(4, 1), nullable=True)
     level = Column(Integer, nullable=True)
+    incline_pct = Column(Numeric(3, 1), nullable=True)
     calories = Column(Integer, nullable=True)
     rir = Column(Integer, nullable=True)
 

@@ -259,6 +259,7 @@ class SetSchema(BaseModel):
     distance_km: float | None = Field(default=None, gt=0, le=1000)
     speed_kmh: float | None = Field(default=None, gt=0, le=100)
     level: int | None = Field(default=None, ge=1, le=100)
+    incline_pct: float | None = Field(default=None, ge=0, le=40)
     calories: int | None = Field(default=None, ge=1, le=5000)
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
     side: Literal["left", "right"] | None = None
@@ -272,6 +273,7 @@ class EditSetSchema(BaseModel):
     distance_km: float | None = Field(default=None, gt=0, le=1000)
     speed_kmh: float | None = Field(default=None, gt=0, le=100)
     level: int | None = Field(default=None, ge=1, le=100)
+    incline_pct: float | None = Field(default=None, ge=0, le=40)
     calories: int | None = Field(default=None, ge=1, le=5000)
     rir: int | None = Field(default=None, ge=0, le=4)
 
@@ -292,6 +294,7 @@ class SetResponseSchema(BaseModel):
     distance_km: float | None = None
     speed_kmh: float | None = None
     level: int | None = None
+    incline_pct: float | None = None
     calories: int | None = None
     rir: int | None = None
     record: SetRecordSchema | None = None
@@ -306,6 +309,7 @@ class PreviousSetSchema(BaseModel):
     distance_km: float | None = None
     speed_kmh: float | None = None
     level: int | None = None
+    incline_pct: float | None = None
     calories: int | None = None
 
 

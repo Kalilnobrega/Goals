@@ -213,3 +213,20 @@ def test_cardio_stats_estimate_distance_speed_and_calories(client, library, ana)
     assert (insights["minutes"], insights["km"], insights["calories"], insights["calories_estimated"]) == (50, 5.0, 651, True)
     history = client.get("/fitness/sessions", headers=headers).json()["items"][0]
     assert (history["cardio_km"], history["cardio_km_estimated"], history["cardio_calories"], history["cardio_calories_estimated"]) == (5.0, True, 651, True)
+
+
+def test_treadmill_incline_is_saved_and_raises_calories(client, library, ana):
+    from app.dates import today_br
+    _, headers = ana
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "date": today_br().isoformat()}, headers=headers)
+    session = start(client, headers)
+    item = client.post(f"/fitness/sessions/{session['id']}/exercises", json={"exercise_id": library["esteira"]}, headers=headers).json()["exercises"][0]
+    logged = client.post(f"/fitness/session-exercises/{item['id']}/sets", json={"duration_seconds": 1800, "speed_kmh": 6, "incline_pct": 5}, headers=headers).json()
+    assert logged["incline_pct"] == 5.0
+    assert finish(client, headers, session["id"]).status_code == 200
+
+    cardio = client.get("/fitness/stats", params={"period": "4w"}, headers=headers).json()["cardio"]
+    assert cardio["calories"] == 257
+
+    edited = client.patch(f"/fitness/sets/{logged['id']}", json={"incline_pct": None}, headers=headers).json()
+    assert edited["incline_pct"] is None

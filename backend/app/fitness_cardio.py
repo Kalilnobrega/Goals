@@ -24,10 +24,21 @@ def entry_speed(entry: SetEntry) -> float | None:
     return None
 
 
+def incline_met(speed: float, grade: float) -> float:
+    meters_per_minute = speed * 1000 / 60
+    if speed < 8:
+        oxygen = 0.1 * meters_per_minute + 1.8 * meters_per_minute * grade + 3.5
+    else:
+        oxygen = 0.2 * meters_per_minute + 0.9 * meters_per_minute * grade + 3.5
+    return oxygen / 3.5
+
+
 def cardio_met(name: str, entry: SetEntry) -> float:
     lowered = (name or "").lower()
     if any(key in lowered for key in SPEED_BASED):
         speed = entry_speed(entry)
+        if speed and entry.incline_pct:
+            return incline_met(speed, float(entry.incline_pct) / 100)
         return speed_met(speed) if speed else TREADMILL_MET
     for key, met in DEVICE_METS:
         if key in lowered:
