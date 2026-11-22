@@ -264,14 +264,14 @@
   place-items: center;
   border-radius: 10px;
   border: 1px solid rgba(59,130,246,.16);
-  background: rgba(255,255,255,.6);
-  color: var(--blue-600);
-  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  background: rgba(59,130,246,.08);
+  color: var(--blue-500);
+  transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
   .appSwitch:hover {
-    background: rgba(59,130,246,.10);
+    background: rgba(59,130,246,.14);
     border-color: rgba(59,130,246,.30);
   }
 }
