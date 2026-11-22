@@ -170,7 +170,7 @@ function WarmupSet({ item, onLogSet, onStartRest }) {
 
 const logLabel = (kind, number) => (kind === 'warmup' ? 'Registrar aquecimento' : `Registrar série ${number}`);
 
-function NewSet({ item, onLogSet, onStartRest, onCancel, onStaged }) {
+function NewSet({ item, onLogSet, onStartRest, onCancel, onStaged, onHold }) {
   const kind = onCancel ? 'normal' : nextKind(item);
   const next = seriesCount(item.sets) + 1;
   const reference = item.previous[item.sets.length] ?? (kind === 'warmup' ? null : item.sets.filter(entry => entry.kind !== 'warmup').at(-1)) ?? null;
@@ -187,9 +187,12 @@ function NewSet({ item, onLogSet, onStartRest, onCancel, onStaged }) {
     if (problem) return setError(problem);
     setError('');
     setSaving(true);
-    const result = await onLogSet(item, { ...withRir(data, kind === 'normal' || STAGED_KINDS.includes(kind) ? rir : null), kind });
+    const staged = STAGED_KINDS.includes(kind);
+    if (staged) onHold?.(true);
+    const result = await onLogSet(item, { ...withRir(data, kind === 'normal' || staged ? rir : null), kind });
     if (!result) setSaving(false);
-    else if (STAGED_KINDS.includes(kind) && result.id) onStaged?.(result.id);
+    if (staged && result?.id) onStaged?.(result.id);
+    else if (staged) onHold?.(false);
   };
 
   return (
@@ -704,21 +707,65 @@ function PairRow({ row, label, editingId, onEdit, onCancel, onSave, onDelete }) 
 
 const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 
-const PAUSE_SECONDS = 15;
+const PAUSE_OPTIONS = [10, 15, 20];
+const PAUSE_KEY = 'gymPauseSeconds';
+
+function readPause() {
+  try {
+    const value = Number(localStorage.getItem(PAUSE_KEY));
+    return PAUSE_OPTIONS.includes(value) ? value : 15;
+  } catch {
+    return 15;
+  }
+}
+
+function previousStaged(item, entry, label) {
+  const done = (item.previous ?? []).filter(set => set.kind !== 'warmup');
+  const same = done[Number(label) - 1];
+  if (same?.kind === entry.kind && same.stages?.length) return same;
+  return [...done].reverse().find(set => set.kind === entry.kind && set.stages?.length) ?? null;
+}
 
 const dropWeight = (weight) => Math.max(0, Math.round((weight * 0.75) / 2.5) * 2.5);
 
 function PauseClock({ startedAt }) {
   const [now, setNow] = useState(() => Date.now());
+  const [target, setTarget] = useState(readPause);
+  const buzzed = useRef(false);
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const ready = seconds >= target;
+
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(timer);
   }, []);
-  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+
+  useEffect(() => {
+    if (!ready || buzzed.current) return;
+    buzzed.current = true;
+    try {
+      navigator.vibrate?.([200, 100, 200]);
+    } catch {}
+  }, [ready]);
+
+  const cycle = () => {
+    const next = PAUSE_OPTIONS[(PAUSE_OPTIONS.indexOf(target) + 1) % PAUSE_OPTIONS.length];
+    setTarget(next);
+    buzzed.current = seconds >= next;
+    try {
+      localStorage.setItem(PAUSE_KEY, String(next));
+    } catch {}
+  };
+
   return (
-    <span className={`${styles.pauseClock} ${seconds >= PAUSE_SECONDS ? styles.pauseReady : ''}`} aria-live="off">
-      {formatClock(seconds)} / {formatClock(PAUSE_SECONDS)}
-    </span>
+    <button
+      type="button"
+      className={`${styles.pauseClock} ${ready ? styles.pauseReady : ''}`}
+      onClick={cycle}
+      aria-label={`Pausa de ${target} segundos, toque para mudar`}
+    >
+      {formatClock(seconds)} / {formatClock(target)}
+    </button>
   );
 }
 
@@ -727,11 +774,12 @@ function StageForm({ item, entry, label, onSave, onDone }) {
   const drop = entry.kind === 'drop';
   const stages = entry.stages ?? [];
   const last = stages.at(-1) ?? entry;
-  const [weight, setWeight] = useState(() => inputKg(drop ? dropWeight(last.weight_kg) : entry.weight_kg, side));
-  const [reps, setReps] = useState(() => String(drop ? last.reps : Math.max(1, Math.round(entry.reps / 3))));
+  const suggestion = previousStaged(item, entry, label)?.stages?.[stages.length] ?? null;
+  const [weight, setWeight] = useState(() => inputKg(drop ? suggestion?.weight_kg ?? dropWeight(last.weight_kg) : entry.weight_kg, side));
+  const [reps, setReps] = useState(() => String(suggestion?.reps ?? (drop ? last.reps : Math.max(1, Math.round(entry.reps / 3)))));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [pausedAt, setPausedAt] = useState(() => Date.now());
+  const [pausedAt] = useState(() => Date.now());
 
   const submit = async (e) => {
     e.preventDefault();
@@ -740,13 +788,7 @@ function StageForm({ item, entry, label, onSave, onDone }) {
     setError('');
     setSaving(true);
     const ok = await onSave(item, entry, { stages: [...stages, { weight_kg: data.weight_kg, reps: data.reps }] });
-    setSaving(false);
-    if (ok) {
-      setPausedAt(Date.now());
-      if (drop) {
-        setWeight(inputKg(dropWeight(data.weight_kg), side));
-      }
-    }
+    if (!ok) setSaving(false);
   };
 
   const number = stages.length + 1;
@@ -787,7 +829,9 @@ function StageForm({ item, entry, label, onSave, onDone }) {
         </button>
         <button type="button" className={styles.stageDone} onClick={onDone} disabled={saving}>Terminar série</button>
       </div>
-      {drop && number === 1 && <p className={styles.stageHint}>A carga já vem 25% menor. Faça quantos drops quiser.</p>}
+      {suggestion
+        ? <p className={styles.stageHint}>Sugestão da última vez: {drop ? `${formatKg(shownKg(suggestion.weight_kg, side))} kg × ` : ''}{suggestion.reps} reps.</p>
+        : drop && number === 1 && <p className={styles.stageHint}>A carga já vem 25% menor. Faça quantos drops quiser.</p>}
     </form>
   );
 }
@@ -815,10 +859,14 @@ const previousSetText = (set, item, side) => {
   return `${set.kind === 'warmup' ? 'Aq ' : ''}${set.side ? `${SIDE_LABEL[set.side]} ` : ''}${base}×${set.reps}${stages}`;
 };
 
-export default function SessionExerciseCard({ item, index, label, turn = false, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
+export default function SessionExerciseCard({ item, index, label, turn = false, onStaging, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const [stagingId, setStagingId] = useState(null);
+  const stage = (id) => {
+    setStagingId(id);
+    onStaging?.(id !== null);
+  };
   const target = sessionTarget(item);
   const done = seriesCount(item.sets);
   const complete = item.target_sets && done >= item.target_sets;
@@ -857,7 +905,7 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
       if (!ok) return false;
     }
     setEditingId(null);
-    setStagingId(entry.id);
+    stage(entry.id);
     return true;
   };
 
@@ -937,7 +985,7 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
               />
               {staging?.id === row.entry.id && (
                 <li className={styles.stageItem}>
-                  <StageForm key={`${staging.id}-${staging.stages?.length ?? 0}`} item={item} entry={staging} label={labels[rowIndex]} onSave={onEditSet} onDone={() => setStagingId(null)} />
+                  <StageForm key={`${staging.id}-${staging.stages?.length ?? 0}`} item={item} entry={staging} label={labels[rowIndex]} onSave={onEditSet} onDone={() => stage(null)} />
                 </li>
               )}
               </Fragment>
@@ -1003,7 +1051,8 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
               onLogSet={onLogSet}
               onStartRest={onStartRest}
               onCancel={addingExtra ? () => setExtraAt(null) : undefined}
-              onStaged={setStagingId}
+              onStaged={stage}
+              onHold={onStaging}
             />
           )
         ) : (

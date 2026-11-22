@@ -1124,3 +1124,10 @@
 .stageItem {
   list-style: none;
 }
+
+.pauseClock {
+  min-height: 34px;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}

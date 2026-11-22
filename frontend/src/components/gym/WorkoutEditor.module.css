@@ -718,3 +718,109 @@
   font-size: 0.8rem;
   font-weight: 400;
 }
+
+.slotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.copy {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.copySheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copyText {
+  margin: 0;
+  color: var(--gym-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.copyText strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.copyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.copyItem {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.copyItemOn {
+  border-color: color-mix(in srgb, var(--gym-accent) 50%, var(--gym-border));
+}
+
+.copyCheck {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1.5px solid var(--gym-border-strong);
+  color: var(--gym-accent-ink);
+}
+
+.copyItemOn .copyCheck {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent);
+}
+
+.copyName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyConfirm {
+  height: 52px;
+  border-radius: 16px;
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font: inherit;
+  font-family: var(--font-display);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copyConfirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

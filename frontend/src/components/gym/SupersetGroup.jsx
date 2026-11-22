@@ -45,7 +45,9 @@ export default function SupersetGroup({ items, number, cardProps, onStartRest, o
   const counts = items.map(item => seriesCount(item.sets));
   const stage = `${turnId}:${items.map(item => item.sets.length).join(',')}`;
   const [choice, setChoice] = useState({ id: null, stage });
-  const openId = choice.stage === stage && choice.id !== null ? choice.id : turnId;
+  const [held, setHeld] = useState(null);
+  const free = choice.stage === stage && choice.id !== null ? choice.id : turnId;
+  const openId = held ?? free;
   const rounds = Math.max(0, ...items.map(item => item.target_sets ?? 0));
   const done = Math.min(...counts);
   const roundEnded = done > 0 && counts.every(count => count === done);
@@ -92,6 +94,10 @@ export default function SupersetGroup({ items, number, cardProps, onStartRest, o
               label={label}
               turn={item.id === turnId}
               {...cardProps}
+              onStaging={staging => {
+                setHeld(staging ? item.id : null);
+                if (!staging) setChoice({ id: null, stage });
+              }}
               onStartRest={undefined}
               onOpenRest={undefined}
             />

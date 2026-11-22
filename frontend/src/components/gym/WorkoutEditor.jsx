@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History, Link2, Link2Off } from 'lucide-react';
+import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History, Link2, Link2Off, Copy, Check } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS, TECHNIQUES, TECHNIQUE_ORDER, planSlots } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS, TECHNIQUES, TECHNIQUE_ORDER, planSlots, planSummary, repsLabel } from '../../lib/gym';
 import VariantChoices from './VariantChoices';
 import { clearDraft, draftKey, readDraft, writeDraft } from '../../lib/workoutDraft';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
@@ -162,6 +162,7 @@ function Editor({ initial, onSubmit, onDelete }) {
   const [description, setDescription] = useState(restoring ? draft.description ?? '' : initial?.description ?? '');
   const [items, setItems] = useState(() => (restoring ? withPlans(draft.items) : (initial?.exercises ?? []).map(toItem)));
   const [slotSheet, setSlotSheet] = useState(null);
+  const [copySheet, setCopySheet] = useState(null);
   const [cardio, setCardio] = useState(() => (restoring ? withKeys(draft.cardio) : (initial?.cardio ?? []).map(toCardio)));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
@@ -261,6 +262,28 @@ function Editor({ initial, onSubmit, onDelete }) {
   };
 
   const closeSlotSheet = useCallback(() => setSlotSheet(null), []);
+  const closeCopySheet = useCallback(() => setCopySheet(null), []);
+
+  const openCopy = (item) => {
+    const targets = items.filter(entry => entry.key !== item.key && isStrength(entry.exercise)).map(entry => entry.key);
+    setCopySheet({ key: item.key, selected: targets });
+  };
+
+  const toggleCopyTarget = (key) => setCopySheet(current => ({
+    ...current,
+    selected: current.selected.includes(key) ? current.selected.filter(k => k !== key) : [...current.selected, key],
+  }));
+
+  const applyCopy = () => {
+    const source = items.find(entry => entry.key === copySheet.key);
+    const chosen = new Set(copySheet.selected);
+    setCopySheet(null);
+    if (!source || !chosen.size) return;
+    setItems(list => list.map(entry => (chosen.has(entry.key)
+      ? { ...entry, plan: [...source.plan], target_sets: source.target_sets, reps_min: source.reps_min, reps_max: source.reps_max }
+      : entry)));
+    toast(`Copiado para ${plural(chosen.size, 'exercício', 'exercícios')}`);
+  };
 
   const removeItem = (key) => setItems(list => {
     const index = list.findIndex(item => item.key === key);
@@ -596,7 +619,14 @@ function Editor({ initial, onSubmit, onDelete }) {
                         )}
                         {isStrength(item.exercise) && (
                           <div className={styles.slots}>
-                            <span className={styles.targetLabel}>Técnica de cada série</span>
+                            <span className={styles.slotsHeader}>
+                              <span className={styles.targetLabel}>Técnica de cada série</span>
+                              {items.some(entry => entry.key !== item.key && isStrength(entry.exercise)) && (
+                                <button type="button" className={styles.copy} onClick={() => openCopy(item)}>
+                                  <Copy size={13} aria-hidden="true" /> Copiar para outros
+                                </button>
+                              )}
+                            </span>
                             <div className={styles.slotRow}>
                               {planSlots(item.plan).map((slot, slotIndex) => (
                                 <button
@@ -720,6 +750,34 @@ function Editor({ initial, onSubmit, onDelete }) {
                   </span>
                 </button>
               ))}
+            </div>
+          );
+        })()}
+      </GymSheet>
+
+      <GymSheet open={!!copySheet} onClose={closeCopySheet} title="Copiar para outros exercícios">
+        {copySheet && (() => {
+          const source = items.find(entry => entry.key === copySheet.key);
+          if (!source) return null;
+          const others = items.filter(entry => entry.key !== source.key && isStrength(entry.exercise));
+          const detail = [plural(source.plan.length, 'série', 'séries'), `${repsLabel(source.reps_min, source.reps_max)} reps`, planSummary(source.plan)].filter(Boolean).join(' · ');
+          return (
+            <div className={styles.copySheet}>
+              <p className={styles.copyText}>Leva <strong>{detail}</strong> de {source.exercise.name} para:</p>
+              <div className={styles.copyList}>
+                {others.map(entry => {
+                  const on = copySheet.selected.includes(entry.key);
+                  return (
+                    <button key={entry.key} type="button" className={`${styles.copyItem} ${on ? styles.copyItemOn : ''}`} onClick={() => toggleCopyTarget(entry.key)} aria-pressed={on}>
+                      <span className={styles.copyCheck} aria-hidden="true">{on && <Check size={14} strokeWidth={3} />}</span>
+                      <span className={styles.copyName}>{entry.exercise.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className={styles.copyConfirm} onClick={applyCopy} disabled={!copySheet.selected.length}>
+                {copySheet.selected.length ? `Copiar para ${plural(copySheet.selected.length, 'exercício', 'exercícios')}` : 'Escolha ao menos um exercício'}
+              </button>
             </div>
           );
         })()}

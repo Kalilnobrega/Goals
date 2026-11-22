@@ -364,3 +364,54 @@
   color: var(--gym-muted);
   font-size: 0.72rem;
 }
+
+.techniqueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.technique {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+}
+
+.technique_warmup { --kind-color: #ffb547; }
+.technique_drop { --kind-color: #6cc4ff; }
+.technique_rest_pause { --kind-color: #b49cff; }
+.technique_failure { --kind-color: #ff7a7a; }
+
+.techniqueDot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--kind-color);
+}
+
+.techniqueLabel {
+  flex: 1;
+  color: var(--gym-text);
+}
+
+.techniqueValue {
+  color: var(--gym-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.techniqueNote {
+  margin: 0;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.techniqueNote strong {
+  color: var(--gym-text);
+  font-weight: 600;
+}

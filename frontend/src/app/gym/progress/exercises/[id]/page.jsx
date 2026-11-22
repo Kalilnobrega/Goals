@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle,
+  ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle, Flame,
 } from 'lucide-react';
 import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
@@ -186,6 +186,44 @@ function Group({ icon: Icon, title, children }) {
     <section className={styles.group} aria-label={title}>
       <h2 className={styles.groupTitle}><Icon size={17} aria-hidden="true" /> {title}</h2>
       {children}
+    </section>
+  );
+}
+
+const loadText = (weight) => (weight > 0 ? formatKg(weight) : 'PC');
+
+const techniqueSetText = (set) => {
+  const main = `${loadText(set.weight_kg)}×${set.reps}`;
+  if (set.kind === 'drop') return [main, ...set.stages.map(stage => `${loadText(stage.weight_kg)}×${stage.reps}`)].join(' → ');
+  if (set.kind === 'rest_pause') return [main, ...set.stages.map(stage => stage.reps)].join(' + ');
+  return main;
+};
+
+const TECHNIQUE_TAG = { drop: 'Drop', rest_pause: 'Rest-pause', failure: 'Falha' };
+
+function Techniques({ sessions }) {
+  if (!sessions?.length) return null;
+  return (
+    <section className={styles.group} aria-labelledby="exercise-techniques-title">
+      <h2 id="exercise-techniques-title" className={styles.groupTitle}><Flame size={17} aria-hidden="true" /> Técnicas</h2>
+      <ul className={styles.techniqueSessions}>
+        {sessions.map(session => (
+          <li key={session.session_id}>
+            <Link href={`/gym/history/${session.session_id}`} className={styles.techniqueSession}>
+              <span className={styles.rowDate}>{formatDay(session.date)}</span>
+              <span className={styles.techniqueSets}>
+                {session.sets.map((set, index) => (
+                  <span key={index} className={`${styles.techniqueSet} ${styles[`technique_${set.kind}`]}`}>
+                    <span className={styles.techniqueTag}>{TECHNIQUE_TAG[set.kind]}</span>
+                    {techniqueSetText(set)}
+                  </span>
+                ))}
+              </span>
+              <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -566,6 +604,8 @@ export default function ExerciseProgressPage() {
               ))}
             </div>
           </section>
+
+          {!timed && <Techniques sessions={data.techniques} />}
 
           <section className={styles.sessions}>
             <h2 className={styles.sectionTitle}>Treinos</h2>

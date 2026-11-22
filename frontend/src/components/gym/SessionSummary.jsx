@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Trophy, Activity } from 'lucide-react';
+import { Trophy, Activity, Flame } from 'lucide-react';
 import {
   setSummary,
   formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds, groupsLabel,
@@ -9,6 +9,59 @@ import {
 import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
 import UnilateralTag from './UnilateralTag';
 import styles from './SessionSummary.module.css';
+
+function techniqueTotals(session) {
+  const totals = { warmup: 0, failure: 0, drop: 0, dropStages: 0, rest_pause: 0, pauses: 0, stageVolume: 0 };
+  session.exercises.forEach(item => item.sets.forEach(entry => {
+    const stages = entry.stages ?? [];
+    if (entry.kind === 'warmup') totals.warmup += 1;
+    if (entry.kind === 'failure') totals.failure += 1;
+    if (entry.kind === 'drop') {
+      totals.drop += 1;
+      totals.dropStages += stages.length;
+    }
+    if (entry.kind === 'rest_pause') {
+      totals.rest_pause += 1;
+      totals.pauses += stages.length;
+    }
+    totals.stageVolume += stages.reduce((sum, stage) => sum + stage.weight_kg * stage.reps, 0);
+  }));
+  return totals;
+}
+
+function Techniques({ session }) {
+  const totals = techniqueTotals(session);
+  const rows = [
+    totals.failure && { kind: 'failure', label: 'Até a falha', value: plural(totals.failure, 'série', 'séries') },
+    totals.drop && { kind: 'drop', label: 'Drop', value: `${plural(totals.dropStages, 'drop', 'drops')} em ${plural(totals.drop, 'série', 'séries')}` },
+    totals.rest_pause && { kind: 'rest_pause', label: 'Rest-pause', value: `${plural(totals.pauses, 'pausa', 'pausas')} em ${plural(totals.rest_pause, 'série', 'séries')}` },
+    totals.warmup && { kind: 'warmup', label: 'Aquecimento', value: plural(totals.warmup, 'feito', 'feitos') },
+  ].filter(Boolean);
+  if (!rows.length) return null;
+  const share = session.volume_kg > 0 ? Math.round((totals.stageVolume / session.volume_kg) * 100) : 0;
+  return (
+    <section className={styles.card} aria-labelledby="techniques-title">
+      <div className={styles.cardHeader}>
+        <Flame size={16} className={styles.cardIcon} aria-hidden="true" />
+        <h2 id="techniques-title" className={styles.cardTitle}>Técnicas</h2>
+      </div>
+      <ul className={styles.techniqueList}>
+        {rows.map(row => (
+          <li key={row.kind} className={`${styles.technique} ${styles[`technique_${row.kind}`]}`}>
+            <span className={styles.techniqueDot} aria-hidden="true" />
+            <span className={styles.techniqueLabel}>{row.label}</span>
+            <span className={styles.techniqueValue}>{row.value}</span>
+          </li>
+        ))}
+      </ul>
+      {totals.stageVolume > 0 && (
+        <p className={styles.techniqueNote}>
+          Drops e pausas somaram <strong>{formatVolume(totals.stageVolume)}</strong>{share > 0 ? `, ${share}% do volume do treino` : ''}.
+        </p>
+      )}
+    </section>
+  );
+}
 
 const percent = (now, before) => (before > 0 ? ((now - before) / before) * 100 : null);
 
@@ -160,6 +213,8 @@ export default function SessionSummary({ session, insights }) {
           Comparado com a última vez, em <Link href={`/gym/history/${previous.id}`}>{formatDay(previous.date)}</Link>
         </p>
       )}
+
+      <Techniques session={session} />
 
       {insights?.records.length > 0 && (
         <section className={`${styles.card} ${styles.records}`} aria-labelledby="records-title">
