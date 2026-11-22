@@ -31,8 +31,8 @@
 }
 
 .brandMark {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: grid;
   place-items: center;
@@ -42,9 +42,9 @@
 
 .brandName {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.1rem;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
 }
 
 .brandName span {
@@ -104,19 +104,22 @@
   transform: scale(0.96);
 }
 
-.switch {
+.right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
+  gap: 8px;
+}
+
+.switch {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
   border: 1px solid var(--gym-border-strong);
   color: var(--gym-muted);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
   transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
@@ -273,7 +276,7 @@
     display: inline-flex;
   }
 
-  .topStart + .switch {
+  .topStart + .right {
     margin-left: 0;
   }
 
@@ -287,18 +290,15 @@
     height: 52px;
   }
 
+  .right {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 420px) {
   .brandMark {
-    width: 30px;
-    height: 30px;
-  }
-
-  .brandName {
-    font-size: 1.02rem;
-  }
-
-  .switch {
-    height: 34px;
-    padding: 0 12px;
+    width: 32px;
+    height: 32px;
   }
 }
 

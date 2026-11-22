@@ -10,6 +10,7 @@ import { GYM_TAB_ORDER, useGymTabNav } from '../../lib/gymTabs';
 import { prefetchGymTabs } from '../../lib/gymPrefetch';
 import { useSwipeTabs } from '../../lib/useSwipeTabs';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
+import GymStreak from './GymStreak';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -48,7 +49,7 @@ export default function GymNavbar() {
     saveLastApp('gym');
   }, []);
 
-  useHideOnScroll(headerRef, '(max-width: 767px)', pathname);
+  const revealHeader = useHideOnScroll(headerRef, '(max-width: 767px)', pathname);
 
   if (pathname.startsWith('/gym/session/')) return null;
 
@@ -90,7 +91,7 @@ export default function GymNavbar() {
       <header ref={headerRef} className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/gym" {...linkProps('/gym')} className={styles.brand}>
-            <span className={styles.brandMark}><Dumbbell size={18} strokeWidth={2.4} /></span>
+            <span className={styles.brandMark}><Dumbbell size={20} strokeWidth={2.4} /></span>
             <span className={styles.brandName}>Gym<span>Goals</span></span>
           </Link>
 
@@ -122,10 +123,12 @@ export default function GymNavbar() {
             <Play size={15} fill="currentColor" /> Treinar
           </button>
 
-          <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
-            <LayoutGrid size={16} />
-            <span>Apps</span>
-          </Link>
+          <div className={styles.right}>
+            <GymStreak pathname={pathname} onBump={revealHeader} />
+            <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
+              <LayoutGrid size={16} />
+            </Link>
+          </div>
         </div>
       </header>
 
