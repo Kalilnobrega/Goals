@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import styles from './Floating.module.css';
 
 const subscribe = () => () => {};
-const findShell = () => document.querySelector('[data-gym-shell]');
+const findShell = () => document.querySelector('[data-gym-shell]') ?? document.body;
 const REDUCED = '(prefers-reduced-motion: reduce)';
 
 export function popOut(element) {

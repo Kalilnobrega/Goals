@@ -6,7 +6,7 @@ import { getPlans, activatePlan, peekCache } from '../../../lib/api';
 import { apiError, plural, WEEKDAY_SHORT } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
-import Floating from '../../../components/gym/Floating';
+import Floating from '../../../components/Floating';
 import styles from './plans.module.css';
 
 function WeekPreview({ plan }) {

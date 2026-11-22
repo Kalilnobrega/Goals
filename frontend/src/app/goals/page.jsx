@@ -23,6 +23,7 @@ import { restoreSuperGoal, superGoalTitle } from '../../lib/superGoals';
 import { Plus, Search, X } from 'lucide-react';
 import styles from './page.module.css';
 import SkeletonSwap from '../../components/SkeletonSwap';
+import Floating from '../../components/Floating';
 import { rememberGoalsScroll, restoreGoalsScroll } from '../../lib/goalsScroll';
 
 const KIND_FILTERS = [
@@ -445,9 +446,11 @@ export default function GoalsPage() {
         )}
         </SkeletonSwap>
 
-        <button className={styles.fab} onClick={() => setModal('goal')} aria-label="Nova meta">
-          <Plus size={24} />
-        </button>
+        <Floating>
+          <button className={styles.fab} onClick={() => setModal('goal')} aria-label="Nova meta">
+            <Plus size={24} />
+          </button>
+        </Floating>
 
         <Modal open={modal === 'goal'} onClose={closeModal} title="Nova meta">
           <GoalForm superGoals={superGoals} onSubmit={handleCreate} onCancel={closeModal} loading={saving} />

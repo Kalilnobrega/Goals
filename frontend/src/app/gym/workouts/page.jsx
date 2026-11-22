@@ -8,7 +8,7 @@ import { clearDraft, draftKey, readDraftRaw, subscribeDrafts } from '../../../li
 import { WorkoutBodyMini } from '../../../components/gym/WorkoutBodyMap';
 import { useBodyType } from '../../../components/gym/BodyMap';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
-import Floating from '../../../components/gym/Floating';
+import Floating from '../../../components/Floating';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import styles from './page.module.css';
 

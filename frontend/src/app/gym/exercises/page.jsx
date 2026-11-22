@@ -11,7 +11,7 @@ import ExerciseForm from '../../../components/gym/ExerciseForm';
 import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
-import Floating from '../../../components/gym/Floating';
+import Floating from '../../../components/Floating';
 import ExerciseFilters, { ROLE_LABEL, useExerciseFilters } from '../../../components/gym/ExerciseFilters';
 import UnilateralTag from '../../../components/gym/UnilateralTag';
 import VariantChoices from '../../../components/gym/VariantChoices';

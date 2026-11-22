@@ -12,7 +12,7 @@ import ProgressChart from '../../../../components/gym/ProgressChart';
 import BodyWeightForm from '../../../../components/gym/BodyWeightForm';
 import GymSheet from '../../../../components/gym/GymSheet';
 import TargetGoal from '../../../../components/gym/TargetGoal';
-import Floating from '../../../../components/gym/Floating';
+import Floating from '../../../../components/Floating';
 import WeightComparison from '../../../../components/gym/WeightComparison';
 import LimitedList from '../../../../components/gym/LimitedList';
 import styles from '../progress.module.css';
