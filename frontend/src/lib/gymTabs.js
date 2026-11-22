@@ -3,7 +3,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { announceTabSlide, leaveTab } from './pageSlide';
 import { prefetchGymTab } from './gymPrefetch';
 
-export const GYM_TAB_ORDER = ['/gym', '/gym/plans', '/gym/workouts', '/gym/exercises', '/gym/history', '/gym/progress'];
+export const GYM_TAB_ORDER = ['/gym', '/gym/plans', '/gym/workouts', '/gym/exercises', '/gym/history', '/gym/progress', '/gym/social'];
 
 const TREINOS = new Set(['/gym/plans', '/gym/workouts', '/gym/exercises', '/gym/history']);
 

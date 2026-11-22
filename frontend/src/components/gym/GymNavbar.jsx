@@ -1,13 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Dumbbell, House, ClipboardList, TrendingUp, Play, Users, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../../lib/auth';
-import { getMe } from '../../lib/api';
+import { getFitnessProfile, getFriends, getMe } from '../../lib/api';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
-import { useToast } from '../Toast';
 import { GYM_TAB_ORDER, useGymTabNav } from '../../lib/gymTabs';
 import { prefetchGymTabs } from '../../lib/gymPrefetch';
 import { useSwipeTabs } from '../../lib/useSwipeTabs';
@@ -20,7 +19,7 @@ const links = [
   { href: '/gym', label: 'Início', icon: House },
   { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises', '/gym/history'] },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
-  { href: '/gym/social', label: 'Social', icon: Users, soon: true },
+  { href: '/gym/social', label: 'Social', icon: Users, also: ['/gym/u/'] },
 ];
 
 const subscribeToUserName = (onChange) => {
@@ -32,17 +31,23 @@ const subscribeToUserName = (onChange) => {
   };
 };
 
-const SOON_MESSAGE = 'Social em construção: desafios, feed e amigos chegam em breve.';
-
 export default function GymNavbar() {
   const pathname = usePathname();
   const headerRef = useRef(null);
   const openStart = useStartWorkout();
-  const toast = useToast();
-  const announceSoon = () => toast({ tone: 'info', message: SOON_MESSAGE });
   const { linkProps, step, swipeable } = useGymTabNav();
   const router = useRouter();
   const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
+  const [requests, setRequests] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getFitnessProfile()
+      .then((profile) => (profile.username ? getFriends() : null))
+      .then((friends) => { if (active) setRequests(friends?.incoming.length ?? 0); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [pathname]);
 
   useEffect(() => {
     const prefetch = () => {
@@ -78,33 +83,24 @@ export default function GymNavbar() {
     return [href, ...(links.find(l => l.href === href)?.also ?? [])].some(path => pathname.startsWith(path));
   };
 
-  const renderTab = ({ href, label, icon: Icon, soon }) => (soon ? (
-    <button
-      key={href}
-      type="button"
-      className={`${styles.tab} ${styles.tabSoon}`}
-      onClick={announceSoon}
-      aria-disabled="true"
-      aria-label={`${label}, em construção`}
-    >
-      <span className={styles.tabSoonIcon}>
-        <Icon size={22} strokeWidth={2} />
-        <span className={styles.soonBadge}>Em breve</span>
-      </span>
-      <span>{label}</span>
-    </button>
-  ) : (
+  const badgeFor = (href) => (href === '/gym/social' && requests > 0 ? (requests > 9 ? '9+' : String(requests)) : null);
+
+  const renderTab = ({ href, label, icon: Icon }) => (
     <Link
       key={href}
       href={href}
       {...linkProps(href)}
       className={`${styles.tab} ${isCurrent(href) ? styles.tabActive : ''}`}
       aria-current={isCurrent(href) ? 'page' : undefined}
+      aria-label={badgeFor(href) ? `${label}, ${requests} ${requests === 1 ? 'pedido de amizade' : 'pedidos de amizade'}` : undefined}
     >
-      <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />
+      <span className={styles.tabIcon}>
+        <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />
+        {badgeFor(href) && <span className={styles.badge}>{badgeFor(href)}</span>}
+      </span>
       <span>{label}</span>
     </Link>
-  ));
+  );
 
   return (
     <>
@@ -116,17 +112,7 @@ export default function GymNavbar() {
           </AppSwitcher>
 
           <nav className={styles.topLinks} aria-label="GymGoals">
-            {links.map(({ href, label, soon }) => (soon ? (
-              <button
-                key={href}
-                type="button"
-                className={`${styles.topLink} ${styles.topLinkSoon}`}
-                onClick={announceSoon}
-                aria-disabled="true"
-              >
-                {label} <span className={styles.soonTag}>Em breve</span>
-              </button>
-            ) : (
+            {links.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -135,8 +121,9 @@ export default function GymNavbar() {
                 aria-current={isCurrent(href) ? 'page' : undefined}
               >
                 {label}
+                {badgeFor(href) && <span className={styles.topBadge}>{badgeFor(href)}</span>}
               </Link>
-            )))}
+            ))}
           </nav>
 
           <button type="button" className={styles.topStart} onClick={openStart}>

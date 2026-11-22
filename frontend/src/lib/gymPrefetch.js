@@ -1,6 +1,6 @@
 import {
   getBodyWeights, getExercises, getFitnessOverview, getFitnessStats, getHistory, getPlans,
-  getProgressExercises, getProgressWorkouts, getWorkouts, peekCache,
+  getFriends, getProgressExercises, getProgressWorkouts, getWorkouts, peekCache,
 } from './api';
 
 const TAB_DATA = {
@@ -16,6 +16,7 @@ const TAB_DATA = {
     ['fitnessProgress', getProgressExercises],
     ['fitnessBodyWeight', getBodyWeights],
   ],
+  '/gym/social': [['fitnessFriends', getFriends]],
 };
 
 export function prefetchGymTab(href) {

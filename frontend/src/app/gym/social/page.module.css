@@ -1,0 +1,234 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  color: var(--gym-muted);
+  font-size: 0.95rem;
+}
+
+.subtitle strong {
+  color: var(--gym-accent);
+  font-weight: 600;
+}
+
+.pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pill {
+  height: 38px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: none;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pillActive {
+  border-color: transparent;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.soon {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--gym-surface-2);
+  color: var(--gym-faint);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.count {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  color: var(--gym-faint);
+  pointer-events: none;
+}
+
+.search {
+  width: 100%;
+  height: 50px;
+  padding: 0 44px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.search::placeholder {
+  color: var(--gym-faint);
+}
+
+.search:focus {
+  border-color: var(--gym-accent);
+}
+
+.clear {
+  position: absolute;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.hint {
+  color: var(--gym-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  color: var(--gym-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.empty svg {
+  flex-shrink: 0;
+  color: var(--gym-faint);
+}
+
+.setup {
+  align-items: center;
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.setupIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.setupTitle {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.setupButton {
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 22px;
+  border-radius: 16px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.9rem;
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton {
+  height: 140px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--gym-surface) 0%, var(--gym-surface-2) 50%, var(--gym-surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

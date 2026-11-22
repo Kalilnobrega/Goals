@@ -405,6 +405,115 @@
 .gymName {
   overflow: hidden;
   color: var(--gym-text);
+
+.privacyOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.privacyOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.privacyActive {
+  border-color: var(--gym-accent);
+}
+
+.privacyIcon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+}
+
+.privacyActive .privacyIcon {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.privacyText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.privacyLabel {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.privacyLabel small {
+  margin-left: 6px;
+  color: var(--gym-faint);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.privacyDescription {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.privacyCheck {
+  flex-shrink: 0;
+  color: var(--gym-accent);
+}
+
+@media (hover: hover) {
+  .privacyOption:not(.privacyActive):hover {
+    border-color: var(--gym-accent);
+  }
+}
+
+.blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blockedList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blockedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.blockedRow + .blockedRow {
+  border-top: 1px solid var(--gym-border);
+}
+
+.blockedName {
+  min-width: 0;
+  overflow: hidden;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -467,4 +576,23 @@
   .gymIconDanger:hover {
     color: var(--gym-danger);
   }
+}
+
+.blockedName span {
+  color: var(--gym-muted);
+  font-weight: 400;
+}
+
+.unblock {
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-radius: 11px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
 }

@@ -187,61 +187,38 @@
   100% { scale: 1; }
 }
 
-.tabSoon {
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--gym-faint);
-  opacity: 0.55;
-  cursor: default;
-}
-
-.tabSoonIcon {
+.tabIcon {
   position: relative;
   display: grid;
   place-items: center;
 }
 
-.soonBadge {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  margin-left: 4px;
-  padding: 1px 5px;
+.badge,
+.topBadge {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
   border-radius: 999px;
-  background: var(--gym-surface-3);
-  color: var(--gym-muted);
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.topLinkSoon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: none;
-  font-family: inherit;
-  color: var(--gym-faint);
-  cursor: default;
-}
-
-.topLinkSoon:hover {
-  color: var(--gym-faint);
-  background: none;
-}
-
-.soonTag {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--gym-surface-2);
-  color: var(--gym-muted);
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  margin-left: 6px;
+  box-shadow: 0 0 0 2px var(--gym-bg);
+}
+
+.topBadge {
+  margin-left: 6px;
+  vertical-align: 1px;
 }
 
 .tabStartSlot {

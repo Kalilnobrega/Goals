@@ -327,6 +327,25 @@ export const checkUsername = (username) =>
   api.get("/fitness/profile/username-available", { params: { username } }).then((r) => r.data);
 export const updateUsername = (username) =>
   api.put("/fitness/profile/username", { username }).then((r) => r.data);
+export const updateVisibility = (visibility) =>
+  api.put("/fitness/profile/visibility", { visibility }).then((r) => r.data);
+export const searchPeople = (q) => api.get("/fitness/social/search", { params: { q } }).then((r) => r.data);
+export const getFriends = () => cachedGet("fitnessFriends", "/fitness/social/friends");
+export const getSocialProfile = (username) =>
+  cachedGet(`socialProfile:${username}`, `/fitness/social/users/${encodeURIComponent(username)}`);
+export const sendFriendRequest = (username) =>
+  api.post("/fitness/social/friends/requests", { username }).then((r) => r.data);
+export const acceptFriendRequest = (username) =>
+  api.post(`/fitness/social/friends/${encodeURIComponent(username)}/accept`).then((r) => r.data);
+export const removeFriendship = (username) =>
+  api.delete(`/fitness/social/friends/${encodeURIComponent(username)}`).then((r) => r.data);
+export const getBlocks = () => api.get("/fitness/social/blocks").then((r) => r.data);
+export const blockUser = (username) =>
+  api.post(`/fitness/social/blocks/${encodeURIComponent(username)}`).then((r) => r.data);
+export const unblockUser = (username) =>
+  api.delete(`/fitness/social/blocks/${encodeURIComponent(username)}`).then((r) => r.data);
+export const reportUser = (username, reason, details) =>
+  api.post(`/fitness/social/reports/${encodeURIComponent(username)}`, { reason, details }).then((r) => r.data);
 
 export const exportFitnessData = (params) =>
   api.get("/fitness/export", { params, responseType: "blob" }).then((r) => {

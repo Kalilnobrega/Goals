@@ -1,0 +1,139 @@
+.avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gym-accent-soft);
+  border: 1px solid rgba(198, 244, 50, 0.25);
+  color: var(--gym-accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.avatar_md {
+  width: 44px;
+  height: 44px;
+  font-size: 0.95rem;
+}
+
+.avatar_lg {
+  width: 76px;
+  height: 76px;
+  font-size: 1.6rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--gym-border);
+}
+
+.rowLink {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rowText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowName {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowHandle {
+  overflow: hidden;
+  color: var(--gym-muted);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.actionPrimary {
+  border-color: transparent;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.actionCompact {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.84rem;
+}
+
+.iconAction {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 11px;
+  border: 1px solid var(--gym-border-strong);
+  background: none;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .action:not(:disabled):not(.actionPrimary):hover,
+  .iconAction:hover {
+    border-color: var(--gym-accent);
+    color: var(--gym-text);
+  }
+}

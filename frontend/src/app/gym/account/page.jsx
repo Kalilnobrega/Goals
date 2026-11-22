@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, AtSign, Building2, Check, Pencil, Target, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeftRight, AtSign, Building2, Check, Globe, Lock, Pencil, Shield, Target, Users, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
-  changePassword, checkUsername, createGym, deleteAccount, deleteGym, getFitnessProfile, getGyms, getMe, logout, renameGym,
-  setCurrentGym, updateName, updateUsername,
+  changePassword, checkUsername, createGym, deleteAccount, deleteGym, getBlocks, getFitnessProfile, getGyms, getMe, logout,
+  renameGym, setCurrentGym, unblockUser, updateName, updateUsername, updateVisibility,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
@@ -166,6 +166,102 @@ function UsernameCard({ current, onSaved }) {
           {saving ? 'Salvando...' : current ? 'Trocar username' : 'Salvar username'}
         </button>
       </form>
+    </Card>
+  );
+}
+
+const VISIBILITY_OPTIONS = [
+  {
+    key: 'public',
+    label: 'Público',
+    icon: Globe,
+    description: 'Qualquer pessoa vê seus números e recordes. Os últimos treinos ficam só para amigos.',
+  },
+  {
+    key: 'friends',
+    label: 'Amigos',
+    icon: Users,
+    description: 'Só seus amigos veem seus números, recordes e últimos treinos.',
+  },
+  {
+    key: 'private',
+    label: 'Privado',
+    icon: Lock,
+    description: 'Ninguém vê seus treinos. Seu nome e @ continuam aparecendo na busca.',
+  },
+];
+
+function PrivacyCard({ initial, hasUsername }) {
+  const toast = useToast();
+  const [visibility, setVisibility] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [blocked, setBlocked] = useState([]);
+
+  useEffect(() => {
+    if (!hasUsername) return;
+    getBlocks().then(setBlocked).catch(() => {});
+  }, [hasUsername]);
+
+  const choose = async (key) => {
+    if (key === visibility || saving) return;
+    const previous = visibility;
+    setVisibility(key);
+    setSaving(true);
+    try {
+      await updateVisibility(key);
+      toast('Privacidade atualizada');
+    } catch (err) {
+      setVisibility(previous);
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível salvar a privacidade.') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const unblock = async (person) => {
+    try {
+      await unblockUser(person.username);
+      setBlocked((list) => list.filter((p) => p.username !== person.username));
+      toast(`@${person.username} desbloqueado`);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível desbloquear.') });
+    }
+  };
+
+  return (
+    <Card icon={Shield} title="Privacidade" sub="Quem vê seu perfil no Social. Seu peso corporal nunca aparece.">
+      <div className={styles.privacyOptions} role="radiogroup" aria-label="Privacidade do perfil">
+        {VISIBILITY_OPTIONS.map(({ key, label, icon: Icon, description }) => (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={visibility === key}
+            className={`${styles.privacyOption} ${visibility === key ? styles.privacyActive : ''}`}
+            onClick={() => choose(key)}
+          >
+            <span className={styles.privacyIcon}><Icon size={17} /></span>
+            <span className={styles.privacyText}>
+              <span className={styles.privacyLabel}>{label}{key === 'friends' && <small> padrão</small>}</span>
+              <span className={styles.privacyDescription}>{description}</span>
+            </span>
+            {visibility === key && <Check size={17} className={styles.privacyCheck} />}
+          </button>
+        ))}
+      </div>
+      {blocked.length > 0 && (
+        <div className={styles.blocked}>
+          <p className={styles.label}>Bloqueados</p>
+          <ul className={styles.blockedList}>
+            {blocked.map((person) => (
+              <li key={person.username} className={styles.blockedRow}>
+                <span className={styles.blockedName}>{person.name} <span>@{person.username}</span></span>
+                <button type="button" className={styles.unblock} onClick={() => unblock(person)}>Desbloquear</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }
@@ -572,6 +668,7 @@ function GymsCard() {
 export default function GymAccountPage() {
   const [me, setMe] = useState(null);
   const [username, setUsername] = useState(undefined);
+  const [visibility, setVisibility] = useState('friends');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -579,6 +676,7 @@ export default function GymAccountPage() {
       .then(([user, profile]) => {
         setMe(user);
         setUsername(profile.username ?? null);
+        setVisibility(profile.visibility ?? 'friends');
       })
       .catch(() => setError('Não foi possível carregar sua conta.'));
   }, []);
@@ -610,6 +708,7 @@ export default function GymAccountPage() {
         <>
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
+          <PrivacyCard initial={visibility} hasUsername={!!username} />
           <BodyTypeCard />
           <GymsCard />
           <PasswordCard me={me} />
