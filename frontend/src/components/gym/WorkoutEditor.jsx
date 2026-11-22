@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History } from 'lucide-react';
+import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History, Link2, Link2Off } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS } from '../../lib/gym';
 import VariantChoices from './VariantChoices';
 import { clearDraft, draftKey, readDraft, writeDraft } from '../../lib/workoutDraft';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
@@ -17,8 +17,9 @@ import styles from './WorkoutEditor.module.css';
 let nextKey = 0;
 const newKey = () => `item-${nextKey++}`;
 
-const toItem = (row) => ({
+const toItem = (row, index, rows) => ({
   key: newKey(),
+  linked: row.superset != null && rows?.[index + 1]?.superset === row.superset,
   exercise: row.exercise,
   target_sets: row.target_sets,
   reps_min: String(row.reps_min),
@@ -42,10 +43,42 @@ const CARDIO_PHASES = [
 
 const sideAllowed = (item) => canLoadPerSide(item.exercise.equipment, item.unilateral ?? item.exercise.is_unilateral, item.exercise.tracking);
 
-const toPayload = (name, description, items, cardio) => ({
+const supersetsOf = (items) => {
+  let group = 0;
+  return items.map((item, index) => {
+    const joined = item.linked && index < items.length - 1;
+    const fromPrevious = index > 0 && items[index - 1].linked;
+    if (!joined && !fromPrevious) return null;
+    if (!fromPrevious) group += 1;
+    return group;
+  });
+};
+
+const supersetLayout = (items) => {
+  const groups = supersetsOf(items);
+  let unit = 0;
+  return items.map((item, index) => {
+    const group = groups[index];
+    const starts = group === null || groups[index - 1] !== group;
+    if (starts) unit += 1;
+    const size = group === null ? 1 : groups.filter(value => value === group).length;
+    const position = group === null ? 0 : groups.slice(0, index).filter(value => value === group).length;
+    return {
+      group,
+      first: group !== null && position === 0,
+      last: group !== null && position === size - 1,
+      size,
+      label: group === null ? String(unit) : `${unit}${SUPERSET_LETTERS[position]}`,
+    };
+  });
+};
+
+const toPayload = (name, description, items, cardio) => {
+  const supersets = supersetsOf(items);
+  return {
   name: name.trim(),
   description: description.trim() || null,
-  exercises: items.map(item => ({
+  exercises: items.map((item, index) => ({
     exercise_id: item.exercise.id,
     target_sets: item.target_sets,
     reps_min: Number(item.reps_min),
@@ -53,13 +86,15 @@ const toPayload = (name, description, items, cardio) => ({
     rest_seconds: item.rest_seconds,
     unilateral: item.unilateral,
     load_mode: sideAllowed(item) && item.load_mode === 'side' ? 'side' : null,
+    superset: supersets[index],
   })),
   cardio: CARDIO_PHASES.flatMap(phase => cardio.filter(item => item.phase === phase.value)).map(item => ({
     exercise_id: item.exercise?.id ?? null,
     phase: item.phase,
     minutes: Number(item.minutes),
   })),
-});
+  };
+};
 
 const toDraft = (name, description, items, cardio, base) => ({
   name,
@@ -187,7 +222,7 @@ function Editor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null, load_mode: null })),
+      ...selected.map(exercise => ({ key: newKey(), linked: false, exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null, load_mode: null })),
     ]);
     setPickerOpen(false);
   };
@@ -197,7 +232,12 @@ function Editor({ initial, onSubmit, onDelete }) {
     if (invalid?.field === key) setInvalid(null);
   };
 
-  const removeItem = (key) => setItems(list => list.filter(item => item.key !== key));
+  const removeItem = (key) => setItems(list => {
+    const index = list.findIndex(item => item.key === key);
+    return list
+      .map((item, i) => (i === index - 1 ? { ...item, linked: item.linked && list[index].linked } : item))
+      .filter(item => item.key !== key);
+  });
 
   const cardioOptions = useMemo(() => (exercises ?? []).filter(exercise => exercise.tracking === 'cardio'), [exercises]);
   const strengthExercises = useMemo(() => exercises?.filter(exercise => exercise.tracking !== 'cardio') ?? null, [exercises]);
@@ -212,7 +252,15 @@ function Editor({ initial, onSubmit, onDelete }) {
   const removeCardio = (key) => setCardio(list => list.filter(item => item.key !== key));
 
   const reorder = (keys) => {
-    setItems(list => keys.map(key => list.find(item => item.key === key)));
+    setItems(list => {
+      const pairs = new Set(list.flatMap((item, index) => (item.linked && list[index + 1] ? [`${item.key}>${list[index + 1].key}`] : [])));
+      const ordered = keys.map(key => list.find(item => item.key === key));
+      return ordered.map((item, index) => ({ ...item, linked: !!ordered[index + 1] && pairs.has(`${item.key}>${ordered[index + 1].key}`) }));
+    });
+  };
+
+  const toggleLink = (key) => {
+    setItems(list => list.map(item => (item.key === key ? { ...item, linked: !item.linked } : item)));
   };
 
   const validate = () => {
@@ -265,6 +313,7 @@ function Editor({ initial, onSubmit, onDelete }) {
   };
 
   const totalSets = items.reduce((sum, item) => sum + item.target_sets, 0);
+  const layout = supersetLayout(items);
 
   const cardioBlock = (phase) => {
     const rows = cardio.filter(item => item.phase === phase.value);
@@ -418,10 +467,27 @@ function Editor({ initial, onSubmit, onDelete }) {
               {items.map((item, index) => (
                 <SortableItem key={item.key} id={item.key}>
                   {({ itemProps, handleProps, isDragging }) => (
-                    <li {...itemProps} data-item={item.key} className={`${styles.item} ${isDragging ? styles.itemDragging : ''} ${invalid?.field === item.key ? styles.itemInvalid : ''}`}>
+                    <li
+                      {...itemProps}
+                      data-item={item.key}
+                      className={[
+                        styles.item,
+                        layout[index].group !== null ? styles.itemSuperset : '',
+                        layout[index].group !== null && !layout[index].first ? styles.itemJoinedTop : '',
+                        layout[index].group !== null && !layout[index].last ? styles.itemJoinedBottom : '',
+                        isDragging ? styles.itemDragging : '',
+                        invalid?.field === item.key ? styles.itemInvalid : '',
+                      ].join(' ')}
+                    >
+                      {layout[index].first && (
+                        <span className={styles.supersetKicker}>
+                          Superset · {plural(layout[index].size, 'exercício', 'exercícios')}
+                          <small>Faça uma série de cada, em sequência, e descanse no fim da rodada</small>
+                        </span>
+                      )}
                       <div className={styles.itemTop}>
                         <DragHandle handleProps={handleProps} className={styles.handle} />
-                        <span className={styles.index}>{index + 1}</span>
+                        <span className={styles.index}>{layout[index].label}</span>
                         <span className={styles.itemText}>
                           <span className={styles.itemName}>{item.exercise.name}</span>
                           <span className={styles.itemMeta}>
@@ -498,18 +564,20 @@ function Editor({ initial, onSubmit, onDelete }) {
                           </div>
                         </div>
                         )}
-                        <div className={styles.target}>
-                          <span className={styles.targetLabel}>Descanso</span>
-                          <GymSelect
-                            value={item.rest_seconds ?? null}
-                            options={REST_CHOICES}
-                            onChange={seconds => updateItem(item.key, { rest_seconds: seconds })}
-                            title={`Descanso · ${item.exercise.name}`}
-                            label={`Descanso de ${item.exercise.name}`}
-                            hint="Tempo do cronômetro entre as séries deste exercício."
-                            grid
-                          />
-                        </div>
+                        {(layout[index].group === null || layout[index].last) && (
+                          <div className={styles.target}>
+                            <span className={styles.targetLabel}>{layout[index].group === null ? 'Descanso' : 'Descanso da rodada'}</span>
+                            <GymSelect
+                              value={item.rest_seconds ?? null}
+                              options={REST_CHOICES}
+                              onChange={seconds => updateItem(item.key, { rest_seconds: seconds })}
+                              title={layout[index].group === null ? `Descanso · ${item.exercise.name}` : 'Descanso do superset'}
+                              label={layout[index].group === null ? `Descanso de ${item.exercise.name}` : 'Descanso depois de cada rodada do superset'}
+                              hint={layout[index].group === null ? 'Tempo do cronômetro entre as séries deste exercício.' : 'Tempo do cronômetro depois do último exercício de cada rodada.'}
+                              grid
+                            />
+                          </div>
+                        )}
                         <div className={styles.target}>
                           <span className={styles.targetLabel}>Execução</span>
                           <GymSwitch
@@ -532,6 +600,16 @@ function Editor({ initial, onSubmit, onDelete }) {
                         )}
                       </div>
                       {invalid?.field === item.key && <span className={styles.fieldError}>{invalid.message}</span>}
+                      {index < items.length - 1 && !isDragging && (
+                        <button
+                          type="button"
+                          className={`${styles.link} ${item.linked ? styles.linkOn : ''}`}
+                          onClick={() => toggleLink(item.key)}
+                          aria-label={item.linked ? `Separar ${item.exercise.name} e ${items[index + 1].exercise.name}` : `Juntar ${item.exercise.name} e ${items[index + 1].exercise.name} em superset`}
+                        >
+                          {item.linked ? <><Link2Off size={14} aria-hidden="true" /> Separar</> : <><Link2 size={14} aria-hidden="true" /> Superset</>}
+                        </button>
+                      )}
                     </li>
                   )}
                 </SortableItem>

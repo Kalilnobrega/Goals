@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse
+  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse, Link2, Link2Off
 } from 'lucide-react';
 import {
   getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
@@ -13,6 +13,7 @@ import {
 import {
   apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
   plural, perSide, canLoadPerSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel, variantTitle, variantHint,
+  supersetUnits, supersetTurn, SUPERSET_LETTERS,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -25,6 +26,7 @@ import GymSheet from '../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../components/gym/ExercisePicker';
 import GymSwitch from '../../../../components/gym/GymSwitch';
 import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard';
+import SupersetGroup from '../../../../components/gym/SupersetGroup';
 import SessionSummary from '../../../../components/gym/SessionSummary';
 import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
 import RestTimer from '../../../../components/gym/RestTimer';
@@ -36,11 +38,15 @@ import styles from './page.module.css';
 
 const isCardio = (item) => item.tracking === 'cardio';
 
-const exerciseNumbers = (session) => {
+const unitsOf = (session) => supersetUnits(session.exercises).map(unit => ({ ...unit, key: `u-${unit.items[0].id}` }));
+
+const unitNumbers = (units) => {
   const numbers = {};
-  session.exercises.filter(item => !isCardio(item)).forEach((item, index) => { numbers[item.id] = index; });
+  units.filter(unit => !isCardio(unit.items[0])).forEach((unit, index) => { numbers[unit.key] = index; });
   return numbers;
 };
+
+const unitName = (unit) => unit.items.map(item => item.exercise_name).join(' + ');
 
 const withCardioInPlace = (session, mainIds) => [
   ...session.exercises.filter(item => isCardio(item) && item.phase === 'start').map(item => item.id),
@@ -98,6 +104,10 @@ function subscribeView(onChange) {
 const isDone = (item) => (item.target_sets ? seriesCount(item.sets) >= item.target_sets : item.sets.length > 0);
 
 const firstPending = (session) => (session.exercises.find(item => !isDone(item)) ?? session.exercises.at(-1))?.id ?? null;
+
+const unitDone = (unit) => unit.items.every(isDone);
+
+const unitEntry = (unit) => (unit.group !== null ? supersetTurn(unit.items) : null) ?? unit.items.find(item => !isDone(item)) ?? unit.items[0];
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -341,6 +351,8 @@ export default function SessionPage() {
 
   const startRest = (item) => startRestTimer(item.rest_seconds, item.exercise_name, session.id);
 
+  const startGroupRest = (items) => startRestTimer(items.at(-1).rest_seconds, items.map(item => item.exercise_name).join(' + '), session.id);
+
   const toggleUnilateral = async (item) => {
     try {
       setSession(withPending(await updateSessionExercise(item.id, { unilateral: !item.unilateral })));
@@ -429,24 +441,64 @@ export default function SessionPage() {
     }
   };
 
-  const reorder = async (ids) => {
+  const reorder = async (ids, supersets) => {
     const previous = session;
-    setSession(current => ({ ...current, exercises: ids.map(itemId => current.exercises.find(item => item.id === itemId)) }));
+    setSession(current => ({
+      ...current,
+      exercises: ids.map((itemId, index) => {
+        const item = current.exercises.find(entry => entry.id === itemId);
+        return supersets ? { ...item, superset: supersets[index] } : item;
+      }),
+    }));
     try {
-      await reorderSession(previous.id, ids);
+      setSession(withPending(await reorderSession(previous.id, ids, supersets)));
+      return true;
     } catch (err) {
       setSession(previous);
-      fail(err, 'Não foi possível mudar a ordem.');
+      return fail(err, 'Não foi possível mudar a ordem.');
     }
   };
 
+  const unitOf = (item) => unitsOf(session).find(unit => unit.items.some(entry => entry.id === item.id));
+
   const moveToEnd = (item) => {
     setSheet(null);
-    const all = session.exercises.map(e => e.id);
-    const main = session.exercises.filter(e => !isCardio(e) && e.id !== item.id).map(e => e.id);
-    if (item.id === currentId) setCurrentId(all[all.indexOf(item.id) + 1] ?? item.id);
-    reorder(withCardioInPlace(session, [...main, item.id]));
-    toast(`${item.exercise_name} foi para o fim do treino`);
+    const unit = unitOf(item);
+    const moving = new Set(unit.items.map(e => e.id));
+    const units = unitsOf(session);
+    const main = session.exercises.filter(e => !isCardio(e) && !moving.has(e.id)).map(e => e.id);
+    if (moving.has(currentId)) {
+      const following = units[units.indexOf(unit) + 1];
+      if (following) setCurrentId(unitEntry(following).id);
+    }
+    reorder(withCardioInPlace(session, [...main, ...unit.items.map(e => e.id)]));
+    toast(`${unit.group !== null ? 'O superset' : item.exercise_name} foi para o fim do treino`);
+  };
+
+  const nextMain = (item) => {
+    const main = session.exercises.filter(e => !isCardio(e));
+    return main[main.findIndex(e => e.id === item.id) + 1] ?? null;
+  };
+
+  const joinNext = async (item) => {
+    setSheet(null);
+    const next = nextMain(item);
+    if (!next) return;
+    const used = session.exercises.map(e => e.superset ?? 0);
+    const group = item.superset ?? next.superset ?? Math.max(0, ...used) + 1;
+    const merging = new Set([item.superset, next.superset].filter(value => value != null));
+    const supersets = session.exercises.map(e => (e.id === item.id || e.id === next.id || merging.has(e.superset) ? group : e.superset ?? null));
+    if (await reorder(session.exercises.map(e => e.id), supersets)) toast(`${item.exercise_name} e ${next.exercise_name} em superset`);
+  };
+
+  const leaveSuperset = async (item) => {
+    setSheet(null);
+    const unit = unitOf(item);
+    const rest = session.exercises.filter(e => e.id !== item.id);
+    const lastIndex = rest.findIndex(e => e.id === unit.items.filter(entry => entry.id !== item.id).at(-1).id);
+    const ordered = [...rest.slice(0, lastIndex + 1), item, ...rest.slice(lastIndex + 1)];
+    const supersets = ordered.map(e => (e.id === item.id ? null : e.superset ?? null));
+    if (await reorder(ordered.map(e => e.id), supersets)) toast(`${item.exercise_name} saiu do superset`);
   };
 
   const removeExercise = async (item) => {
@@ -511,9 +563,10 @@ export default function SessionPage() {
     }
   };
 
-  const ids = session?.exercises.map(item => item.id) ?? [];
-  const idsKey = ids.join(',');
-  const currentIndex = Math.max(0, ids.indexOf(currentId));
+  const units = session ? unitsOf(session) : [];
+  const ids = units.map(unit => unit.key);
+  const idsKey = units.map(unit => unit.items.map(item => item.id).join('+')).join(',');
+  const currentIndex = Math.max(0, units.findIndex(unit => unit.items.some(item => item.id === currentId)));
   const focus = view === 'focus' && session?.status === 'in_progress' && ids.length > 0;
 
   useLayoutEffect(() => {
@@ -535,8 +588,9 @@ export default function SessionPage() {
   }, [currentIndex, idsKey, focus]);
 
   const goTo = (index) => {
-    const id = ids[index];
-    if (!id) return;
+    const unit = units[index];
+    if (!unit) return;
+    const id = unitEntry(unit).id;
     const el = carouselRef.current;
     if (el) {
       fromScroll.current = true;
@@ -559,10 +613,11 @@ export default function SessionPage() {
       }
       return;
     }
-    const id = ids[Math.round(el.scrollLeft / el.clientWidth)];
-    if (id && id !== currentId) {
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    const unit = units[index];
+    if (unit && index !== currentIndex) {
       fromScroll.current = true;
-      setCurrentId(id);
+      setCurrentId(unitEntry(unit).id);
     }
   };
 
@@ -620,12 +675,16 @@ export default function SessionPage() {
     };
   });
 
-  const current = session.exercises[currentIndex];
+  const current = units[currentIndex];
   const menuItem = sheet?.type === 'menu' ? session.exercises.find(it => it.id === sheet.item.id) : null;
   const menuSiblings = sheet?.type === 'menu' ? familySiblings(exercises?.find(item => item.id === sheet.item.exercise_id), exercises) : [];
-  const next = session.exercises[currentIndex + 1];
-  const numbers = exerciseNumbers(session);
+  const next = units[currentIndex + 1];
+  const numbers = unitNumbers(units);
   const mainItems = session.exercises.filter(item => !isCardio(item));
+  const mainUnits = units.filter(unit => !isCardio(unit.items[0]));
+  const menuNext = menuItem && !isCardio(menuItem) ? nextMain(menuItem) : null;
+  const menuGrouped = !!menuItem && menuItem.superset != null && unitOf(menuItem)?.group !== null;
+  const menuJoinable = !!menuNext && (menuItem.superset == null || menuItem.superset !== menuNext.superset);
   const cardProps = {
     cardioOptions: (exercises ?? []).filter(isCardio),
     onPickCardio: (item, exercise) => swapExercise(item, [exercise]),
@@ -641,6 +700,19 @@ export default function SessionPage() {
     onSaveNote: saveNote,
   };
 
+  const renderUnit = (unit) => (unit.group !== null ? (
+    <SupersetGroup
+      key={unit.key}
+      items={unit.items}
+      number={(numbers[unit.key] ?? 0) + 1}
+      cardProps={cardProps}
+      onStartRest={startGroupRest}
+      onOpenRest={it => setSheet({ type: 'rest', item: it, group: true })}
+    />
+  ) : (
+    <SessionExerciseCard key={unit.key} item={unit.items[0]} index={numbers[unit.key] ?? 0} {...cardProps} />
+  ));
+
   return (
     <div className={styles.page} data-session-focus="">
       <div className={styles.headerTop}>
@@ -652,7 +724,7 @@ export default function SessionPage() {
           <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
         </span>
         <div className={styles.headerActions}>
-          {ids.length > 1 && (
+          {session.exercises.length > 1 && (
             <button
               type="button"
               className={styles.iconButton}
@@ -700,17 +772,17 @@ export default function SessionPage() {
       {focus && (
         <>
           <div className={styles.strip} ref={stripRef} role="tablist" aria-label="Exercícios do treino">
-            {session.exercises.map((item, index) => (
+            {units.map((unit, index) => (
               <button
-                key={item.id}
+                key={unit.key}
                 type="button"
                 role="tab"
                 aria-selected={index === currentIndex}
-                className={`${styles.chip} ${index === currentIndex ? styles.chipCurrent : ''} ${isDone(item) ? styles.chipDone : ''}`}
+                className={`${styles.chip} ${index === currentIndex ? styles.chipCurrent : ''} ${unitDone(unit) ? styles.chipDone : ''}`}
                 onClick={() => goTo(index)}
               >
-                <span className={styles.chipIndex}>{isDone(item) ? <Check size={13} strokeWidth={3} /> : isCardio(item) ? <HeartPulse size={13} /> : numbers[item.id] + 1}</span>
-                <span className={styles.chipName}>{item.exercise_name}</span>
+                <span className={styles.chipIndex}>{unitDone(unit) ? <Check size={13} strokeWidth={3} /> : isCardio(unit.items[0]) ? <HeartPulse size={13} /> : unit.group !== null ? <Link2 size={13} /> : numbers[unit.key] + 1}</span>
+                <span className={styles.chipName}>{unitName(unit)}</span>
               </button>
             ))}
             <button type="button" className={`${styles.chip} ${styles.chipAdd}`} onClick={() => openPicker('add')} aria-label="Adicionar exercício">
@@ -719,9 +791,9 @@ export default function SessionPage() {
           </div>
 
           <div className={styles.carousel} ref={carouselRef} onScroll={handleCarouselScroll}>
-            {session.exercises.map((item, index) => (
-              <div key={item.id} className={styles.slide} aria-hidden={index !== currentIndex} inert={index !== currentIndex}>
-                <SessionExerciseCard item={item} index={numbers[item.id] ?? 0} {...cardProps} />
+            {units.map((unit, index) => (
+              <div key={unit.key} className={styles.slide} aria-hidden={index !== currentIndex} inert={index !== currentIndex}>
+                {renderUnit(unit)}
               </div>
             ))}
           </div>
@@ -731,9 +803,7 @@ export default function SessionPage() {
       {!focus && session.exercises.length > 0 && (
         <>
           <div className={styles.cards}>
-            {session.exercises.map(item => (
-              <SessionExerciseCard key={item.id} item={item} index={numbers[item.id] ?? 0} {...cardProps} />
-            ))}
+            {units.map(renderUnit)}
           </div>
           <button type="button" className={styles.add} onClick={() => openPicker('add')}>
             <Plus size={18} strokeWidth={2.4} /> Adicionar exercício
@@ -756,12 +826,12 @@ export default function SessionPage() {
         {focus && next ? (
           <button
             type="button"
-            className={`${styles.barMain} ${isDone(current) ? styles.barMainReady : ''}`}
+            className={`${styles.barMain} ${unitDone(current) ? styles.barMainReady : ''}`}
             onClick={() => goTo(currentIndex + 1)}
           >
             <span className={styles.barText}>
-              <small>{isCardio(next) ? 'Próximo' : `Próximo · ${numbers[next.id] + 1} de ${mainItems.length}`}</small>
-              <span>{next.exercise_name}</span>
+              <small>{isCardio(next.items[0]) ? 'Próximo' : `Próximo${next.group !== null ? ' superset' : ''} · ${numbers[next.key] + 1} de ${mainUnits.length}`}</small>
+              <span>{unitName(next)}</span>
             </span>
             <ChevronRight size={22} />
           </button>
@@ -811,11 +881,23 @@ export default function SessionPage() {
                   type="button"
                   className={s.option}
                   onClick={() => moveToEnd(sheet.item)}
-                  disabled={mainItems.at(-1).id === sheet.item.id}
+                  disabled={mainUnits.at(-1).items.some(item => item.id === sheet.item.id)}
                 >
                   <ArrowDownToLine size={20} />
-                  <span>Deixar para depois<small>Vai para o fim do treino, útil se o aparelho estiver ocupado</small></span>
+                  <span>Deixar para depois<small>{menuGrouped ? 'O superset inteiro vai para o fim do treino' : 'Vai para o fim do treino, útil se o aparelho estiver ocupado'}</small></span>
                 </button>
+                {menuJoinable && (
+                  <button type="button" className={s.option} onClick={() => joinNext(menuItem)}>
+                    <Link2 size={20} />
+                    <span>Fazer superset com o próximo<small>Junta com {menuNext.exercise_name} só neste treino. A ficha não muda</small></span>
+                  </button>
+                )}
+                {menuGrouped && (
+                  <button type="button" className={s.option} onClick={() => leaveSuperset(menuItem)}>
+                    <Link2Off size={20} />
+                    <span>Sair do superset<small>Vira um exercício separado, logo depois do superset. A ficha não muda</small></span>
+                  </button>
+                )}
                 <button type="button" className={s.option} onClick={() => setSheet({ type: 'order' })}>
                   <ArrowUpDown size={20} /> <span>Reordenar exercícios</span>
                 </button>
@@ -890,19 +972,26 @@ export default function SessionPage() {
         {sheet?.type === 'order' && (
           <div className={s.stack}>
             <p className={s.text}>Arraste para mudar a ordem. A ficha não muda.</p>
-            <SortableList ids={mainItems.map(item => item.id)} onReorder={ids => reorder(withCardioInPlace(session, ids))}>
+            <SortableList
+              ids={mainUnits.map(unit => unit.key)}
+              onReorder={keys => reorder(withCardioInPlace(session, keys.flatMap(key => mainUnits.find(unit => unit.key === key).items.map(item => item.id))))}
+            >
               <ol className={s.orderList}>
-                {mainItems.map((item, index) => (
-                  <SortableItem key={item.id} id={item.id}>
+                {mainUnits.map((unit, index) => (
+                  <SortableItem key={unit.key} id={unit.key}>
                     {({ itemProps, handleProps, isDragging }) => (
                       <li {...itemProps} className={`${s.orderItem} ${isDragging ? s.orderDragging : ''}`}>
                         <DragHandle handleProps={handleProps} className={s.orderHandle} />
                         <span className={s.orderIndex}>{index + 1}</span>
                         <span className={s.orderText}>
-                          <span className={s.orderName}>{item.exercise_name}</span>
+                          <span className={s.orderName}>{unit.group !== null ? `Superset · ${unitName(unit)}` : unit.items[0].exercise_name}</span>
                           <span className={s.orderMeta}>
-                            {groupsLabel(item)}
-                            {item.sets.length ? ` · ${plural(item.sets.length, 'série feita', 'séries feitas')}` : ''}
+                            {unit.group !== null
+                              ? unit.items.map((item, position) => `${SUPERSET_LETTERS[position]} ${groupsLabel(item)}`).join(' · ')
+                              : groupsLabel(unit.items[0])}
+                            {unit.items.some(item => item.sets.length)
+                              ? ` · ${plural(unit.items.reduce((sum, item) => sum + item.sets.length, 0), 'série feita', 'séries feitas')}`
+                              : ''}
                           </span>
                         </span>
                       </li>
@@ -918,6 +1007,7 @@ export default function SessionPage() {
         {sheet?.type === 'rest' && (
           <div className={s.stack}>
             <p className={s.text}>
+              {sheet.group ? 'Descanso depois de cada rodada do superset. ' : ''}
               O cronômetro só começa quando você tocar nele. O tempo fica salvo para as próximas vezes
               {session.workout_id ? ' e na ficha' : ''}.
             </p>

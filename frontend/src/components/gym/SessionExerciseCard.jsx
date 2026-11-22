@@ -547,7 +547,7 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
 
 const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 
-export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
+export default function SessionExerciseCard({ item, index, label, turn = false, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
   const target = sessionTarget(item);
@@ -583,11 +583,12 @@ export default function SessionExerciseCard({ item, index, onLogSet, onEditSet, 
     <PerSide.Provider value={side}>
     <Tracking.Provider value={tracking}>
     <Incline.Provider value={cardio && hasIncline(item.exercise_name)}>
-      <article className={`${styles.card} ${complete ? styles.complete : ''}`}>
+      <article className={`${styles.card} ${complete ? styles.complete : ''} ${turn ? styles.turn : ''}`} data-session-item={item.id}>
         <header className={styles.header}>
           <div className={styles.headerTop}>
-            <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : cardio ? <HeartPulse size={16} /> : index + 1}</span>
+            <span className={styles.index}>{complete ? <Check size={16} strokeWidth={3} /> : cardio ? <HeartPulse size={16} /> : label ?? index + 1}</span>
             <MarqueeText as="h2" text={item.exercise_name} className={styles.name} />
+            {turn && <span className={styles.turnTag}>Agora</span>}
             {onOpenMenu && (
               <button type="button" className={styles.menu} onClick={() => onOpenMenu(item)} aria-label={`Opções de ${item.exercise_name}`}>
                 <MoreVertical size={18} />

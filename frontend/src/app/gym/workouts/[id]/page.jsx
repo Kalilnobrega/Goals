@@ -2,9 +2,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, HeartPulse, Pencil, Timer, TrendingUp } from 'lucide-react';
+import { ChevronLeft, HeartPulse, Link2, Pencil, Timer, TrendingUp } from 'lucide-react';
 import { getWorkout, peekCache } from '../../../../lib/api';
-import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide, cardioNote } from '../../../../lib/gym';
+import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide, cardioNote, supersetMarks } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
 import UnilateralTag from '../../../../components/gym/UnilateralTag';
 import styles from './workout.module.css';
@@ -52,6 +52,7 @@ export default function WorkoutDetailPage() {
 
   const exercises = workout.exercises;
   const totalSets = exercises.reduce((sum, item) => sum + item.target_sets, 0);
+  const marks = supersetMarks(exercises);
 
   return (
     <div className={styles.page}>
@@ -79,8 +80,9 @@ export default function WorkoutDetailPage() {
           <h2 id="workout-exercises-title" className={styles.cardTitle}>Exercícios</h2>
           <ol className={styles.list}>
             {exercises.map((item, index) => (
-              <li key={item.id} className={styles.item}>
-                <span className={styles.index}>{index + 1}</span>
+              <li key={item.id} className={`${styles.item} ${marks[index].grouped ? styles.itemSuperset : ''} ${marks[index].first ? styles.itemSupersetFirst : ''} ${marks[index].grouped && !marks[index].last ? styles.itemSupersetInner : ''}`}>
+                {marks[index].first && <span className={styles.supersetTag}><Link2 size={12} aria-hidden="true" /> Superset · descanso no fim da rodada</span>}
+                <span className={styles.index}>{marks[index].label}</span>
                 <span className={styles.itemText}>
                   <span className={styles.itemName}>{item.exercise.name}</span>
                   <span className={styles.itemMeta}>
@@ -91,7 +93,7 @@ export default function WorkoutDetailPage() {
                 </span>
                 <span className={styles.itemTarget}>
                   <span className={styles.prescription}>{prescription(item)}</span>
-                  {item.rest_seconds && (
+                  {item.rest_seconds && marks[index].last && (
                     <span className={styles.rest}><Timer size={12} aria-hidden="true" /> {formatRest(item.rest_seconds)}</span>
                   )}
                 </span>

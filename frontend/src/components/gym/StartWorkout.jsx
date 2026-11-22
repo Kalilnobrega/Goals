@@ -1,11 +1,11 @@
 'use client';
 import { createContext, useCallback, useContext, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarCheck, ChevronRight, ClipboardList, Play, Timer, Zap } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, ChevronRight, ClipboardList, Link2, Play, Timer, Zap } from 'lucide-react';
 import { getFitnessOverview, getWorkouts, peekCache } from '../../lib/api';
 import {
   muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote, prescription, formatRest, equipmentLabel, gripLabel,
-  canLoadPerSide, cardioMinutes,
+  canLoadPerSide, cardioMinutes, supersetMarks,
 } from '../../lib/gym';
 import GymSheet from './GymSheet';
 import useStartSession from './useStartSession';
@@ -68,6 +68,7 @@ function WorkoutPreview({ workout, starting, onStart, onBack }) {
   }
   const exercises = workout.exercises ?? [];
   const totalSets = exercises.reduce((sum, item) => sum + item.target_sets, 0);
+  const marks = supersetMarks(exercises);
   const minutes = cardioMinutes(workout);
   const summary = [
     plural(exercises.length, 'exercício', 'exercícios'),
@@ -80,15 +81,16 @@ function WorkoutPreview({ workout, starting, onStart, onBack }) {
       <p className={styles.summary}>{summary}</p>
       <ol className={styles.list}>
         <CardioRows workout={workout} phase="start" label="Cardio no início" />
-        {exercises.map(item => (
-          <li key={item.id} className={styles.row}>
+        {exercises.map((item, index) => (
+          <li key={item.id} className={`${styles.row} ${marks[index].grouped ? styles.rowSuperset : ''} ${marks[index].grouped && !marks[index].last ? styles.rowSupersetInner : ''}`}>
+            {marks[index].first && <span className={styles.rowSupersetTag}><Link2 size={11} aria-hidden="true" /> Superset</span>}
             <span className={styles.rowMain}>
               <span className={styles.rowName}>{item.exercise.name}</span>
               <span className={styles.rowTarget}>{prescription(item)}</span>
             </span>
             <span className={styles.rowDetails}>
               {exerciseDetails(item)}
-              {item.rest_seconds ? <span className={styles.rowRest}><Timer size={11} aria-hidden="true" /> {formatRest(item.rest_seconds)}</span> : null}
+              {item.rest_seconds && marks[index].last ? <span className={styles.rowRest}><Timer size={11} aria-hidden="true" /> {formatRest(item.rest_seconds)}</span> : null}
             </span>
           </li>
         ))}

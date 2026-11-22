@@ -452,3 +452,39 @@ export function setSummary(entry, tracking = 'reps', extra = false) {
   const load = entry.weight_kg > 0 ? `${extra ? 'PC + ' : ''}${formatKg(entry.weight_kg)} kg` : 'Peso corporal';
   return `${load} × ${entry.reps}`;
 }
+
+export const SUPERSET_LETTERS = 'ABCDEFGHIJ';
+
+export function supersetUnits(items, groupOf = (item) => item.superset ?? null) {
+  const units = [];
+  items.forEach((item, index) => {
+    const group = groupOf(item, index);
+    const last = units.at(-1);
+    if (group !== null && last && last.group === group) last.items.push(item);
+    else units.push({ group, items: [item] });
+  });
+  return units.map(unit => (unit.items.length > 1 ? unit : { ...unit, group: null }));
+}
+
+export function supersetTurn(items) {
+  const open = items.filter(item => !item.target_sets || seriesCount(item.sets) < item.target_sets);
+  if (!open.length) return null;
+  const least = Math.min(...open.map(item => seriesCount(item.sets)));
+  return open.find(item => seriesCount(item.sets) === least) ?? null;
+}
+
+export function supersetMarks(items) {
+  const marks = [];
+  let number = 0;
+  supersetUnits(items).forEach(unit => {
+    number += 1;
+    unit.items.forEach((item, position) => marks.push({
+      grouped: unit.group !== null,
+      first: unit.group !== null && position === 0,
+      last: unit.group === null || position === unit.items.length - 1,
+      size: unit.items.length,
+      label: unit.group === null ? String(number) : `${number}${SUPERSET_LETTERS[position]}`,
+    }));
+  });
+  return marks;
+}

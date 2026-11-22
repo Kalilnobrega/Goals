@@ -529,3 +529,89 @@
   background: var(--gym-accent);
   color: var(--gym-accent-ink);
 }
+
+.item {
+  position: relative;
+}
+
+.itemSuperset {
+  border-color: color-mix(in srgb, var(--gym-accent) 45%, var(--gym-border));
+  box-shadow: inset 3px 0 0 var(--gym-accent);
+}
+
+.itemJoinedTop {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.itemJoinedBottom {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.supersetKicker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+  color: var(--gym-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.supersetKicker small {
+  color: var(--gym-faint);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.link {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  z-index: 2;
+  transform: translate(-50%, 50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px dashed var(--gym-border-strong);
+  background: var(--gym-bg);
+  color: var(--gym-faint);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link::before {
+  content: '';
+  position: absolute;
+  inset: -9px -6px;
+}
+
+.linkOn {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--gym-accent) 45%, var(--gym-border));
+  background: var(--gym-surface-2);
+  color: var(--gym-accent);
+}
+
+@media (hover: hover) {
+  .link:hover {
+    border-color: var(--gym-accent);
+    color: var(--gym-accent);
+  }
+}
+
+.index {
+  width: auto;
+  min-width: 26px;
+  padding: 0 4px;
+}

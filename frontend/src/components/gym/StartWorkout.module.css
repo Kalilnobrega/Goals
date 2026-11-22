@@ -121,3 +121,23 @@
   font-size: 0.8rem;
   white-space: pre-line;
 }
+
+.rowSuperset {
+  box-shadow: inset 2px 0 0 var(--gym-accent);
+}
+
+.rowSupersetInner + .rowSuperset {
+  border-top-color: transparent;
+}
+
+.rowSupersetTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  color: var(--gym-accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

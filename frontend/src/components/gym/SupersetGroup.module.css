@@ -1,0 +1,178 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px 10px;
+  border-radius: 26px;
+  border: 1px solid color-mix(in srgb, var(--gym-accent) 35%, var(--gym-border));
+  background: color-mix(in srgb, var(--gym-accent) 5%, transparent);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gym-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title small {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.title small::before {
+  content: '·';
+  margin-right: 6px;
+}
+
+.restChip {
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rest {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.rest span {
+  flex: 1;
+  text-align: left;
+}
+
+.rest strong {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.restReady {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.compact {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compactDone {
+  border-color: rgba(198, 244, 50, 0.35);
+}
+
+.compactIndex {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 5px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--gym-surface-3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.compactDone .compactIndex {
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.compactText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compactName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compactSets {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compactCount {
+  flex-shrink: 0;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.compactChevron {
+  flex-shrink: 0;
+  color: var(--gym-faint);
+}
+
+@media (hover: hover) {
+  .compact:hover {
+    border-color: var(--gym-border-strong);
+  }
+}
