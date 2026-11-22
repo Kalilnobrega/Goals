@@ -10,7 +10,7 @@ def test_profile_requires_authentication(client):
 def test_profile_defaults_to_male_and_can_change(client, ana, bruno):
     _, headers = ana
     _, bruno_headers = bruno
-    assert client.get("/fitness/profile", headers=headers).json() == {"body_type": "male", "username": None}
+    assert client.get("/fitness/profile", headers=headers).json() == {"body_type": "male", "username": None, "visibility": "friends"}
 
     assert client.put("/fitness/profile", json={"body_type": "female"}, headers=headers).json()["body_type"] == "female"
     assert client.get("/fitness/profile", headers=headers).json()["body_type"] == "female"
@@ -34,13 +34,13 @@ def test_username_is_normalized_saved_and_kept_with_body_type(client, ana):
     _, headers = ana
     response = client.put("/fitness/profile/username", json={"username": "  @Ana.Silva_ "}, headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"body_type": "male", "username": "ana.silva_"}
+    assert response.json() == {"body_type": "male", "username": "ana.silva_", "visibility": "friends"}
 
     client.put("/fitness/profile", json={"body_type": "female"}, headers=headers)
-    assert client.get("/fitness/profile", headers=headers).json() == {"body_type": "female", "username": "ana.silva_"}
+    assert client.get("/fitness/profile", headers=headers).json() == {"body_type": "female", "username": "ana.silva_", "visibility": "friends"}
 
     renamed = client.put("/fitness/profile/username", json={"username": "ana2"}, headers=headers)
-    assert renamed.json() == {"body_type": "female", "username": "ana2"}
+    assert renamed.json() == {"body_type": "female", "username": "ana2", "visibility": "friends"}
 
 
 def test_username_must_be_unique_across_users(client, ana, bruno):

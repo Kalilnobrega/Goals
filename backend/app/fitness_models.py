@@ -275,6 +275,7 @@ class FitnessProfile(Base):
     body_type = Column(String(10), nullable=False, default="male")
     username = Column(String(20), nullable=True, unique=True, index=True)
     current_gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
+    visibility = Column(String(10), nullable=False, default="friends", server_default="friends")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
@@ -307,3 +308,36 @@ class ExerciseGymSetting(Base):
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), primary_key=True)
     gym_specific = Column(Boolean, nullable=False)
+
+
+
+class Friendship(Base):
+    __tablename__ = "fitness_friendships"
+    __table_args__ = (UniqueConstraint("user_low_id", "user_high_id", name="uq_fitness_friendship_pair"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_low_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_high_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    requester_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(10), nullable=False, default="pending")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class UserBlock(Base):
+    __tablename__ = "fitness_blocks"
+
+    blocker_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    blocked_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserReport(Base):
+    __tablename__ = "fitness_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    reporter_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reported_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reason = Column(String(20), nullable=False)
+    details = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -1289,6 +1289,77 @@ class FitnessProfileSchema(BaseModel):
 class FitnessProfileResponseSchema(BaseModel):
     body_type: Literal["male", "female"]
     username: str | None = None
+    visibility: Literal["public", "friends", "private"] = "friends"
+
+
+class VisibilityUpdateSchema(BaseModel):
+    visibility: Literal["public", "friends", "private"]
+
+
+Relation = Literal["self", "friends", "request_sent", "request_received", "none", "blocked"]
+
+
+class SocialUserSchema(BaseModel):
+    username: str
+    name: str
+    relation: Relation
+
+
+class FriendSchema(BaseModel):
+    username: str
+    name: str
+    since: datetime | None = None
+
+
+class FriendsSchema(BaseModel):
+    friends: list[FriendSchema]
+    incoming: list[FriendSchema]
+    outgoing: list[FriendSchema]
+
+
+class SocialStatsSchema(BaseModel):
+    workouts: int
+    workouts_this_month: int
+    week_streak: int
+    best_week_streak: int
+    friends: int
+    member_since: date | None = None
+
+
+class SocialRecordSchema(BaseModel):
+    name: str
+    weight_kg: float
+    reps: int
+    previous_kg: float
+    date: date
+
+
+class SocialSessionSchema(BaseModel):
+    name: str
+    date: date
+    minutes: int
+    volume_kg: float
+    exercises: int
+
+
+class SocialProfileSchema(BaseModel):
+    username: str
+    name: str
+    visibility: Literal["public", "friends", "private"]
+    relation: Relation
+    can_view: bool
+    stats: SocialStatsSchema | None = None
+    records: list[SocialRecordSchema] | None = None
+    recent_sessions: list[SocialSessionSchema] | None = None
+
+
+class FriendRequestSchema(BaseModel):
+    username: str = Field(max_length=40)
+
+
+class ReportSchema(BaseModel):
+    reason: Literal["spam", "offensive", "fake", "other"]
+    details: str | None = Field(default=None, max_length=500)
 
 
 class UsernameUpdateSchema(BaseModel):
