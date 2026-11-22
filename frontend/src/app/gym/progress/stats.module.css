@@ -206,6 +206,86 @@
   font-size: 0.8rem;
 }
 
+.runs {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.run {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.runRank {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.run:first-child .runRank {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.runBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.runTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.runLength {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.runBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.runRange {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.runBody .track {
+  flex: none;
+  height: 6px;
+  margin-top: 2px;
+}
+
+.runFoot {
+  margin-top: 4px;
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

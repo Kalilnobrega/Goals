@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Target, ChevronRight, Scale, CalendarDays, ListChecks, Timer, HeartPulse,
 } from 'lucide-react';
-import { getFitnessStats, getPlans, peekCache } from '../../lib/api';
+import { getFitnessStats, getGymStreak, getPlans, peekCache } from '../../lib/api';
 import {
   formatDay, formatDuration, formatKg, formatSeconds, formatVolume, muscleLabel, parseDay, plural,
 } from '../../lib/gym';
@@ -128,26 +128,69 @@ function Timeline({ data }) {
   );
 }
 
-function Consistency({ data }) {
+function WeekStreaks() {
+  const [streak, setStreak] = useState(() => peekCache('gymStreak') ?? null);
+
+  useEffect(() => {
+    getGymStreak().then(setStreak).catch(() => {});
+  }, []);
+
+  if (!streak) return null;
+  const longest = streak.top[0]?.length || 1;
+
+  return (
+    <Card icon={Flame} title="Maiores sequências" hint={`meta de ${plural(streak.target, 'treino', 'treinos')} por semana`}>
+      {streak.top.length === 0 ? (
+        <p className={styles.empty}>Nenhuma sequência ainda. Bata a meta de treinos desta semana para começar.</p>
+      ) : (
+        <>
+          <ol className={styles.runs}>
+            {streak.top.map((run, index) => (
+              <li key={run.start} className={styles.run}>
+                <span className={styles.runRank}>{index + 1}</span>
+                <div className={styles.runBody}>
+                  <div className={styles.runTop}>
+                    <span className={styles.runLength}>{plural(run.length, 'semana', 'semanas')}</span>
+                    {run.current && <span className={styles.runBadge}><Flame size={11} aria-hidden="true" /> atual</span>}
+                  </div>
+                  <span className={styles.runRange}>{formatDay(run.start)} – {formatDay(run.end)}</span>
+                  <span className={styles.track}>
+                    <span className={styles.fill} style={{ width: `${(run.length / longest) * 100}%` }} />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className={styles.runFoot}>{plural(streak.total_runs, 'sequência', 'sequências')} desde o início</p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function Consistency({ data, streaks = true }) {
   const { consistency } = data;
   const maxDay = Math.max(...consistency.weekdays, 1);
   const totalParts = consistency.day_parts.reduce((sum, p) => sum + p.sessions, 0);
   const favorite = consistency.weekdays.indexOf(Math.max(...consistency.weekdays));
+  if (!streaks && data.summary.sessions === 0) return null;
 
   return (
     <Card icon={CalendarCheck} title="Constância">
-      <div className={styles.streaks}>
-        <div className={styles.streak}>
-          <Flame size={18} className={styles.streakIcon} aria-hidden="true" />
-          <span className={styles.streakValue}>{plural(consistency.current_week_streak, 'semana', 'semanas')}</span>
-          <span className={styles.streakLabel}>seguidas treinando</span>
+      {streaks && (
+        <div className={styles.streaks}>
+          <div className={styles.streak}>
+            <Flame size={18} className={styles.streakIcon} aria-hidden="true" />
+            <span className={styles.streakValue}>{plural(consistency.current_week_streak, 'semana', 'semanas')}</span>
+            <span className={styles.streakLabel}>seguidas treinando</span>
+          </div>
+          <div className={styles.streak}>
+            <Medal size={18} className={styles.streakIcon} aria-hidden="true" />
+            <span className={styles.streakValue}>{plural(consistency.best_week_streak, 'semana', 'semanas')}</span>
+            <span className={styles.streakLabel}>melhor sequência</span>
+          </div>
         </div>
-        <div className={styles.streak}>
-          <Medal size={18} className={styles.streakIcon} aria-hidden="true" />
-          <span className={styles.streakValue}>{plural(consistency.best_week_streak, 'semana', 'semanas')}</span>
-          <span className={styles.streakLabel}>melhor sequência</span>
-        </div>
-      </div>
+      )}
 
       {data.summary.sessions > 0 && (
         <>
@@ -850,7 +893,8 @@ export function GeneralStats() {
           <Progressions data={ready} />
           <RelativeStrength data={ready} />
           <TimeCard data={ready} />
-          <Consistency data={ready} />
+          <WeekStreaks />
+          <Consistency data={ready} streaks={false} />
           <MostDone data={ready} />
           <AllTime data={ready} />
         </>
