@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Fragment, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Check, CloudOff, HeartPulse, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
@@ -435,6 +435,7 @@ function SetRow({ entry, label, editing, onEdit, onCancel, onSave, onDelete, onA
   const [weight, setWeight] = useState(inputKg(entry.weight_kg, side));
   const [reps, setReps] = useState(String(entry.reps));
   const [rir, setRir] = useState(entry.rir ?? null);
+  const [stages, setStages] = useState(() => (entry.stages ?? []).map(stage => ({ weight: inputKg(stage.weight_kg, side), reps: String(stage.reps) })));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -476,11 +477,22 @@ function SetRow({ entry, label, editing, onEdit, onCancel, onSave, onDelete, onA
     return <TimedEditSet entry={entry} tracking={tracking} extra={extra} onSave={onSave} onDelete={onDelete} onCancel={onCancel} incline={incline} />;
   }
 
+  const pause = entry.kind === 'rest_pause';
+
+  const updateStage = (index, change) => setStages(list => list.map((stage, i) => (i === index ? { ...stage, ...change } : stage)));
+
   const save = async () => {
     const { data, error: problem } = validate(weight, reps, side);
     if (problem) return setError(problem);
+    const cleanStages = [];
+    for (const [index, stage] of stages.entries()) {
+      const checked = validate(pause ? weight : stage.weight, stage.reps, side);
+      if (checked.error) return setError(`${pause ? 'Pausa' : 'Drop'} ${index + 1}: ${checked.error}`);
+      cleanStages.push(checked.data);
+    }
     setBusy(true);
-    const ok = await onSave(entry, entry.kind === 'warmup' || entry.kind === 'failure' ? data : { ...data, rir });
+    const payload = entry.kind === 'warmup' || entry.kind === 'failure' ? data : { ...data, rir };
+    const ok = await onSave(entry, STAGED_KINDS.includes(entry.kind) ? { ...payload, stages: cleanStages } : payload);
     if (!ok) setBusy(false);
   };
 
@@ -498,6 +510,50 @@ function SetRow({ entry, label, editing, onEdit, onCancel, onSave, onDelete, onA
       </div>
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
       {entry.kind !== 'warmup' && entry.kind !== 'failure' && <RirPicker value={rir} onChange={setRir} />}
+      {stages.length > 0 && (
+        <div className={`${styles.editStages} ${kindClass(entry.kind)}`}>
+          {stages.map((stage, index) => (
+            <div key={index} className={styles.editStage}>
+              <span className={styles.editStageLabel}>
+                <span className={styles.kindDot} aria-hidden="true" />
+                {pause ? `Pausa ${index + 1}` : `Drop ${index + 1}`}
+                <button
+                  type="button"
+                  className={styles.editStageRemove}
+                  onClick={() => setStages(list => list.filter((_, i) => i !== index))}
+                  aria-label={`Remover ${pause ? 'pausa' : 'drop'} ${index + 1}`}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </span>
+              {pause ? (
+                <div className={styles.inputs}>
+                  <div className={styles.inputGroup}>
+                    <button type="button" className={styles.step} onClick={() => updateStage(index, { reps: stepReps(stage.reps, -1) })} aria-label="Menos uma repetição">
+                      <Minus size={16} strokeWidth={2.6} />
+                    </button>
+                    <label className={styles.field}>
+                      <input className={styles.input} value={stage.reps} onChange={e => updateStage(index, { reps: digits(e.target.value) })} inputMode="numeric" placeholder="0" aria-label={`Repetições da pausa ${index + 1}`} />
+                      <span className={styles.unit}>reps</span>
+                    </label>
+                    <button type="button" className={styles.step} onClick={() => updateStage(index, { reps: stepReps(stage.reps, 1) })} aria-label="Mais uma repetição">
+                      <Plus size={16} strokeWidth={2.6} />
+                    </button>
+                  </div>
+                  <span className={styles.stageWeight}>mesmo peso</span>
+                </div>
+              ) : (
+                <SetInputs
+                  weight={stage.weight}
+                  reps={stage.reps}
+                  onWeight={value => updateStage(index, { weight: value })}
+                  onReps={value => updateStage(index, { reps: value })}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.editActions}>
         <button type="button" className={styles.editDelete} onClick={remove} disabled={busy} aria-label={`Excluir série ${label}`}>
@@ -793,7 +849,6 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
   const labels = rowLabels(rows);
   const stagedEntry = stagingId ? item.sets.find(entry => entry.id === stagingId) : null;
   const staging = !!onLogSet && !item.unilateral && stagedEntry && STAGED_KINDS.includes(stagedEntry.kind) ? stagedEntry : null;
-  const labelOf = (entry) => labels[rows.findIndex(row => row.entry?.id === entry.id)] ?? '';
   const canDrop = !!onLogSet && !!onEditSet && !timed && !item.unilateral;
 
   const addDrop = async (entry) => {
@@ -868,6 +923,7 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
         {item.sets.length > 0 && (
           <ol className={styles.sets}>
             {rows.map((row, rowIndex) => (row.entry ? (
+              <Fragment key={row.entry.id}>
               <SetRow
                 key={`${row.entry.id}-${editingId === row.entry.id}-${side}`}
                 entry={row.entry}
@@ -879,6 +935,12 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
                 onDelete={deleteEntry}
                 onAddDrop={canDrop && row.entry.kind !== 'warmup' && !row.entry.pending ? addDrop : undefined}
               />
+              {staging?.id === row.entry.id && (
+                <li className={styles.stageItem}>
+                  <StageForm key={`${staging.id}-${staging.stages?.length ?? 0}`} item={item} entry={staging} label={labels[rowIndex]} onSave={onEditSet} onDone={() => setStagingId(null)} />
+                </li>
+              )}
+              </Fragment>
             ) : (
               <PairRow
                 key={row.key}
@@ -914,9 +976,7 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
           </div>
         )}
 
-        {staging ? (
-          <StageForm key={`${staging.id}-${staging.stages?.length ?? 0}`} item={item} entry={staging} label={labelOf(staging)} onSave={onEditSet} onDone={() => setStagingId(null)} />
-        ) : needsDevice && onPickCardio ? null : !complete || addingExtra ? (
+        {staging ? null : needsDevice && onPickCardio ? null : !complete || addingExtra ? (
           !timed && !addingExtra && nextKind(item) === 'warmup' ? (
             <WarmupSet key={`w-${item.sets.length}`} item={item} onLogSet={onLogSet} onStartRest={onStartRest} />
           ) : timed ? (

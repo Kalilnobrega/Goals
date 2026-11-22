@@ -1082,3 +1082,45 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.editStages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px dashed color-mix(in srgb, var(--kind-color) 50%, transparent);
+  background: color-mix(in srgb, var(--kind-color) 6%, transparent);
+}
+
+.editStage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editStageLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kind-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.editStageRemove {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.stageItem {
+  list-style: none;
+}
