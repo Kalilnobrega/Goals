@@ -14,6 +14,7 @@ from app.fitness_schemas import (
     WorkoutResponseSchema,
 )
 from app.fitness_timing import intensity_choices
+from app.fitness_supersets import superset_numbers
 from .auth import get_current_user
 
 fitness_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -198,6 +199,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
         raise HTTPException(status_code=400, detail="Cardio vai no bloco de cardio da ficha, não entre os exercícios.")
     if any(item.exercise_id is not None and tracking[item.exercise_id] != CARDIO for item in data.cardio):
         raise HTTPException(status_code=400, detail="O bloco de cardio aceita só exercícios de cardio.")
+    supersets = superset_numbers([item.superset for item in data.exercises])
     return [
         WorkoutExercise(
             exercise_id=item.exercise_id,
@@ -208,6 +210,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
             rest_seconds=item.rest_seconds,
             unilateral=item.unilateral,
             load_mode=item.load_mode,
+            superset=supersets[index],
         )
         for index, item in enumerate(data.exercises)
     ]

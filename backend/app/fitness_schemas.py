@@ -144,6 +144,7 @@ class WorkoutExerciseSchema(BaseModel):
     rest_seconds: int | None = Field(default=None, ge=0, le=900)
     unilateral: bool | None = None
     load_mode: LoadMode | None = None
+    superset: int | None = Field(default=None, ge=1, le=40)
 
     @model_validator(mode="after")
     def reps_range(self):
@@ -194,6 +195,7 @@ class WorkoutExerciseResponseSchema(BaseModel):
     rest_seconds: int | None
     unilateral: bool | None = None
     load_mode: str | None = None
+    superset: int | None = None
 
 
 class WorkoutCardioResponseSchema(BaseModel):
@@ -226,6 +228,13 @@ class AddSessionExerciseSchema(BaseModel):
 
 class ReorderSessionSchema(BaseModel):
     exercise_ids: list[int]
+    supersets: list[int | None] | None = None
+
+    @model_validator(mode="after")
+    def same_length(self):
+        if self.supersets is not None and len(self.supersets) != len(self.exercise_ids):
+            raise ValueError("A lista de supersets precisa ter um valor para cada exercício.")
+        return self
 
 
 class EditSessionExerciseSchema(BaseModel):
@@ -337,6 +346,7 @@ class SessionExerciseResponseSchema(BaseModel):
     tracking: str = "reps"
     load_mode: str | None = None
     phase: str | None = None
+    superset: int | None = None
     from_plan: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]

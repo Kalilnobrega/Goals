@@ -116,6 +116,7 @@ class WorkoutExercise(Base):
     rest_seconds = Column(Integer, nullable=True)
     unilateral = Column(Boolean, nullable=True)
     load_mode = Column(String(5), nullable=True)
+    superset = Column(Integer, nullable=True)
 
     exercise = relationship("Exercise", lazy="joined")
 
@@ -172,6 +173,7 @@ class SessionExercise(Base):
     tracking = Column(String(10), nullable=False, default="reps", server_default="reps")
     load_mode = Column(String(5), nullable=True)
     phase = Column(String(5), nullable=True)
+    superset = Column(Integer, nullable=True)
 
     sets = relationship(
         "SetEntry",

@@ -22,6 +22,7 @@ from app.fitness_schemas import (
 )
 from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus, bodyweight_factors
 from app.fitness_cardio import cardio_numbers
+from app.fitness_supersets import normalize_supersets
 from app.dates import to_br_date
 from .auth import get_current_user
 from .fitness import visible_exercises
@@ -171,6 +172,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "tracking": item.tracking or "reps",
             "load_mode": item.load_mode,
             "phase": item.phase,
+            "superset": item.superset,
             "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": reference["sets"] if reference else [],
@@ -515,6 +517,7 @@ def start_session(
                 unilateral=item.unilateral if item.unilateral is not None else item.exercise.is_unilateral,
                 tracking=item.exercise.tracking,
                 load_mode=item.load_mode,
+                superset=item.superset,
             )
             for item in workout.exercises
         ]
@@ -630,6 +633,9 @@ def reorder_session_exercises(
         )
     for index, item_id in enumerate(data.exercise_ids):
         by_id[item_id].position = index
+        if data.supersets is not None:
+            by_id[item_id].superset = data.supersets[index]
+    normalize_supersets(workout_session.exercises)
     return commit_session(workout_session, db)
 
 
@@ -711,6 +717,7 @@ def delete_session_exercise(
     item = get_own_session_exercise(item_id, user, db, allow_completed=True)
     workout_session = db.get(WorkoutSession, item.session_id)
     workout_session.exercises.remove(item)
+    normalize_supersets(workout_session.exercises)
     return commit_session(workout_session, db)
 
 
