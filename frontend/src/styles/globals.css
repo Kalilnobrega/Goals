@@ -86,6 +86,15 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+@media (max-width: 600px) {
+  :root { --tabbar-h: 62px; }
+
+  body:has([data-tabbar]) {
+    --tabbar-space: calc(var(--tabbar-h) + 10px + env(safe-area-inset-bottom));
+    padding-bottom: var(--tabbar-space);
+  }
+}
+
 .app-backdrop {
   position: fixed;
   top: 0;
@@ -172,6 +181,14 @@ html:active-view-transition [data-navbar] {
   background: #ffffff !important;
   backdrop-filter: none !important;
 }
+
+::view-transition-group(app-tabbar) {
+  animation: none;
+  z-index: 100;
+}
+
+::view-transition-old(app-tabbar) { display: none; }
+::view-transition-new(app-tabbar) { animation: none; }
 
 ::view-transition-old(app-navbar) {
   display: none;
