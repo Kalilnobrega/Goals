@@ -119,7 +119,7 @@ function UsernameCard({ current, onSaved }) {
     <Card
       icon={AtSign}
       title="Username"
-      sub={current ? `Você é @${current}` : 'É por ele que seus amigos vão te encontrar no Social'}
+      sub={current ? `Você é @${current}` : 'É por ele que seus amigos vão te encontrar'}
     >
       <form className={styles.form} onSubmit={submit} noValidate>
         <span className={styles.prefixWrap}>
