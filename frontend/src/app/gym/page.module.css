@@ -80,6 +80,7 @@
 
 .progress .progressText {
   margin-top: 0;
+  white-space: nowrap;
 }
 
 .progressDone {

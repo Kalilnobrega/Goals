@@ -66,8 +66,11 @@ function GreetingProgress({ data }) {
         <span className={styles.progressFill} style={{ width: `${Math.min(trainedDays / target, 1) * 100}%` }} />
       </span>
       <span className={`${styles.progressText} ${complete ? styles.progressDone : ''}`}>
-        {complete ? <><Check size={14} strokeWidth={3} aria-hidden="true" /> Semana completa · </> : null}
-        {trainedDays} de {target} {target === 1 ? 'treino' : 'treinos'} da semana
+        {complete ? (
+          <><Check size={14} strokeWidth={3} aria-hidden="true" /> Semana completa · {plural(trainedDays, 'treino', 'treinos')}</>
+        ) : (
+          <>{trainedDays} de {target} {target === 1 ? 'treino' : 'treinos'}</>
+        )}
       </span>
     </div>
   );
