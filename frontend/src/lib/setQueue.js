@@ -51,6 +51,8 @@ export const pendingEntry = (queued) => ({
   level: queued.data.level ?? null,
   side: queued.data.side ?? null,
   rir: queued.data.rir ?? null,
+  kind: queued.data.kind ?? 'normal',
+  stages: [],
   created_at: queued.createdAt,
   pending: true,
 });

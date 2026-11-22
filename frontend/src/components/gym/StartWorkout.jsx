@@ -5,7 +5,7 @@ import { ArrowLeft, CalendarCheck, ChevronRight, ClipboardList, Link2, Play, Tim
 import { getFitnessOverview, getWorkouts, peekCache } from '../../lib/api';
 import {
   muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote, prescription, formatRest, equipmentLabel, gripLabel,
-  canLoadPerSide, cardioMinutes, supersetMarks,
+  canLoadPerSide, cardioMinutes, supersetMarks, planSummary,
 } from '../../lib/gym';
 import GymSheet from './GymSheet';
 import useStartSession from './useStartSession';
@@ -42,6 +42,7 @@ function exerciseDetails(item) {
     equipmentLabel(exercise.equipment),
     unilateral && 'Unilateral',
     item.load_mode === 'side' && canLoadPerSide(exercise.equipment, unilateral, exercise.tracking) && 'Carga por lado',
+    planSummary(item.set_plan),
   ].filter(Boolean).join(' · ');
 }
 

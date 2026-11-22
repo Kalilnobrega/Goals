@@ -615,3 +615,106 @@
   min-width: 26px;
   padding: 0 4px;
 }
+
+.slots {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slotRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot {
+  --slot-color: var(--gym-text);
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 13px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.slotTechnique {
+  border: 1.5px solid var(--slot-color);
+  background: color-mix(in srgb, var(--slot-color) 13%, transparent);
+  color: var(--slot-color);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.slotWarmup { --slot-color: #ffb547; }
+.slotDrop { --slot-color: #6cc4ff; }
+.slotRestPause { --slot-color: #b49cff; }
+.slotFailure { --slot-color: #ff7a7a; }
+
+.slotHint {
+  color: var(--gym-faint);
+  font-size: 0.8rem;
+}
+
+.techniques {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.technique {
+  --slot-color: var(--gym-muted);
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.technique:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.techniqueOn {
+  border: 1.5px solid var(--slot-color);
+  background: color-mix(in srgb, var(--slot-color) 10%, var(--gym-surface-2));
+}
+
+.techniqueOn:not(.slotWarmup):not(.slotDrop):not(.slotRestPause):not(.slotFailure) {
+  border-color: var(--gym-accent);
+}
+
+.techniqueDot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--slot-color);
+}
+
+.techniqueText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 500;
+}
+
+.techniqueText small {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}

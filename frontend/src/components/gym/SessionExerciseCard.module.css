@@ -861,3 +861,224 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+.kindWarmup { --kind-color: #ffb547; --kind-ink: #1c1405; }
+.kindDrop { --kind-color: #6cc4ff; --kind-ink: #04131d; }
+.kindRestPause { --kind-color: #b49cff; --kind-ink: #140d2a; }
+.kindFailure { --kind-color: #ff7a7a; --kind-ink: #2a0707; }
+
+.kindLine,
+.kindLineText {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--kind-color);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.kindLine small,
+.kindLineText small {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.kindDot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  align-self: center;
+  border-radius: 999px;
+  background: var(--kind-color);
+}
+
+.log.kindWarmup,
+.log.kindDrop,
+.log.kindRestPause {
+  background: var(--kind-color);
+  color: var(--kind-ink);
+}
+
+.setIndex {
+  width: auto;
+  min-width: 24px;
+  padding: 0 4px;
+}
+
+.setIndex.kindWarmup {
+  background: color-mix(in srgb, var(--kind-color) 16%, transparent);
+  color: var(--kind-color);
+}
+
+.setWarmup {
+  color: var(--gym-muted);
+}
+
+.setStaged {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.stages {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 34px;
+  text-align: left;
+}
+
+.stage {
+  color: var(--gym-muted);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kindTag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kind-color) 15%, transparent);
+  color: var(--kind-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stageForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px dashed color-mix(in srgb, var(--kind-color) 55%, transparent);
+  background: color-mix(in srgb, var(--kind-color) 7%, transparent);
+}
+
+.stageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stageWeight {
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-weight: 600;
+}
+
+.stageDone {
+  flex: 1;
+  height: 54px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stageHint {
+  margin: 0;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+
+.pauseClock {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pauseReady {
+  background: var(--kind-color);
+  color: var(--kind-ink);
+}
+
+.plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.planSlot {
+  --kind-color: var(--gym-muted);
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.planTechnique {
+  background: color-mix(in srgb, var(--kind-color) 12%, transparent);
+  color: var(--kind-color);
+  font-family: inherit;
+  font-size: 0.72rem;
+}
+
+.planDone {
+  background: color-mix(in srgb, var(--gym-accent) 14%, transparent);
+  color: var(--gym-accent);
+}
+
+.planCurrent {
+  box-shadow: inset 0 0 0 1.5px var(--kind-color);
+  color: var(--kind-color);
+}
+
+.planCurrent:not(.planTechnique) {
+  --kind-color: var(--gym-text);
+}
+
+.previousWarmup {
+  color: #ffb547;
+}
+
+.kindLine {
+  min-width: 0;
+}
+
+.kindText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editDrop {
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--kind-color) 60%, transparent);
+  background: color-mix(in srgb, var(--kind-color) 8%, transparent);
+  color: var(--kind-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

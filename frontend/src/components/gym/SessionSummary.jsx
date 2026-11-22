@@ -205,8 +205,10 @@ export default function SessionSummary({ session, insights }) {
                   <span key={row.key} className={styles.set}>
                     {timed
                       ? setSummary(row.entry ?? row.left ?? row.right, item.tracking, item.equipment === 'bodyweight')
+                      : row.entry?.kind === 'warmup'
+                      ? 'Aquecimento'
                       : row.entry
-                      ? setLabel(row.entry.weight_kg, row.entry.reps, item.equipment === 'bodyweight')
+                      ? `${setLabel(row.entry.weight_kg, row.entry.reps, item.equipment === 'bodyweight')}${(row.entry.stages ?? []).map(stage => ` + ${setLabel(stage.weight_kg, stage.reps, item.equipment === 'bodyweight')}`).join('')}${row.entry.kind === 'failure' ? ' (falha)' : ''}`
                       : ['left', 'right'].filter(side => row[side]).map(side => `${SIDE_LABEL[side]} ${setLabel(row[side].weight_kg, row[side].reps, item.equipment === 'bodyweight')}`).join(' · ')}
                   </span>
                 ))}

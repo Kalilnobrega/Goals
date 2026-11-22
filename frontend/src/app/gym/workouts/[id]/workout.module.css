@@ -243,3 +243,10 @@
   min-width: 26px;
   padding: 0 4px;
 }
+
+.techniques {
+  display: block;
+  margin-top: 2px;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}

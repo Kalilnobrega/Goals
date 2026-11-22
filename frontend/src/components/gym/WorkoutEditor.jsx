@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History, Link2, Link2Off } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS } from '../../lib/gym';
+import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS, TECHNIQUES, TECHNIQUE_ORDER, planSlots } from '../../lib/gym';
 import VariantChoices from './VariantChoices';
 import { clearDraft, draftKey, readDraft, writeDraft } from '../../lib/workoutDraft';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
@@ -17,8 +17,13 @@ import styles from './WorkoutEditor.module.css';
 let nextKey = 0;
 const newKey = () => `item-${nextKey++}`;
 
+const normalPlan = (count) => Array.from({ length: count }, () => 'normal');
+
+const isStrength = (exercise) => (exercise.tracking ?? 'reps') === 'reps';
+
 const toItem = (row, index, rows) => ({
   key: newKey(),
+  plan: row.set_plan ?? normalPlan(row.target_sets),
   linked: row.superset != null && rows?.[index + 1]?.superset === row.superset,
   exercise: row.exercise,
   target_sets: row.target_sets,
@@ -87,6 +92,7 @@ const toPayload = (name, description, items, cardio) => {
     unilateral: item.unilateral,
     load_mode: sideAllowed(item) && item.load_mode === 'side' ? 'side' : null,
     superset: supersets[index],
+    set_plan: isStrength(item.exercise) ? item.plan : null,
   })),
   cardio: CARDIO_PHASES.flatMap(phase => cardio.filter(item => item.phase === phase.value)).map(item => ({
     exercise_id: item.exercise?.id ?? null,
@@ -106,6 +112,10 @@ const toDraft = (name, description, items, cardio, base) => ({
 });
 
 const withKeys = (rows) => (rows ?? []).map(row => ({ ...row, key: newKey() }));
+
+const withPlans = (rows) => withKeys(rows).map(row => ({ ...row, plan: row.plan?.length ? row.plan : normalPlan(row.target_sets) }));
+
+const SLOT_COLORS = { warmup: 'slotWarmup', drop: 'slotDrop', rest_pause: 'slotRestPause', failure: 'slotFailure' };
 
 const REST_CHOICES = [{ value: null, label: 'Nenhum' }, ...REST_OPTIONS.map(seconds => ({ value: seconds, label: formatRest(seconds) }))];
 
@@ -150,7 +160,8 @@ function Editor({ initial, onSubmit, onDelete }) {
   const [banner, setBanner] = useState(draft ? (stale ? 'stale' : 'restored') : null);
   const [name, setName] = useState(restoring ? draft.name ?? '' : initial?.name ?? '');
   const [description, setDescription] = useState(restoring ? draft.description ?? '' : initial?.description ?? '');
-  const [items, setItems] = useState(() => (restoring ? withKeys(draft.items) : (initial?.exercises ?? []).map(toItem)));
+  const [items, setItems] = useState(() => (restoring ? withPlans(draft.items) : (initial?.exercises ?? []).map(toItem)));
+  const [slotSheet, setSlotSheet] = useState(null);
   const [cardio, setCardio] = useState(() => (restoring ? withKeys(draft.cardio) : (initial?.cardio ?? []).map(toCardio)));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
@@ -213,7 +224,7 @@ function Editor({ initial, onSubmit, onDelete }) {
   };
 
   const restoreDraft = () => {
-    applySource({ name: draft.name ?? '', description: draft.description ?? '', items: withKeys(draft.items), cardio: withKeys(draft.cardio) });
+    applySource({ name: draft.name ?? '', description: draft.description ?? '', items: withPlans(draft.items), cardio: withKeys(draft.cardio) });
     setBanner('restored');
   };
 
@@ -222,7 +233,7 @@ function Editor({ initial, onSubmit, onDelete }) {
   const addExercises = (selected) => {
     setItems(list => [
       ...list,
-      ...selected.map(exercise => ({ key: newKey(), linked: false, exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], reps_max: '', rest_seconds: null, unilateral: null, load_mode: null })),
+      ...selected.map(exercise => ({ key: newKey(), linked: false, exercise, ...TRACKING_DEFAULTS[exercise.tracking ?? 'reps'], plan: normalPlan(TRACKING_DEFAULTS[exercise.tracking ?? 'reps'].target_sets), reps_max: '', rest_seconds: null, unilateral: null, load_mode: null })),
     ]);
     setPickerOpen(false);
   };
@@ -231,6 +242,25 @@ function Editor({ initial, onSubmit, onDelete }) {
     setItems(list => list.map(item => (item.key === key ? { ...item, ...changes } : item)));
     if (invalid?.field === key) setInvalid(null);
   };
+
+  const setPlan = (key, plan) => updateItem(key, { plan, target_sets: plan.filter(kind => kind !== 'warmup').length });
+
+  const resizePlan = (item, count) => {
+    const plan = count > item.plan.length
+      ? [...item.plan, ...normalPlan(count - item.plan.length)]
+      : item.plan.slice(0, count);
+    if (!plan.some(kind => kind !== 'warmup')) return;
+    setPlan(item.key, plan);
+  };
+
+  const chooseTechnique = (kind) => {
+    const item = items.find(entry => entry.key === slotSheet.key);
+    setSlotSheet(null);
+    if (!item) return;
+    setPlan(item.key, item.plan.map((current, index) => (index === slotSheet.index ? kind : current)));
+  };
+
+  const closeSlotSheet = useCallback(() => setSlotSheet(null), []);
 
   const removeItem = (key) => setItems(list => {
     const index = list.findIndex(item => item.key === key);
@@ -520,10 +550,10 @@ function Editor({ initial, onSubmit, onDelete }) {
                           <span className={styles.targetLabel}>Séries</span>
                           <Stepper
                             label="Séries"
-                            value={item.target_sets}
+                            value={item.plan.length}
                             min={1}
-                            max={20}
-                            onChange={value => updateItem(item.key, { target_sets: value })}
+                            max={isStrength(item.exercise) ? 25 : 20}
+                            onChange={value => resizePlan(item, value)}
                           />
                         </div>}
                         {item.exercise.tracking && item.exercise.tracking !== 'reps' ? (
@@ -563,6 +593,25 @@ function Editor({ initial, onSubmit, onDelete }) {
                             />
                           </div>
                         </div>
+                        )}
+                        {isStrength(item.exercise) && (
+                          <div className={styles.slots}>
+                            <span className={styles.targetLabel}>Técnica de cada série</span>
+                            <div className={styles.slotRow}>
+                              {planSlots(item.plan).map((slot, slotIndex) => (
+                                <button
+                                  key={slotIndex}
+                                  type="button"
+                                  className={`${styles.slot} ${slot.kind !== 'normal' ? styles.slotTechnique : ''} ${styles[SLOT_COLORS[slot.kind]] ?? ''}`}
+                                  onClick={() => setSlotSheet({ key: item.key, index: slotIndex })}
+                                  aria-label={`Série ${slotIndex + 1} de ${item.exercise.name}: ${TECHNIQUES[slot.kind].label}`}
+                                >
+                                  {slot.label}
+                                </button>
+                              ))}
+                            </div>
+                            {item.plan.every(kind => kind === 'normal') && <span className={styles.slotHint}>Toque numa série para escolher a técnica.</span>}
+                          </div>
                         )}
                         {(layout[index].group === null || layout[index].last) && (
                           <div className={styles.target}>
@@ -640,6 +689,41 @@ function Editor({ initial, onSubmit, onDelete }) {
           {saving ? 'Salvando…' : initial ? (dirty ? 'Salvar alterações' : 'Tudo salvo') : 'Criar ficha'}
         </button>
       </div>
+
+      <GymSheet
+        open={!!slotSheet}
+        onClose={closeSlotSheet}
+        title={slotSheet ? `Série ${slotSheet.index + 1} · ${items.find(entry => entry.key === slotSheet.key)?.exercise.name ?? ''}` : ''}
+      >
+        {slotSheet && (() => {
+          const item = items.find(entry => entry.key === slotSheet.key);
+          if (!item) return null;
+          const current = item.plan[slotSheet.index];
+          const onlyWorking = current !== 'warmup' && item.plan.filter(kind => kind !== 'warmup').length === 1;
+          return (
+            <div className={styles.techniques}>
+              {TECHNIQUE_ORDER.map(kind => (
+                <button
+                  key={kind}
+                  type="button"
+                  className={`${styles.technique} ${current === kind ? styles.techniqueOn : ''} ${styles[SLOT_COLORS[kind]] ?? ''}`}
+                  onClick={() => chooseTechnique(kind)}
+                  disabled={kind === 'warmup' && onlyWorking}
+                  aria-pressed={current === kind}
+                >
+                  <span className={styles.techniqueDot} aria-hidden="true" />
+                  <span className={styles.techniqueText}>
+                    {TECHNIQUES[kind].label}
+                    {kind === 'warmup' && onlyWorking
+                      ? <small>Precisa sobrar ao menos uma série de verdade</small>
+                      : TECHNIQUES[kind].hint && <small>{TECHNIQUES[kind].hint}</small>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+      </GymSheet>
 
       <GymSheet open={pickerOpen} onClose={closePicker} title="Adicionar exercícios">
         {pickerOpen && (

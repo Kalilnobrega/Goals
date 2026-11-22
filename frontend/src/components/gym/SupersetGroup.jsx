@@ -7,13 +7,15 @@ import styles from './SupersetGroup.module.css';
 
 const shortSet = (item, entry) => {
   const tracking = item.tracking ?? 'reps';
+  if (entry.kind === 'warmup') return 'Aq';
   if (tracking !== 'reps') return setSummary(entry, tracking, item.equipment === 'bodyweight');
   const side = entry.side ? `${SIDE_LABEL[entry.side]} ` : '';
   const weight = perSide(item) ? entry.weight_kg / 2 : entry.weight_kg;
   const load = item.equipment === 'bodyweight'
     ? (weight > 0 ? `PC+${formatKg(weight)}` : 'PC')
     : weight > 0 ? formatKg(weight) : 'PC';
-  return `${side}${load}×${entry.reps}`;
+  const stages = (entry.stages ?? []).map(stage => `+${formatKg(perSide(item) ? stage.weight_kg / 2 : stage.weight_kg)}×${stage.reps}`).join(' ');
+  return `${side}${load}×${entry.reps}${stages ? ` ${stages}` : ''}`;
 };
 
 function CompactRow({ item, label, onOpen }) {

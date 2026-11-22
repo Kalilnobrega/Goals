@@ -57,8 +57,9 @@ const withCardioInPlace = (session, mainIds) => [
 const totals = (session) => session.exercises.filter(item => !isCardio(item)).reduce(
   (acc, item) => {
     item.sets.forEach(entry => {
+      if (entry.kind === 'warmup') return;
       acc.sets += 1;
-      acc.volume += entry.weight_kg * entry.reps;
+      acc.volume += entry.weight_kg * entry.reps + (entry.stages ?? []).reduce((sum, stage) => sum + stage.weight_kg * stage.reps, 0);
     });
     return acc;
   },
@@ -243,7 +244,7 @@ export default function SessionPage() {
       setOffline(false);
       if (entry.record) celebrate(item, entry.record);
       else buzz();
-      return true;
+      return entry;
     } catch (err) {
       if (!isOfflineError(err)) return fail(err, 'Não foi possível salvar a série. Tente de novo.');
       const queued = {
@@ -330,8 +331,8 @@ export default function SessionPage() {
       })));
       if (!silent) {
         toast({
-          message: `Série ${entry.position} de ${item.exercise_name} excluída`,
-          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined, rir: entry.rir ?? undefined, duration_seconds: entry.duration_seconds ?? undefined, distance_km: entry.distance_km ?? undefined, speed_kmh: entry.speed_kmh ?? undefined, level: entry.level ?? undefined }) },
+          message: entry.kind === 'warmup' ? `Aquecimento de ${item.exercise_name} excluído` : `Série de ${item.exercise_name} excluída`,
+          action: { label: 'Desfazer', onClick: () => logSet(item, { weight_kg: entry.weight_kg, reps: entry.reps, side: entry.side ?? undefined, rir: entry.rir ?? undefined, kind: entry.kind ?? undefined, duration_seconds: entry.duration_seconds ?? undefined, distance_km: entry.distance_km ?? undefined, speed_kmh: entry.speed_kmh ?? undefined, level: entry.level ?? undefined }) },
         });
       }
       return true;

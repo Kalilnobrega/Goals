@@ -1,9 +1,10 @@
 'use client';
-import { createContext, useContext, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Check, CloudOff, HeartPulse, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
   sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, hasIncline } from '../../lib/gym';
+  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, hasIncline,
+  TECHNIQUES, STAGED_KINDS, nextKind, planSlots, allSeriesCount, rowLabels } from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -113,9 +114,66 @@ function RirPicker({ value, onChange }) {
 
 const withRir = (data, rir) => (rir === null ? data : { ...data, rir });
 
-function NewSet({ item, onLogSet, onStartRest, onCancel }) {
-  const next = item.sets.length + 1;
-  const reference = item.previous[item.sets.length] ?? item.sets[item.sets.length - 1] ?? null;
+const KIND_CLASS = { warmup: 'kindWarmup', drop: 'kindDrop', rest_pause: 'kindRestPause', failure: 'kindFailure' };
+
+const kindClass = (kind) => styles[KIND_CLASS[kind]] ?? '';
+
+const KIND_NOTE = {
+  warmup: 'fora do volume',
+  drop: 'anote os drops depois',
+  rest_pause: 'anote as pausas depois',
+  failure: 'RIR 0',
+};
+
+function KindLine({ kind, number }) {
+  if (kind === 'normal') return null;
+  return (
+    <p className={`${styles.kindLine} ${kindClass(kind)}`}>
+      <span className={styles.kindDot} aria-hidden="true" />
+      <span className={styles.kindText}>
+        {kind === 'warmup' ? 'Aquecimento' : `Série ${number} · ${TECHNIQUES[kind].label.toLowerCase()}`}
+        <small> · {KIND_NOTE[kind]}</small>
+      </span>
+    </p>
+  );
+}
+
+function WarmupSet({ item, onLogSet, onStartRest }) {
+  const [saving, setSaving] = useState(false);
+  const log = async () => {
+    setSaving(true);
+    const ok = await onLogSet(item, { weight_kg: 0, reps: 0, kind: 'warmup' });
+    if (!ok) setSaving(false);
+  };
+  return (
+    <div className={styles.newSet}>
+      <KindLine kind="warmup" />
+      <div className={styles.newActions}>
+        <button type="button" className={`${styles.log} ${kindClass('warmup')}`} onClick={log} disabled={saving}>
+          <Check size={18} strokeWidth={2.8} />
+          {saving ? 'Salvando…' : 'Aquecimento feito'}
+        </button>
+        {onStartRest && (
+          <button
+            type="button"
+            className={styles.rest}
+            onClick={() => onStartRest(item)}
+            aria-label={item.rest_seconds ? `Iniciar descanso de ${formatRest(item.rest_seconds)}` : 'Iniciar cronômetro de descanso'}
+          >
+            <Timer size={18} /> {formatClock(item.rest_seconds ?? 0)}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const logLabel = (kind, number) => (kind === 'warmup' ? 'Registrar aquecimento' : `Registrar série ${number}`);
+
+function NewSet({ item, onLogSet, onStartRest, onCancel, onStaged }) {
+  const kind = onCancel ? 'normal' : nextKind(item);
+  const next = seriesCount(item.sets) + 1;
+  const reference = item.previous[item.sets.length] ?? (kind === 'warmup' ? null : item.sets.filter(entry => entry.kind !== 'warmup').at(-1)) ?? null;
   const side = useContext(PerSide);
   const [weight, setWeight] = useState(reference ? inputKg(reference.weight_kg, side) : '');
   const [reps, setReps] = useState(reference ? String(reference.reps) : item.reps_min ? String(item.reps_min) : '');
@@ -129,19 +187,21 @@ function NewSet({ item, onLogSet, onStartRest, onCancel }) {
     if (problem) return setError(problem);
     setError('');
     setSaving(true);
-    const ok = await onLogSet(item, withRir(data, rir));
-    if (!ok) setSaving(false);
+    const result = await onLogSet(item, { ...withRir(data, kind === 'normal' || STAGED_KINDS.includes(kind) ? rir : null), kind });
+    if (!result) setSaving(false);
+    else if (STAGED_KINDS.includes(kind) && result.id) onStaged?.(result.id);
   };
 
   return (
     <form className={styles.newSet} onSubmit={submit} noValidate>
+      <KindLine kind={kind} number={next} />
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
-      <RirPicker value={rir} onChange={setRir} />
+      {kind !== 'warmup' && kind !== 'failure' && <RirPicker value={rir} onChange={setRir} />}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.newActions}>
-        <button type="submit" className={styles.log} disabled={saving}>
+        <button type="submit" className={`${styles.log} ${kindClass(kind)}`} disabled={saving}>
           <Check size={18} strokeWidth={2.8} />
-          {saving ? 'Salvando…' : `Registrar série ${next}`}
+          {saving ? 'Salvando…' : logLabel(kind, next)}
         </button>
         {onStartRest && (
         <button
@@ -186,6 +246,8 @@ function SideFields({ side, values, onChange }) {
 }
 
 function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
+  const kind = onCancel ? 'normal' : nextKind(item);
+  const number = seriesCount(item.sets) + (item.sets.length && sideCount(item, 'left') !== sideCount(item, 'right') ? 0 : 1);
   const left = sideCount(item, 'left');
   const right = sideCount(item, 'right');
   const pairs = Math.min(left, right);
@@ -208,7 +270,7 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
     for (const side of missing) {
       const { data, error: problem } = validate(values[side].weight, values[side].reps);
       if (problem) return setError(`${SIDE_NAME[side]}: ${problem}`);
-      entries.push(withRir({ ...data, side }, rir));
+      entries.push({ ...withRir({ ...data, side }, kind === 'warmup' || kind === 'failure' ? null : rir), kind });
     }
     setError('');
     setSaving(true);
@@ -223,15 +285,16 @@ function UnilateralNewSet({ item, onLogSet, onStartRest, onCancel }) {
 
   return (
     <form className={styles.newSet} onSubmit={submit} noValidate>
+      <KindLine kind={kind} number={number} />
       {missing.map(side => (
         <SideFields key={side} side={side} values={values[side]} onChange={next => setValues(current => ({ ...current, [side]: next }))} />
       ))}
-      <RirPicker value={rir} onChange={setRir} />
+      {kind !== 'warmup' && kind !== 'failure' && <RirPicker value={rir} onChange={setRir} />}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.newActions}>
-        <button type="submit" className={styles.log} disabled={saving}>
+        <button type="submit" className={`${styles.log} ${kindClass(kind)}`} disabled={saving}>
           <Check size={18} strokeWidth={2.8} />
-          {saving ? 'Salvando…' : missing.length === 2 ? `Registrar série ${pairs + 1}` : `Completar série ${pairs + 1} (${SIDE_NAME[missing[0]].toLowerCase()})`}
+          {saving ? 'Salvando…' : missing.length === 2 ? logLabel(kind, number) : `Completar ${kind === 'warmup' ? 'aquecimento' : `série ${number}`} (${SIDE_NAME[missing[0]].toLowerCase()})`}
         </button>
         {onStartRest && (
         <button
@@ -344,7 +407,26 @@ function SwipeToDelete({ onDelete, children }) {
 const Tracking = createContext('reps');
 const Incline = createContext(false);
 
-function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
+function Stages({ entry }) {
+  const side = useContext(PerSide);
+  if (!entry.stages?.length) return null;
+  return (
+    <span className={styles.stages}>
+      {entry.stages.map((stage, index) => (
+        <span key={index} className={styles.stage}>
+          ↳ {entry.kind === 'rest_pause' ? 'pausa · ' : ''}{stage.weight_kg > 0 ? `${formatKg(shownKg(stage.weight_kg, side))} ${side ? 'kg/lado' : 'kg'}` : 'PC'} × {stage.reps}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function KindTag({ kind }) {
+  if (!kind || kind === 'normal') return null;
+  return <span className={`${styles.kindTag} ${kindClass(kind)}`}>{TECHNIQUES[kind].tag}</span>;
+}
+
+function SetRow({ entry, label, editing, onEdit, onCancel, onSave, onDelete, onAddDrop }) {
   const extra = useContext(ExtraLoad);
   const tracking = useContext(Tracking);
   const incline = useContext(Incline);
@@ -361,12 +443,14 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
       <SwipeToDelete onDelete={() => onDelete(entry)}>
         <button
           type="button"
-          className={`${styles.setRow} ${entry.pending ? styles.setPending : ''}`}
-          onClick={entry.pending ? undefined : onEdit}
-          aria-label={entry.pending ? `Série ${entry.position} guardada no celular, aguardando conexão` : `Editar série ${entry.position}`}
+          className={`${styles.setRow} ${entry.pending ? styles.setPending : ''} ${entry.kind === 'warmup' ? styles.setWarmup : ''} ${entry.stages?.length ? styles.setStaged : ''}`}
+          onClick={entry.pending || entry.kind === 'warmup' ? undefined : onEdit}
+          aria-label={entry.pending ? `Série ${label} guardada no celular, aguardando conexão` : entry.kind === 'warmup' ? 'Aquecimento feito, deslize para excluir' : `Editar série ${label}`}
         >
-          <span className={styles.setIndex}>{entry.position}</span>
-          {timed ? (
+          <span className={`${styles.setIndex} ${entry.kind === 'warmup' ? kindClass('warmup') : ''}`}>{label}</span>
+          {entry.kind === 'warmup' ? (
+            <span className={`${styles.setValue} ${styles.setTimed}`}>Aquecimento feito</span>
+          ) : timed ? (
             <span className={`${styles.setValue} ${styles.setTimed}`}>{setSummary(entry, tracking, extra)}</span>
           ) : (<>
           <span className={styles.setValue}>
@@ -376,11 +460,13 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
           </span>
           <span className={styles.setTimes}>×</span>
           <span className={styles.setValue}>{entry.reps} <small>reps</small></span>
-          {entry.rir != null && <span className={styles.tag}>RIR {rirLabel(entry.rir)}</span>}
+          {entry.rir != null && entry.kind !== 'failure' && <span className={styles.tag}>RIR {rirLabel(entry.rir)}</span>}
+          <KindTag kind={entry.kind} />
           </>)}
           {entry.pending
             ? <CloudOff size={18} className={styles.setWaiting} aria-hidden="true" />
             : <Check size={18} className={styles.setDone} aria-hidden="true" />}
+          <Stages entry={entry} />
         </button>
       </SwipeToDelete>
     );
@@ -394,7 +480,7 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
     const { data, error: problem } = validate(weight, reps, side);
     if (problem) return setError(problem);
     setBusy(true);
-    const ok = await onSave(entry, { ...data, rir });
+    const ok = await onSave(entry, entry.kind === 'warmup' || entry.kind === 'failure' ? data : { ...data, rir });
     if (!ok) setBusy(false);
   };
 
@@ -407,16 +493,30 @@ function SetRow({ entry, editing, onEdit, onCancel, onSave, onDelete }) {
   return (
     <li className={styles.editRow}>
       <div className={styles.editHeader}>
-        <span className={styles.setIndex}>{entry.position}</span>
-        <span>Editar série{entry.side ? ` · ${SIDE_NAME[entry.side]}` : ''}</span>
+        <span className={styles.setIndex}>{label}</span>
+        <span>{entry.kind === 'warmup' ? 'Editar aquecimento' : 'Editar série'}{entry.side ? ` · ${SIDE_NAME[entry.side]}` : ''}</span>
       </div>
       <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
-      <RirPicker value={rir} onChange={setRir} />
+      {entry.kind !== 'warmup' && entry.kind !== 'failure' && <RirPicker value={rir} onChange={setRir} />}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.editActions}>
-        <button type="button" className={styles.editDelete} onClick={remove} disabled={busy} aria-label={`Excluir série ${entry.position}`}>
+        <button type="button" className={styles.editDelete} onClick={remove} disabled={busy} aria-label={`Excluir série ${label}`}>
           <Trash2 size={18} />
         </button>
+        {onAddDrop && (
+          <button
+            type="button"
+            className={`${styles.editDrop} ${kindClass(entry.kind === 'rest_pause' ? 'rest_pause' : 'drop')}`}
+            onClick={async () => {
+              setBusy(true);
+              const ok = await onAddDrop(entry);
+              if (!ok) setBusy(false);
+            }}
+            disabled={busy}
+          >
+            <Plus size={16} strokeWidth={2.6} /> {entry.kind === 'rest_pause' ? 'Pausa' : 'Drop'}
+          </button>
+        )}
         <button type="button" className={styles.editCancel} onClick={onCancel} disabled={busy}>Cancelar</button>
         <button type="button" className={styles.editSave} onClick={save} disabled={busy}>Salvar</button>
       </div>
@@ -498,14 +598,15 @@ function ExerciseNote({ item, onSave }) {
 
 const sideValue = (entry, extra) => `${loadText(entry.weight_kg, extra)} × ${entry.reps}`;
 
-function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
+function PairRow({ row, label, editingId, onEdit, onCancel, onSave, onDelete }) {
   const extra = useContext(ExtraLoad);
   const editing = [row.left, row.right].find(entry => entry && entry.id === editingId);
   if (editing) {
     return (
-      <SetRow key={editing.id} entry={editing} editing onEdit={() => {}} onCancel={onCancel} onSave={onSave} onDelete={onDelete} />
+      <SetRow key={editing.id} entry={editing} label={label} editing onEdit={() => {}} onCancel={onCancel} onSave={onSave} onDelete={onDelete} />
     );
   }
+  const kind = (row.left ?? row.right)?.kind;
 
   const removeBoth = async () => {
     for (const entry of [row.left, row.right].filter(Boolean)) {
@@ -519,8 +620,8 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
 
   return (
     <SwipeToDelete onDelete={removeBoth}>
-      <div className={`${styles.setRow} ${styles.pairRow} ${pending ? styles.setPending : ''}`}>
-        <span className={styles.setIndex}>{row.position}</span>
+      <div className={`${styles.setRow} ${styles.pairRow} ${pending ? styles.setPending : ''} ${kind === 'warmup' ? styles.setWarmup : ''}`}>
+        <span className={`${styles.setIndex} ${kind === 'warmup' ? kindClass('warmup') : ''}`}>{label}</span>
         {['left', 'right'].map(side => {
           const entry = row[side];
           return (
@@ -530,7 +631,7 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
               className={`${styles.pairSide} ${entry ? '' : styles.pairMissing}`}
               onClick={entry && !entry.pending ? () => onEdit(entry.id) : undefined}
               disabled={!entry || entry.pending}
-              aria-label={entry ? `Editar série ${row.position}, ${SIDE_NAME[side].toLowerCase()}: ${sideValue(entry, extra)}` : `${SIDE_NAME[side]} ainda não registrada`}
+              aria-label={entry ? `Editar série ${label}, ${SIDE_NAME[side].toLowerCase()}: ${sideValue(entry, extra)}` : `${SIDE_NAME[side]} ainda não registrada`}
             >
               <span className={styles.pairLabel}>{SIDE_LABEL[side]}</span>
               <span className={styles.pairValue}>{entry ? sideValue(entry, extra) : '—'}</span>
@@ -547,9 +648,121 @@ function PairRow({ row, editingId, onEdit, onCancel, onSave, onDelete }) {
 
 const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 
+const PAUSE_SECONDS = 15;
+
+const dropWeight = (weight) => Math.max(0, Math.round((weight * 0.75) / 2.5) * 2.5);
+
+function PauseClock({ startedAt }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, []);
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  return (
+    <span className={`${styles.pauseClock} ${seconds >= PAUSE_SECONDS ? styles.pauseReady : ''}`} aria-live="off">
+      {formatClock(seconds)} / {formatClock(PAUSE_SECONDS)}
+    </span>
+  );
+}
+
+function StageForm({ item, entry, label, onSave, onDone }) {
+  const side = useContext(PerSide);
+  const drop = entry.kind === 'drop';
+  const stages = entry.stages ?? [];
+  const last = stages.at(-1) ?? entry;
+  const [weight, setWeight] = useState(() => inputKg(drop ? dropWeight(last.weight_kg) : entry.weight_kg, side));
+  const [reps, setReps] = useState(() => String(drop ? last.reps : Math.max(1, Math.round(entry.reps / 3))));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [pausedAt, setPausedAt] = useState(() => Date.now());
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const { data, error: problem } = validate(drop ? weight : inputKg(entry.weight_kg, side), reps, side);
+    if (problem) return setError(problem);
+    setError('');
+    setSaving(true);
+    const ok = await onSave(item, entry, { stages: [...stages, { weight_kg: data.weight_kg, reps: data.reps }] });
+    setSaving(false);
+    if (ok) {
+      setPausedAt(Date.now());
+      if (drop) {
+        setWeight(inputKg(dropWeight(data.weight_kg), side));
+      }
+    }
+  };
+
+  const number = stages.length + 1;
+
+  return (
+    <form className={`${styles.stageForm} ${kindClass(entry.kind)}`} onSubmit={submit} noValidate>
+      <div className={styles.stageHeader}>
+        <span className={styles.kindLineText}>
+          <span className={styles.kindDot} aria-hidden="true" />
+          {drop ? `Drop ${number}` : `Pausa ${number}`}
+          <small> · série {label} · {drop ? 'sem descanso' : 'mesmo peso'}</small>
+        </span>
+        {!drop && <PauseClock key={pausedAt} startedAt={pausedAt} />}
+      </div>
+      {drop ? (
+        <SetInputs weight={weight} reps={reps} onWeight={setWeight} onReps={setReps} />
+      ) : (
+        <div className={styles.inputs}>
+          <div className={styles.inputGroup}>
+            <button type="button" className={styles.step} onClick={() => setReps(stepReps(reps, -1))} aria-label="Menos uma repetição">
+              <Minus size={16} strokeWidth={2.6} />
+            </button>
+            <label className={styles.field}>
+              <input className={styles.input} value={reps} onChange={e => setReps(digits(e.target.value))} inputMode="numeric" placeholder="0" aria-label="Repetições da pausa" />
+              <span className={styles.unit}>reps</span>
+            </label>
+            <button type="button" className={styles.step} onClick={() => setReps(stepReps(reps, 1))} aria-label="Mais uma repetição">
+              <Plus size={16} strokeWidth={2.6} />
+            </button>
+          </div>
+          <span className={styles.stageWeight}>{entry.weight_kg > 0 ? `${formatKg(shownKg(entry.weight_kg, side))} ${side ? 'kg/lado' : 'kg'}` : 'Peso corporal'}</span>
+        </div>
+      )}
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <div className={styles.newActions}>
+        <button type="submit" className={`${styles.log} ${kindClass(entry.kind)}`} disabled={saving}>
+          {saving ? 'Salvando…' : drop ? 'Registrar drop' : 'Registrar pausa'}
+        </button>
+        <button type="button" className={styles.stageDone} onClick={onDone} disabled={saving}>Terminar série</button>
+      </div>
+      {drop && number === 1 && <p className={styles.stageHint}>A carga já vem 25% menor. Faça quantos drops quiser.</p>}
+    </form>
+  );
+}
+
+function PlanProgress({ item }) {
+  const done = allSeriesCount(item.sets);
+  return (
+    <div className={styles.plan} aria-label="Plano de séries da ficha">
+      {planSlots(item.set_plan).map((slot, index) => (
+        <span
+          key={index}
+          className={`${styles.planSlot} ${slot.kind !== 'normal' ? `${styles.planTechnique} ${kindClass(slot.kind)}` : ''} ${index < done ? styles.planDone : ''} ${index === done ? styles.planCurrent : ''}`}
+        >
+          {index < done ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : slot.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const previousSetText = (set, item, side) => {
+  if (set.kind === 'warmup') return 'Aq';
+  const base = item.equipment === 'bodyweight' && set.weight_kg > 0 ? `PC+${formatKg(set.weight_kg)}` : set.weight_kg > 0 ? formatKg(shownKg(set.weight_kg, side)) : 'PC';
+  const stages = (set.stages ?? []).map(stage => ` + ${stage.weight_kg > 0 ? formatKg(shownKg(stage.weight_kg, side)) : 'PC'}×${stage.reps}`).join('');
+  return `${set.kind === 'warmup' ? 'Aq ' : ''}${set.side ? `${SIDE_LABEL[set.side]} ` : ''}${base}×${set.reps}${stages}`;
+};
+
 export default function SessionExerciseCard({ item, index, label, turn = false, onLogSet, onEditSet, onDeleteSet, onStartRest, onOpenRest, onOpenMenu, onRemove, onSaveNote, cardioOptions, onPickCardio }) {
   const [editingId, setEditingId] = useState(null);
   const [extraAt, setExtraAt] = useState(null);
+  const [stagingId, setStagingId] = useState(null);
   const target = sessionTarget(item);
   const done = seriesCount(item.sets);
   const complete = item.target_sets && done >= item.target_sets;
@@ -577,6 +790,21 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
   };
 
   const past = previousHistory(item);
+  const labels = rowLabels(rows);
+  const stagedEntry = stagingId ? item.sets.find(entry => entry.id === stagingId) : null;
+  const staging = !!onLogSet && !item.unilateral && stagedEntry && STAGED_KINDS.includes(stagedEntry.kind) ? stagedEntry : null;
+  const labelOf = (entry) => labels[rows.findIndex(row => row.entry?.id === entry.id)] ?? '';
+  const canDrop = !!onLogSet && !!onEditSet && !timed && !item.unilateral;
+
+  const addDrop = async (entry) => {
+    if (!STAGED_KINDS.includes(entry.kind)) {
+      const ok = await onEditSet(item, entry, { kind: 'drop' });
+      if (!ok) return false;
+    }
+    setEditingId(null);
+    setStagingId(entry.id);
+    return true;
+  };
 
   return (
     <ExtraLoad.Provider value={extra}>
@@ -614,6 +842,8 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
           </div>
         </header>
 
+        {item.set_plan?.length > 0 && !cardio && !timed && <PlanProgress item={item} />}
+
         {past.length > 0 && (
           <div className={styles.previousBox}>
             <span className={styles.previousTitle}>Última vez{side ? ' · cada lado' : ''}</span>
@@ -624,8 +854,8 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
                 </span>
                 <span className={styles.previousSets}>
                   {entry.sets.map((set, i) => (
-                    <span key={i} className={styles.previousSet}>
-                      {timed ? setSummary(set, tracking, extra) : <>{set.side ? `${SIDE_LABEL[set.side]} ` : ''}{item.equipment === 'bodyweight' && set.weight_kg > 0 ? `PC+${formatKg(set.weight_kg)}` : set.weight_kg > 0 ? formatKg(shownKg(set.weight_kg, side)) : 'PC'}×{set.reps}</>}
+                    <span key={i} className={`${styles.previousSet} ${set.kind === 'warmup' ? styles.previousWarmup : ''}`}>
+                      {timed ? setSummary(set, tracking, extra) : previousSetText(set, item, side)}
                     </span>
                   ))}
                 </span>
@@ -637,20 +867,23 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
 
         {item.sets.length > 0 && (
           <ol className={styles.sets}>
-            {rows.map(row => (row.entry ? (
+            {rows.map((row, rowIndex) => (row.entry ? (
               <SetRow
                 key={`${row.entry.id}-${editingId === row.entry.id}-${side}`}
                 entry={row.entry}
+                label={labels[rowIndex]}
                 editing={editingId === row.entry.id}
                 onEdit={() => setEditingId(row.entry.id)}
                 onCancel={() => setEditingId(null)}
                 onSave={saveEdit}
                 onDelete={deleteEntry}
+                onAddDrop={canDrop && row.entry.kind !== 'warmup' && !row.entry.pending ? addDrop : undefined}
               />
             ) : (
               <PairRow
                 key={row.key}
                 row={row}
+                label={labels[rowIndex]}
                 editingId={editingId}
                 onEdit={setEditingId}
                 onCancel={() => setEditingId(null)}
@@ -681,8 +914,12 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
           </div>
         )}
 
-        {needsDevice && onPickCardio ? null : !complete || addingExtra ? (
-          timed ? (
+        {staging ? (
+          <StageForm key={`${staging.id}-${staging.stages?.length ?? 0}`} item={item} entry={staging} label={labelOf(staging)} onSave={onEditSet} onDone={() => setStagingId(null)} />
+        ) : needsDevice && onPickCardio ? null : !complete || addingExtra ? (
+          !timed && !addingExtra && nextKind(item) === 'warmup' ? (
+            <WarmupSet key={`w-${item.sets.length}`} item={item} onLogSet={onLogSet} onStartRest={onStartRest} />
+          ) : timed ? (
             <TimedNewSet
               key={`t-${item.sets.length}`}
               item={item}
@@ -706,6 +943,7 @@ export default function SessionExerciseCard({ item, index, label, turn = false, 
               onLogSet={onLogSet}
               onStartRest={onStartRest}
               onCancel={addingExtra ? () => setExtraAt(null) : undefined}
+              onStaged={setStagingId}
             />
           )
         ) : (

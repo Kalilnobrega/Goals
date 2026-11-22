@@ -296,7 +296,11 @@ export const perSide = (item) => item.load_mode === 'side' && canLoadPerSide(ite
 export const RIR_OPTIONS = [0, 1, 2, 3, 4];
 export const rirLabel = (value) => (value >= 4 ? '4+' : String(value));
 
-export const seriesCount = (sets) => new Set(sets.map(entry => (entry.side ? `p${entry.position}` : `s${entry.id}`))).size;
+const seriesKey = (entry) => (entry.side ? `p${entry.position}` : `s${entry.id}`);
+
+export const seriesCount = (sets) => new Set(sets.filter(entry => entry.kind !== 'warmup').map(seriesKey)).size;
+
+export const allSeriesCount = (sets) => new Set(sets.map(seriesKey)).size;
 
 export function renumberSets(sets) {
   const counters = {};
@@ -488,3 +492,48 @@ export function supersetMarks(items) {
   });
   return marks;
 }
+
+export const TECHNIQUES = {
+  normal: { label: 'Normal', short: null, tag: null, hint: null },
+  warmup: { label: 'Aquecimento', short: 'Aq', tag: 'Aquecimento', hint: 'Leve, não conta no volume nem nos recordes' },
+  drop: { label: 'Drop', short: 'Drop', tag: 'Drop', hint: 'Baixa o peso e continua sem descanso' },
+  rest_pause: { label: 'Rest-pause', short: 'RP', tag: 'Rest-pause', hint: 'Pausa curta e mais reps com o mesmo peso' },
+  failure: { label: 'Até a falha', short: 'Falha', tag: 'Falha', hint: 'Vai até não conseguir mais nenhuma' },
+};
+
+export const TECHNIQUE_ORDER = ['normal', 'warmup', 'drop', 'rest_pause', 'failure'];
+
+export const STAGED_KINDS = ['drop', 'rest_pause'];
+
+export const nextKind = (item) => item.set_plan?.[allSeriesCount(item.sets)] ?? 'normal';
+
+export function planSlots(plan) {
+  let working = 0;
+  return plan.map(kind => {
+    if (kind !== 'warmup') working += 1;
+    return { kind, number: kind === 'warmup' ? null : working, label: kind === 'warmup' ? 'Aq' : TECHNIQUES[kind]?.short ?? String(working) };
+  });
+}
+
+export function planSummary(plan) {
+  if (!plan?.length) return '';
+  const slots = planSlots(plan);
+  const warmups = slots.filter(slot => slot.kind === 'warmup').length;
+  const parts = warmups ? [plural(warmups, 'aquecimento', 'aquecimentos')] : [];
+  slots.filter(slot => slot.number && slot.kind !== 'normal').forEach(slot => {
+    parts.push(`${slot.number}ª ${TECHNIQUES[slot.kind].label.toLowerCase()}`);
+  });
+  return parts.join(' · ');
+}
+
+export function rowLabels(rows) {
+  let working = 0;
+  return rows.map(row => {
+    const entry = row.entry ?? row.left ?? row.right;
+    if (entry?.kind === 'warmup') return 'Aq';
+    working += 1;
+    return String(working);
+  });
+}
+
+export const stageText = (entry, format = (weight) => `${formatKg(weight)} kg`) => (entry.stages ?? []).map(stage => `${format(stage.weight_kg)} × ${stage.reps}`);
