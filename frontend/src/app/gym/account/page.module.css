@@ -339,7 +339,7 @@
   padding: 10px 10px 12px;
   border-radius: 16px;
   border: 1px solid var(--gym-border-strong);
-  background: var(--gym-surface-2);
+  background: var(--gym-surface);
   color: var(--gym-muted);
   font: inherit;
   cursor: pointer;
@@ -348,7 +348,6 @@
 
 .bodyOptionActive {
   border-color: var(--gym-accent);
-  background: var(--gym-accent-soft);
   color: var(--gym-text);
 }
 
