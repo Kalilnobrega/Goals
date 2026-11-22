@@ -44,6 +44,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -67,6 +68,7 @@ from app.routers.fitness_overview import fitness_overview_router
 from app.routers.fitness_stats import fitness_stats_router
 from app.routers.fitness_plans import fitness_plans_router
 from app.routers.fitness_profile import fitness_profile_router
+from app.routers.fitness_export import fitness_export_router
 
 app.include_router(auth_router)
 app.include_router(home_router)
@@ -83,3 +85,4 @@ app.include_router(fitness_overview_router)
 app.include_router(fitness_stats_router)
 app.include_router(fitness_plans_router)
 app.include_router(fitness_profile_router)
+app.include_router(fitness_export_router)
