@@ -128,6 +128,32 @@
   border-color: var(--gym-accent);
 }
 
+.userChip {
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gym-border-strong);
+  color: var(--gym-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.userChip svg {
+  color: var(--gym-accent);
+}
+
+.userChip:hover,
+.userChipActive {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+}
+
 .tabbar {
   position: fixed;
   left: 0;
@@ -292,6 +318,16 @@
 
   .right {
     gap: 6px;
+  }
+
+  .userChip {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .userChip span {
+    display: none;
   }
 }
 

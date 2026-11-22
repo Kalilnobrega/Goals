@@ -311,6 +311,10 @@ export const getWeek = (start) => cachedGet(`fitnessWeek:${start}`, `/fitness/we
 export const getGymStreak = () => cachedGet("gymStreak", "/fitness/streak");
 export const getFitnessProfile = () => cachedGet("fitnessProfile", "/fitness/profile");
 export const updateFitnessProfile = (data) => api.put("/fitness/profile", data).then((r) => r.data);
+export const checkUsername = (username) =>
+  api.get("/fitness/profile/username-available", { params: { username } }).then((r) => r.data);
+export const updateUsername = (username) =>
+  api.put("/fitness/profile/username", { username }).then((r) => r.data);
 
 export const exportFitnessData = (params) =>
   api.get("/fitness/export", { params, responseType: "blob" }).then((r) => {

@@ -1,8 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users, UserCircle2 } from 'lucide-react';
+import { getUserName, saveUserName } from '../../lib/auth';
+import { getMe } from '../../lib/api';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
 import { useToast } from '../Toast';
@@ -20,6 +22,15 @@ const links = [
   { href: '/gym/social', label: 'Social', icon: Users, soon: true },
 ];
 
+const subscribeToUserName = (onChange) => {
+  window.addEventListener('username-changed', onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    window.removeEventListener('username-changed', onChange);
+    window.removeEventListener('storage', onChange);
+  };
+};
+
 const SOON_MESSAGE = 'Social em construção: desafios, feed e amigos chegam em breve.';
 
 export default function GymNavbar() {
@@ -30,6 +41,7 @@ export default function GymNavbar() {
   const announceSoon = () => toast({ tone: 'info', message: SOON_MESSAGE });
   const { linkProps, step, swipeable } = useGymTabNav();
   const router = useRouter();
+  const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
 
   useEffect(() => {
     const prefetch = () => {
@@ -47,6 +59,13 @@ export default function GymNavbar() {
 
   useEffect(() => {
     saveLastApp('gym');
+    if (getUserName()) return;
+    getMe()
+      .then((me) => {
+        saveUserName(me.name);
+        window.dispatchEvent(new Event('username-changed'));
+      })
+      .catch(() => {});
   }, []);
 
   const revealHeader = useHideOnScroll(headerRef, '(max-width: 767px)', pathname);
@@ -127,6 +146,15 @@ export default function GymNavbar() {
             <GymStreak pathname={pathname} onBump={revealHeader} />
             <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
               <LayoutGrid size={16} />
+            </Link>
+            <Link
+              href="/gym/account"
+              className={`${styles.userChip} ${pathname.startsWith('/gym/account') ? styles.userChipActive : ''}`}
+              aria-label="Minha conta"
+              title="Minha conta"
+            >
+              <UserCircle2 size={16} />
+              {userName && <span>{userName.split(' ')[0]}</span>}
             </Link>
           </div>
         </div>
