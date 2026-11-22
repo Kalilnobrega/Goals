@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AtSign, Check, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
+import { AtSign, Check, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
   changePassword, checkUsername, deleteAccount, getFitnessProfile, getMe, logout, updateName, updateUsername,
 } from '../../../lib/api';
@@ -9,6 +9,7 @@ import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName 
 import { apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import GymSheet from '../../../components/gym/GymSheet';
+import BodyMap, { useBodyType } from '../../../components/gym/BodyMap';
 import styles from './page.module.css';
 
 const CONFIRM_WORD = 'EXCLUIR';
@@ -162,6 +163,46 @@ function UsernameCard({ current, onSaved }) {
           {saving ? 'Salvando...' : current ? 'Trocar username' : 'Salvar username'}
         </button>
       </form>
+    </Card>
+  );
+}
+
+const BODY_OPTIONS = [
+  { key: 'male', label: 'Masculino' },
+  { key: 'female', label: 'Feminino' },
+];
+
+function BodyTypeCard() {
+  const toast = useToast();
+  const [bodyType, setBodyType] = useBodyType();
+
+  const choose = (key) => {
+    if (key === bodyType) return;
+    setBodyType(key);
+    toast(`Boneco ${key === 'female' ? 'feminino' : 'masculino'} selecionado`);
+  };
+
+  return (
+    <Card icon={PersonStanding} title="Boneco" sub="Usado nos mapas musculares de exercícios, fichas, planos e histórico">
+      <div className={styles.bodyOptions} role="radiogroup" aria-label="Boneco">
+        {BODY_OPTIONS.map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            role="radio"
+            aria-checked={bodyType === option.key}
+            className={`${styles.bodyOption} ${bodyType === option.key ? styles.bodyOptionActive : ''}`}
+            onClick={() => choose(option.key)}
+          >
+            <span className={styles.bodyPreview} aria-hidden="true">
+              <BodyMap sex={option.key} compact />
+            </span>
+            <span className={styles.bodyLabel}>
+              {bodyType === option.key && <Check size={15} />} {option.label}
+            </span>
+          </button>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -399,6 +440,7 @@ export default function GymAccountPage() {
         <>
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
+          <BodyTypeCard />
           <PasswordCard me={me} />
           <LogoutCard />
           <DeleteCard me={me} />

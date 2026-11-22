@@ -323,3 +323,55 @@
     animation: none;
   }
 }
+
+.bodyOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bodyOption {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.bodyOptionActive {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent-soft);
+  color: var(--gym-text);
+}
+
+.bodyPreview {
+  pointer-events: none;
+}
+
+.bodyLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.bodyLabel svg {
+  color: var(--gym-accent);
+}
+
+@media (hover: hover) {
+  .bodyOption:not(.bodyOptionActive):hover {
+    border-color: var(--gym-accent);
+  }
+}
