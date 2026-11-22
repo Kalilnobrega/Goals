@@ -10,6 +10,7 @@ import { useLateGoals } from '../lib/LateGoalsContext';
 import styles from './Navbar.module.css';
 import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
 import { useSwipeTabs } from '../lib/useSwipeTabs';
+import { useHideOnScroll } from '../lib/useHideOnScroll';
 import { announceTabSlide, leaveTab } from '../lib/pageSlide';
 
 const links = [
@@ -34,6 +35,7 @@ export default function Navbar() {
   const { lateCount, streak, setStreak } = useLateGoals();
   const [pendingHref, setPendingHref] = useState(null);
   const [seenPath, setSeenPath] = useState(pathname);
+  const headerRef = useRef(null);
   const linksRef = useRef(null);
   const indicatorRef = useRef(null);
   const tabsRef = useRef(null);
@@ -108,6 +110,12 @@ export default function Navbar() {
     if (seenStreak !== null && streak > seenStreak) setBump(b => b + 1);
   }
 
+  const revealHeader = useHideOnScroll(headerRef, '(max-width: 600px)', pathname);
+
+  useEffect(() => {
+    if (bump) revealHeader();
+  }, [bump, revealHeader]);
+
   useEffect(() => {
     if (!pathname.startsWith('/account')) saveLastApp('goals');
   }, [pathname]);
@@ -175,7 +183,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className={styles.header}>
+      <header ref={headerRef} className={styles.header}>
         <nav className={`${styles.nav} glass`} style={{ viewTransitionName: 'app-navbar' }} data-navbar="">
           <Link href="/" className={styles.brand} onClick={(event) => {
             if (tabClick(event, '/')) return;
