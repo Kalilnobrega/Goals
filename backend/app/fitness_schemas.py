@@ -1268,6 +1268,21 @@ class FitnessProfileSchema(BaseModel):
     body_type: Literal["male", "female"]
 
 
+class FitnessProfileResponseSchema(BaseModel):
+    body_type: Literal["male", "female"]
+    username: str | None = None
+
+
+class UsernameUpdateSchema(BaseModel):
+    username: str = Field(max_length=40)
+
+
+class UsernameAvailabilitySchema(BaseModel):
+    username: str
+    available: bool
+    reason: str | None = None
+
+
 class SessionPerformanceSchema(BaseModel):
     session_id: int
     date: date

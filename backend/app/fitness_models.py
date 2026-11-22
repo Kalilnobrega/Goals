@@ -271,6 +271,7 @@ class FitnessProfile(Base):
 
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     body_type = Column(String(10), nullable=False, default="male")
+    username = Column(String(20), nullable=True, unique=True, index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
