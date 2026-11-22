@@ -169,3 +169,21 @@ def test_timed_exercises_ignore_kind(client, library, headers):
         headers=headers,
     )
     assert response.json()["kind"] == "normal"
+
+
+def test_exercise_progress_lists_recent_technique_sets(client, library, headers):
+    workout = save_workout(client, headers, [bench(library)]).json()
+    session = start(client, headers, workout["id"])
+    item_id = session["exercises"][0]["id"]
+    log(client, headers, item_id, 60, 10)
+    drop = log(client, headers, item_id, 60, 8, kind="drop")
+    client.patch(f"/fitness/sets/{drop['id']}", json={"stages": [{"weight_kg": 45, "reps": 8}]}, headers=headers)
+    log(client, headers, item_id, 60, 7, kind="failure")
+    client.post(f"/fitness/sessions/{session['id']}/finish", json={}, headers=headers)
+
+    progress = client.get(f"/fitness/exercises/{library['supino-reto']}/progress", headers=headers).json()
+    assert len(progress["techniques"]) == 1
+    assert [(s["kind"], s["weight_kg"], s["reps"], s["stages"]) for s in progress["techniques"][0]["sets"]] == [
+        ("drop", 60, 8, [{"weight_kg": 45, "reps": 8}]),
+        ("failure", 60, 7, []),
+    ]

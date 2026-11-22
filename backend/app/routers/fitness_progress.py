@@ -351,11 +351,39 @@ def get_exercise_progress(
         "stagnation": stagnation(ordered),
         "ready": ready_to_progress(user, db, exercise.id, rows),
         "frequency": frequency(ordered),
+        "techniques": technique_sessions(user, db, exercise.id),
         "points": [
             {**point, "max_weight_kg": float(point["max_weight_kg"]), "volume_kg": float(point["volume_kg"])}
             for point in points.values()
         ],
     }
+
+
+TECHNIQUE_KINDS = ("drop", "rest_pause", "failure")
+TECHNIQUE_SESSIONS = 6
+
+
+def technique_sessions(user: User, db: Session, exercise_id: int) -> list[dict]:
+    rows = (
+        completed_sets(user, db)
+        .filter(SessionExercise.exercise_id == exercise_id, SetEntry.kind.in_(TECHNIQUE_KINDS))
+        .with_entities(WorkoutSession.id, WorkoutSession.completed_at, SetEntry)
+        .order_by(WorkoutSession.completed_at.desc(), WorkoutSession.id.desc(), SetEntry.position, SetEntry.id)
+        .all()
+    )
+    sessions: dict[int, dict] = {}
+    for session_id, completed_at, entry in rows:
+        if session_id not in sessions:
+            if len(sessions) == TECHNIQUE_SESSIONS:
+                break
+            sessions[session_id] = {"session_id": session_id, "date": to_br_date(aware(completed_at)), "sets": []}
+        sessions[session_id]["sets"].append({
+            "kind": entry.kind,
+            "weight_kg": float(entry.weight_kg),
+            "reps": entry.reps,
+            "stages": entry.stages or [],
+        })
+    return list(sessions.values())
 
 
 def add_cardio_numbers(points: dict, exercise: Exercise, user: User, db: Session):

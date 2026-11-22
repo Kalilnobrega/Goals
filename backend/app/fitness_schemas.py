@@ -464,6 +464,20 @@ class ExerciseProgressSchema(BaseModel):
     stagnation: "StagnationSchema | None" = None
     ready: "ExerciseReadySchema | None" = None
     frequency: "ExerciseFrequencySchema | None" = None
+    techniques: list["TechniqueSessionSchema"] = []
+
+
+class TechniqueSetSchema(BaseModel):
+    kind: str
+    weight_kg: float
+    reps: int
+    stages: list[StageSchema] = []
+
+
+class TechniqueSessionSchema(BaseModel):
+    session_id: int
+    date: date
+    sets: list[TechniqueSetSchema]
 
 
 class RepRecordSchema(BaseModel):
