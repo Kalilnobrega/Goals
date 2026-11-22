@@ -29,7 +29,7 @@ def active_summary(user: User, db: Session) -> dict | None:
     total_sets = (
         db.query(func.count(func.distinct(series_key())))
         .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
-        .filter(SessionExercise.session_id == workout_session.id, SessionExercise.tracking != "cardio")
+        .filter(SessionExercise.session_id == workout_session.id, SessionExercise.tracking != "cardio", SetEntry.kind != "warmup")
         .scalar()
     )
     return {

@@ -1,6 +1,6 @@
 from bisect import bisect_right
 from datetime import date, datetime
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from app.dates import to_br_date
 from app.fitness_models import BodyWeightEntry, Exercise, SessionExercise, SetEntry
@@ -50,8 +50,8 @@ def bodyweight_bonus(sessions: list[tuple[int, datetime]], user_id: int, db: Ses
     if not weights.days:
         return {}
     rows = (
-        db.query(SessionExercise.session_id, func.sum(SetEntry.reps * func.coalesce(Exercise.bodyweight_factor, DEFAULT_FACTOR)))
-        .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        db.query(SessionExercise.session_id, func.sum((SetEntry.reps + SetEntry.stage_reps) * func.coalesce(Exercise.bodyweight_factor, DEFAULT_FACTOR)))
+        .join(SetEntry, and_(SetEntry.session_exercise_id == SessionExercise.id, SetEntry.kind != "warmup"))
         .outerjoin(Exercise, Exercise.id == SessionExercise.exercise_id)
         .filter(SessionExercise.session_id.in_(started), SessionExercise.equipment == BODYWEIGHT)
         .group_by(SessionExercise.session_id)

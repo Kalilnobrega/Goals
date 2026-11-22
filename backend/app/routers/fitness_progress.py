@@ -46,7 +46,7 @@ def completed_sets(user: User, db: Session):
         db.query(SetEntry)
         .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
         .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
-        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED, SetEntry.kind != "warmup")
     )
 
 
@@ -231,7 +231,7 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
             if timing["seconds"] is not None:
                 spans.append(timing["seconds"])
                 preps.append(timing["prep"])
-                count = len({("pair", s.position) if s.side else ("set", s.id) for s in item.sets})
+                count = len({("pair", s.position) if s.side else ("set", s.id) for s in item.sets if s.kind != "warmup"})
                 if count:
                     set_seconds.append(timing["work"] / count)
     if not spans and not rests:
@@ -272,6 +272,8 @@ def get_exercise_progress(
             SetEntry.distance_km,
             SetEntry.speed_kmh,
             SetEntry.level,
+            SetEntry.stage_volume_kg,
+            SetEntry.stage_reps,
         )
         .order_by(WorkoutSession.completed_at, WorkoutSession.id, SetEntry.id)
         .all()
@@ -280,7 +282,7 @@ def get_exercise_progress(
     points: dict[int, dict] = {}
     series: dict[int, set] = {}
     body = BodyWeights(user.id, db) if exercise.equipment == BODYWEIGHT else None
-    for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id, duration, distance, speed, level in rows:
+    for session_id, session_name, completed_at, weight, reps, side, position, set_id, item_id, duration, distance, speed, level, stage_volume, stage_reps in rows:
         load = Decimal(str(round(body.load(float(weight), BODYWEIGHT, to_br_date(aware(completed_at)), share(exercise.bodyweight_factor)), 2))) if body else weight
         point = points.setdefault(session_id, {
             "session_id": session_id,
@@ -303,7 +305,7 @@ def get_exercise_progress(
             "right_estimated_1rm_kg": None,
         })
         series.setdefault(session_id, set()).add(("pair", item_id, position) if side else ("set", set_id))
-        point["volume_kg"] += load * reps
+        point["volume_kg"] += load * reps + (stage_volume or 0) + (load - weight) * (stage_reps or 0)
         if duration:
             point["duration_seconds"] += duration
             point["best_duration_seconds"] = max(point["best_duration_seconds"], duration)

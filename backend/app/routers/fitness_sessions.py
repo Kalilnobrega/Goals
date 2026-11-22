@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import String, case, cast, func, literal, or_
+from sqlalchemy import String, and_, case, cast, func, literal, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -23,6 +23,7 @@ from app.fitness_schemas import (
 from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_bonus, bodyweight_factors
 from app.fitness_cardio import cardio_numbers
 from app.fitness_supersets import normalize_supersets
+from app.fitness_sets import NORMAL, WARMUP, FAILURE, STAGED, entry_volume, is_working, working
 from app.dates import to_br_date
 from .auth import get_current_user
 from .fitness import visible_exercises
@@ -64,16 +65,18 @@ def serialize_set(entry: SetEntry) -> dict:
         "incline_pct": float(entry.incline_pct) if entry.incline_pct is not None else None,
         "calories": entry.calories,
         "rir": entry.rir,
+        "kind": entry.kind or NORMAL,
+        "stages": entry.stages or [],
     }
 
 
 CARDIO = "cardio"
 TIMED = ("time", CARDIO)
-PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "incline_pct", "calories", "rir"}
+PREVIOUS_FIELDS = {"weight_kg", "reps", "side", "duration_seconds", "distance_km", "speed_kmh", "level", "incline_pct", "calories", "rir", "kind", "stages"}
 
 
 def series_count(entries) -> int:
-    return len({("pair", entry.position) if entry.side else ("set", entry.id) for entry in entries})
+    return len({("pair", entry.position) if entry.side else ("set", entry.id) for entry in working(entries)})
 
 
 def series_key():
@@ -155,7 +158,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
         if item.tracking != CARDIO:
             total_sets += series_count(item.sets)
         extra = Decimal(str(round(body * factors.get(item.exercise_id, 1.0), 2))) if body and item.equipment == BODYWEIGHT else Decimal(0)
-        volume += sum(((entry.weight_kg + extra) * entry.reps for entry in item.sets), Decimal(0))
+        volume += sum((entry_volume(entry, extra) for entry in working(item.sets)), Decimal(0))
         exercises.append({
             "id": item.id,
             "exercise_id": item.exercise_id,
@@ -173,6 +176,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
             "load_mode": item.load_mode,
             "phase": item.phase,
             "superset": item.superset,
+            "set_plan": item.set_plan,
             "from_plan": item.workout_exercise_id is not None,
             "sets": [serialize_set(entry) for entry in item.sets],
             "previous": reference["sets"] if reference else [],
@@ -325,7 +329,7 @@ def commit_session(workout_session: WorkoutSession, db: Session) -> dict:
 def muscle_groups_by_session(session_ids: list[int], db: Session) -> dict[int, list[str]]:
     rows = (
         db.query(SessionExercise.session_id, SessionExercise.muscle_group, func.count(SetEntry.id))
-        .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        .join(SetEntry, and_(SetEntry.session_exercise_id == SessionExercise.id, SetEntry.kind != WARMUP))
         .filter(SessionExercise.session_id.in_(session_ids), SessionExercise.tracking != CARDIO)
         .group_by(SessionExercise.session_id, SessionExercise.muscle_group)
         .all()
@@ -344,8 +348,8 @@ def session_stats(db: Session):
         db.query(
             SessionExercise.session_id.label("session_id"),
             func.count(func.distinct(case((SessionExercise.tracking != CARDIO, SessionExercise.id)))).label("exercise_count"),
-            func.count(func.distinct(case((SessionExercise.tracking != CARDIO, series_key())))).label("total_sets"),
-            func.sum(SetEntry.weight_kg * SetEntry.reps).label("volume"),
+            func.count(func.distinct(case((and_(SessionExercise.tracking != CARDIO, SetEntry.kind != WARMUP), series_key())))).label("total_sets"),
+            func.sum(case((SetEntry.kind == WARMUP, 0), else_=SetEntry.weight_kg * SetEntry.reps + SetEntry.stage_volume_kg)).label("volume"),
             func.sum(case((SessionExercise.tracking == CARDIO, SetEntry.duration_seconds), else_=0)).label("cardio_seconds"),
         )
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
@@ -518,6 +522,7 @@ def start_session(
                 tracking=item.exercise.tracking,
                 load_mode=item.load_mode,
                 superset=item.superset,
+                set_plan=item.set_plan if item.exercise.tracking == "reps" else None,
             )
             for item in workout.exercises
         ]
@@ -736,7 +741,7 @@ def existing_set(item_id: int, client_id: str, user: User, db: Session) -> SetEn
 
 
 def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutSession, db: Session) -> dict | None:
-    if workout_session.status != IN_PROGRESS or item.exercise_id is None or (item.tracking or "reps") != "reps":
+    if workout_session.status != IN_PROGRESS or item.exercise_id is None or (item.tracking or "reps") != "reps" or not is_working(entry):
         return None
     rows = (
         db.query(SetEntry.weight_kg, SetEntry.reps)
@@ -746,6 +751,7 @@ def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutS
             WorkoutSession.user_id == workout_session.user_id,
             or_(WorkoutSession.status == COMPLETED, WorkoutSession.id == workout_session.id),
             SessionExercise.exercise_id == item.exercise_id,
+            SetEntry.kind != WARMUP,
             SetEntry.id != entry.id,
         )
         .all()
@@ -773,6 +779,17 @@ def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutS
     return None
 
 
+def set_kind(item: SessionExercise, kind: str | None) -> str:
+    return kind if kind and (item.tracking or "reps") == "reps" else NORMAL
+
+
+def apply_stages(entry: SetEntry, stages) -> None:
+    clean = [{"weight_kg": float(to_kg(stage.weight_kg)), "reps": stage.reps} for stage in stages or []] if entry.kind in STAGED else []
+    entry.stages = clean or None
+    entry.stage_volume_kg = sum((to_kg(stage["weight_kg"]) * stage["reps"] for stage in clean), Decimal(0))
+    entry.stage_reps = sum(stage["reps"] for stage in clean)
+
+
 def logged_at(item: SessionExercise, workout_session: WorkoutSession):
     times = [entry.created_at for entry in item.sets if entry.created_at]
     return max(times) if times else workout_session.completed_at or workout_session.started_at
@@ -796,14 +813,16 @@ def add_set(
     timed = item.tracking in TIMED
     if timed and not data.duration_seconds:
         raise HTTPException(status_code=400, detail="Informe a duração.")
-    if not timed and data.reps < 1:
+    kind = set_kind(item, data.kind)
+    warmup = kind == WARMUP
+    if not timed and not warmup and data.reps < 1:
         raise HTTPException(status_code=400, detail="Informe as repetições.")
     same_side = [s for s in item.sets if s.side == data.side]
     entry = SetEntry(
         position=(len(same_side) if data.side else max((s.position for s in same_side), default=0)) + 1,
         side=data.side,
-        weight_kg=to_kg(0 if item.tracking == CARDIO else data.weight_kg),
-        reps=0 if timed else data.reps,
+        weight_kg=to_kg(0 if item.tracking == CARDIO or warmup else data.weight_kg),
+        reps=0 if timed or warmup else data.reps,
         duration_seconds=data.duration_seconds if timed else None,
         distance_km=to_kg(data.distance_km) if item.tracking == CARDIO and data.distance_km else None,
         speed_kmh=round(Decimal(str(data.speed_kmh)), 1) if item.tracking == CARDIO and data.speed_kmh else None,
@@ -812,7 +831,8 @@ def add_set(
         calories=data.calories if item.tracking == CARDIO else None,
         created_at=utcnow() if workout_session.status == IN_PROGRESS else logged_at(item, workout_session),
         client_id=data.client_id,
-        rir=None if timed else data.rir,
+        rir=None if timed or kind == WARMUP else (0 if kind == FAILURE else data.rir),
+        kind=kind,
     )
     item.sets.append(entry)
     try:
@@ -855,8 +875,23 @@ def edit_set(
             entry.calories = data.calories
         if "incline_pct" in changes:
             entry.incline_pct = round(Decimal(str(data.incline_pct)), 1) if data.incline_pct is not None else None
-    if "rir" in changes and not timed:
-        entry.rir = data.rir
+    if not timed:
+        if "kind" in changes and data.kind:
+            entry.kind = data.kind
+            if entry.kind not in STAGED:
+                apply_stages(entry, [])
+            if entry.kind == WARMUP:
+                entry.rir = None
+                entry.weight_kg = to_kg(0)
+                entry.reps = 0
+            elif entry.kind == FAILURE:
+                entry.rir = 0
+        if "rir" in changes and entry.kind != WARMUP:
+            entry.rir = data.rir
+        if "stages" in changes:
+            if data.stages and entry.kind not in STAGED:
+                raise HTTPException(status_code=400, detail="Só drop e rest-pause têm etapas.")
+            apply_stages(entry, data.stages)
     db.commit()
     db.refresh(entry)
     return serialize_set(entry)

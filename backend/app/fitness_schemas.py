@@ -2,10 +2,12 @@ from typing import Literal
 from datetime import date, datetime, time
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.fitness_muscles import MuscleKey, MuscleRole
+from app.fitness_sets import clean_plan
 from app.fitness_intensity import Intensity
 
 
 LoadMode = Literal["total", "side"]
+SetKind = Literal["normal", "warmup", "failure", "drop", "rest_pause"]
 
 MuscleGroup = Literal[
     "chest",
@@ -145,9 +147,11 @@ class WorkoutExerciseSchema(BaseModel):
     unilateral: bool | None = None
     load_mode: LoadMode | None = None
     superset: int | None = Field(default=None, ge=1, le=40)
+    set_plan: list[SetKind] | None = Field(default=None, max_length=30)
 
     @model_validator(mode="after")
     def reps_range(self):
+        self.set_plan = clean_plan(self.set_plan, self.target_sets)
         if self.rest_seconds == 0:
             self.rest_seconds = None
         if self.reps_max is not None:
@@ -196,6 +200,7 @@ class WorkoutExerciseResponseSchema(BaseModel):
     unilateral: bool | None = None
     load_mode: str | None = None
     superset: int | None = None
+    set_plan: list[str] | None = None
 
 
 class WorkoutCardioResponseSchema(BaseModel):
@@ -273,6 +278,12 @@ class SetSchema(BaseModel):
     client_id: str | None = Field(default=None, min_length=8, max_length=36, pattern=r"^[A-Za-z0-9-]+$")
     side: Literal["left", "right"] | None = None
     rir: int | None = Field(default=None, ge=0, le=4)
+    kind: SetKind = "normal"
+
+
+class StageSchema(BaseModel):
+    weight_kg: float = Field(ge=0, le=1000)
+    reps: int = Field(ge=1, le=1000)
 
 
 class EditSetSchema(BaseModel):
@@ -285,6 +296,8 @@ class EditSetSchema(BaseModel):
     incline_pct: float | None = Field(default=None, ge=0, le=40)
     calories: int | None = Field(default=None, ge=1, le=5000)
     rir: int | None = Field(default=None, ge=0, le=4)
+    kind: SetKind | None = None
+    stages: list[StageSchema] | None = Field(default=None, max_length=8)
 
 
 class FinishSessionSchema(BaseModel):
@@ -306,6 +319,8 @@ class SetResponseSchema(BaseModel):
     incline_pct: float | None = None
     calories: int | None = None
     rir: int | None = None
+    kind: str = "normal"
+    stages: list[StageSchema] = []
     record: SetRecordSchema | None = None
 
 
@@ -314,6 +329,8 @@ class PreviousSetSchema(BaseModel):
     reps: int
     side: str | None = None
     rir: int | None = None
+    kind: str = "normal"
+    stages: list[StageSchema] = []
     duration_seconds: int | None = None
     distance_km: float | None = None
     speed_kmh: float | None = None
@@ -347,6 +364,7 @@ class SessionExerciseResponseSchema(BaseModel):
     load_mode: str | None = None
     phase: str | None = None
     superset: int | None = None
+    set_plan: list[str] | None = None
     from_plan: bool = False
     sets: list[SetResponseSchema]
     previous: list[PreviousSetSchema]

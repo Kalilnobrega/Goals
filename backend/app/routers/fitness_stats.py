@@ -11,6 +11,7 @@ from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkout
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BodyWeights, bodyweight_factors
+from app.fitness_sets import working
 from app.fitness_cardio import cardio_numbers
 from .auth import get_current_user
 from .fitness import get_own_workout
@@ -45,12 +46,15 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
     timings = exercise_timings(workout_session, levels)
     exercises = []
     for item in workout_session.exercises:
-        if not item.sets:
+        entries = working(item.sets)
+        if not entries:
             continue
         strength = (item.tracking or "reps") == "reps"
-        weights = [(float(entry.weight_kg), entry.reps) for entry in item.sets] if strength else [(0.0, 0)]
+        weights = [(float(entry.weight_kg), entry.reps) for entry in entries] if strength else [(0.0, 0)]
+        stages = [(float(stage["weight_kg"]), stage["reps"]) for entry in entries for stage in (entry.stages or [])] if strength else []
         factor = (factors or {}).get(item.exercise_id, 1.0)
         loads = [((body.load(weight, item.equipment, day, factor) if body else weight), reps) for weight, reps in weights]
+        stage_loads = [((body.load(weight, item.equipment, day, factor) if body else weight), reps) for weight, reps in stages]
         estimates = [e for e in (estimated_1rm(load, reps) for load, reps in loads) if e is not None]
         top_weight, top_reps = max(weights, key=lambda pair: (pair[0], pair[1]))
         exercises.append({
@@ -60,8 +64,8 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "muscle_group": item.muscle_group,
             "muscles": item.muscles or [],
             "sets": series_count(item.sets),
-            "reps": sum(reps for _, reps in weights),
-            "volume": sum(load * reps for load, reps in loads),
+            "reps": sum(reps for _, reps in weights) + sum(reps for _, reps in stages),
+            "volume": sum(load * reps for load, reps in loads) + sum(load * reps for load, reps in stage_loads),
             "top_weight": top_weight,
             "top_reps": top_reps,
             "max_reps": max(reps for _, reps in weights),
@@ -71,10 +75,10 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
             "work": timings[item.id]["work"],
             "rest": timings[item.id]["rest"],
             "rests": timings[item.id]["rests"],
-            "set_list": [(float(entry.weight_kg), entry.reps) for entry in item.sets] if strength else [],
+            "set_list": [(float(entry.weight_kg), entry.reps) for entry in entries] if strength else [],
             "tracking": item.tracking or "reps",
-            "duration": sum(entry.duration_seconds or 0 for entry in item.sets),
-            "distance": sum(float(entry.distance_km or 0) for entry in item.sets),
+            "duration": sum(entry.duration_seconds or 0 for entry in entries),
+            "distance": sum(float(entry.distance_km or 0) for entry in entries),
             **(cardio_numbers(item.exercise_name, item.sets, body.on(day) if body else 0.0) if item.tracking == "cardio" else {}),
         })
     cardio = [e for e in exercises if e["tracking"] == "cardio"]

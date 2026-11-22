@@ -117,6 +117,7 @@ class WorkoutExercise(Base):
     unilateral = Column(Boolean, nullable=True)
     load_mode = Column(String(5), nullable=True)
     superset = Column(Integer, nullable=True)
+    set_plan = Column(JSON, nullable=True)
 
     exercise = relationship("Exercise", lazy="joined")
 
@@ -174,6 +175,7 @@ class SessionExercise(Base):
     load_mode = Column(String(5), nullable=True)
     phase = Column(String(5), nullable=True)
     superset = Column(Integer, nullable=True)
+    set_plan = Column(JSON, nullable=True)
 
     sets = relationship(
         "SetEntry",
@@ -206,6 +208,10 @@ class SetEntry(Base):
     incline_pct = Column(Numeric(3, 1), nullable=True)
     calories = Column(Integer, nullable=True)
     rir = Column(Integer, nullable=True)
+    kind = Column(String(12), nullable=False, default="normal", server_default="normal")
+    stages = Column(JSON, nullable=True)
+    stage_volume_kg = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    stage_reps = Column(Integer, nullable=False, default=0, server_default=text("0"))
 
 
 class BodyWeightEntry(Base):

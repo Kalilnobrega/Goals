@@ -211,6 +211,7 @@ def build_workout_exercises(data: WorkoutSchema, user: User, session: Session) -
             unilateral=item.unilateral,
             load_mode=item.load_mode,
             superset=supersets[index],
+            set_plan=item.set_plan if tracking[item.exercise_id] == "reps" else None,
         )
         for index, item in enumerate(data.exercises)
     ]
