@@ -330,3 +330,63 @@ def test_overview_muscle_map_counts_secondary_as_half(client, ana, db_session):
     muscles = {m["muscle"]: m for m in overview(client, headers)["muscle_map"]}
     assert muscles["chest_mid"] == {"muscle": "chest_mid", "done_sets": 3.0, "planned_sets": 4.0}
     assert muscles["triceps_lateral"] == {"muscle": "triceps_lateral", "done_sets": 1.5, "planned_sets": 2.0}
+
+
+def week_streak(client, headers):
+    response = client.get("/fitness/streak", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def train_on(client, headers, db_session, workout_id, day):
+    session = train(client, headers, workout_id)
+    move_session(db_session, session["id"], br_day_start_utc(day) + timedelta(hours=10))
+
+
+def test_week_streak_requires_authentication(client):
+    assert client.get("/fitness/streak").status_code == 401
+
+
+def test_week_streak_without_plan_needs_one_workout_per_week(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    assert week_streak(client, headers) == {"current": 0, "best": 0, "target": 1, "trained_days": 0, "week_done": False}
+
+    today = today_br()
+    monday = today - timedelta(days=today.weekday())
+    train_on(client, headers, db_session, workout["id"], monday - timedelta(days=7))
+    train_on(client, headers, db_session, workout["id"], monday - timedelta(days=14))
+    assert week_streak(client, headers)["current"] == 2
+
+    train_on(client, headers, db_session, workout["id"], monday)
+    data = week_streak(client, headers)
+    assert data["current"] == 3
+    assert data["best"] == 3
+    assert data["trained_days"] == 1
+    assert data["week_done"] is True
+
+
+def test_week_streak_counts_weeks_that_hit_the_plan_target(client, library, ana, db_session):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    client.post(
+        "/fitness/plans",
+        json={"name": "Treino", "days": [{"weekday": 0, "workout_id": workout["id"]}, {"weekday": 2, "workout_id": workout["id"]}]},
+        headers=headers,
+    )
+    today = today_br()
+    monday = today - timedelta(days=today.weekday())
+    last = monday - timedelta(days=7)
+    train_on(client, headers, db_session, workout["id"], last)
+    train_on(client, headers, db_session, workout["id"], last + timedelta(days=4))
+    before = monday - timedelta(days=14)
+    train_on(client, headers, db_session, workout["id"], before)
+    train_on(client, headers, db_session, workout["id"], before)
+    older = monday - timedelta(days=21)
+    train_on(client, headers, db_session, workout["id"], older)
+    train_on(client, headers, db_session, workout["id"], older + timedelta(days=1))
+    train_on(client, headers, db_session, workout["id"], older - timedelta(days=7))
+    train_on(client, headers, db_session, workout["id"], older - timedelta(days=6))
+
+    data = week_streak(client, headers)
+    assert data == {"current": 1, "best": 2, "target": 2, "trained_days": 0, "week_done": False}

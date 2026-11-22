@@ -1247,6 +1247,14 @@ class WeekSchema(OverviewWeekSchema):
     first_session_on: date | None
 
 
+class WeekStreakSchema(BaseModel):
+    current: int
+    best: int
+    target: int
+    trained_days: int
+    week_done: bool
+
+
 class FitnessProfileSchema(BaseModel):
     body_type: Literal["male", "female"]
 

@@ -6,7 +6,7 @@ from app.database import get_db
 from app.dates import today_br, to_br_date, br_day_start_utc
 from app.models import User
 from app.fitness_models import Workout, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, Plan
-from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema
+from app.fitness_schemas import OverviewSchema, CalendarSchema, WeekSchema, WeekStreakSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, COMPLETED, aware, session_stats, history_item, series_key
 from app.fitness_load import bodyweight_bonus
@@ -358,6 +358,47 @@ def get_week(
         "has_plan": plan is not None,
         "first_session_on": first_session_on(user, db),
     }
+
+
+def plan_week_streak(user: User, db: Session, today: date, plan: Plan | None) -> dict:
+    target = len(planned_by_weekday(plan)) or 1
+    started = (
+        db.query(WorkoutSession.started_at)
+        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+        .all()
+    )
+    days_by_week: dict[date, set] = {}
+    for (started_at,) in started:
+        day = to_br_date(started_at)
+        days_by_week.setdefault(day - timedelta(days=day.weekday()), set()).add(day)
+    done = {week for week, days in days_by_week.items() if len(days) >= target}
+
+    this_week = today - timedelta(days=today.weekday())
+    week = this_week if this_week in done else this_week - timedelta(days=7)
+    current = 0
+    while week in done:
+        current += 1
+        week -= timedelta(days=7)
+
+    best = run = 0
+    previous = None
+    for week in sorted(done):
+        run = run + 1 if previous and week - previous == timedelta(days=7) else 1
+        best = max(best, run)
+        previous = week
+
+    return {
+        "current": current,
+        "best": best,
+        "target": target,
+        "trained_days": len(days_by_week.get(this_week, ())),
+        "week_done": this_week in done,
+    }
+
+
+@fitness_overview_router.get("/streak", response_model=WeekStreakSchema)
+def get_week_streak(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return plan_week_streak(user, db, today_br(), active_plan(user, db))
 
 
 def parse_month(value: str) -> date:
