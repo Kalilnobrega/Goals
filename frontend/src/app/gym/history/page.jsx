@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { History, Search, X, ChevronDown, SearchX } from 'lucide-react';
+import { History, Search, X, ChevronDown, SearchX, Download } from 'lucide-react';
 import { getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
 import {
   addDays, formatDay, formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
@@ -9,6 +9,7 @@ import {
 } from '../../../lib/gym';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import GymSheet from '../../../components/gym/GymSheet';
+import ExportSheet from '../../../components/gym/ExportSheet';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
@@ -85,6 +86,8 @@ function HistoryCard({ item }) {
 
 export default function HistoryPage() {
   const [data, setData] = useState(() => peekCache('fitnessHistory') ?? null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const closeExport = useCallback(() => setExportOpen(false), []);
   const [loadError, setLoadError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState(false);
@@ -166,7 +169,8 @@ export default function HistoryPage() {
 
   return (
     <div className={styles.page}>
-      <header>
+      <header className={styles.header}>
+        <div className={styles.headerText}>
         <h1 className={styles.title}>Histórico</h1>
         <p className={styles.subtitle}>
           {data
@@ -175,7 +179,14 @@ export default function HistoryPage() {
               : data.total ? plural(data.total, 'treino concluído', 'treinos concluídos') : 'Seus treinos concluídos'
             : 'Seus treinos concluídos'}
         </p>
+        </div>
+        <button type="button" className={styles.exportButton} onClick={() => setExportOpen(true)} aria-label="Exportar treinos e peso">
+          <Download size={18} aria-hidden="true" /> Exportar
+        </button>
       </header>
+      <GymSheet open={exportOpen} onClose={closeExport} title="Exportar dados">
+        {exportOpen && <ExportSheet />}
+      </GymSheet>
 
       <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
 

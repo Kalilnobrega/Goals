@@ -310,3 +310,9 @@ export const deactivatePlan = (id) => api.post(`/fitness/plans/${id}/deactivate`
 export const getWeek = (start) => cachedGet(`fitnessWeek:${start}`, `/fitness/week?start=${start}`);
 export const getFitnessProfile = () => cachedGet("fitnessProfile", "/fitness/profile");
 export const updateFitnessProfile = (data) => api.put("/fitness/profile", data).then((r) => r.data);
+
+export const exportFitnessData = (params) =>
+  api.get("/fitness/export", { params, responseType: "blob" }).then((r) => {
+    const match = /filename="([^"]+)"/.exec(r.headers["content-disposition"] ?? "");
+    return { blob: r.data, filename: match ? match[1] : `gymgoals.${params.format}` };
+  });
