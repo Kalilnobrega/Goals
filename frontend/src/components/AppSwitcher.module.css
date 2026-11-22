@@ -1,0 +1,174 @@
+.root {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.light {
+  --switcher-text: #0f172a;
+  --switcher-muted: #64748b;
+  --switcher-bg: rgba(255, 255, 255, 0.98);
+  --switcher-border: rgba(59, 130, 246, 0.16);
+  --switcher-hover: rgba(59, 130, 246, 0.08);
+  --switcher-active: rgba(59, 130, 246, 0.1);
+  --switcher-check: var(--blue-500);
+  --switcher-chevron: var(--blue-500);
+  --switcher-shadow: 0 18px 40px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.dark {
+  --switcher-text: var(--gym-text);
+  --switcher-muted: var(--gym-muted);
+  --switcher-bg: var(--gym-surface);
+  --switcher-border: var(--gym-border-strong);
+  --switcher-hover: var(--gym-surface-2);
+  --switcher-active: var(--gym-accent-soft);
+  --switcher-check: var(--gym-accent);
+  --switcher-chevron: var(--gym-muted);
+  --switcher-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  margin: -4px -8px -4px -4px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: 14px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--switcher-hover);
+  }
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--switcher-check);
+  outline-offset: 2px;
+}
+
+.chevron {
+  margin-left: 4px;
+  color: var(--switcher-chevron);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -4px;
+  z-index: 200;
+  width: 290px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--switcher-border);
+  background: var(--switcher-bg);
+  box-shadow: var(--switcher-shadow);
+  transform-origin: top left;
+  animation: menuIn var(--dur-base) var(--ease-out);
+}
+
+.menuTitle {
+  padding: 8px 10px 6px;
+  color: var(--switcher-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--switcher-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--switcher-hover);
+}
+
+.itemActive,
+.itemActive:hover,
+.itemActive:focus-visible {
+  background: var(--switcher-active);
+}
+
+.itemIcon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.goals {
+  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  color: white;
+}
+
+.gym {
+  background: #c6f432;
+  color: #11140a;
+}
+
+.itemText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.itemLabel {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.itemDescription {
+  color: var(--switcher-muted);
+  font-size: 0.8rem;
+}
+
+.check {
+  flex-shrink: 0;
+  color: var(--switcher-check);
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .chevron {
+    animation: none;
+    transition: none;
+  }
+}

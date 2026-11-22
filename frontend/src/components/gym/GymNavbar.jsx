@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, TrendingUp, LayoutGrid, Play, Users, UserCircle2 } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, TrendingUp, Play, Users, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../../lib/auth';
 import { getMe } from '../../lib/api';
 import { saveLastApp } from '../../lib/apps';
@@ -13,6 +13,7 @@ import { prefetchGymTabs } from '../../lib/gymPrefetch';
 import { useSwipeTabs } from '../../lib/useSwipeTabs';
 import { useHideOnScroll } from '../../lib/useHideOnScroll';
 import GymStreak from './GymStreak';
+import AppSwitcher from '../AppSwitcher';
 import styles from './GymNavbar.module.css';
 
 const links = [
@@ -109,10 +110,10 @@ export default function GymNavbar() {
     <>
       <header ref={headerRef} className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/gym" {...linkProps('/gym')} className={styles.brand}>
+          <AppSwitcher current="gym" theme="dark" className={styles.brand}>
             <span className={styles.brandMark}><Dumbbell size={20} strokeWidth={2.4} /></span>
             <span className={styles.brandName}>Gym<span>Goals</span></span>
-          </Link>
+          </AppSwitcher>
 
           <nav className={styles.topLinks} aria-label="GymGoals">
             {links.map(({ href, label, soon }) => (soon ? (
@@ -144,9 +145,6 @@ export default function GymNavbar() {
 
           <div className={styles.right}>
             <GymStreak pathname={pathname} onBump={revealHeader} />
-            <Link href="/apps" className={styles.switch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
-              <LayoutGrid size={16} />
-            </Link>
             <Link
               href="/gym/account"
               className={`${styles.userChip} ${pathname.startsWith('/gym/account') ? styles.userChipActive : ''}`}

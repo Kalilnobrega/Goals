@@ -65,7 +65,7 @@ export default function AppsPage() {
         </ul>
 
         <footer className={styles.footer}>
-          <p>Você pode trocar de app a qualquer momento pelo botão de apps no topo da tela, sem entrar de novo.</p>
+          <p>Você pode trocar de app a qualquer momento tocando na logo no topo da tela, sem entrar de novo.</p>
           <Link href="/account" className={styles.account}><UserCircle2 size={16} /> Minha conta</Link>
         </footer>
       </div>

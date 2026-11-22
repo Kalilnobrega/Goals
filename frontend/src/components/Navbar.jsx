@@ -2,11 +2,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Target, House, ListChecks, ChartColumn, UserCircle2, LayoutGrid } from 'lucide-react';
+import { Target, House, ListChecks, ChartColumn, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../lib/auth';
 import { saveLastApp } from '../lib/apps';
 import { getMe, getStreak } from '../lib/api';
 import { useLateGoals } from '../lib/LateGoalsContext';
+import AppSwitcher from './AppSwitcher';
 import styles from './Navbar.module.css';
 import { prefetchTab, prefetchAllTabs } from '../lib/prefetchTabs';
 import { useSwipeTabs } from '../lib/useSwipeTabs';
@@ -185,13 +186,10 @@ export default function Navbar() {
     <>
       <header ref={headerRef} className={styles.header}>
         <nav className={`${styles.nav} glass`} style={{ viewTransitionName: 'app-navbar' }} data-navbar="">
-          <Link href="/" className={styles.brand} onClick={(event) => {
-            if (tabClick(event, '/')) return;
-            announceTabSlide(tabSlide('/'));
-          }}>
+          <AppSwitcher current="goals" className={styles.brand}>
             <span className={styles.brandIcon}><Target size={20} /></span>
             <span className={styles.brandName}>Goals</span>
-          </Link>
+          </AppSwitcher>
  
           <ul className={styles.links} ref={linksRef}>
             <li className={styles.indicator} ref={indicatorRef} aria-hidden="true" />
@@ -221,10 +219,6 @@ export default function Navbar() {
                 <span key={`n-${bump}`} className={bump ? styles.numberIn : ''}>{streakValue}</span>
               </span>
             </div>
-
-            <Link href="/apps" className={styles.appSwitch} aria-label="Trocar aplicativo" title="Trocar aplicativo">
-              <LayoutGrid size={16} />
-            </Link>
 
             {firstName && (
               <Link

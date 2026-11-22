@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2, LogOut } from 'lucide-react';
+import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2, LogOut, ArrowLeftRight, Dumbbell } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { getMe, updateName, changePassword, deleteAccount, logout } from '../../lib/api';
 import { clearToken, getRefreshToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
 import forms from '../../styles/forms.module.css';
 import styles from './page.module.css';
 import { shakeInvalid } from '../../lib/formMotion';
+import { saveLastApp } from '../../lib/apps';
 
 function errorMessage(err, fallback) {
   const detail = err.response?.data?.detail;
@@ -203,6 +204,26 @@ function PasswordCard({ me }) {
   );
 }
 
+function SwitchAppCard() {
+  const router = useRouter();
+
+  const openGym = () => {
+    saveLastApp('gym');
+    router.push('/gym');
+  };
+
+  return (
+    <section className={`${styles.card} glass`}>
+      <div className={styles.logoutRow}>
+        <CardHeader icon={ArrowLeftRight} title="Trocar aplicativo" sub="Também dá para trocar clicando na logo no topo" />
+        <button type="button" className={styles.btnSwitch} onClick={openGym}>
+          <Dumbbell size={15} /> Abrir o GymGoals
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function LogoutCard() {
   const router = useRouter();
 
@@ -346,6 +367,7 @@ export default function AccountPage() {
           <>
             <NameCard me={me} onSaved={handleNameSaved} />
             <PasswordCard me={me} />
+            <SwitchAppCard />
             <LogoutCard />
             <DeleteCard me={me} />
           </>

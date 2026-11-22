@@ -111,23 +111,6 @@
   gap: 8px;
 }
 
-.switch {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--gym-border-strong);
-  color: var(--gym-accent);
-  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
-}
-
-.switch:hover {
-  border-color: var(--gym-accent);
-  background: var(--gym-accent-soft);
-}
-
 .userChip {
   height: 32px;
   flex-shrink: 0;

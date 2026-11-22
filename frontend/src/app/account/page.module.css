@@ -187,6 +187,27 @@
   .btnLogout:hover { background: rgba(239, 68, 68, 0.13); }
 }
 
+.btnSwitch {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: rgba(59, 130, 246, 0.08);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--blue-600);
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out), scale var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .btnSwitch:hover { background: rgba(59, 130, 246, 0.14); }
+}
+
 .skeleton {
   border-radius: 20px;
   height: 180px;

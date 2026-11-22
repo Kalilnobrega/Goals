@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AtSign, Check, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeftRight, AtSign, Check, Target, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
   changePassword, checkUsername, deleteAccount, getFitnessProfile, getMe, logout, updateName, updateUsername,
 } from '../../../lib/api';
+import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
 import { apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
@@ -304,6 +305,23 @@ function PasswordCard({ me }) {
   );
 }
 
+function SwitchAppCard() {
+  const router = useRouter();
+
+  const openGoals = () => {
+    saveLastApp('goals');
+    router.push('/');
+  };
+
+  return (
+    <Card icon={ArrowLeftRight} title="Trocar aplicativo" sub="Também dá para trocar tocando na logo no topo">
+      <button type="button" className={styles.secondary} onClick={openGoals}>
+        <Target size={16} /> Abrir o Goals
+      </button>
+    </Card>
+  );
+}
+
 function LogoutCard() {
   const router = useRouter();
 
@@ -442,6 +460,7 @@ export default function GymAccountPage() {
           <UsernameCard current={username} onSaved={setUsername} />
           <BodyTypeCard />
           <PasswordCard me={me} />
+          <SwitchAppCard />
           <LogoutCard />
           <DeleteCard me={me} />
         </>
