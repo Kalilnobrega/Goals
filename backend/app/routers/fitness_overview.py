@@ -17,6 +17,8 @@ from app.fitness_muscles import muscle_credit
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
+TOP_WEEK_STREAKS = 3
+
 
 def active_summary(user: User, db: Session) -> dict | None:
     workout_session = (
@@ -380,19 +382,31 @@ def plan_week_streak(user: User, db: Session, today: date, plan: Plan | None) ->
         current += 1
         week -= timedelta(days=7)
 
-    best = run = 0
-    previous = None
+    runs: list[list[date]] = []
     for week in sorted(done):
-        run = run + 1 if previous and week - previous == timedelta(days=7) else 1
-        best = max(best, run)
-        previous = week
+        if runs and week - runs[-1][-1] == timedelta(days=7):
+            runs[-1].append(week)
+        else:
+            runs.append([week])
+    current_end = this_week if this_week in done else this_week - timedelta(days=7)
+    top = sorted(reversed(runs), key=lambda run: -len(run))[:TOP_WEEK_STREAKS]
 
     return {
         "current": current,
-        "best": best,
+        "best": max((len(run) for run in runs), default=0),
         "target": target,
         "trained_days": len(days_by_week.get(this_week, ())),
         "week_done": this_week in done,
+        "top": [
+            {
+                "start": run[0],
+                "end": run[-1] + timedelta(days=6),
+                "length": len(run),
+                "current": run[-1] == current_end,
+            }
+            for run in top
+        ],
+        "total_runs": len(runs),
     }
 
 

@@ -1247,12 +1247,21 @@ class WeekSchema(OverviewWeekSchema):
     first_session_on: date | None
 
 
+class WeekStreakRunSchema(BaseModel):
+    start: date
+    end: date
+    length: int
+    current: bool
+
+
 class WeekStreakSchema(BaseModel):
     current: int
     best: int
     target: int
     trained_days: int
     week_done: bool
+    top: list[WeekStreakRunSchema]
+    total_runs: int
 
 
 class FitnessProfileSchema(BaseModel):

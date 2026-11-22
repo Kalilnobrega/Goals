@@ -350,7 +350,9 @@ def test_week_streak_requires_authentication(client):
 def test_week_streak_without_plan_needs_one_workout_per_week(client, library, ana, db_session):
     _, headers = ana
     workout = make_workout(client, headers, library)
-    assert week_streak(client, headers) == {"current": 0, "best": 0, "target": 1, "trained_days": 0, "week_done": False}
+    assert week_streak(client, headers) == {
+        "current": 0, "best": 0, "target": 1, "trained_days": 0, "week_done": False, "top": [], "total_runs": 0,
+    }
 
     today = today_br()
     monday = today - timedelta(days=today.weekday())
@@ -389,4 +391,15 @@ def test_week_streak_counts_weeks_that_hit_the_plan_target(client, library, ana,
     train_on(client, headers, db_session, workout["id"], older - timedelta(days=6))
 
     data = week_streak(client, headers)
-    assert data == {"current": 1, "best": 2, "target": 2, "trained_days": 0, "week_done": False}
+    assert {key: data[key] for key in ("current", "best", "target", "trained_days", "week_done", "total_runs")} == {
+        "current": 1, "best": 2, "target": 2, "trained_days": 0, "week_done": False, "total_runs": 2,
+    }
+    assert data["top"] == [
+        {
+            "start": (older - timedelta(days=7)).isoformat(),
+            "end": (older + timedelta(days=6)).isoformat(),
+            "length": 2,
+            "current": False,
+        },
+        {"start": last.isoformat(), "end": (last + timedelta(days=6)).isoformat(), "length": 1, "current": True},
+    ]
