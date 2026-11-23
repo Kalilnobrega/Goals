@@ -457,6 +457,43 @@ class ProgressPointSchema(BaseModel):
     right_estimated_1rm_kg: float | None = None
 
 
+class GymSchema(BaseModel):
+    id: int
+    name: str
+    sessions: int
+    current: bool
+
+
+class GymListSchema(BaseModel):
+    current_gym_id: int | None
+    gyms: list[GymSchema]
+
+
+class GymCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    make_current: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Dê um nome para a academia.")
+        return value
+
+
+class GymRenameSchema(GymCreateSchema):
+    pass
+
+
+class CurrentGymSchema(BaseModel):
+    gym_id: int
+
+
+class ExerciseGymSettingSchema(BaseModel):
+    gym_specific: bool | None = None
+
+
 class ProgressGymSchema(BaseModel):
     id: int
     name: str
@@ -1619,38 +1656,81 @@ class ChallengeInviteSchema(BaseModel):
     username: str = Field(max_length=40)
 
 
-class GymSchema(BaseModel):
+ReactionKind = Literal["strong", "fire", "clap", "wow"]
+
+
+class MediaSchema(BaseModel):
     id: int
+    url: str
+    width: int | None = None
+    height: int | None = None
+
+
+class ProgressPhotoSchema(MediaSchema):
+    taken_on: date | None = None
+    note: str | None = None
+
+
+class PostCreateSchema(BaseModel):
+    session_id: int | None = None
+    caption: str | None = Field(default=None, max_length=500)
+    activity: str | None = Field(default=None, max_length=40)
+    media_ids: list[int] = Field(default_factory=list, max_length=4)
+
+
+class PostAuthorSchema(BaseModel):
+    username: str | None
     name: str
-    sessions: int
-    current: bool
 
 
-class GymListSchema(BaseModel):
-    current_gym_id: int | None
-    gyms: list[GymSchema]
+class PostWorkoutSchema(BaseModel):
+    session_id: int
+    name: str
+    minutes: int
+    volume_kg: float
+    exercises: int
+    highlights: list[str]
 
 
-class GymCreateSchema(BaseModel):
-    name: str = Field(min_length=1, max_length=60)
-    make_current: bool = False
-
-    @field_validator("name")
-    @classmethod
-    def strip_name(cls, value: str) -> str:
-        value = " ".join(value.split())
-        if not value:
-            raise ValueError("Dê um nome para a academia.")
-        return value
-
-
-class GymRenameSchema(GymCreateSchema):
-    pass
+class PostSchema(BaseModel):
+    id: int
+    author: PostAuthorSchema
+    created_at: datetime
+    caption: str | None
+    activity: str | None
+    workout: PostWorkoutSchema | None
+    media: list[MediaSchema]
+    reactions: dict[str, int]
+    my_reaction: ReactionKind | None
+    comment_count: int
+    is_mine: bool
 
 
-class CurrentGymSchema(BaseModel):
-    gym_id: int
+class CommentSchema(BaseModel):
+    id: int
+    author: PostAuthorSchema
+    text: str
+    created_at: datetime
+    can_delete: bool
 
 
-class ExerciseGymSettingSchema(BaseModel):
-    gym_specific: bool | None = None
+class PostDetailSchema(PostSchema):
+    comments: list[CommentSchema]
+
+
+class FeedSchema(BaseModel):
+    posts: list[PostSchema]
+    next_before: int | None
+
+
+class ReactionSchema(BaseModel):
+    kind: ReactionKind
+
+
+class CommentCreateSchema(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
+class PostReportSchema(BaseModel):
+    reason: Literal["spam", "offensive", "fake", "other"]
+    details: str | None = Field(default=None, max_length=500)

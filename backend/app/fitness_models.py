@@ -340,6 +340,7 @@ class UserReport(Base):
     reported_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     reason = Column(String(20), nullable=False)
     details = Column(String(500), nullable=True)
+    post_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -375,4 +376,54 @@ class ChallengeInvite(Base):
     challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), primary_key=True)
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     invited_by = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Post(Base):
+    __tablename__ = "fitness_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_id = Column(ForeignKey("fitness_sessions.id", ondelete="CASCADE"), nullable=True, unique=True)
+    caption = Column(String(500), nullable=True)
+    activity = Column(String(40), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+    media = relationship("Media", order_by="Media.position", lazy="selectin")
+
+
+class Media(Base):
+    __tablename__ = "fitness_media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    post_id = Column(ForeignKey("fitness_posts.id", ondelete="CASCADE"), nullable=True, index=True)
+    kind = Column(String(10), nullable=False, default="post")
+    storage_key = Column(String(200), nullable=False, unique=True)
+    content_type = Column(String(30), nullable=False)
+    size = Column(Integer, nullable=False)
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+    taken_on = Column(Date, nullable=True)
+    note = Column(String(140), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class PostReaction(Base):
+    __tablename__ = "fitness_post_reactions"
+
+    post_id = Column(ForeignKey("fitness_posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    kind = Column(String(10), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class PostComment(Base):
+    __tablename__ = "fitness_post_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(ForeignKey("fitness_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    text = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

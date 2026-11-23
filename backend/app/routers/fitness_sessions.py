@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from app.fitness_gyms import is_specific, same_gym
+from app.fitness_media import purge_session_posts
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, and_, case, cast, func, literal, or_
 from sqlalchemy.exc import IntegrityError
@@ -598,7 +599,9 @@ def delete_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    db.delete(get_own_session(session_id, user, db))
+    workout_session = get_own_session(session_id, user, db)
+    purge_session_posts(db, workout_session.id)
+    db.delete(workout_session)
     db.commit()
     return {"message": "Treino excluído"}
 

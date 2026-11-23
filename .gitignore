@@ -37,3 +37,6 @@ Thumbs.db
 graphify-out/
 # Railway IaC SDK
 /node_modules/
+
+# Fotos do GymGoals em desenvolvimento
+backend/media/

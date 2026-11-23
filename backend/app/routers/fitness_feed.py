@@ -1,0 +1,367 @@
+import secrets
+from datetime import date, datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.dates import today_br
+from app.models import User
+from app.fitness_models import (
+    ChallengeMember, FitnessProfile, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
+)
+from app.fitness_schemas import (
+    CommentCreateSchema,
+    CommentSchema,
+    FeedSchema,
+    PostCreateSchema,
+    PostDetailSchema,
+    PostReportSchema,
+    PostSchema,
+    ProgressPhotoSchema,
+    ReactionSchema,
+)
+from app.fitness_media import delete_files
+from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
+from .auth import get_current_user
+from .fitness_sessions import COMPLETED
+from .fitness_social import can_view, has_blocked, is_close, own_profile, relation_to
+from .fitness_stats import session_facts
+
+fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
+
+PAGE_SIZE = 20
+MAX_MEDIA = 4
+PENDING_TTL = timedelta(days=1)
+NOT_FOUND = "Post não encontrado."
+
+
+def media_out(item: Media) -> dict:
+    return {"id": item.id, "url": media_url(item.id), "width": item.width, "height": item.height}
+
+
+def drop_stale_pending(db: Session, user_id: int) -> None:
+    limit = datetime.now(timezone.utc) - PENDING_TTL
+    stale = (
+        db.query(Media)
+        .filter(Media.user_id == user_id, Media.kind == "post", Media.post_id.is_(None), Media.created_at < limit)
+        .all()
+    )
+    if stale:
+        delete_files(stale)
+        for item in stale:
+            db.delete(item)
+        db.commit()
+
+
+@fitness_feed_router.post("/media", response_model=ProgressPhotoSchema)
+async def upload_media(
+    file: UploadFile = File(...),
+    kind: str = Form("post"),
+    width: int | None = Form(None),
+    height: int | None = Form(None),
+    taken_on: date | None = Form(None),
+    note: str | None = Form(None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if kind not in ("post", "progress"):
+        raise HTTPException(status_code=422, detail="Tipo de foto inválido.")
+    data = await file.read(MAX_BYTES + 1)
+    if len(data) > MAX_BYTES:
+        raise HTTPException(status_code=413, detail="A foto pode ter no máximo 8 MB.")
+    content_type = sniff(data)
+    if content_type is None:
+        raise HTTPException(status_code=415, detail="Envie uma foto em JPEG, PNG ou WebP.")
+    if taken_on and taken_on > today_br():
+        raise HTTPException(status_code=422, detail="A data da foto não pode ser no futuro.")
+    drop_stale_pending(db, user.id)
+    key = f"{user.id}/{secrets.token_urlsafe(16)}.{EXTENSIONS[content_type]}"
+    get_storage().save(key, data, content_type)
+    media = Media(
+        user_id=user.id,
+        kind=kind,
+        storage_key=key,
+        content_type=content_type,
+        size=len(data),
+        width=width if width and 0 < width < 20000 else None,
+        height=height if height and 0 < height < 20000 else None,
+        taken_on=(taken_on or today_br()) if kind == "progress" else None,
+        note=((note or "").strip()[:140] or None) if kind == "progress" else None,
+    )
+    db.add(media)
+    db.commit()
+    return {**media_out(media), "taken_on": media.taken_on, "note": media.note}
+
+
+@fitness_feed_router.get("/media/{media_id}")
+def serve_media(media_id: int, exp: int = Query(...), sig: str = Query(..., max_length=64), db: Session = Depends(get_db)):
+    if not valid_signature(media_id, exp, sig):
+        raise HTTPException(status_code=403, detail="Link da foto expirado.")
+    media = db.get(Media, media_id)
+    data = get_storage().read(media.storage_key) if media else None
+    if data is None:
+        raise HTTPException(status_code=404, detail="Foto não encontrada.")
+    return Response(content=data, media_type=media.content_type, headers={"Cache-Control": "private, max-age=3600"})
+
+
+@fitness_feed_router.get("/progress-photos", response_model=list[ProgressPhotoSchema])
+def list_progress_photos(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    photos = (
+        db.query(Media)
+        .filter(Media.user_id == user.id, Media.kind == "progress")
+        .order_by(Media.taken_on.desc(), Media.id.desc())
+        .all()
+    )
+    return [{**media_out(p), "taken_on": p.taken_on, "note": p.note} for p in photos]
+
+
+@fitness_feed_router.delete("/media/{media_id}", status_code=204)
+def delete_media(media_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    media = db.get(Media, media_id)
+    if media is None or media.user_id != user.id or media.post_id is not None:
+        raise HTTPException(status_code=404, detail="Foto não encontrada.")
+    delete_files([media])
+    db.delete(media)
+    db.commit()
+
+
+def author_profile(db: Session, user_id: int) -> tuple[User, FitnessProfile | None]:
+    return db.get(User, user_id), db.get(FitnessProfile, user_id)
+
+
+def can_see(db: Session, viewer: int, author: int) -> bool:
+    if viewer == author:
+        return True
+    if has_blocked(db, author, viewer) or has_blocked(db, viewer, author):
+        return False
+    profile = db.get(FitnessProfile, author)
+    if profile is None or not profile.username:
+        return False
+    relation = relation_to(db, viewer, author)
+    return can_view(profile.visibility or "friends", relation, is_close(db, viewer, author, relation))
+
+
+def network(db: Session, me: int) -> set[int]:
+    friends = db.query(Friendship).filter(
+        Friendship.status == "accepted", or_(Friendship.user_low_id == me, Friendship.user_high_id == me)
+    ).all()
+    ids = {f.user_high_id if f.user_low_id == me else f.user_low_id for f in friends}
+    mine = db.query(ChallengeMember.challenge_id).filter(ChallengeMember.user_id == me)
+    ids |= {row.user_id for row in db.query(ChallengeMember.user_id).filter(ChallengeMember.challenge_id.in_(mine)).all()}
+    ids.discard(me)
+    blocked = {row.blocked_id for row in db.query(UserBlock.blocked_id).filter(UserBlock.blocker_id == me)}
+    blocked |= {row.blocker_id for row in db.query(UserBlock.blocker_id).filter(UserBlock.blocked_id == me)}
+    private = {
+        row.user_id for row in db.query(FitnessProfile.user_id).filter(FitnessProfile.user_id.in_(ids), FitnessProfile.visibility == "private")
+    }
+    return (ids - blocked - private) | {me}
+
+
+def workout_summary(db: Session, post: Post) -> dict | None:
+    if post.session_id is None:
+        return None
+    session = db.get(WorkoutSession, post.session_id)
+    if session is None:
+        return None
+    facts = session_facts(session)
+    ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
+    names = [e["name"] for e in ranked] + [c["name"] for c in facts["cardio"]]
+    return {
+        "session_id": session.id,
+        "name": session.name,
+        "minutes": round(facts["minutes"]),
+        "volume_kg": round(facts["volume"], 1),
+        "exercises": len(facts["exercises"]) + len(facts["cardio"]),
+        "highlights": names[:3],
+    }
+
+
+def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
+    ids = [p.id for p in posts]
+    counts: dict[int, dict[str, int]] = {pid: {} for pid in ids}
+    mine: dict[int, str] = {}
+    comments: dict[int, int] = {}
+    if ids:
+        for row in db.query(PostReaction.post_id, PostReaction.kind, func.count()).filter(PostReaction.post_id.in_(ids)).group_by(PostReaction.post_id, PostReaction.kind):
+            counts[row[0]][row[1]] = row[2]
+        mine = dict(db.query(PostReaction.post_id, PostReaction.kind).filter(PostReaction.post_id.in_(ids), PostReaction.user_id == me).all())
+        comments = dict(db.query(PostComment.post_id, func.count()).filter(PostComment.post_id.in_(ids)).group_by(PostComment.post_id).all())
+    result = []
+    for post in posts:
+        user, profile = author_profile(db, post.user_id)
+        result.append({
+            "id": post.id,
+            "author": {"username": profile.username if profile else None, "name": user.name},
+            "created_at": post.created_at,
+            "caption": post.caption,
+            "activity": post.activity,
+            "workout": workout_summary(db, post),
+            "media": [media_out(m) for m in post.media],
+            "reactions": counts.get(post.id, {}),
+            "my_reaction": mine.get(post.id),
+            "comment_count": comments.get(post.id, 0),
+            "is_mine": post.user_id == me,
+        })
+    return result
+
+
+def visible_post(db: Session, post_id: int, me: int) -> Post:
+    post = db.get(Post, post_id)
+    if post is None or not can_see(db, me, post.user_id):
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return post
+
+
+@fitness_feed_router.post("/posts", response_model=PostSchema)
+def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    caption = (data.caption or "").strip() or None
+    activity = (data.activity or "").strip() or None
+    if len(set(data.media_ids)) != len(data.media_ids):
+        raise HTTPException(status_code=422, detail="Foto repetida no post.")
+    media = db.query(Media).filter(Media.id.in_(data.media_ids)).all() if data.media_ids else []
+    if len(media) != len(data.media_ids) or any(m.user_id != me.user_id or m.kind != "post" or m.post_id is not None for m in media):
+        raise HTTPException(status_code=422, detail="Alguma foto não pôde ser usada. Envie de novo.")
+    if data.session_id is not None:
+        session = db.get(WorkoutSession, data.session_id)
+        if session is None or session.user_id != me.user_id or session.status != COMPLETED:
+            raise HTTPException(status_code=404, detail="Treino não encontrado.")
+        if db.query(Post.id).filter(Post.session_id == session.id).first():
+            raise HTTPException(status_code=409, detail="Esse treino já foi publicado.")
+        activity = None
+    elif not (caption or media or activity):
+        raise HTTPException(status_code=422, detail="Escreva algo, escolha a atividade ou adicione uma foto.")
+    post = Post(user_id=me.user_id, session_id=data.session_id, caption=caption, activity=activity)
+    db.add(post)
+    db.flush()
+    order = {media_id: index for index, media_id in enumerate(data.media_ids)}
+    for item in media:
+        item.post_id = post.id
+        item.position = order[item.id]
+    db.commit()
+    db.refresh(post)
+    return serialize(db, [post], me.user_id)[0]
+
+
+@fitness_feed_router.get("/feed", response_model=FeedSchema)
+def get_feed(
+    before: int | None = Query(default=None),
+    me: FitnessProfile = Depends(own_profile),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Post).filter(Post.user_id.in_(network(db, me.user_id)))
+    if before is not None:
+        query = query.filter(Post.id < before)
+    posts = query.order_by(Post.id.desc()).limit(PAGE_SIZE + 1).all()
+    more = len(posts) > PAGE_SIZE
+    posts = posts[:PAGE_SIZE]
+    return {"posts": serialize(db, posts, me.user_id), "next_before": posts[-1].id if more else None}
+
+
+@fitness_feed_router.get("/users/{username}/posts", response_model=FeedSchema)
+def get_user_posts(
+    username: str,
+    before: int | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.query(FitnessProfile).filter(FitnessProfile.username == username.lower().lstrip("@")).first()
+    if profile is None or not can_see(db, user.id, profile.user_id):
+        return {"posts": [], "next_before": None}
+    query = db.query(Post).filter(Post.user_id == profile.user_id)
+    if before is not None:
+        query = query.filter(Post.id < before)
+    posts = query.order_by(Post.id.desc()).limit(PAGE_SIZE + 1).all()
+    more = len(posts) > PAGE_SIZE
+    posts = posts[:PAGE_SIZE]
+    return {"posts": serialize(db, posts, user.id), "next_before": posts[-1].id if more else None}
+
+
+def comment_out(db: Session, comment: PostComment, post: Post, me: int) -> dict:
+    user, profile = author_profile(db, comment.user_id)
+    return {
+        "id": comment.id,
+        "author": {"username": profile.username if profile else None, "name": user.name},
+        "text": comment.text,
+        "created_at": comment.created_at,
+        "can_delete": me in (comment.user_id, post.user_id),
+    }
+
+
+@fitness_feed_router.get("/posts/{post_id}", response_model=PostDetailSchema)
+def get_post(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, user.id)
+    comments = db.query(PostComment).filter(PostComment.post_id == post.id).order_by(PostComment.id).all()
+    visible = [c for c in comments if not has_blocked(db, user.id, c.user_id) and not has_blocked(db, c.user_id, user.id)]
+    return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in visible]}
+
+
+@fitness_feed_router.delete("/posts/{post_id}", status_code=204)
+def delete_post(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = db.get(Post, post_id)
+    if post is None or post.user_id != user.id:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    delete_files(list(post.media))
+    for item in list(post.media):
+        db.delete(item)
+    db.query(PostReaction).filter(PostReaction.post_id == post.id).delete()
+    db.query(PostComment).filter(PostComment.post_id == post.id).delete()
+    db.delete(post)
+    db.commit()
+
+
+@fitness_feed_router.put("/posts/{post_id}/reaction", response_model=PostSchema)
+def react(post_id: int, data: ReactionSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, me.user_id)
+    reaction = db.get(PostReaction, (post.id, me.user_id))
+    if reaction is None:
+        db.add(PostReaction(post_id=post.id, user_id=me.user_id, kind=data.kind))
+    else:
+        reaction.kind = data.kind
+    db.commit()
+    return serialize(db, [post], me.user_id)[0]
+
+
+@fitness_feed_router.delete("/posts/{post_id}/reaction", response_model=PostSchema)
+def unreact(post_id: int, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, me.user_id)
+    db.query(PostReaction).filter(PostReaction.post_id == post.id, PostReaction.user_id == me.user_id).delete()
+    db.commit()
+    return serialize(db, [post], me.user_id)[0]
+
+
+@fitness_feed_router.post("/posts/{post_id}/comments", response_model=CommentSchema)
+def add_comment(post_id: int, data: CommentCreateSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, me.user_id)
+    text = data.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Escreva um comentário.")
+    comment = PostComment(post_id=post.id, user_id=me.user_id, text=text)
+    db.add(comment)
+    db.commit()
+    return comment_out(db, comment, post, me.user_id)
+
+
+@fitness_feed_router.delete("/comments/{comment_id}", status_code=204)
+def delete_comment(comment_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    comment = db.get(PostComment, comment_id)
+    post = db.get(Post, comment.post_id) if comment else None
+    if comment is None or user.id not in (comment.user_id, post.user_id):
+        raise HTTPException(status_code=404, detail="Comentário não encontrado.")
+    db.delete(comment)
+    db.commit()
+
+
+@fitness_feed_router.post("/posts/{post_id}/report", status_code=201)
+def report_post(post_id: int, data: PostReportSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, me.user_id)
+    if post.user_id == me.user_id:
+        raise HTTPException(status_code=422, detail="Você não pode denunciar o próprio post.")
+    db.add(UserReport(
+        reporter_id=me.user_id,
+        reported_id=post.user_id,
+        reason=data.reason,
+        details=(data.details or "").strip() or None,
+        post_id=post.id,
+    ))
+    db.commit()
+    return {"message": "Denúncia enviada. Obrigado por avisar."}
