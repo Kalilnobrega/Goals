@@ -431,3 +431,18 @@ class PostComment(Base):
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     text = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Notification(Base):
+    __tablename__ = "fitness_notifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(20), nullable=False)
+    post_id = Column(ForeignKey("fitness_posts.id", ondelete="CASCADE"), nullable=True)
+    challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), nullable=True)
+    comment_id = Column(ForeignKey("fitness_post_comments.id", ondelete="CASCADE"), nullable=True)
+    detail = Column(String(20), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)

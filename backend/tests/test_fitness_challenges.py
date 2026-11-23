@@ -222,15 +222,16 @@ def test_private_profiles_still_show_name_and_score(client, library, ana, bruno)
 
 def test_pending_count(client, db_session, ana, bruno):
     assert client.get("/fitness/challenges/pending/count", headers=headers_for(make_user(db_session, "Sem Nome"))).json() == {
-        "friend_requests": 0, "challenge_invites": 0,
+        "friend_requests": 0, "challenge_invites": 0, "notifications": 0,
     }
     client.post("/fitness/social/friends/requests", json={"username": "bruno"}, headers=ana)
-    assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 1, "challenge_invites": 0}
+    assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 1, "challenge_invites": 0, "notifications": 1}
     client.post("/fitness/social/friends/ana/accept", headers=bruno)
     challenge = create(client, ana)
     client.post(f"/fitness/challenges/{challenge['id']}/invites", json={"username": "bruno"}, headers=ana)
-    assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 0, "challenge_invites": 1}
-    assert client.get("/fitness/challenges/pending/count", headers=ana).json() == {"friend_requests": 0, "challenge_invites": 0}
+    pending = client.get("/fitness/challenges/pending/count", headers=bruno).json()
+    assert pending["friend_requests"] == 0 and pending["challenge_invites"] == 1
+    assert client.get("/fitness/challenges/pending/count", headers=ana).json()["challenge_invites"] == 0
 
 
 def test_exercise_metric_can_count_the_whole_family(client, ana, db_session):

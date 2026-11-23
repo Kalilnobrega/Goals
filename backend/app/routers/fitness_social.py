@@ -14,6 +14,7 @@ from app.fitness_schemas import (
     SocialProfileSchema,
     SocialUserSchema,
 )
+from app.fitness_notifications import clear, notify
 from .auth import get_current_user
 from .fitness_profile import normalize_username
 from .fitness_plans import active_plan
@@ -270,11 +271,14 @@ def send_friend_request(
     if friendship is None:
         low, high = pair(me.user_id, target.user_id)
         db.add(Friendship(user_low_id=low, user_high_id=high, requester_id=me.user_id, status="pending"))
+        notify(db, target.user_id, me.user_id, "friend_request")
     elif friendship.status == "accepted":
         raise HTTPException(status_code=409, detail="Vocês já são amigos.")
     elif friendship.requester_id != me.user_id:
         friendship.status = "accepted"
         friendship.accepted_at = datetime.now(timezone.utc)
+        clear(db, me.user_id, target.user_id, "friend_request")
+        notify(db, target.user_id, me.user_id, "friend_accepted")
     try:
         db.commit()
     except IntegrityError:
@@ -294,6 +298,8 @@ def accept_friend_request(
         raise HTTPException(status_code=404, detail="Pedido de amizade não encontrado.")
     friendship.status = "accepted"
     friendship.accepted_at = datetime.now(timezone.utc)
+    clear(db, me.user_id, target.user_id, "friend_request")
+    notify(db, target.user_id, me.user_id, "friend_accepted")
     db.commit()
     return social_user(db, me.user_id, target)
 
@@ -308,6 +314,9 @@ def remove_friendship(
     friendship = friendship_between(db, me.user_id, target.user_id)
     if friendship is None:
         raise HTTPException(status_code=404, detail="Não há amizade nem pedido com essa pessoa.")
+    if friendship.status == "pending":
+        clear(db, target.user_id, me.user_id, "friend_request")
+        clear(db, me.user_id, target.user_id, "friend_request")
     db.delete(friendship)
     db.commit()
     return social_user(db, me.user_id, target)

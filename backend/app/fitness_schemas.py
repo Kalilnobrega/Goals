@@ -1767,3 +1767,22 @@ class CopiedWorkoutSchema(BaseModel):
     workout_id: int
     name: str
     skipped: int
+
+
+class NotificationSchema(BaseModel):
+    id: int
+    kind: Literal["friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment"]
+    actor: PostAuthorSchema
+    created_at: datetime
+    read: bool
+    post_id: int | None = None
+    challenge_id: int | None = None
+    challenge_name: str | None = None
+    detail: str | None = None
+    preview: str | None = None
+
+
+class NotificationsSchema(BaseModel):
+    notifications: list[NotificationSchema]
+    next_before: int | None
+    unread: int

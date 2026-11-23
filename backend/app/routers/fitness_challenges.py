@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship, Notification
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
@@ -18,6 +18,7 @@ from app.fitness_schemas import (
     WEIGHT_METRICS,
 )
 from app.fitness_load import BodyWeights
+from app.fitness_notifications import clear, notify
 from .auth import get_current_user
 from .fitness_social import own_profile, find_profile, friendship_between, has_blocked
 from .fitness_stats import completed_facts, plan_adherence, weight_records
@@ -334,6 +335,7 @@ def join(db: Session, challenge: Challenge, user_id: int, accept_weight: bool = 
         if len(challenge.members) >= MAX_MEMBERS:
             raise HTTPException(status_code=409, detail="Esse desafio já está cheio.")
         db.add(ChallengeMember(challenge_id=challenge.id, user_id=user_id))
+        notify(db, challenge.owner_id, user_id, "challenge_joined", challenge_id=challenge.id)
     db.query(ChallengeInvite).filter(
         ChallengeInvite.challenge_id == challenge.id, ChallengeInvite.user_id == user_id
     ).delete()
@@ -510,6 +512,7 @@ def invite_friend(
         raise HTTPException(status_code=409, detail="Essa pessoa já está no desafio.")
     if db.get(ChallengeInvite, (challenge.id, target.user_id)) is None:
         db.add(ChallengeInvite(challenge_id=challenge.id, user_id=target.user_id, invited_by=me.user_id))
+        notify(db, target.user_id, me.user_id, "challenge_invite", challenge_id=challenge.id)
         db.commit()
     return {"message": "Convite enviado."}
 
@@ -571,6 +574,7 @@ def remove_member(
 def delete_challenge(challenge_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     challenge = get_owned_challenge(db, challenge_id, user.id)
     db.query(ChallengeInvite).filter(ChallengeInvite.challenge_id == challenge.id).delete()
+    db.query(Notification).filter(Notification.challenge_id == challenge.id).delete(synchronize_session=False)
     db.delete(challenge)
     db.commit()
 
@@ -579,7 +583,7 @@ def delete_challenge(challenge_id: int, user: User = Depends(get_current_user), 
 def pending_count(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.get(FitnessProfile, user.id)
     if profile is None or not profile.username:
-        return {"friend_requests": 0, "challenge_invites": 0}
+        return {"friend_requests": 0, "challenge_invites": 0, "notifications": 0}
     requests = (
         db.query(func.count(Friendship.id))
         .filter(
@@ -595,4 +599,9 @@ def pending_count(user: User = Depends(get_current_user), db: Session = Depends(
         .filter(ChallengeInvite.user_id == user.id, Challenge.end_date >= today_br())
         .scalar()
     )
-    return {"friend_requests": requests, "challenge_invites": invites}
+    unread = (
+        db.query(func.count(Notification.id))
+        .filter(Notification.user_id == user.id, Notification.read_at.is_(None))
+        .scalar()
+    )
+    return {"friend_requests": requests, "challenge_invites": invites, "notifications": unread}

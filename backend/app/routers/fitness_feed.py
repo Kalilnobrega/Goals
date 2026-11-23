@@ -7,7 +7,7 @@ from app.database import get_db
 from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
-    ChallengeMember, Exercise, FitnessProfile, Workout, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
+    ChallengeMember, Exercise, FitnessProfile, Notification, Workout, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
 )
 from app.fitness_schemas import (
     CommentCreateSchema,
@@ -27,6 +27,7 @@ from app.fitness_schemas import (
 from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
+from app.fitness_notifications import clear, notify, renotify
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
 from .fitness import build_workout_cardio, build_workout_exercises
@@ -475,6 +476,7 @@ def delete_post(post_id: int, user: User = Depends(get_current_user), db: Sessio
     delete_files(list(post.media))
     for item in list(post.media):
         db.delete(item)
+    db.query(Notification).filter(Notification.post_id == post.id).delete(synchronize_session=False)
     db.query(PostReaction).filter(PostReaction.post_id == post.id).delete()
     db.query(PostComment).filter(PostComment.post_id == post.id).delete()
     db.delete(post)
@@ -489,6 +491,7 @@ def react(post_id: int, data: ReactionSchema, me: FitnessProfile = Depends(own_p
         db.add(PostReaction(post_id=post.id, user_id=me.user_id, kind=data.kind))
     else:
         reaction.kind = data.kind
+    renotify(db, post.user_id, me.user_id, "post_reaction", post_id=post.id, detail=data.kind)
     db.commit()
     return serialize(db, [post], me.user_id)[0]
 
@@ -497,6 +500,7 @@ def react(post_id: int, data: ReactionSchema, me: FitnessProfile = Depends(own_p
 def unreact(post_id: int, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, me.user_id)
     db.query(PostReaction).filter(PostReaction.post_id == post.id, PostReaction.user_id == me.user_id).delete()
+    clear(db, post.user_id, me.user_id, "post_reaction", post_id=post.id)
     db.commit()
     return serialize(db, [post], me.user_id)[0]
 
@@ -509,6 +513,9 @@ def add_comment(post_id: int, data: CommentCreateSchema, me: FitnessProfile = De
         raise HTTPException(status_code=422, detail="Escreva um comentário.")
     comment = PostComment(post_id=post.id, user_id=me.user_id, text=text)
     db.add(comment)
+    db.flush()
+    if post.user_id != me.user_id:
+        notify(db, post.user_id, me.user_id, "post_comment", post_id=post.id, comment_id=comment.id)
     db.commit()
     return comment_out(db, comment, post, me.user_id)
 
@@ -519,6 +526,7 @@ def delete_comment(comment_id: int, user: User = Depends(get_current_user), db: 
     post = db.get(Post, comment.post_id) if comment else None
     if comment is None or user.id not in (comment.user_id, post.user_id):
         raise HTTPException(status_code=404, detail="Comentário não encontrado.")
+    db.query(Notification).filter(Notification.comment_id == comment.id).delete(synchronize_session=False)
     db.delete(comment)
     db.commit()
 
