@@ -12,7 +12,7 @@ import GymSheet from '../../../../components/gym/GymSheet';
 import styles from './compose.module.css';
 
 const MAX_PHOTOS = 4;
-const ACTIVITIES = ['Corrida', 'Caminhada', 'Bike', 'Natação', 'Futebol', 'Luta', 'Yoga', 'Outra'];
+const ACTIVITIES = ['Academia', 'Corrida', 'Caminhada', 'Bike', 'Natação', 'Futebol', 'Luta', 'Yoga', 'Outra'];
 
 function Composer() {
   const router = useRouter();
