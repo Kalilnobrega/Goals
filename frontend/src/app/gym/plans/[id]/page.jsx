@@ -95,7 +95,6 @@ export default function PlanDetailPage() {
 
       <div className={styles.actions}>
         <Link href={`/gym/plans/${plan.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
-        <button type="button" className={`${styles.edit} ${styles.share}`} onClick={() => setSharing(true)} aria-label="Compartilhar" title="Compartilhar"><Share2 size={18} /></button>
         <button
           type="button"
           className={plan.is_active ? styles.secondary : styles.primary}
@@ -104,6 +103,7 @@ export default function PlanDetailPage() {
         >
           {plan.is_active ? 'Desativar' : 'Usar este plano'}
         </button>
+        <button type="button" className={`${styles.edit} ${styles.share}`} onClick={() => setSharing(true)} aria-label="Compartilhar" title="Compartilhar"><Share2 size={18} /></button>
       </div>
 
       <section className={styles.card} aria-labelledby="plan-week-title">
