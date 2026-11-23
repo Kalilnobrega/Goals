@@ -207,12 +207,7 @@ export default function StatsPage() {
   return (
     <>
       <main className={styles.main}>
-        <div className={`${styles.pageHero} glass`}>
-          <div>
-            <h1 className={styles.title}>Estatísticas</h1>
-            <p className={styles.sub}>Seu histórico de tarefas, registros e ciclos</p>
-          </div>
-        </div>
+        <h1 className="visually-hidden">Estatísticas</h1>
 
         {error && <p className={styles.error}>{error}</p>}
 

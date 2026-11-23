@@ -307,27 +307,7 @@ export default function GoalsPage() {
     <>
       <main className={styles.main}>
 
-        <div className={`${styles.pageHero} glass`}>
-          <div className={styles.heroLeft}>
-            <div className={styles.heroText}>
-              <h1 className={styles.title}>Minhas metas</h1>
-              <p className={styles.sub}>
-                <span className={styles.countBadge}>{goals.length}</span>
-                <span className={styles.subLabel}>
-                  meta{goals.length !== 1 ? 's' : ''} cadastrada{goals.length !== 1 ? 's' : ''}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className={styles.heroActions}>
-            <button className={styles.btnSuper} onClick={() => setModal('super')}>
-              <SuperGoalIcon size={16} /> <span>Supermeta</span>
-            </button>
-            <button className={styles.btnNew} onClick={() => setModal('goal')}>
-              <Plus size={16} /> Nova meta
-            </button>
-          </div>
-        </div>
+        <h1 className="visually-hidden">Minhas metas</h1>
 
         <div className={`${styles.toolbar} ${searchOpen ? styles.toolbarSearching : ''} glass`}>
           <div className={styles.searchWrap}>
@@ -361,6 +341,14 @@ export default function GoalsPage() {
                 {f.label}
               </button>
             ))}
+          </div>
+          <div className={styles.heroActions}>
+            <button className={styles.btnSuper} onClick={() => setModal('super')} aria-label="Nova supermeta">
+              <SuperGoalIcon size={16} /> <span className={styles.btnSuperLabel}>Supermeta</span>
+            </button>
+            <button className={styles.btnNew} onClick={() => setModal('goal')}>
+              <Plus size={16} /> Nova meta
+            </button>
           </div>
         </div>
 
