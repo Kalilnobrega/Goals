@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Activity, CalendarDays, Info, MessageCircle, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
+  Activity, CalendarDays, Info, MessageCircle, MoreHorizontal, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
 } from 'lucide-react';
 import {
   deleteChallenge, getChallenge, getFriends, inviteToChallenge, leaveChallenge, peekCache, removeChallengeMember,
@@ -84,6 +84,12 @@ export default function ChallengePage() {
   const [error, setError] = useState('');
   const [inviting, setInviting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const fromMenu = (action) => {
+    setMenuOpen(false);
+    action();
+  };
   const closeDetails = useCallback(() => setShowDetails(false), []);
 
   const load = useCallback(() => {
@@ -175,7 +181,14 @@ export default function ChallengePage() {
 
   return (
     <div className={styles.page}>
-      <Link href="/gym/social/desafios" className={styles.back}><ChevronLeft size={18} /> Desafios</Link>
+      <div className={styles.topBar}>
+        <Link href="/gym/social/desafios" className={styles.back}><ChevronLeft size={18} /> Desafios</Link>
+        {challenge && !error && (
+          <button type="button" className={styles.moreButton} onClick={() => setMenuOpen(true)} aria-label="Opções do desafio">
+            <MoreHorizontal size={20} />
+          </button>
+        )}
+      </div>
 
       {error && <p className={styles.error}>{error}</p>}
       {!challenge && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando desafio" />}
@@ -186,23 +199,13 @@ export default function ChallengePage() {
             <div className={styles.heroTop}>
               <span className={`${styles.status} ${styles[`status_${challenge.status}`]}`}>{STATUS_LABEL[challenge.status]}</span>
               <span className={styles.timeLeft}>{timeLeftLabel(challenge)}</span>
-              {!finished && (
-                <button type="button" className={styles.headerInvite} onClick={() => setInviting(true)} aria-label="Convidar" title="Convidar">
-                  <UserPlus size={16} />
-                </button>
-              )}
             </div>
             <h1 className={styles.name}>{challenge.name}</h1>
-            <div className={styles.metaRow}>
-              <p className={styles.meta}>
-                <CalendarDays size={14} /> {formatRange(challenge.start_date, challenge.end_date)}
-                <span aria-hidden="true">·</span>
-                <Users size={14} /> {challenge.member_count} {challenge.member_count === 1 ? 'participante' : 'participantes'}
-              </p>
-              <button type="button" className={styles.detailsButton} onClick={() => setShowDetails(true)}>
-                <Info size={14} /> Detalhes
-              </button>
-            </div>
+            <p className={styles.meta}>
+              <CalendarDays size={14} /> {formatRange(challenge.start_date, challenge.end_date)}
+              <span aria-hidden="true">·</span>
+              <Users size={14} /> {challenge.member_count} {challenge.member_count === 1 ? 'participante' : 'participantes'}
+            </p>
           </section>
 
           <GymSheet open={showDetails} onClose={closeDetails} title="Detalhes do desafio">
@@ -350,13 +353,27 @@ export default function ChallengePage() {
           </section>
           )}
 
-          <div className={styles.footer}>
-            {challenge.is_owner ? (
-              <button type="button" className={styles.danger} onClick={remove}><Trash2 size={16} /> Excluir desafio</button>
-            ) : (
-              <button type="button" className={styles.danger} onClick={leave}><LogOut size={16} /> Sair do desafio</button>
-            )}
-          </div>
+          <GymSheet open={menuOpen} onClose={closeMenu} title={challenge.name}>
+            <div className={styles.menu}>
+              {!finished && (
+                <button type="button" className={styles.menuItem} onClick={() => fromMenu(() => setInviting(true))}>
+                  <UserPlus size={18} /> Convidar
+                </button>
+              )}
+              <button type="button" className={styles.menuItem} onClick={() => fromMenu(() => setShowDetails(true))}>
+                <Info size={18} /> Detalhes do desafio
+              </button>
+              {challenge.is_owner ? (
+                <button type="button" className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => fromMenu(remove)}>
+                  <Trash2 size={18} /> Excluir desafio
+                </button>
+              ) : (
+                <button type="button" className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => fromMenu(leave)}>
+                  <LogOut size={18} /> Sair do desafio
+                </button>
+              )}
+            </div>
+          </GymSheet>
 
           <GymSheet open={inviting} onClose={closeInvite} title="Convidar">
             {inviting && (
