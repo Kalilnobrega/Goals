@@ -11,6 +11,8 @@ import { formatRange, formatScore, metricLabel, minRuleLabel } from '../../../..
 import { useToast } from '../../../../components/Toast';
 import SocialTabs from '../../../../components/gym/social/SocialTabs';
 import UsernameSetup from '../../../../components/gym/social/UsernameSetup';
+import { SocialActionButton, SocialActionFab } from '../../../../components/gym/social/SocialAction';
+import social from '../../../../components/gym/social/social.module.css';
 import styles from './challenges.module.css';
 
 function ordinal(position) {
@@ -119,7 +121,10 @@ export default function ChallengesPage() {
     <div className={styles.page}>
       <h1 className="visually-hidden">Social: desafios</h1>
 
-      <SocialTabs />
+      <div className={social.toolbar}>
+        <SocialTabs />
+        {profile?.username && <SocialActionButton href="/gym/social/desafios/novo" label="Criar desafio" icon={Plus} />}
+      </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
@@ -129,9 +134,7 @@ export default function ChallengesPage() {
 
       {profile?.username && (
         <>
-          <Link href="/gym/social/desafios/novo" className={styles.create}>
-            <Plus size={18} /> Criar desafio
-          </Link>
+          <SocialActionFab href="/gym/social/desafios/novo" label="Criar desafio" icon={Plus} />
 
           {!lists && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando desafios" />}
 

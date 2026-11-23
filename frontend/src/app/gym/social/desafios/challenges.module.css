@@ -4,21 +4,6 @@
   gap: 14px;
 }
 
-.create {
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 16px;
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1rem;
-  text-decoration: none;
-}
-
 .group {
   display: flex;
   flex-direction: column;

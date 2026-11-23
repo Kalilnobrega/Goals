@@ -4,20 +4,6 @@
   gap: 10px;
 }
 
-.checkin {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 16px;
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-  font-family: var(--font-display);
-  font-weight: 700;
-  text-decoration: none;
-}
-
 .card {
   display: flex;
   flex-direction: column;
@@ -212,4 +198,15 @@
   height: 200px;
   border-radius: 20px;
   background: var(--gym-surface);
+}
+
+.desktopAction {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktopAction {
+    display: flex;
+    justify-content: flex-end;
+  }
 }

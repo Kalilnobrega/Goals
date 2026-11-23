@@ -6,6 +6,7 @@ import { getChallengeActivity } from '../../../lib/api';
 import { apiError, formatDay, formatVolume, plural } from '../../../lib/gym';
 import Avatar from './Avatar';
 import { PostPhotos } from './PostCard';
+import { SocialActionButton, SocialActionFab } from './SocialAction';
 import styles from './ChallengeActivity.module.css';
 
 function ActivityCard({ item, challengeId, active }) {
@@ -94,9 +95,12 @@ export default function ChallengeActivity({ challenge }) {
   return (
     <section className={styles.wrap}>
       {canCheckin && (
-        <Link href={`/gym/social/publicar?checkin=1&desafio=${challenge.id}`} className={styles.checkin}>
-          <Camera size={18} /> Fazer check-in manual
-        </Link>
+        <>
+          <div className={styles.desktopAction}>
+            <SocialActionButton href={`/gym/social/publicar?checkin=1&desafio=${challenge.id}`} label="Fazer check-in manual" icon={Camera} />
+          </div>
+          <SocialActionFab href={`/gym/social/publicar?checkin=1&desafio=${challenge.id}`} label="Fazer check-in manual" icon={Camera} />
+        </>
       )}
       {error && <p className={styles.error}>{error}</p>}
       {!data && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando atividade" />}

@@ -1,12 +1,13 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Camera, Newspaper } from 'lucide-react';
+import { Newspaper, Plus } from 'lucide-react';
 import { getFeed, getFitnessProfile, peekCache } from '../../../lib/api';
 import { apiError } from '../../../lib/gym';
 import SocialTabs from '../../../components/gym/social/SocialTabs';
 import UsernameSetup from '../../../components/gym/social/UsernameSetup';
 import PostCard from '../../../components/gym/social/PostCard';
+import { SocialActionButton, SocialActionFab } from '../../../components/gym/social/SocialAction';
+import social from '../../../components/gym/social/social.module.css';
 import styles from './feed.module.css';
 
 export default function FeedPage() {
@@ -47,7 +48,10 @@ export default function FeedPage() {
     <div className={styles.page}>
       <h1 className="visually-hidden">Social: feed</h1>
 
-      <SocialTabs />
+      <div className={social.toolbar}>
+        <SocialTabs />
+        {profile?.username && <SocialActionButton href="/gym/social/publicar" label="Publicar" icon={Plus} />}
+      </div>
 
       {error && <p className={styles.error}>{error}</p>}
       {!profile && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando" />}
@@ -55,9 +59,7 @@ export default function FeedPage() {
 
       {profile?.username && (
         <>
-          <Link href="/gym/social/publicar" className={styles.compose}>
-            <Camera size={18} /> Publicar
-          </Link>
+          <SocialActionFab href="/gym/social/publicar" label="Publicar" icon={Plus} />
 
           {!feed && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando feed" />}
 
