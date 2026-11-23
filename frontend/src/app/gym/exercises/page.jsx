@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
+import { Plus, Search, X, ChevronRight, SearchX, Pencil, Share2 } from 'lucide-react';
+import ShareSheet from '../../../components/gym/social/ShareSheet';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache, getGyms } from '../../../lib/api';
 import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyLabelGroups } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
@@ -25,6 +26,8 @@ export default function ExercisesPage() {
   const filters = useExerciseFilters(exercises);
   const { query, setQuery, group: filter, muscle, roleOf, visible, signature } = filters;
   const [sheet, setSheet] = useState(null);
+  const [sharingId, setSharingId] = useState(null);
+  const closeShare = useCallback(() => setSharingId(null), []);
   const toast = useToast();
   const confirmAction = useConfirm();
 
@@ -270,6 +273,18 @@ export default function ExercisesPage() {
                 <Pencil size={18} /> Editar exercício
               </button>
             )}
+            {detail.is_custom && (
+              <button
+                type="button"
+                className={sheetStyles.secondary}
+                onClick={() => {
+                  setSheet(null);
+                  setSharingId(detail.id);
+                }}
+              >
+                <Share2 size={18} /> Compartilhar exercício
+              </button>
+            )}
           </div>
         )}
         {sheet && sheet.mode !== 'detail' && (
@@ -281,6 +296,7 @@ export default function ExercisesPage() {
           />
         )}
       </GymSheet>
+      <ShareSheet open={!!sharingId} onClose={closeShare} kind="exercise" itemId={sharingId} />
     </div>
   );
 }

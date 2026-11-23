@@ -26,7 +26,7 @@ function describe(item) {
     }
     case 'shared_item':
       return {
-        text: <>{name} te enviou {item.detail === 'plan' ? 'um plano' : 'uma ficha'}</>,
+        text: <>{name} te enviou {{ plan: 'um plano', exercise: 'um exercício' }[item.detail] ?? 'uma ficha'}</>,
         href: item.share_id ? `/gym/social/recebidos/${item.share_id}` : '/gym/social/amigos',
       };
     case 'post_comment':

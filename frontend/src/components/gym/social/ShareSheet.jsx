@@ -79,10 +79,11 @@ export default function ShareSheet({ open, onClose, kind, itemId }) {
     setStep('menu');
     onClose();
   };
-  const param = kind === 'plan' ? 'plano' : 'ficha';
+  const param = { plan: 'plano', exercise: 'exercicio' }[kind] ?? 'ficha';
+  const title = { plan: 'Compartilhar plano', exercise: 'Compartilhar exercício' }[kind] ?? 'Compartilhar ficha';
 
   return (
-    <GymSheet open={open} onClose={close} title={step === 'friends' ? 'Enviar para amigos' : kind === 'plan' ? 'Compartilhar plano' : 'Compartilhar ficha'}>
+    <GymSheet open={open} onClose={close} title={step === 'friends' ? 'Enviar para amigos' : title}>
       {step === 'menu' ? (
         <div className={styles.menu}>
           <Link href={`/gym/social/publicar?${param}=${itemId}`} className={styles.option}>

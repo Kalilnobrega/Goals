@@ -45,7 +45,7 @@ export default function ReceivedSharePage() {
                 <Avatar name={item.sender.name} />
                 <span className={styles.rowMain}>
                   <span className={styles.rowName}>{item.is_mine ? 'Você enviou' : `${item.sender.name} te enviou`}</span>
-                  <span className={styles.muted}>{item.kind === 'plan' ? 'um plano' : 'uma ficha'} · {timeAgo(item.created_at)}</span>
+                  <span className={styles.muted}>{{ plan: 'um plano', exercise: 'um exercício' }[item.kind] ?? 'uma ficha'} · {timeAgo(item.created_at)}</span>
                 </span>
               </span>
             </div>

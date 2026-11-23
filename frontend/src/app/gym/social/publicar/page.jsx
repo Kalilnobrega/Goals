@@ -3,7 +3,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
-import { createPost, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
+import { createPost, getExercises, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
 import { addDays, apiError, formatDay, formatVolume, plural, todayIso } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
@@ -21,7 +21,8 @@ function Composer() {
   const checkin = searchParams.get('checkin') === '1';
   const shareWorkoutId = Number(searchParams.get('ficha')) || null;
   const sharePlanId = Number(searchParams.get('plano')) || null;
-  const sharing = !!(shareWorkoutId || sharePlanId);
+  const shareExerciseId = Number(searchParams.get('exercicio')) || null;
+  const sharing = !!(shareWorkoutId || sharePlanId || shareExerciseId);
   const [sharedName, setSharedName] = useState('');
   const challengeId = Number(searchParams.get('desafio')) || null;
   const backHref = challengeId ? `/gym/social/desafios/${challengeId}?aba=atividade` : '/gym/social';
@@ -45,7 +46,16 @@ function Composer() {
   useEffect(() => {
     if (shareWorkoutId) getWorkout(shareWorkoutId).then((data) => setSharedName(data.name)).catch(() => setError('Ficha não encontrada.'));
     if (sharePlanId) getPlan(sharePlanId).then((data) => setSharedName(data.name)).catch(() => setError('Plano não encontrado.'));
-  }, [shareWorkoutId, sharePlanId]);
+    if (shareExerciseId) {
+      getExercises()
+        .then((list) => {
+          const found = list.find((item) => item.id === shareExerciseId);
+          if (found) setSharedName(found.name);
+          else setError('Exercício não encontrado.');
+        })
+        .catch(() => setError('Exercício não encontrado.'));
+    }
+  }, [shareWorkoutId, sharePlanId, shareExerciseId]);
 
   useEffect(() => {
     if (!initialSession) return;
@@ -123,6 +133,7 @@ function Composer() {
         activity: linked || sharing ? null : chosenActivity || null,
         share_workout_id: shareWorkoutId,
         share_plan_id: sharePlanId,
+        share_exercise_id: shareExerciseId,
         media_ids: ids,
         ...(checkin ? { minutes: minutesValue, performed_on: performedOn } : {}),
       });
@@ -138,17 +149,17 @@ function Composer() {
     <div className={styles.page}>
       <Link href={backHref} className={styles.back}><ChevronLeft size={18} /> {challengeId ? 'Desafio' : 'Feed'}</Link>
       <h1 className={styles.title}>
-        {shareWorkoutId ? 'Compartilhar ficha' : sharePlanId ? 'Compartilhar plano' : checkin ? 'Check-in manual' : linked ? 'Publicar treino' : 'Nova publicação'}
+        {shareWorkoutId ? 'Compartilhar ficha' : sharePlanId ? 'Compartilhar plano' : shareExerciseId ? 'Compartilhar exercício' : checkin ? 'Check-in manual' : linked ? 'Publicar treino' : 'Nova publicação'}
       </h1>
       {checkin && <p className={styles.muted}>Para treinos feitos fora do app. A foto é obrigatória e serve de prova para o grupo.</p>}
 
       <form className={styles.form} onSubmit={submit}>
         {sharing && (
           <section className={styles.workout}>
-            <span className={styles.workoutIcon}>{sharePlanId ? <CalendarDays size={18} /> : <ClipboardList size={18} />}</span>
+            <span className={styles.workoutIcon}>{sharePlanId ? <CalendarDays size={18} /> : shareExerciseId ? <Dumbbell size={18} /> : <ClipboardList size={18} />}</span>
             <span className={styles.workoutText}>
               <span className={styles.workoutName}>{sharedName || 'Carregando...'}</span>
-              <span className={styles.muted}>Quem vir o post pode copiar {sharePlanId ? 'o plano' : 'a ficha'}</span>
+              <span className={styles.muted}>Quem vir o post pode copiar {sharePlanId ? 'o plano' : shareExerciseId ? 'o exercício' : 'a ficha'}</span>
             </span>
           </section>
         )}

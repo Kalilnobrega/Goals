@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, ClipboardList, Copy } from 'lucide-react';
-import { apiError } from '../../../lib/gym';
+import { CalendarDays, ClipboardList, Copy, Dumbbell } from 'lucide-react';
+import { apiError, equipmentLabel, muscleLabel, muscleName } from '../../../lib/gym';
 import { useToast } from '../../Toast';
 import styles from './SharedCard.module.css';
 
@@ -36,12 +36,18 @@ export default function SharedCard({ kind, snapshot, onCopy, mine = false }) {
   const toast = useToast();
   const [copying, setCopying] = useState(false);
   const isPlan = kind === 'plan';
+  const isExercise = kind === 'exercise';
 
   const copy = async () => {
     setCopying(true);
     try {
       const result = await onCopy();
       const extra = result.skipped ? ` ${result.skipped === 1 ? '1 exercício personalizado ficou' : `${result.skipped} exercícios personalizados ficaram`} de fora.` : '';
+      if (isExercise) {
+        toast(`Exercício "${result.name}" adicionado à sua biblioteca`);
+        router.push('/gym/exercises');
+        return;
+      }
       toast(isPlan ? `Plano "${result.name}" criado, sem ativar.${extra}` : `Ficha "${result.name}" criada.${extra}`);
       router.push(isPlan ? `/gym/plans/${result.id}` : `/gym/workouts/${result.id}`);
     } catch (err) {
@@ -49,6 +55,33 @@ export default function SharedCard({ kind, snapshot, onCopy, mine = false }) {
       setCopying(false);
     }
   };
+
+  if (isExercise) {
+    const primary = snapshot.muscles.filter((m) => m.role === 'primary').map((m) => muscleName(m.muscle));
+    const others = snapshot.muscles.filter((m) => m.role !== 'primary').map((m) => muscleName(m.muscle));
+    return (
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <span className={styles.icon}><Dumbbell size={16} /></span>
+          <span className={styles.headerText}>
+            <span className={styles.kind}>Exercício</span>
+            <span className={styles.name}>{snapshot.name}</span>
+          </span>
+        </div>
+        <ul className={styles.rows}>
+          <li className={styles.row}><span className={styles.rowName}>Grupo</span><span className={styles.rowValue}>{muscleLabel(snapshot.muscle_group)}</span></li>
+          <li className={styles.row}><span className={styles.rowName}>Equipamento</span><span className={styles.rowValue}>{equipmentLabel(snapshot.equipment)}</span></li>
+          {primary.length > 0 && <li className={styles.row}><span className={styles.rowName}>Principal</span><span className={styles.rowValue}>{primary.join(', ')}</span></li>}
+          {others.length > 0 && <li className={styles.row}><span className={styles.rowName}>Também trabalha</span><span className={styles.rowValue}>{others.join(', ')}</span></li>}
+        </ul>
+        {onCopy && !mine && (
+          <button type="button" className={styles.copy} onClick={copy} disabled={copying}>
+            <Copy size={16} /> {copying ? 'Copiando...' : 'Copiar para meus exercícios'}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const byDay = isPlan ? new Map(snapshot.days.map((day) => [day.weekday, snapshot.workouts[day.workout]?.name])) : null;
 

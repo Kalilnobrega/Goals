@@ -209,7 +209,7 @@ export default function SocialPage() {
                       <Avatar name={item.sender.name} />
                       <span className={social.rowText}>
                         <span className={social.rowName}>{item.snapshot.name}</span>
-                        <span className={social.rowHandle}>{item.kind === 'plan' ? 'Plano' : 'Ficha'} de {item.sender.name.split(' ')[0]}</span>
+                        <span className={social.rowHandle}>{{ plan: 'Plano', exercise: 'Exercício' }[item.kind] ?? 'Ficha'} de {item.sender.name.split(' ')[0]}</span>
                       </span>
                     </Link>
                   </li>
