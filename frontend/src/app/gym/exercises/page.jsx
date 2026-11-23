@@ -90,25 +90,16 @@ export default function ExercisesPage() {
   };
 
   const openNew = () => setSheet({ exercise: null, initialName: query.trim() });
-  const customCount = exercises?.filter(e => e.is_custom).length ?? 0;
 
   return (
     <div className={styles.page}>
-      <header className={styles.hero}>
-        <div>
-          <h1 className={styles.title}>Exercícios</h1>
-          <p className={styles.subtitle}>
-            {exercises
-              ? `${exercises.length} na biblioteca${customCount ? ` · ${customCount} seus` : ''}`
-              : 'Sua biblioteca de movimentos'}
-          </p>
-        </div>
+      <h1 className="visually-hidden">Treinos: exercícios</h1>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarTabs}><SegmentTabs tabs={WORKOUT_TABS} label="Treinos" /></div>
         <button type="button" className={styles.newDesktop} onClick={openNew}>
           <Plus size={18} strokeWidth={2.4} /> Novo exercício
         </button>
-      </header>
-
-      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
+      </div>
 
       <div className={styles.searchBox}>
         <Search size={18} className={styles.searchIcon} aria-hidden="true" />

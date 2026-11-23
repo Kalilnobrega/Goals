@@ -16,10 +16,7 @@ const AREAS = [
 export default function ProgressHubPage() {
   return (
     <div className={styles.page}>
-      <header>
-        <h1 className={styles.title}>Evolução</h1>
-        <p className={styles.subtitle}>Escolha o que você quer acompanhar</p>
-      </header>
+      <h1 className="visually-hidden">Evolução</h1>
       <nav className={hub.grid} aria-label="Áreas da evolução">
         {AREAS.map(({ href, icon: Icon, title, text }, index) => (
           <Link key={href} href={href} className={hub.card} style={{ '--i': index }}>

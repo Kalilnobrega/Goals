@@ -46,19 +46,13 @@ export default function WorkoutsPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.hero}>
-        <div>
-          <h1 className={styles.title}>Treinos</h1>
-          <p className={styles.subtitle}>
-            {workouts?.length ? plural(workouts.length, 'ficha', 'fichas') : 'Suas fichas de treino'}
-          </p>
-        </div>
+      <h1 className="visually-hidden">Treinos: fichas</h1>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarTabs}><SegmentTabs tabs={WORKOUT_TABS} label="Treinos" /></div>
         <Link href="/gym/workouts/new" className={styles.newDesktop}>
           <Plus size={18} strokeWidth={2.4} /> Nova ficha
         </Link>
-      </header>
-
-      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
+      </div>
 
       {draft && (
         <div className={styles.draftCard}>

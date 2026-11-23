@@ -169,21 +169,7 @@ export default function HistoryPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerText}>
-        <h1 className={styles.title}>Histórico</h1>
-        <p className={styles.subtitle}>
-          {data
-            ? filtered
-              ? plural(data.total, 'treino encontrado', 'treinos encontrados')
-              : data.total ? plural(data.total, 'treino concluído', 'treinos concluídos') : 'Seus treinos concluídos'
-            : 'Seus treinos concluídos'}
-        </p>
-        </div>
-        <button type="button" className={styles.exportButton} onClick={() => setExportOpen(true)} aria-label="Exportar treinos e peso">
-          <Download size={18} aria-hidden="true" /> Exportar
-        </button>
-      </header>
+      <h1 className="visually-hidden">Treinos: histórico</h1>
       <GymSheet open={exportOpen} onClose={closeExport} title="Exportar dados">
         {exportOpen && <ExportSheet />}
       </GymSheet>
@@ -225,7 +211,13 @@ export default function HistoryPage() {
         {filtered && (
           <button type="button" className={styles.clearAll} onClick={clearAll}>Limpar</button>
         )}
+        <button type="button" className={styles.exportButton} onClick={() => setExportOpen(true)} aria-label="Exportar treinos e peso">
+          <Download size={16} aria-hidden="true" /> Exportar
+        </button>
       </div>
+      {data && filtered && (
+        <p className={styles.resultCount}>{plural(data.total, 'treino encontrado', 'treinos encontrados')}</p>
+      )}
 
       {loadError && !data && (
         <div className={styles.state}>

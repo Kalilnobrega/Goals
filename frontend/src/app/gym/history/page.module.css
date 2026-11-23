@@ -4,20 +4,6 @@
   gap: 16px;
 }
 
-.title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-
-.subtitle {
-  margin-top: 4px;
-  color: var(--gym-muted);
-  font-size: 0.95rem;
-}
-
 .month {
   display: flex;
   flex-direction: column;
@@ -405,26 +391,15 @@
   font-size: 1rem;
 }
 
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.headerText {
-  min-width: 0;
-}
-
 .exportButton {
-  height: 40px;
+  height: 38px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0 14px;
-  margin-top: 4px;
-  border-radius: 12px;
+  margin-left: auto;
+  border-radius: 999px;
   border: 1px solid var(--gym-border-strong);
   background: transparent;
   color: var(--gym-text);
@@ -432,4 +407,10 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.resultCount {
+  margin-top: -4px;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
 }

@@ -54,15 +54,11 @@ export default function PlansPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.hero}>
-        <div>
-          <h1 className={styles.title}>Treinos</h1>
-          <p className={styles.subtitle}>{plans?.length ? plural(plans.length, 'plano', 'planos') : 'Sua semana de treinos'}</p>
-        </div>
+      <h1 className="visually-hidden">Treinos: planos</h1>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarTabs}><SegmentTabs tabs={WORKOUT_TABS} label="Treinos" /></div>
         <Link href="/gym/plans/new" className={styles.newDesktop}><Plus size={18} strokeWidth={2.4} /> Novo plano</Link>
-      </header>
-
-      <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
+      </div>
 
       {loadError && !plans && (
         <div className={styles.state}>
