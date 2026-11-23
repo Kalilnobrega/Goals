@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Activity, CalendarDays, MessageCircle, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
+  Activity, CalendarDays, Info, MessageCircle, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
 } from 'lucide-react';
 import {
   deleteChallenge, getChallenge, getFriends, inviteToChallenge, leaveChallenge, peekCache, removeChallengeMember,
@@ -83,6 +83,8 @@ export default function ChallengePage() {
   const [challenge, setChallenge] = useState(() => peekCache(`fitnessChallenge:${id}`));
   const [error, setError] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const closeDetails = useCallback(() => setShowDetails(false), []);
 
   const load = useCallback(() => {
     getChallenge(id)
@@ -191,23 +193,74 @@ export default function ChallengePage() {
               )}
             </div>
             <h1 className={styles.name}>{challenge.name}</h1>
-            {challenge.description && <p className={styles.description}>{challenge.description}</p>}
-            <p className={styles.meta}>
-              <CalendarDays size={14} /> {formatRange(challenge.start_date, challenge.end_date)}
-              <span aria-hidden="true">·</span>
-              <Users size={14} /> {challenge.member_count} {challenge.member_count === 1 ? 'participante' : 'participantes'}
-            </p>
-            <ul className={styles.rules}>
-              {challenge.metrics.map((metric) => (
-                <li key={metric.id} className={styles.rule}>
-                  {metricLabel(metric)}{multi && metric.weight > 1 ? ` · peso ${metric.weight}×` : ''}
-                </li>
-              ))}
-              <li className={`${styles.rule} ${styles.ruleMuted}`}>{minRuleLabel(challenge.min_rule)}</li>
-              {challenge.hide_weight && <li className={`${styles.rule} ${styles.ruleMuted}`}>Peso escondido</li>}
-              {challenge.allow_manual && <li className={`${styles.rule} ${styles.ruleMuted}`}>Check-in manual com foto</li>}
-            </ul>
+            <div className={styles.metaRow}>
+              <p className={styles.meta}>
+                <CalendarDays size={14} /> {formatRange(challenge.start_date, challenge.end_date)}
+                <span aria-hidden="true">·</span>
+                <Users size={14} /> {challenge.member_count} {challenge.member_count === 1 ? 'participante' : 'participantes'}
+              </p>
+              <button type="button" className={styles.detailsButton} onClick={() => setShowDetails(true)}>
+                <Info size={14} /> Detalhes
+              </button>
+            </div>
           </section>
+
+          <GymSheet open={showDetails} onClose={closeDetails} title="Detalhes do desafio">
+            <div className={styles.details}>
+              {challenge.description && <p className={styles.description}>{challenge.description}</p>}
+              <dl className={styles.detailList}>
+                <div className={styles.detailItem}>
+                  <dt>Período</dt>
+                  <dd>{formatRange(challenge.start_date, challenge.end_date)} · {timeLeftLabel(challenge)}</dd>
+                </div>
+                {challenge.owner_username && (
+                  <div className={styles.detailItem}>
+                    <dt>Criado por</dt>
+                    <dd>@{challenge.owner_username}</dd>
+                  </div>
+                )}
+                <div className={styles.detailItem}>
+                  <dt>O que vale ponto</dt>
+                  <dd>
+                    <ul className={styles.metricList}>
+                      {challenge.metrics.map((metric) => (
+                        <li key={metric.id}>
+                          {metricLabel(metric)}{multi && metric.weight > 1 ? ` · peso ${metric.weight}×` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                    <span className={styles.detailHint}>
+                      {multi
+                        ? 'Quem lidera cada métrica ganha 100 pontos nela (vezes o peso) e os outros ganham proporcional. O total é a soma.'
+                        : 'O ranking mostra a quantidade de cada pessoa.'}
+                    </span>
+                  </dd>
+                </div>
+                <div className={styles.detailItem}>
+                  <dt>Treino mínimo</dt>
+                  <dd>{minRuleLabel(challenge.min_rule)}</dd>
+                </div>
+                <div className={styles.detailItem}>
+                  <dt>Check-in manual</dt>
+                  <dd>
+                    {challenge.allow_manual
+                      ? 'Permitido, com foto obrigatória. Conta em dias treinados, treinos e minutos.'
+                      : 'Não permitido. Só contam treinos registrados no app.'}
+                  </dd>
+                </div>
+                {challenge.uses_weight && (
+                  <div className={styles.detailItem}>
+                    <dt>Peso corporal</dt>
+                    <dd>
+                      {challenge.hide_weight
+                        ? 'Escondido: o ranking mostra só a porcentagem ou a razão, nunca os quilos.'
+                        : 'Visível para os participantes: peso inicial e atual.'}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </GymSheet>
 
           {winner && (
             <section className={styles.winner}>
