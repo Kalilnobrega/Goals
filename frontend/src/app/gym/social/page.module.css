@@ -28,45 +28,6 @@
   font-weight: 600;
 }
 
-.pills {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.pill {
-  height: 38px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--gym-border-strong);
-  background: none;
-  color: var(--gym-muted);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pillActive {
-  border-color: transparent;
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-}
-
-.soon {
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: var(--gym-surface-2);
-  color: var(--gym-faint);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
 .card {
   display: flex;
   flex-direction: column;
@@ -167,41 +128,6 @@
 .empty svg {
   flex-shrink: 0;
   color: var(--gym-faint);
-}
-
-.setup {
-  align-items: center;
-  padding: 24px 18px;
-  text-align: center;
-}
-
-.setupIcon {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: var(--gym-accent-soft);
-  color: var(--gym-accent);
-}
-
-.setupTitle {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.setupButton {
-  height: 48px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 22px;
-  border-radius: 16px;
-  background: var(--gym-accent);
-  color: var(--gym-accent-ink);
-  font-family: var(--font-display);
-  font-weight: 700;
-  text-decoration: none;
 }
 
 .error {

@@ -1,0 +1,424 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  margin-left: -6px;
+  border-radius: 10px;
+  color: var(--gym-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.heroTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status_active {
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.status_upcoming {
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+}
+
+.status_finished {
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+}
+
+.timeLeft {
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--gym-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+}
+
+.rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule {
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ruleMuted {
+  color: var(--gym-muted);
+  font-weight: 500;
+}
+
+.winner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.winnerTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.winnerText {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.highlight {
+  border-color: var(--gym-accent);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cardIcon {
+  color: var(--gym-accent);
+}
+
+.cardHint {
+  margin-left: auto;
+  color: var(--gym-faint);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.link {
+  overflow: hidden;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inviteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primary,
+.secondary,
+.danger {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 13px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+}
+
+.primary {
+  border: none;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.secondary {
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+}
+
+.danger {
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  background: rgba(255, 107, 107, 0.08);
+  color: var(--gym-danger);
+}
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 14px;
+}
+
+.row + .row {
+  margin-top: 2px;
+}
+
+.rowMe {
+  background: var(--gym-accent-soft);
+}
+
+.position {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.podium1 {
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.podium2 {
+  background: #d7dbe0;
+  color: #15181b;
+}
+
+.podium3 {
+  background: #c98a52;
+  color: #1b1007;
+}
+
+.rowText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowName {
+  overflow: hidden;
+  color: var(--gym-text);
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowValues {
+  overflow: hidden;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.removeMember {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--gym-faint);
+  cursor: pointer;
+}
+
+.removeMember:hover {
+  color: var(--gym-danger);
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.friendList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.friend + .friend {
+  border-top: 1px solid var(--gym-border);
+}
+
+.friendText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.friendName {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friendHandle {
+  color: var(--gym-muted);
+  font-size: 0.84rem;
+}
+
+.inviteButton {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gym-accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--gym-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.92rem;
+}
+
+.skeleton {
+  height: 220px;
+  border-radius: 22px;
+  background: linear-gradient(90deg, var(--gym-surface) 0%, var(--gym-surface-2) 50%, var(--gym-surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

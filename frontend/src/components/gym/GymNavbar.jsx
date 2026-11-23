@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Dumbbell, House, ClipboardList, TrendingUp, Play, Users, UserCircle2 } from 'lucide-react';
 import { getUserName, saveUserName } from '../../lib/auth';
-import { getFitnessProfile, getFriends, getMe } from '../../lib/api';
+import { getMe, getSocialPending } from '../../lib/api';
 import { saveLastApp } from '../../lib/apps';
 import { useStartWorkout } from './StartWorkout';
 import { GYM_TAB_ORDER, useGymTabNav } from '../../lib/gymTabs';
@@ -19,7 +19,7 @@ const links = [
   { href: '/gym', label: 'Início', icon: House },
   { href: '/gym/plans', label: 'Treinos', icon: ClipboardList, also: ['/gym/workouts', '/gym/exercises', '/gym/history'] },
   { href: '/gym/progress', label: 'Evolução', icon: TrendingUp },
-  { href: '/gym/social', label: 'Social', icon: Users, also: ['/gym/u/'] },
+  { href: '/gym/social', label: 'Social', icon: Users, also: ['/gym/u/', '/gym/convite/'] },
 ];
 
 const subscribeToUserName = (onChange) => {
@@ -42,9 +42,8 @@ export default function GymNavbar() {
 
   useEffect(() => {
     let active = true;
-    getFitnessProfile()
-      .then((profile) => (profile.username ? getFriends() : null))
-      .then((friends) => { if (active) setRequests(friends?.incoming.length ?? 0); })
+    getSocialPending()
+      .then((data) => { if (active) setRequests(data.friend_requests + data.challenge_invites); })
       .catch(() => {});
     return () => { active = false; };
   }, [pathname]);
@@ -92,7 +91,7 @@ export default function GymNavbar() {
       {...linkProps(href)}
       className={`${styles.tab} ${isCurrent(href) ? styles.tabActive : ''}`}
       aria-current={isCurrent(href) ? 'page' : undefined}
-      aria-label={badgeFor(href) ? `${label}, ${requests} ${requests === 1 ? 'pedido de amizade' : 'pedidos de amizade'}` : undefined}
+      aria-label={badgeFor(href) ? `${label}, ${requests} ${requests === 1 ? 'pedido ou convite' : 'pedidos ou convites'}` : undefined}
     >
       <span className={styles.tabIcon}>
         <Icon size={22} strokeWidth={isCurrent(href) ? 2.4 : 2} />

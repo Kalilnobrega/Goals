@@ -1,19 +1,15 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { AtSign, Search, UserPlus, Users, X } from 'lucide-react';
+import { Search, UserPlus, X } from 'lucide-react';
 import { getFitnessProfile, getFriends, peekCache, removeFriendship, searchPeople } from '../../../lib/api';
 import { apiError, plural } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import PersonRow from '../../../components/gym/social/PersonRow';
 import FriendAction from '../../../components/gym/social/FriendAction';
+import UsernameSetup from '../../../components/gym/social/UsernameSetup';
+import SocialTabs from '../../../components/gym/social/SocialTabs';
 import social from '../../../components/gym/social/social.module.css';
 import styles from './page.module.css';
-
-const SOON = [
-  { key: 'challenges', label: 'Desafios' },
-  { key: 'feed', label: 'Feed' },
-];
 
 function SearchPeople({ onChanged }) {
   const [query, setQuery] = useState('');
@@ -136,35 +132,17 @@ export default function SocialPage() {
         </p>
       </header>
 
-      <div className={styles.pills} role="tablist" aria-label="Social">
-        <button type="button" role="tab" aria-selected="true" className={`${styles.pill} ${styles.pillActive}`}>
-          <Users size={15} /> Amigos
-        </button>
-        {SOON.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-disabled="true"
-            className={styles.pill}
-            onClick={() => toast({ tone: 'info', message: `${tab.label} chega em breve.` })}
-          >
-            {tab.label} <span className={styles.soon}>Em breve</span>
-          </button>
-        ))}
-      </div>
+      <SocialTabs />
 
       {error && <p className={styles.error}>{error}</p>}
 
-      {needsUsername && (
-        <section className={`${styles.card} ${styles.setup}`}>
-          <span className={styles.setupIcon}><AtSign size={22} /></span>
-          <h2 className={styles.setupTitle}>Escolha seu @username</h2>
-          <p className={styles.hint}>É por ele que seus amigos vão te encontrar e te adicionar.</p>
-          <Link href="/gym/account" className={styles.setupButton}>Criar username</Link>
-        </section>
+      {!profile && !error && (
+        <div className={styles.skeletonList} aria-busy="true" aria-label="Carregando">
+          <div className={styles.skeleton} />
+        </div>
       )}
+
+      {needsUsername && <UsernameSetup />}
 
       {profile?.username && (
         <>
