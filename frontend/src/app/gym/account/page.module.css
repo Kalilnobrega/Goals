@@ -596,3 +596,20 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.weightToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  cursor: pointer;
+}
+
+.weightToggle input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--gym-accent);
+}

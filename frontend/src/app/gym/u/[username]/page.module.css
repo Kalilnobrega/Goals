@@ -391,3 +391,50 @@
     animation: none;
   }
 }
+
+.closeArea {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid rgba(198, 244, 50, 0.3);
+}
+
+.closeTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gym-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.closeLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.closeLink {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.closeLink svg:first-child {
+  color: var(--gym-accent);
+}
+
+.closeLink svg:last-child {
+  margin-left: auto;
+  color: var(--gym-faint);
+}

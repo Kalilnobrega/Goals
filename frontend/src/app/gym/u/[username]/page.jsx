@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Ban, ChevronLeft, Clock, Dumbbell, Flag, Globe, Lock, MoreHorizontal, Settings, Trophy, Users,
+  Ban, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, Flag, Globe, History, Lock, MoreHorizontal, Settings, Star,
+  TrendingUp, Trophy, Users,
 } from 'lucide-react';
 import { blockUser, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
 import { apiError, formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
@@ -13,6 +14,7 @@ import GymSheet from '../../../../components/gym/GymSheet';
 import Avatar from '../../../../components/gym/social/Avatar';
 import FriendAction from '../../../../components/gym/social/FriendAction';
 import PostCard from '../../../../components/gym/social/PostCard';
+import CloseFriendToggle from '../../../../components/gym/social/CloseFriendToggle';
 import styles from './page.module.css';
 
 const VISIBILITY = {
@@ -190,6 +192,13 @@ export default function SocialProfilePage() {
               ) : (
                 <>
                   <FriendAction person={profile} onChange={load} />
+                  {profile.relation === 'friends' && (
+                    <CloseFriendToggle
+                      person={profile}
+                      active={profile.is_close_friend}
+                      onChange={(close) => setProfile((current) => ({ ...current, is_close_friend: close }))}
+                    />
+                  )}
                   <button type="button" className={styles.more} onClick={() => setMenuOpen(true)} aria-label="Mais opções">
                     <MoreHorizontal size={18} />
                   </button>
@@ -197,6 +206,23 @@ export default function SocialProfilePage() {
               )}
             </div>
           </section>
+
+          {profile.close_access && (
+            <section className={styles.closeArea}>
+              <h2 className={styles.closeTitle}><Star size={15} fill="currentColor" /> {firstName(profile.name)} te marcou como melhor amigo</h2>
+              <div className={styles.closeLinks}>
+                <Link href={`/gym/u/${profile.username}/fichas`} className={styles.closeLink}>
+                  <ClipboardList size={18} /> Fichas e plano <ChevronRight size={16} />
+                </Link>
+                <Link href={`/gym/u/${profile.username}/historico`} className={styles.closeLink}>
+                  <History size={18} /> Histórico <ChevronRight size={16} />
+                </Link>
+                <Link href={`/gym/u/${profile.username}/evolucao`} className={styles.closeLink}>
+                  <TrendingUp size={18} /> Evolução <ChevronRight size={16} />
+                </Link>
+              </div>
+            </section>
+          )}
 
           {!profile.can_view && (
             <section className={styles.locked}>

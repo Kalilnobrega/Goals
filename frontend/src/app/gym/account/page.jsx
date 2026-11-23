@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeftRight, AtSign, Building2, Check, Globe, Lock, Pencil, Shield, Target, Users, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
   changePassword, checkUsername, createGym, deleteAccount, deleteGym, getBlocks, getFitnessProfile, getGyms, getMe, logout,
-  renameGym, setCurrentGym, unblockUser, updateName, updateUsername, updateVisibility,
+  renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateUsername, updateVisibility,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
@@ -191,9 +191,21 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
-function PrivacyCard({ initial, hasUsername }) {
+function PrivacyCard({ initial, initialShareWeight, hasUsername }) {
   const toast = useToast();
   const [visibility, setVisibility] = useState(initial);
+  const [shareWeight, setShareWeight] = useState(initialShareWeight);
+
+  const toggleWeight = async (next) => {
+    setShareWeight(next);
+    try {
+      await updateCloseWeight(next);
+      toast(next ? 'Melhores amigos agora veem seu peso' : 'Seu peso ficou só para você');
+    } catch (err) {
+      setShareWeight(!next);
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível salvar.') });
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [blocked, setBlocked] = useState([]);
 
@@ -249,6 +261,13 @@ function PrivacyCard({ initial, hasUsername }) {
           </button>
         ))}
       </div>
+      <label className={styles.weightToggle}>
+        <span className={styles.privacyText}>
+          <span className={styles.privacyLabel}>Mostrar meu peso para melhores amigos</span>
+          <span className={styles.privacyDescription}>Melhores amigos veem suas fichas, histórico e evolução. O peso corporal só aparece se você ligar aqui.</span>
+        </span>
+        <input type="checkbox" checked={shareWeight} onChange={(e) => toggleWeight(e.target.checked)} />
+      </label>
       {blocked.length > 0 && (
         <div className={styles.blocked}>
           <p className={styles.label}>Bloqueados</p>
@@ -669,6 +688,7 @@ export default function GymAccountPage() {
   const [me, setMe] = useState(null);
   const [username, setUsername] = useState(undefined);
   const [visibility, setVisibility] = useState('friends');
+  const [shareWeight, setShareWeight] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -677,6 +697,7 @@ export default function GymAccountPage() {
         setMe(user);
         setUsername(profile.username ?? null);
         setVisibility(profile.visibility ?? 'friends');
+        setShareWeight(!!profile.share_weight_close);
       })
       .catch(() => setError('Não foi possível carregar sua conta.'));
   }, []);
@@ -708,7 +729,7 @@ export default function GymAccountPage() {
         <>
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
-          <PrivacyCard initial={visibility} hasUsername={!!username} />
+          <PrivacyCard initial={visibility} initialShareWeight={shareWeight} hasUsername={!!username} />
           <BodyTypeCard />
           <GymsCard />
           <PasswordCard me={me} />

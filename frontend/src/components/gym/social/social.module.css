@@ -284,3 +284,37 @@
     display: none;
   }
 }
+
+.closeToggle,
+.closeToggleLabel {
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 11px;
+  border: 1px solid var(--gym-border-strong);
+  background: none;
+  color: var(--gym-faint);
+  cursor: pointer;
+}
+
+.closeToggle {
+  width: 34px;
+}
+
+.closeToggleLabel {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.closeActive {
+  border-color: rgba(198, 244, 50, 0.4);
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}

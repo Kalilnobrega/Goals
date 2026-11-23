@@ -341,6 +341,22 @@ export const acceptFriendRequest = (username) =>
 export const removeFriendship = (username) =>
   api.delete(`/fitness/social/friends/${encodeURIComponent(username)}`).then((r) => r.data);
 export const getBlocks = () => api.get("/fitness/social/blocks").then((r) => r.data);
+export const addCloseFriend = (username) =>
+  api.put(`/fitness/social/close-friends/${encodeURIComponent(username)}`).then((r) => r.data);
+export const removeCloseFriend = (username) =>
+  api.delete(`/fitness/social/close-friends/${encodeURIComponent(username)}`).then((r) => r.data);
+export const updateCloseWeight = (share) => api.put("/fitness/profile/close-weight", { share }).then((r) => r.data);
+const closeUrl = (username, path) => `/fitness/social/users/${encodeURIComponent(username)}/${path}`;
+export const getCloseWorkouts = (username) => api.get(closeUrl(username, "workouts")).then((r) => r.data);
+export const getClosePlan = (username) => api.get(closeUrl(username, "plan")).then((r) => r.data);
+export const getCloseHistory = (username, offset = 0) =>
+  api.get(closeUrl(username, "history"), { params: { offset } }).then((r) => r.data);
+export const getCloseSession = (username, id) => api.get(closeUrl(username, `sessions/${id}`)).then((r) => r.data);
+export const getCloseStats = (username, period = "3m") =>
+  api.get(closeUrl(username, "stats"), { params: { period } }).then((r) => r.data);
+export const getCloseProgress = (username) => api.get(closeUrl(username, "progress/exercises")).then((r) => r.data);
+export const getCloseBodyWeight = (username) => api.get(closeUrl(username, "body-weight")).then((r) => r.data);
+export const copyCloseWorkout = (username, id) => api.post(closeUrl(username, `workouts/${id}/copy`)).then((r) => r.data);
 export const blockUser = (username) =>
   api.post(`/fitness/social/blocks/${encodeURIComponent(username)}`).then((r) => r.data);
 export const unblockUser = (username) =>

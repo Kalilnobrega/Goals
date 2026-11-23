@@ -6,6 +6,7 @@ import { apiError, plural } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import PersonRow from '../../../../components/gym/social/PersonRow';
 import FriendAction from '../../../../components/gym/social/FriendAction';
+import CloseFriendToggle from '../../../../components/gym/social/CloseFriendToggle';
 import UsernameSetup from '../../../../components/gym/social/UsernameSetup';
 import SocialTabs from '../../../../components/gym/social/SocialTabs';
 import social from '../../../../components/gym/social/social.module.css';
@@ -166,10 +167,22 @@ export default function SocialPage() {
 
           {friends && (
             <Section title="Amigos" count={friends.friends.length}>
+              {friends.friends.length > 0 && (
+                <p className={styles.hint}>Toque na estrela para marcar melhores amigos: eles veem suas fichas, histórico e evolução.</p>
+              )}
               {friends.friends.length ? (
                 <ul className={social.list}>
                   {friends.friends.map((person) => (
-                    <PersonRow key={person.username} person={person} />
+                    <PersonRow key={person.username} person={person}>
+                      <CloseFriendToggle
+                        person={person}
+                        active={person.close}
+                        onChange={(close) => setFriends((current) => ({
+                          ...current,
+                          friends: current.friends.map((f) => (f.username === person.username ? { ...f, close } : f)),
+                        }))}
+                      />
+                    </PersonRow>
                   ))}
                 </ul>
               ) : (
