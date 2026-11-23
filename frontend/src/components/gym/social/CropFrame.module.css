@@ -53,7 +53,6 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  animation: gridIn var(--dur-fast) var(--ease-out);
 }
 
 .lineV,
@@ -72,10 +71,4 @@
   left: 0;
   right: 0;
   height: 1px;
-}
-
-@keyframes gridIn {
-  from {
-    opacity: 0;
-  }
 }
