@@ -349,6 +349,9 @@ export const reportUser = (username, reason, details) =>
   api.post(`/fitness/social/reports/${encodeURIComponent(username)}`, { reason, details }).then((r) => r.data);
 export const getChallenges = () => cachedGet("fitnessChallenges", "/fitness/challenges");
 export const getSocialPending = () => api.get("/fitness/challenges/pending/count").then((r) => r.data);
+export const getNotifications = (before) =>
+  api.get("/fitness/notifications", { params: before ? { before } : {} }).then((r) => r.data);
+export const readAllNotifications = () => api.post("/fitness/notifications/read-all");
 export const getChallenge = (id) => cachedGet(`fitnessChallenge:${id}`, `/fitness/challenges/${id}`);
 export const createChallenge = (data) => api.post("/fitness/challenges", data).then((r) => r.data);
 export const getChallengeInvite = (code) =>

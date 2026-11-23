@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, House, ClipboardList, TrendingUp, Play, Users, UserCircle2 } from 'lucide-react';
+import { Dumbbell, House, ClipboardList, TrendingUp, Play, Users, UserCircle2, Bell } from 'lucide-react';
 import { getUserName, saveUserName } from '../../lib/auth';
 import { getMe, getSocialPending } from '../../lib/api';
 import { saveLastApp } from '../../lib/apps';
@@ -39,11 +39,22 @@ export default function GymNavbar() {
   const router = useRouter();
   const userName = useSyncExternalStore(subscribeToUserName, getUserName, () => '');
   const [requests, setRequests] = useState(0);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const clearUnread = () => setUnread(0);
+    window.addEventListener('gym-notifications-read', clearUnread);
+    return () => window.removeEventListener('gym-notifications-read', clearUnread);
+  }, []);
 
   useEffect(() => {
     let active = true;
     getSocialPending()
-      .then((data) => { if (active) setRequests(data.friend_requests + data.challenge_invites); })
+      .then((data) => {
+        if (!active) return;
+        setRequests(data.friend_requests + data.challenge_invites);
+        setUnread(data.notifications ?? 0);
+      })
       .catch(() => {});
     return () => { active = false; };
   }, [pathname]);
@@ -131,6 +142,15 @@ export default function GymNavbar() {
 
           <div className={styles.right}>
             <GymStreak pathname={pathname} onBump={revealHeader} />
+            <Link
+              href="/gym/notificacoes"
+              className={`${styles.bell} ${pathname.startsWith('/gym/notificacoes') ? styles.userChipActive : ''}`}
+              aria-label={unread ? `Notificações, ${unread} não ${unread === 1 ? 'lida' : 'lidas'}` : 'Notificações'}
+              title="Notificações"
+            >
+              <Bell size={16} />
+              {unread > 0 && <span className={styles.bellBadge}>{unread > 9 ? '9+' : unread}</span>}
+            </Link>
             <Link
               href="/gym/account"
               className={`${styles.userChip} ${pathname.startsWith('/gym/account') ? styles.userChipActive : ''}`}
