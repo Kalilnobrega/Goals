@@ -112,17 +112,26 @@ function Lightbox({ media, index, onClose, onMove }) {
   );
 }
 
+export function PostPhotos({ media }) {
+  const [open, setOpen] = useState(null);
+  const close = useCallback(() => setOpen(null), []);
+  return (
+    <>
+      <PhotoCarousel media={media} onOpen={setOpen} />
+      <Lightbox media={media} index={open} onClose={close} onMove={setOpen} />
+    </>
+  );
+}
+
 export default function PostCard({ post, onChange, onDeleted, linkToPost = true }) {
   const toast = useToast();
   const confirmAction = useConfirm();
-  const [open, setOpen] = useState(null);
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
   const closeMenu = useCallback(() => setMenu(false), []);
-  const closeLightbox = useCallback(() => setOpen(null), []);
   const closeReport = useCallback(() => {
     setReporting(false);
     setReason('');
@@ -179,7 +188,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
             <Avatar name={author.name} />
             <span className={styles.authorText}>
               <span className={styles.authorName}>{author.name}</span>
-              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}</span>
+              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}{post.minutes ? ` · ${post.minutes} min` : ''}</span>
             </span>
           </Link>
         ) : (
@@ -187,7 +196,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
             <Avatar name={author.name} />
             <span className={styles.authorText}>
               <span className={styles.authorName}>{post.is_mine ? 'Você' : author.name}</span>
-              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}</span>
+              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}{post.minutes ? ` · ${post.minutes} min` : ''}</span>
             </span>
           </span>
         )}
@@ -216,7 +225,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
 
       {post.caption && <p className={styles.caption}>{post.caption}</p>}
 
-      <PhotoCarousel media={post.media} onOpen={setOpen} />
+      <PostPhotos media={post.media} />
 
       <footer className={styles.footer}>
         <div className={styles.reactions} role="group" aria-label="Reações">
@@ -243,7 +252,6 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
         )}
       </footer>
 
-      <Lightbox media={post.media} index={open} onClose={closeLightbox} onMove={setOpen} />
 
       <GymSheet open={menu} onClose={closeMenu} title="Post">
         <div className={styles.menu}>

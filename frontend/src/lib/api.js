@@ -367,6 +367,10 @@ export const leaveChallenge = (id) => api.delete(`/fitness/challenges/${id}/memb
 export const removeChallengeMember = (id, username) =>
   api.delete(`/fitness/challenges/${id}/members/${encodeURIComponent(username)}`);
 export const deleteChallenge = (id) => api.delete(`/fitness/challenges/${id}`);
+export const getChallengeActivity = (id, page = 0) =>
+  api.get(`/fitness/challenges/${id}/activity`, { params: { page } }).then((r) => r.data);
+export const getChallengeSession = (id, sessionId) =>
+  api.get(`/fitness/challenges/${id}/sessions/${sessionId}`).then((r) => r.data);
 export const mediaSrc = (url) => `${API_BASE}${url}`;
 export const uploadMedia = (blob, fields = {}, full = null) => {
   const form = new FormData();

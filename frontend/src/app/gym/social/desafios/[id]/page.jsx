@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
-  CalendarDays, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
+  Activity, CalendarDays, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
 } from 'lucide-react';
 import {
   deleteChallenge, getChallenge, getFriends, inviteToChallenge, leaveChallenge, peekCache, removeChallengeMember,
@@ -16,6 +16,7 @@ import { useToast } from '../../../../../components/Toast';
 import { useConfirm } from '../../../../../components/ConfirmDialog';
 import GymSheet from '../../../../../components/gym/GymSheet';
 import Avatar from '../../../../../components/gym/social/Avatar';
+import ChallengeActivity from '../../../../../components/gym/social/ChallengeActivity';
 import styles from './detail.module.css';
 
 function firstName(name) {
@@ -75,6 +76,7 @@ export default function ChallengePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justCreated = searchParams.get('novo') === '1';
+  const [tab, setTab] = useState(searchParams.get('aba') === 'atividade' ? 'activity' : 'ranking');
   const toast = useToast();
   const confirmAction = useConfirm();
   const [challenge, setChallenge] = useState(() => peekCache(`fitnessChallenge:${id}`));
@@ -196,6 +198,7 @@ export default function ChallengePage() {
               ))}
               <li className={`${styles.rule} ${styles.ruleMuted}`}>{minRuleLabel(challenge.min_rule)}</li>
               {challenge.hide_weight && <li className={`${styles.rule} ${styles.ruleMuted}`}>Peso escondido</li>}
+              {challenge.allow_manual && <li className={`${styles.rule} ${styles.ruleMuted}`}>Check-in manual com foto</li>}
             </ul>
           </section>
 
@@ -221,6 +224,18 @@ export default function ChallengePage() {
             </section>
           )}
 
+          <div className={styles.tabs} role="tablist" aria-label="Desafio">
+            <button type="button" role="tab" aria-selected={tab === 'ranking'} className={`${styles.tab} ${tab === 'ranking' ? styles.tabActive : ''}`} onClick={() => setTab('ranking')}>
+              <Crown size={15} /> Ranking
+            </button>
+            <button type="button" role="tab" aria-selected={tab === 'activity'} className={`${styles.tab} ${tab === 'activity' ? styles.tabActive : ''}`} onClick={() => setTab('activity')}>
+              <Activity size={15} /> Atividade
+            </button>
+          </div>
+
+          {tab === 'activity' && <ChallengeActivity challenge={challenge} />}
+
+          {tab === 'ranking' && (
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>
               <Crown size={17} className={styles.cardIcon} /> Ranking
@@ -267,6 +282,7 @@ export default function ChallengePage() {
               ))}
             </ol>
           </section>
+          )}
 
           <div className={styles.footer}>
             {challenge.is_owner ? (

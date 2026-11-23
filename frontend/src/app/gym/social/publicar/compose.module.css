@@ -348,3 +348,26 @@
 .sessionActive {
   border-color: var(--gym-accent);
 }
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.input[type="date"] {
+  color-scheme: dark;
+}

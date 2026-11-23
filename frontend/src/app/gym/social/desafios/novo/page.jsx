@@ -47,6 +47,7 @@ export default function NewChallengePage() {
   const [muscleGroup, setMuscleGroup] = useState(null);
   const [consent, setConsent] = useState(false);
   const [hideWeight, setHideWeight] = useState(false);
+  const [allowManual, setAllowManual] = useState(false);
   const [rule, setRule] = useState({ kind: 'none', value: null });
   const [pickingFor, setPickingFor] = useState(null);
   const [exercises, setExercises] = useState(null);
@@ -144,6 +145,7 @@ export default function NewChallengePage() {
         min_rule: rule,
         accept_weight: usesWeight && consent,
         hide_weight: usesWeight && hideWeight,
+        allow_manual: allowManual,
       });
       router.replace(`/gym/social/desafios/${challenge.id}?novo=1`);
     } catch (err) {
@@ -386,6 +388,17 @@ export default function NewChallengePage() {
               <span>{ruleOption.unit}</span>
             </label>
           )}
+        </section>
+
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Check-in manual</h2>
+          <label className={styles.check}>
+            <input type="checkbox" checked={allowManual} onChange={(e) => setAllowManual(e.target.checked)} />
+            <span>
+              <strong>Permitir treinos feitos fora do app</strong>
+              <small>Corrida, futebol, aula... A pessoa faz um check-in com a atividade, a duração e uma foto obrigatória. Conta em dias treinados, treinos e minutos.</small>
+            </span>
+          </label>
         </section>
 
         {error && <p className={styles.error}>{error}</p>}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Camera, ChevronLeft, ChevronRight, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
 import { createPost, getPostableSessions, getSession, uploadPhoto } from '../../../../lib/api';
-import { apiError, formatDay, formatVolume, plural } from '../../../../lib/gym';
+import { addDays, apiError, formatDay, formatVolume, plural, todayIso } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
 import CropFrame from '../../../../components/gym/social/CropFrame';
@@ -18,6 +18,11 @@ function Composer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSession = Number(searchParams.get('sessao')) || null;
+  const checkin = searchParams.get('checkin') === '1';
+  const challengeId = Number(searchParams.get('desafio')) || null;
+  const backHref = challengeId ? `/gym/social/desafios/${challengeId}?aba=atividade` : '/gym/social';
+  const [minutes, setMinutes] = useState('');
+  const [performedOn, setPerformedOn] = useState(todayIso());
   const toast = useToast();
   const inputRef = useRef(null);
   const [linked, setLinked] = useState(null);
@@ -87,7 +92,9 @@ function Composer() {
   const moveCrop = (position) => setPhotos((current) => current.map((photo, i) => (i === active ? { ...photo, position } : photo)));
 
   const chosenActivity = activity === 'Outra' ? customActivity.trim() : activity;
-  const canSubmit = !progress && !preparing && (linked || caption.trim() || photos.length || chosenActivity);
+  const minutesValue = Number(minutes);
+  const checkinReady = !!chosenActivity && minutesValue >= 1 && minutesValue <= 600 && photos.length > 0;
+  const canSubmit = !progress && !preparing && (checkin ? checkinReady : linked || caption.trim() || photos.length || chosenActivity);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -106,9 +113,10 @@ function Composer() {
         caption: caption.trim() || null,
         activity: linked ? null : chosenActivity || null,
         media_ids: ids,
+        ...(checkin ? { minutes: minutesValue, performed_on: performedOn } : {}),
       });
-      toast('Publicado no feed');
-      router.replace('/gym/social');
+      toast(checkin ? 'Check-in feito' : 'Publicado no feed');
+      router.replace(backHref);
     } catch (err) {
       setError(apiError(err, 'Não foi possível publicar.'));
       setProgress('');
@@ -117,11 +125,12 @@ function Composer() {
 
   return (
     <div className={styles.page}>
-      <Link href="/gym/social" className={styles.back}><ChevronLeft size={18} /> Feed</Link>
-      <h1 className={styles.title}>{linked ? 'Publicar treino' : 'Nova publicação'}</h1>
+      <Link href={backHref} className={styles.back}><ChevronLeft size={18} /> {challengeId ? 'Desafio' : 'Feed'}</Link>
+      <h1 className={styles.title}>{checkin ? 'Check-in manual' : linked ? 'Publicar treino' : 'Nova publicação'}</h1>
+      {checkin && <p className={styles.muted}>Para treinos feitos fora do app. A foto é obrigatória e serve de prova para o grupo.</p>}
 
       <form className={styles.form} onSubmit={submit}>
-        {linked ? (
+        {checkin ? null : linked ? (
           <section className={styles.workout}>
             <span className={styles.workoutIcon}><Dumbbell size={18} /></span>
             <span className={styles.workoutText}>
@@ -146,7 +155,7 @@ function Composer() {
 
         {!linked && (
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>O que você fez? <small>opcional</small></h2>
+            <h2 className={styles.cardTitle}>O que você fez? {!checkin && <small>opcional</small>}</h2>
             <div className={styles.chips}>
               {ACTIVITIES.map((item) => (
                 <button
@@ -168,6 +177,31 @@ function Composer() {
                 placeholder="Ex.: Crossfit, vôlei, trilha"
                 aria-label="Atividade"
               />
+            )}
+            {checkin && (
+              <div className={styles.row}>
+                <label className={styles.field}>
+                  <span className={styles.label}>Duração (min)</span>
+                  <input
+                    className={styles.input}
+                    inputMode="numeric"
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    placeholder="Ex.: 45"
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span className={styles.label}>Data</span>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={performedOn}
+                    min={addDays(todayIso(), -7)}
+                    max={todayIso()}
+                    onChange={(e) => setPerformedOn(e.target.value || todayIso())}
+                  />
+                </label>
+              </div>
             )}
           </section>
         )}

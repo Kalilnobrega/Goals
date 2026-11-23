@@ -224,6 +224,37 @@
   color: var(--gym-danger);
 }
 
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.tab {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabActive {
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+}
+
 .ranking {
   display: flex;
   flex-direction: column;
