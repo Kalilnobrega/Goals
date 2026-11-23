@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowUpDown, Check, ChevronLeft, Dumbbell, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Camera, Check, ChevronLeft, Dumbbell, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
 import {
   getSession, getSessionInsights, deleteSession, addSet, updateSet, deleteSet, updateSessionExercise, removeSessionExercise,
   getExercises, reorderSession,
@@ -256,6 +256,9 @@ export default function HistoryDetailPage() {
                 <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Treinar de novo'}
               </button>
             )}
+            <Link href={`/gym/social/publicar?sessao=${session.id}`} className={s.secondary}>
+              <Camera size={18} /> Publicar no feed
+            </Link>
             <button type="button" className={s.secondary} onClick={startEditing}>
               <Pencil size={18} /> Editar treino
             </button>

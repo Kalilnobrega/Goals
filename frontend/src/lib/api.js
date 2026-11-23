@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getToken, saveToken, getRefreshToken, saveRefreshToken, clearToken } from "./auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -363,6 +363,30 @@ export const leaveChallenge = (id) => api.delete(`/fitness/challenges/${id}/memb
 export const removeChallengeMember = (id, username) =>
   api.delete(`/fitness/challenges/${id}/members/${encodeURIComponent(username)}`);
 export const deleteChallenge = (id) => api.delete(`/fitness/challenges/${id}`);
+export const mediaSrc = (url) => `${API_BASE}${url}`;
+export const uploadMedia = (blob, fields = {}) => {
+  const form = new FormData();
+  form.append("file", blob, "foto.jpg");
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") form.append(key, String(value));
+  });
+  return api.post("/fitness/media", form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+};
+export const deleteMedia = (id) => api.delete(`/fitness/media/${id}`);
+export const getProgressPhotos = () => cachedGet("fitnessProgressPhotos", "/fitness/progress-photos");
+export const createPost = (data) => api.post("/fitness/posts", data).then((r) => r.data);
+export const getFeed = (before) =>
+  before ? api.get("/fitness/feed", { params: { before } }).then((r) => r.data) : cachedGet("fitnessFeed", "/fitness/feed");
+export const getUserPosts = (username) =>
+  api.get(`/fitness/users/${encodeURIComponent(username)}/posts`).then((r) => r.data);
+export const getPost = (id) => api.get(`/fitness/posts/${id}`).then((r) => r.data);
+export const deletePost = (id) => api.delete(`/fitness/posts/${id}`);
+export const reactToPost = (id, kind) => api.put(`/fitness/posts/${id}/reaction`, { kind }).then((r) => r.data);
+export const removeReaction = (id) => api.delete(`/fitness/posts/${id}/reaction`).then((r) => r.data);
+export const addComment = (id, text) => api.post(`/fitness/posts/${id}/comments`, { text }).then((r) => r.data);
+export const deleteComment = (id) => api.delete(`/fitness/comments/${id}`);
+export const reportPost = (id, reason, details) =>
+  api.post(`/fitness/posts/${id}/report`, { reason, details }).then((r) => r.data);
 
 export const exportFitnessData = (params) =>
   api.get("/fitness/export", { params, responseType: "blob" }).then((r) => {

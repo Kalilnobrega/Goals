@@ -5,13 +5,14 @@ import { useParams } from 'next/navigation';
 import {
   Ban, ChevronLeft, Clock, Dumbbell, Flag, Globe, Lock, MoreHorizontal, Settings, Trophy, Users,
 } from 'lucide-react';
-import { blockUser, getSocialProfile, peekCache, reportUser } from '../../../../lib/api';
+import { blockUser, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
 import { apiError, formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
 import Avatar from '../../../../components/gym/social/Avatar';
 import FriendAction from '../../../../components/gym/social/FriendAction';
+import PostCard from '../../../../components/gym/social/PostCard';
 import styles from './page.module.css';
 
 const VISIBILITY = {
@@ -119,6 +120,7 @@ export default function SocialProfilePage() {
   const [error, setError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [posts, setPosts] = useState(null);
 
   const load = useCallback(() => {
     getSocialProfile(handle)
@@ -132,6 +134,12 @@ export default function SocialProfilePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const canView = profile?.can_view;
+  useEffect(() => {
+    if (!canView) return;
+    getUserPosts(handle).then((data) => setPosts(data.posts)).catch(() => setPosts([]));
+  }, [canView, handle]);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const closeReport = useCallback(() => setReporting(false), []);
@@ -257,6 +265,20 @@ export default function SocialProfilePage() {
                 <p className={styles.note}>Os últimos treinos aparecem só para amigos e quem está nos mesmos desafios.</p>
               )}
             </>
+          )}
+
+          {profile.can_view && posts && posts.length > 0 && (
+            <section className={styles.posts}>
+              <h2 className={styles.postsTitle}>Publicações</h2>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onChange={(updated) => setPosts((list) => list.map((p) => (p.id === updated.id ? updated : p)))}
+                  onDeleted={(removed) => setPosts((list) => list.filter((p) => p.id !== removed.id))}
+                />
+              ))}
+            </section>
           )}
 
           {!self && (

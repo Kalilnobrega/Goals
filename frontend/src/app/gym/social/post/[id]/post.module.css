@@ -1,0 +1,147 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  margin-left: -6px;
+  border-radius: 10px;
+  color: var(--gym-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.bubble {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--gym-surface-2);
+}
+
+.commentHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.commentAuthor {
+  color: var(--gym-text);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.commentText {
+  margin-top: 2px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.remove {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--gym-faint);
+  cursor: pointer;
+}
+
+.form {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  min-width: 0;
+  flex: 1;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--gym-accent);
+}
+
+.send {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 14px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  cursor: pointer;
+}
+
+.send:disabled {
+  opacity: 0.4;
+}
+
+.muted {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.92rem;
+}
+
+.skeleton {
+  height: 260px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+}

@@ -1,201 +1,90 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Search, UserPlus, X } from 'lucide-react';
-import { getFitnessProfile, getFriends, peekCache, removeFriendship, searchPeople } from '../../../lib/api';
-import { apiError, plural } from '../../../lib/gym';
-import { useToast } from '../../../components/Toast';
-import PersonRow from '../../../components/gym/social/PersonRow';
-import FriendAction from '../../../components/gym/social/FriendAction';
-import UsernameSetup from '../../../components/gym/social/UsernameSetup';
+import Link from 'next/link';
+import { Camera, Newspaper } from 'lucide-react';
+import { getFeed, getFitnessProfile, peekCache } from '../../../lib/api';
+import { apiError } from '../../../lib/gym';
 import SocialTabs from '../../../components/gym/social/SocialTabs';
-import social from '../../../components/gym/social/social.module.css';
-import styles from './page.module.css';
+import UsernameSetup from '../../../components/gym/social/UsernameSetup';
+import PostCard from '../../../components/gym/social/PostCard';
+import styles from './feed.module.css';
 
-function SearchPeople({ onChanged }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState(null);
-  const [searched, setSearched] = useState('');
-
-  const term = query.trim();
-  const ready = term.replace(/^@/, '').length >= 2;
-
-  useEffect(() => {
-    if (!ready) return undefined;
-    let active = true;
-    const timer = setTimeout(() => {
-      searchPeople(term)
-        .then((people) => {
-          if (!active) return;
-          setResults(people);
-          setSearched(term);
-        })
-        .catch(() => {});
-    }, 300);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [term, ready]);
-
-  const update = (person) => {
-    setResults((list) => list.map((p) => (p.username === person.username ? person : p)));
-    onChanged();
-  };
-
-  const visible = ready && searched === term ? results : null;
-
-  return (
-    <section className={styles.card}>
-      <label className={styles.searchWrap}>
-        <Search size={18} className={styles.searchIcon} aria-hidden="true" />
-        <input
-          className={styles.search}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar pelo @username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label="Buscar pessoas"
-        />
-        {query && (
-          <button type="button" className={styles.clear} onClick={() => setQuery('')} aria-label="Limpar busca">
-            <X size={16} />
-          </button>
-        )}
-      </label>
-      {!ready && <p className={styles.hint}>Perfis públicos também aparecem pelo nome.</p>}
-      {visible && visible.length === 0 && <p className={styles.hint}>Ninguém encontrado com “{searched}”.</p>}
-      {visible && visible.length > 0 && (
-        <ul className={social.list}>
-          {visible.map((person) => (
-            <PersonRow key={person.username} person={person}>
-              <FriendAction person={person} onChange={update} compact />
-            </PersonRow>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function Section({ title, count, children }) {
-  return (
-    <section className={styles.card}>
-      <h2 className={styles.sectionTitle}>
-        {title}
-        {count > 0 && <span className={styles.count}>{count}</span>}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-export default function SocialPage() {
-  const toast = useToast();
+export default function FeedPage() {
   const [profile, setProfile] = useState(() => peekCache('fitnessProfile'));
-  const [friends, setFriends] = useState(() => peekCache('fitnessFriends'));
+  const [feed, setFeed] = useState(() => peekCache('fitnessFeed'));
   const [error, setError] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const loadFriends = useCallback(() => {
-    getFriends().then(setFriends).catch((err) => setError(apiError(err, 'Não foi possível carregar seus amigos.')));
+  const load = useCallback(() => {
+    getFeed().then(setFeed).catch((err) => setError(apiError(err, 'Não foi possível carregar o feed.')));
   }, []);
 
   useEffect(() => {
     getFitnessProfile()
       .then((data) => {
         setProfile(data);
-        if (data.username) loadFriends();
+        if (data.username) load();
       })
       .catch(() => setError('Não foi possível carregar o Social.'));
-  }, [loadFriends]);
+  }, [load]);
 
-  const decline = async (person) => {
+  const loadMore = async () => {
+    setLoadingMore(true);
     try {
-      await removeFriendship(person.username);
-      toast('Pedido recusado');
-      loadFriends();
+      const page = await getFeed(feed.next_before);
+      setFeed((current) => ({ posts: [...current.posts, ...page.posts], next_before: page.next_before }));
     } catch (err) {
-      toast({ tone: 'danger', message: apiError(err, 'Não foi possível recusar o pedido.') });
+      setError(apiError(err, 'Não foi possível carregar mais posts.'));
+    } finally {
+      setLoadingMore(false);
     }
   };
 
-  const withRelation = (list, relation) => list.map((person) => ({ ...person, relation }));
-  const needsUsername = profile && !profile.username;
+  const replace = (post) => setFeed((current) => ({ ...current, posts: current.posts.map((p) => (p.id === post.id ? post : p)) }));
+  const drop = (post) => setFeed((current) => ({ ...current, posts: current.posts.filter((p) => p.id !== post.id) }));
 
   return (
     <div className={styles.page}>
       <header className={styles.top}>
         <h1 className={styles.title}>Social</h1>
-        <p className={styles.subtitle}>
-          {profile?.username ? <>Você é <strong>@{profile.username}</strong></> : 'Amigos, desafios e feed'}
-        </p>
+        <p className={styles.subtitle}>O que seus amigos andam treinando</p>
       </header>
 
       <SocialTabs />
 
       {error && <p className={styles.error}>{error}</p>}
-
-      {!profile && !error && (
-        <div className={styles.skeletonList} aria-busy="true" aria-label="Carregando">
-          <div className={styles.skeleton} />
-        </div>
-      )}
-
-      {needsUsername && <UsernameSetup />}
+      {!profile && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando" />}
+      {profile && !profile.username && <UsernameSetup />}
 
       {profile?.username && (
         <>
-          <SearchPeople onChanged={loadFriends} />
+          <Link href="/gym/social/publicar" className={styles.compose}>
+            <Camera size={18} /> Publicar
+          </Link>
 
-          {!friends && !error && (
-            <div className={styles.skeletonList} aria-busy="true" aria-label="Carregando amigos">
-              <div className={styles.skeleton} />
-            </div>
+          {!feed && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando feed" />}
+
+          {feed && feed.posts.length === 0 && (
+            <section className={styles.empty}>
+              <Newspaper size={26} />
+              <p className={styles.emptyTitle}>Nada por aqui ainda</p>
+              <p className={styles.emptyText}>
+                Publique seu treino com uma foto. Os posts dos seus amigos e de quem está nos seus desafios aparecem aqui.
+              </p>
+            </section>
           )}
 
-          {friends && friends.incoming.length > 0 && (
-            <Section title="Pedidos de amizade" count={friends.incoming.length}>
-              <ul className={social.list}>
-                {withRelation(friends.incoming, 'request_received').map((person) => (
-                  <PersonRow key={person.username} person={person}>
-                    <FriendAction person={person} onChange={loadFriends} compact />
-                    <button type="button" className={social.iconAction} onClick={() => decline(person)} aria-label={`Recusar pedido de ${person.name}`}>
-                      <X size={16} />
-                    </button>
-                  </PersonRow>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {friends && (
-            <Section title="Amigos" count={friends.friends.length}>
-              {friends.friends.length ? (
-                <ul className={social.list}>
-                  {friends.friends.map((person) => (
-                    <PersonRow key={person.username} person={person} />
-                  ))}
-                </ul>
-              ) : (
-                <div className={styles.empty}>
-                  <UserPlus size={22} />
-                  <p>Você ainda não tem amigos no GymGoals. Busque pelo @ de alguém para começar.</p>
-                </div>
+          {feed && feed.posts.length > 0 && (
+            <div className={styles.list}>
+              {feed.posts.map((post) => (
+                <PostCard key={post.id} post={post} onChange={replace} onDeleted={drop} />
+              ))}
+              {feed.next_before && (
+                <button type="button" className={styles.more} onClick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? 'Carregando...' : 'Carregar mais'}
+                </button>
               )}
-            </Section>
-          )}
-
-          {friends && friends.outgoing.length > 0 && (
-            <Section title={plural(friends.outgoing.length, 'pedido enviado', 'pedidos enviados')}>
-              <ul className={social.list}>
-                {withRelation(friends.outgoing, 'request_sent').map((person) => (
-                  <PersonRow key={person.username} person={person}>
-                    <FriendAction person={person} onChange={loadFriends} compact />
-                  </PersonRow>
-                ))}
-              </ul>
-            </Section>
+            </div>
           )}
         </>
       )}

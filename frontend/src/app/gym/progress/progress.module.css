@@ -755,3 +755,48 @@
 .gymChoices .variantActive {
   background: var(--gym-accent);
 }
+
+.photosLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.photosIcon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--gym-accent-soft);
+  color: var(--gym-accent);
+}
+
+.photosText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.photosTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.photosSub {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+}
+
+.photosChevron {
+  color: var(--gym-faint);
+}

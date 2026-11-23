@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Scale, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
+import { Camera, Scale, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import {
   getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, getBodyGoal, saveBodyGoal, deleteBodyGoal, peekCache,
 } from '../../../../lib/api';
@@ -142,6 +142,15 @@ export default function BodyWeightPage() {
         <h1 className={styles.detailTitle}>Peso corporal</h1>
         <p className={styles.subtitle}>Como seu peso muda com o tempo</p>
       </div>
+
+      <Link href="/gym/progress/body/fotos" className={styles.photosLink}>
+        <span className={styles.photosIcon}><Camera size={18} /></span>
+        <span className={styles.photosText}>
+          <span className={styles.photosTitle}>Fotos de evolução</span>
+          <span className={styles.photosSub}>Galeria privada, só você vê</span>
+        </span>
+        <ChevronRight size={18} className={styles.photosChevron} />
+      </Link>
 
       {loadError && !entries && (
         <div className={styles.state}>

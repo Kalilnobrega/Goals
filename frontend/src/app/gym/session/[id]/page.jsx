@@ -2,10 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, Building2, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse, Link2, Link2Off
-} from 'lucide-react';
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, Building2, Camera, Check, ChevronLeft, ChevronRight, CloudOff, Dumbbell, Flag, GalleryHorizontalEnd, HeartPulse, LayoutList, Link2, Link2Off, MoreHorizontal, Play, Plus, RefreshCw, Repeat, Trash2, Trophy, Weight } from 'lucide-react';
 import {
   getSession, getSessionInsights, getExercises, getGyms, setSessionGym, peekCache, finishSession, deleteSession, addSessionExercise,
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
@@ -669,7 +666,8 @@ export default function SessionPage() {
         </header>
         <SessionSummary session={session} insights={insights} />
         <div className={s.actions}>
-          <Link href="/gym" className={s.primary}>Voltar ao início</Link>
+          <Link href={`/gym/social/publicar?sessao=${session.id}`} className={s.primary}><Camera size={18} /> Publicar no feed</Link>
+          <Link href="/gym" className={s.secondary}>Voltar ao início</Link>
           <Link href="/gym/history" className={s.secondary}>Ver histórico</Link>
         </div>
       </div>

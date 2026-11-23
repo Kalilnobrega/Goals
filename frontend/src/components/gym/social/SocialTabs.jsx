@@ -1,18 +1,17 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, Users } from 'lucide-react';
-import { useToast } from '../../Toast';
+import { Newspaper, Trophy, Users } from 'lucide-react';
 import styles from './social.module.css';
 
 const TABS = [
-  { href: '/gym/social', label: 'Amigos', icon: Users, match: (path) => path === '/gym/social' },
+  { href: '/gym/social', label: 'Feed', icon: Newspaper, match: (path) => path === '/gym/social' || path.startsWith('/gym/social/post') || path.startsWith('/gym/social/publicar') },
   { href: '/gym/social/desafios', label: 'Desafios', icon: Trophy, match: (path) => path.startsWith('/gym/social/desafios') },
+  { href: '/gym/social/amigos', label: 'Amigos', icon: Users, match: (path) => path.startsWith('/gym/social/amigos') },
 ];
 
 export default function SocialTabs() {
   const pathname = usePathname();
-  const toast = useToast();
 
   return (
     <nav className={styles.pills} aria-label="Social">
@@ -29,14 +28,6 @@ export default function SocialTabs() {
           </Link>
         );
       })}
-      <button
-        type="button"
-        className={styles.pill}
-        aria-disabled="true"
-        onClick={() => toast({ tone: 'info', message: 'Feed chega em breve.' })}
-      >
-        Feed <span className={styles.soon}>Em breve</span>
-      </button>
     </nav>
   );
 }
