@@ -17,16 +17,18 @@ from app.fitness_schemas import (
     PostDetailSchema,
     PostReportSchema,
     PostableSessionSchema,
+    PostWorkoutDetailSchema,
     PostSchema,
     ProgressPhotoSchema,
     ReactionSchema,
 )
 from app.fitness_media import delete_files
+from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from .auth import get_current_user
-from .fitness_sessions import COMPLETED
+from .fitness_sessions import COMPLETED, serialize_session
 from .fitness_social import can_view, has_blocked, is_close, own_profile, relation_to
-from .fitness_stats import session_facts
+from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -368,6 +370,36 @@ def get_post(post_id: int, user: User = Depends(get_current_user), db: Session =
     comments = db.query(PostComment).filter(PostComment.post_id == post.id).order_by(PostComment.id).all()
     visible = [c for c in comments if not has_blocked(db, user.id, c.user_id) and not has_blocked(db, c.user_id, user.id)]
     return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in visible]}
+
+
+@fitness_feed_router.get("/posts/{post_id}/workout", response_model=PostWorkoutDetailSchema)
+def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, user.id)
+    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
+    if session is None:
+        raise HTTPException(status_code=404, detail="Esse post não tem treino vinculado.")
+    detail = serialize_session(session, db)
+    mine = post.user_id == user.id
+    if not mine:
+        for item in detail["exercises"]:
+            item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])
+    owner, profile = author_profile(db, post.user_id)
+    day = to_br_date(session.started_at)
+    records = weight_records(completed_facts(owner, db, None, day), lambda s: s["id"] == session.id)
+    muscle_sets: dict[str, float] = {}
+    for e in session_facts(session)["exercises"]:
+        for muscle, credit in muscle_credit(e["muscles"]).items():
+            muscle_sets[muscle] = muscle_sets.get(muscle, 0.0) + credit * e["sets"]
+    return {
+        "author": {"username": profile.username if profile else None, "name": owner.name},
+        "is_mine": mine,
+        "muscle_sets": [{"muscle": m, "sets": round(v, 2)} for m, v in sorted(muscle_sets.items(), key=lambda kv: -kv[1])],
+        "session": detail,
+        "records": [
+            {"name": r["name"], "weight_kg": r["weight_kg"], "reps": r["reps"], "previous_kg": r["previous_kg"]}
+            for r in records
+        ],
+    }
 
 
 @fitness_feed_router.delete("/posts/{post_id}", status_code=204)

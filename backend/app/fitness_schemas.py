@@ -1746,3 +1746,18 @@ class PostableSessionSchema(BaseModel):
     minutes: int
     exercises: int
     volume_kg: float
+
+
+class PostRecordSchema(BaseModel):
+    name: str
+    weight_kg: float
+    reps: int
+    previous_kg: float
+
+
+class PostWorkoutDetailSchema(BaseModel):
+    author: PostAuthorSchema
+    is_mine: bool
+    session: SessionResponseSchema
+    records: list[PostRecordSchema]
+    muscle_sets: list[dict]

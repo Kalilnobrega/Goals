@@ -223,3 +223,31 @@ def test_postable_sessions_lists_recent_unposted_workouts(client, library, ana, 
 
     post(client, ana, session_id=second["id"], caption="pago")
     assert [s["id"] for s in client.get("/fitness/posts/postable-sessions", headers=ana).json()] == [first["id"]]
+
+
+def test_post_workout_detail_follows_post_visibility_and_hides_notes(client, library, ana, bruno, carla):
+    befriend(client, ana, bruno, "bruno", "ana")
+    workout = make_workout(client, ana, library)
+    first = start(client, ana, workout["id"])
+    log_set(client, ana, first["exercises"][0]["id"], 60, 10)
+    assert finish(client, ana, first["id"]).status_code == 200
+    session = start(client, ana, workout["id"])
+    item = session["exercises"][0]["id"]
+    log_set(client, ana, item, 70, 8)
+    client.patch(f"/fitness/session-exercises/{item}", json={"note": "ombro doendo"}, headers=ana)
+    assert finish(client, ana, session["id"]).status_code == 200
+    created = post(client, ana, session_id=session["id"])
+    free = post(client, ana, caption="sem treino")
+
+    seen = client.get(f"/fitness/posts/{created['id']}/workout", headers=bruno).json()
+    assert seen["is_mine"] is False and seen["author"]["username"] == "ana"
+    exercise = seen["session"]["exercises"][0]
+    assert exercise["sets"][0]["weight_kg"] == 70 and exercise["sets"][0]["reps"] == 8
+    assert exercise["note"] is None and exercise["previous"] == [] and exercise["history"] == []
+    assert seen["records"] == [{"name": "Supino reto", "weight_kg": 70.0, "reps": 8, "previous_kg": 60.0}]
+
+    own = client.get(f"/fitness/posts/{created['id']}/workout", headers=ana).json()
+    assert own["is_mine"] is True
+
+    assert client.get(f"/fitness/posts/{created['id']}/workout", headers=carla).status_code == 404
+    assert client.get(f"/fitness/posts/{free['id']}/workout", headers=bruno).status_code == 404
