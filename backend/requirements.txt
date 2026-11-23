@@ -13,3 +13,4 @@ requests==2.34.2
 resend==2.47.0
 slowapi==0.1.10
 psycopg[binary]==3.3.6
+boto3==1.35.99
