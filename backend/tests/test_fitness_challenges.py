@@ -264,3 +264,67 @@ def test_exercise_metric_can_count_the_whole_family(client, ana, db_session):
 
     bad = payload(metrics=[{"key": "exercise", "exercise_id": solo.id, "measure": "reps", "scope": "family"}])
     assert client.post("/fitness/challenges", json=bad, headers=ana).status_code == 422
+
+
+def test_records_metric_counts_load_records_inside_the_challenge(client, library, ana, db_session):
+    from app.fitness_models import WorkoutSession
+    train(client, ana, library, weight=80)
+    old = db_session.query(WorkoutSession).one()
+    old.started_at = old.started_at - timedelta(days=20)
+    old.completed_at = old.completed_at - timedelta(days=20)
+    db_session.commit()
+
+    challenge = create(client, ana, metrics=[{"key": "records"}])
+    train(client, ana, library, weight=70)
+    assert client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"][0]["score"] == 0
+    train(client, ana, library, weight=85)
+    assert client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"][0]["score"] == 1
+
+
+def test_plan_metric_uses_each_members_own_plan(client, library, ana, bruno):
+    today = today_br()
+    workout = make_workout(client, ana, library)
+    plan = client.post("/fitness/plans", json={"name": "Plano", "days": [{"weekday": today.weekday(), "workout_id": workout["id"]}]}, headers=ana)
+    assert plan.status_code == 200, plan.text
+    challenge = create(client, ana, metrics=[{"key": "plan"}])
+    join(client, bruno, challenge)
+    train(client, ana, library)
+    train(client, bruno, library)
+    ranking = client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"]
+    scores = {r["username"]: r["score"] for r in ranking}
+    assert scores == {"ana": 100, "bruno": 0}
+
+
+def test_muscle_metric_counts_sets_by_role(client, ana, db_session):
+    from app.fitness_models import Exercise, ExerciseMuscle
+    supino = Exercise(slug="supino-m", name="Supino M", muscle_group="chest", equipment="barbell")
+    leg = Exercise(slug="leg-m", name="Leg M", muscle_group="quads", equipment="machine")
+    db_session.add_all([supino, leg])
+    db_session.flush()
+    db_session.add_all([
+        ExerciseMuscle(exercise_id=supino.id, muscle="chest_mid", role="primary"),
+        ExerciseMuscle(exercise_id=supino.id, muscle="triceps_long", role="secondary"),
+    ])
+    db_session.commit()
+    workout = client.post("/fitness/workouts", json={"name": "A", "exercises": [
+        {"exercise_id": supino.id, "target_sets": 2, "reps_min": 8},
+        {"exercise_id": leg.id, "target_sets": 1, "reps_min": 8},
+    ]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 60, 10)
+    log_set(client, ana, session["exercises"][0]["id"], 60, 8)
+    log_set(client, ana, session["exercises"][1]["id"], 100, 10)
+    assert finish(client, ana, session["id"]).status_code == 200
+
+    challenge = create(client, ana, metrics=[
+        {"key": "muscle", "muscle_group": "chest"},
+        {"key": "muscle", "muscle_group": "triceps"},
+        {"key": "muscle", "muscle_group": "quads"},
+    ])
+    values = challenge["ranking"][0]["values"]
+    assert values == {"muscle:chest": 2, "muscle:triceps": 1, "muscle:quads": 1}
+
+    bad = payload(metrics=[{"key": "muscle"}])
+    assert client.post("/fitness/challenges", json=bad, headers=ana).status_code == 422
+    cardio = payload(metrics=[{"key": "muscle", "muscle_group": "cardio"}])
+    assert client.post("/fitness/challenges", json=cardio, headers=ana).status_code == 422

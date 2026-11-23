@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Dumbbell, Minus, Plus } from 'lucide-react';
 import { createChallenge, getExercises } from '../../../../../lib/api';
 import { addDays, apiError, todayIso } from '../../../../../lib/gym';
-import { EXERCISE_MEASURES, METRIC_OPTIONS, formatRange } from '../../../../../lib/challenges';
+import { CHALLENGE_MUSCLE_GROUPS, EXERCISE_MEASURES, METRIC_OPTIONS, formatRange } from '../../../../../lib/challenges';
 import GymSheet from '../../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../../components/gym/ExercisePicker';
 import styles from './new.module.css';
@@ -41,6 +41,7 @@ export default function NewChallengePage() {
   const [exercise, setExercise] = useState(null);
   const [measure, setMeasure] = useState('max_weight');
   const [scope, setScope] = useState('exact');
+  const [muscleGroup, setMuscleGroup] = useState(null);
   const [rule, setRule] = useState({ kind: 'none', value: null });
   const [picking, setPicking] = useState(false);
   const [exercises, setExercises] = useState(null);
@@ -107,6 +108,7 @@ export default function NewChallengePage() {
     if (!name.trim()) return setError('Dê um nome ao desafio.');
     if (!selected.length) return setError('Escolha pelo menos uma métrica.');
     if (selected.includes('exercise') && !exercise) return setError('Escolha o exercício do desafio.');
+    if (selected.includes('muscle') && !muscleGroup) return setError('Escolha o grupo muscular do desafio.');
     if (!length) return setError('O fim precisa ser depois do início.');
     if (ruleOption.unit && !(rule.value >= ruleOption.min && rule.value <= ruleOption.max)) {
       return setError(`O treino mínimo deve ficar entre ${ruleOption.min} e ${ruleOption.max} ${ruleOption.unit}.`);
@@ -118,6 +120,7 @@ export default function NewChallengePage() {
         key: option.key,
         weight: selected.length > 1 ? weightOf(option.key) : 1,
         ...(option.key === 'exercise' ? { exercise_id: exercise.id, measure, scope: exercise.family ? scope : 'exact' } : {}),
+        ...(option.key === 'muscle' ? { muscle_group: muscleGroup } : {}),
       }));
       const challenge = await createChallenge({
         name: name.trim(),
@@ -244,6 +247,25 @@ export default function NewChallengePage() {
                         ))}
                       </div>
                     </div>
+                  )}
+                  {active && option.key === 'muscle' && (
+                    <div className={styles.metricExtra}>
+                      <div className={styles.chips}>
+                      {CHALLENGE_MUSCLE_GROUPS.map((group) => (
+                        <button
+                          key={group.value}
+                          type="button"
+                          className={`${styles.chip} ${muscleGroup === group.value ? styles.chipActive : ''}`}
+                          onClick={() => setMuscleGroup(group.value)}
+                        >
+                          {group.label}
+                        </button>
+                      ))}
+                      </div>
+                    </div>
+                  )}
+                  {active && option.key === 'plan' && (
+                    <p className={`${styles.metricExtra} ${styles.hint}`}>Cada um compete contra o próprio plano ativo. Quem não tem plano fica com 0%.</p>
                   )}
                   {active && selected.length > 1 && (
                     <div className={styles.weight}>

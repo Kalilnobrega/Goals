@@ -1,4 +1,4 @@
-import { formatKg } from './gym';
+import { MUSCLE_GROUPS, formatKg, muscleLabel } from './gym';
 
 export const METRIC_OPTIONS = [
   { key: 'days', label: 'Dias treinados', short: 'dias', description: 'Um ponto por dia com treino válido' },
@@ -9,7 +9,12 @@ export const METRIC_OPTIONS = [
   { key: 'cardio_km', label: 'Distância no cardio', short: 'km', description: 'Quilômetros no cardio' },
   { key: 'cardio_kcal', label: 'Calorias no cardio', short: 'kcal', description: 'Calorias gastas no cardio' },
   { key: 'exercise', label: 'Por exercício', short: '', description: 'Um exercício escolhido' },
+  { key: 'muscle', label: 'Grupo muscular', short: 'séries', description: 'Séries de um grupo, contando músculos secundários pela metade' },
+  { key: 'records', label: 'Recordes batidos', short: 'recordes', description: 'Quantos recordes de carga cada um bate' },
+  { key: 'plan', label: 'Seguir o plano', short: '%', description: '% dos treinos do próprio plano cumpridos' },
 ];
+
+export const CHALLENGE_MUSCLE_GROUPS = MUSCLE_GROUPS.filter((group) => group.value !== 'cardio' && group.value !== 'other');
 
 export const EXERCISE_MEASURES = [
   { key: 'reps', label: 'Total de repetições', short: 'reps' },
@@ -26,6 +31,7 @@ const optionOf = (key) => METRIC_OPTIONS.find((option) => option.key === key);
 const measureOf = (key) => EXERCISE_MEASURES.find((measure) => measure.key === key);
 
 export function metricLabel(metric) {
+  if (metric.key === 'muscle') return `Séries de ${muscleLabel(metric.muscle_group).toLowerCase()}`;
   if (metric.key !== 'exercise') return optionOf(metric.key)?.label ?? metric.key;
   const target = metric.scope === 'family' && metric.family
     ? `${metric.family} (todas as variações)`
@@ -40,6 +46,9 @@ export function formatMetricValue(metric, value) {
   if (metric.key === 'volume') return `${number.format(Math.round(value))} kg`;
   if (metric.key === 'cardio_km') return `${distance.format(value)} km`;
   if (metric.key === 'cardio_kcal') return `${number.format(value)} kcal`;
+  if (metric.key === 'muscle') return `${number.format(value)} ${value === 1 ? 'série' : 'séries'}`;
+  if (metric.key === 'records') return `${value} ${value === 1 ? 'recorde' : 'recordes'}`;
+  if (metric.key === 'plan') return `${Math.round(value)}%`;
   if (metric.measure === 'reps') return `${number.format(value)} reps`;
   if (metric.measure === 'max_weight') return `${formatKg(value)} kg`;
   return `${number.format(Math.round(value))} kg`;

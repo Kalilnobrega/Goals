@@ -16,7 +16,9 @@ from app.fitness_schemas import (
 )
 from .auth import get_current_user
 from .fitness_social import own_profile, find_profile, friendship_between, has_blocked
-from .fitness_stats import completed_facts
+from .fitness_stats import completed_facts, plan_adherence, weight_records
+from .fitness_plans import active_plan
+from app.fitness_muscles import group_credit
 
 fitness_challenges_router = APIRouter(prefix="/fitness/challenges", tags=["fitness"])
 
@@ -30,6 +32,8 @@ def metric_id(metric: dict) -> str:
     if metric["key"] == "exercise":
         base = f"exercise:{metric['exercise_id']}:{metric['measure']}"
         return f"{base}:family" if metric.get("scope") == "family" else base
+    if metric["key"] == "muscle":
+        return f"muscle:{metric['muscle_group']}"
     return metric["key"]
 
 
@@ -82,8 +86,19 @@ def qualifies(session: dict, rule: dict | None) -> bool:
     return len(session["exercises"]) + len(session["cardio"]) >= rule["value"]
 
 
+def muscle_sets(sessions: list[dict], group: str) -> float:
+    total = 0.0
+    for session in sessions:
+        for e in session["exercises"]:
+            credit = group_credit(e["muscles"]).get(group) if e["muscles"] else (1.0 if e["muscle_group"] == group else 0.0)
+            total += (credit or 0.0) * e["sets"]
+    return round(total, 2)
+
+
 def metric_value(metric: dict, sessions: list[dict], targets: dict[str, set[int]] | None = None) -> float:
     key = metric["key"]
+    if key == "muscle":
+        return muscle_sets(sessions, metric["muscle_group"])
     if key == "days":
         return float(len({s["day"] for s in sessions}))
     if key == "workouts":
@@ -107,17 +122,46 @@ def metric_value(metric: dict, sessions: list[dict], targets: dict[str, set[int]
     return max((e["top_weight"] for e in entries), default=0.0)
 
 
+def plan_pct(db: Session, user: User, sessions: list[dict], challenge: Challenge) -> float:
+    plan = active_plan(user, db)
+    if plan is None or not plan.days:
+        return 0.0
+    today = today_br()
+    if today < challenge.start_date:
+        return 0.0
+    adherence = plan_adherence(plan, sessions, challenge.start_date, min(today, challenge.end_date))
+    return float(adherence["pct"] or 0)
+
+
+def member_values(db: Session, challenge: Challenge, user: User, targets: dict[str, set[int]]) -> dict[str, float]:
+    keys = {metric["key"] for metric in challenge.metrics}
+    in_range = lambda s: challenge.start_date <= s["day"] <= challenge.end_date
+    if "records" in keys:
+        history = completed_facts(user, db, None, challenge.end_date)
+        sessions = [s for s in history if in_range(s) and qualifies(s, challenge.min_rule)]
+    else:
+        history = []
+        sessions = [s for s in completed_facts(user, db, challenge.start_date, challenge.end_date) if qualifies(s, challenge.min_rule)]
+    counted = {s["id"] for s in sessions}
+    values = {}
+    for metric in challenge.metrics:
+        if metric["key"] == "records":
+            value = float(len(weight_records(history, lambda s: s["id"] in counted)))
+        elif metric["key"] == "plan":
+            value = plan_pct(db, user, sessions, challenge)
+        else:
+            value = metric_value(metric, sessions, targets)
+        values[metric_id(metric)] = value
+    return values
+
+
 def ranking(db: Session, challenge: Challenge, me: int) -> list[dict]:
     targets = family_members(db, challenge)
     rows = []
     for member in challenge.members:
         user = db.get(User, member.user_id)
         profile = db.get(FitnessProfile, member.user_id)
-        sessions = [
-            s for s in completed_facts(user, db, challenge.start_date, challenge.end_date)
-            if qualifies(s, challenge.min_rule)
-        ]
-        values = {metric_id(metric): metric_value(metric, sessions, targets) for metric in challenge.metrics}
+        values = member_values(db, challenge, user, targets)
         rows.append({
             "user_id": user.id,
             "username": profile.username if profile else None,

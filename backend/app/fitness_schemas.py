@@ -1459,46 +1459,9 @@ class FitnessGoalResponseSchema(BaseModel):
     needed_per_day: float | None
 
 
-class GymSchema(BaseModel):
-    id: int
-    name: str
-    sessions: int
-    current: bool
-
-
-class GymListSchema(BaseModel):
-    current_gym_id: int | None
-    gyms: list[GymSchema]
-
-
-class GymCreateSchema(BaseModel):
-    name: str = Field(min_length=1, max_length=60)
-    make_current: bool = False
-
-    @field_validator("name")
-    @classmethod
-    def strip_name(cls, value: str) -> str:
-        value = " ".join(value.split())
-        if not value:
-            raise ValueError("Dê um nome para a academia.")
-        return value
-
-
-class GymRenameSchema(GymCreateSchema):
-    pass
-
-
-class CurrentGymSchema(BaseModel):
-    gym_id: int
-
-
-class ExerciseGymSettingSchema(BaseModel):
-    gym_specific: bool | None = None
-
-
-
-
-ChallengeMetricKey = Literal["days", "workouts", "minutes", "volume", "cardio_minutes", "cardio_km", "cardio_kcal", "exercise"]
+ChallengeMetricKey = Literal[
+    "days", "workouts", "minutes", "volume", "cardio_minutes", "cardio_km", "cardio_kcal", "exercise", "records", "plan", "muscle",
+]
 ExerciseMeasure = Literal["reps", "volume", "max_weight"]
 ChallengeStatus = Literal["upcoming", "active", "finished"]
 
@@ -1509,9 +1472,15 @@ class ChallengeMetricSchema(BaseModel):
     exercise_id: int | None = None
     measure: ExerciseMeasure | None = None
     scope: Literal["exact", "family"] | None = None
+    muscle_group: MuscleGroup | None = None
 
     @model_validator(mode="after")
     def exercise_fields(self):
+        if self.key == "muscle":
+            if self.muscle_group is None or self.muscle_group == "cardio":
+                raise ValueError("Escolha o grupo muscular.")
+        else:
+            self.muscle_group = None
         if self.key == "exercise":
             if self.exercise_id is None or self.measure is None:
                 raise ValueError("Escolha o exercício e o que conta nele.")
@@ -1624,3 +1593,40 @@ class ChallengeDetailSchema(BaseModel):
 
 class ChallengeInviteSchema(BaseModel):
     username: str = Field(max_length=40)
+
+
+class GymSchema(BaseModel):
+    id: int
+    name: str
+    sessions: int
+    current: bool
+
+
+class GymListSchema(BaseModel):
+    current_gym_id: int | None
+    gyms: list[GymSchema]
+
+
+class GymCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    make_current: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Dê um nome para a academia.")
+        return value
+
+
+class GymRenameSchema(GymCreateSchema):
+    pass
+
+
+class CurrentGymSchema(BaseModel):
+    gym_id: int
+
+
+class ExerciseGymSettingSchema(BaseModel):
+    gym_specific: bool | None = None
