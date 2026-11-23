@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dates import BRT, today_br, to_br_date
+from app.dates import BRT, br_day_start_utc, today_br, to_br_date
 from app.models import User
 from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema, WeightComparisonSchema
@@ -419,14 +419,14 @@ def weight_records(everything: list[dict], include) -> list[dict]:
     return records
 
 
-def completed_facts(user, db) -> list[dict]:
+def completed_facts(user, db, start: date | None = None, end: date | None = None) -> list[dict]:
     body = BodyWeights(user.id, db)
-    sessions = (
-        db.query(WorkoutSession)
-        .filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
-        .order_by(WorkoutSession.started_at)
-        .all()
-    )
+    query = db.query(WorkoutSession).filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+    if start is not None:
+        query = query.filter(WorkoutSession.started_at >= br_day_start_utc(start))
+    if end is not None:
+        query = query.filter(WorkoutSession.started_at < br_day_start_utc(end + timedelta(days=1)))
+    sessions = query.order_by(WorkoutSession.started_at).all()
     factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
     levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises], user.id)
     facts = [session_facts(s, body, factors, levels) for s in sessions]

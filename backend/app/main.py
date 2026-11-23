@@ -69,6 +69,7 @@ from app.routers.fitness_stats import fitness_stats_router
 from app.routers.fitness_plans import fitness_plans_router
 from app.routers.fitness_profile import fitness_profile_router
 from app.routers.fitness_social import fitness_social_router
+from app.routers.fitness_challenges import fitness_challenges_router
 from app.routers.fitness_export import fitness_export_router
 from app.routers.fitness_gyms import fitness_gyms_router
 
@@ -88,5 +89,6 @@ app.include_router(fitness_stats_router)
 app.include_router(fitness_plans_router)
 app.include_router(fitness_profile_router)
 app.include_router(fitness_social_router)
+app.include_router(fitness_challenges_router)
 app.include_router(fitness_export_router)
 app.include_router(fitness_gyms_router)

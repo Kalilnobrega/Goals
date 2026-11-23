@@ -341,3 +341,37 @@ class UserReport(Base):
     reason = Column(String(20), nullable=False)
     details = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Challenge(Base):
+    __tablename__ = "fitness_challenges"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    owner_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(60), nullable=False)
+    description = Column(String(300), nullable=True)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    metrics = Column(JSON, nullable=False)
+    min_rule = Column(JSON, nullable=True)
+    invite_code = Column(String(16), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    members = relationship("ChallengeMember", cascade="all, delete-orphan", lazy="selectin")
+
+
+class ChallengeMember(Base):
+    __tablename__ = "fitness_challenge_members"
+
+    challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ChallengeInvite(Base):
+    __tablename__ = "fitness_challenge_invites"
+
+    challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    invited_by = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

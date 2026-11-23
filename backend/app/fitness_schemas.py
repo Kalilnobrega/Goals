@@ -1494,3 +1494,129 @@ class CurrentGymSchema(BaseModel):
 
 class ExerciseGymSettingSchema(BaseModel):
     gym_specific: bool | None = None
+
+
+
+
+ChallengeMetricKey = Literal["days", "workouts", "minutes", "volume", "cardio_minutes", "cardio_km", "cardio_kcal", "exercise"]
+ExerciseMeasure = Literal["reps", "volume", "max_weight"]
+ChallengeStatus = Literal["upcoming", "active", "finished"]
+
+
+class ChallengeMetricSchema(BaseModel):
+    key: ChallengeMetricKey
+    weight: int = Field(default=1, ge=1, le=5)
+    exercise_id: int | None = None
+    measure: ExerciseMeasure | None = None
+
+    @model_validator(mode="after")
+    def exercise_fields(self):
+        if self.key == "exercise":
+            if self.exercise_id is None or self.measure is None:
+                raise ValueError("Escolha o exercício e o que conta nele.")
+        else:
+            self.exercise_id = None
+            self.measure = None
+        return self
+
+
+class ChallengeMinRuleSchema(BaseModel):
+    kind: Literal["none", "minutes", "exercises"] = "none"
+    value: int | None = None
+
+    @model_validator(mode="after")
+    def valid_value(self):
+        if self.kind == "none":
+            self.value = None
+        elif self.kind == "minutes" and not (self.value and 5 <= self.value <= 240):
+            raise ValueError("O treino mínimo deve ter entre 5 e 240 minutos.")
+        elif self.kind == "exercises" and not (self.value and 1 <= self.value <= 20):
+            raise ValueError("O treino mínimo deve ter entre 1 e 20 exercícios.")
+        return self
+
+
+class ChallengeCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    description: str | None = Field(default=None, max_length=300)
+    start_date: date
+    end_date: date
+    metrics: list[ChallengeMetricSchema] = Field(min_length=1, max_length=4)
+    min_rule: ChallengeMinRuleSchema = Field(default_factory=ChallengeMinRuleSchema)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dê um nome ao desafio.")
+        return value
+
+
+class ChallengeMetricOutSchema(ChallengeMetricSchema):
+    id: str
+    exercise_name: str | None = None
+
+
+class ChallengeRankingSchema(BaseModel):
+    position: int
+    username: str | None
+    name: str
+    score: float
+    values: dict[str, float]
+    is_me: bool
+
+
+class ChallengeSummarySchema(BaseModel):
+    id: int
+    name: str
+    start_date: date
+    end_date: date
+    status: ChallengeStatus
+    member_count: int
+    metrics: list[ChallengeMetricOutSchema]
+    my_position: int | None = None
+    my_score: float | None = None
+    leader_name: str | None = None
+
+
+class ChallengePreviewSchema(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: str | None
+    start_date: date
+    end_date: date
+    status: ChallengeStatus
+    owner_name: str
+    member_count: int
+    metrics: list[ChallengeMetricOutSchema]
+    min_rule: ChallengeMinRuleSchema
+    is_member: bool
+
+
+class ChallengeListsSchema(BaseModel):
+    active: list[ChallengeSummarySchema]
+    upcoming: list[ChallengeSummarySchema]
+    finished: list[ChallengeSummarySchema]
+    invites: list[ChallengePreviewSchema]
+
+
+class ChallengeDetailSchema(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    start_date: date
+    end_date: date
+    status: ChallengeStatus
+    days_left: int
+    metrics: list[ChallengeMetricOutSchema]
+    min_rule: ChallengeMinRuleSchema
+    owner_username: str | None
+    is_owner: bool
+    invite_code: str
+    member_count: int
+    ranking: list[ChallengeRankingSchema]
+
+
+class ChallengeInviteSchema(BaseModel):
+    username: str = Field(max_length=40)
