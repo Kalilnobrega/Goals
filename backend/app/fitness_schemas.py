@@ -1461,7 +1461,10 @@ class FitnessGoalResponseSchema(BaseModel):
 
 ChallengeMetricKey = Literal[
     "days", "workouts", "minutes", "volume", "cardio_minutes", "cardio_km", "cardio_kcal", "exercise", "records", "plan", "muscle",
+    "progress", "body_weight", "relative_strength",
 ]
+EXERCISE_METRICS = {"exercise", "progress", "relative_strength"}
+WEIGHT_METRICS = {"body_weight", "relative_strength"}
 ExerciseMeasure = Literal["reps", "volume", "max_weight"]
 ChallengeStatus = Literal["upcoming", "active", "finished"]
 
@@ -1473,22 +1476,30 @@ class ChallengeMetricSchema(BaseModel):
     measure: ExerciseMeasure | None = None
     scope: Literal["exact", "family"] | None = None
     muscle_group: MuscleGroup | None = None
+    unit: Literal["pct", "kg"] | None = None
+    direction: Literal["lose", "gain"] | None = None
 
     @model_validator(mode="after")
-    def exercise_fields(self):
+    def metric_fields(self):
         if self.key == "muscle":
             if self.muscle_group is None or self.muscle_group == "cardio":
                 raise ValueError("Escolha o grupo muscular.")
         else:
             self.muscle_group = None
-        if self.key == "exercise":
-            if self.exercise_id is None or self.measure is None:
-                raise ValueError("Escolha o exercício e o que conta nele.")
+        if self.key in EXERCISE_METRICS:
+            if self.exercise_id is None:
+                raise ValueError("Escolha o exercício do desafio.")
             self.scope = self.scope or "exact"
         else:
             self.exercise_id = None
-            self.measure = None
             self.scope = None
+        if self.key == "exercise":
+            if self.measure is None:
+                raise ValueError("Escolha o que conta no exercício.")
+        else:
+            self.measure = None
+        self.unit = (self.unit or "pct") if self.key == "progress" else None
+        self.direction = (self.direction or "lose") if self.key == "body_weight" else None
         return self
 
 
@@ -1514,6 +1525,8 @@ class ChallengeCreateSchema(BaseModel):
     end_date: date
     metrics: list[ChallengeMetricSchema] = Field(min_length=1, max_length=4)
     min_rule: ChallengeMinRuleSchema = Field(default_factory=ChallengeMinRuleSchema)
+    hide_weight: bool = False
+    accept_weight: bool = False
 
     @field_validator("name")
     @classmethod
@@ -1536,12 +1549,15 @@ class ChallengeRankingSchema(BaseModel):
     name: str
     score: float
     values: dict[str, float]
+    details: dict[str, dict[str, float]] = {}
+    missing: list[str] = []
     is_me: bool
 
 
 class ChallengeSummarySchema(BaseModel):
     id: int
     name: str
+    hide_weight: bool = False
     start_date: date
     end_date: date
     status: ChallengeStatus
@@ -1565,6 +1581,8 @@ class ChallengePreviewSchema(BaseModel):
     metrics: list[ChallengeMetricOutSchema]
     min_rule: ChallengeMinRuleSchema
     is_member: bool
+    hide_weight: bool = False
+    uses_weight: bool = False
 
 
 class ChallengeListsSchema(BaseModel):
@@ -1586,9 +1604,15 @@ class ChallengeDetailSchema(BaseModel):
     min_rule: ChallengeMinRuleSchema
     owner_username: str | None
     is_owner: bool
+    hide_weight: bool = False
+    uses_weight: bool = False
     invite_code: str
     member_count: int
     ranking: list[ChallengeRankingSchema]
+
+
+class ChallengeJoinSchema(BaseModel):
+    accept_weight: bool = False
 
 
 class ChallengeInviteSchema(BaseModel):

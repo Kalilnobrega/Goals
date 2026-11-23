@@ -355,6 +355,7 @@ class Challenge(Base):
     metrics = Column(JSON, nullable=False)
     min_rule = Column(JSON, nullable=True)
     invite_code = Column(String(16), nullable=False, unique=True, index=True)
+    hide_weight = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     members = relationship("ChallengeMember", cascade="all, delete-orphan", lazy="selectin")

@@ -328,3 +328,115 @@ def test_muscle_metric_counts_sets_by_role(client, ana, db_session):
     assert client.post("/fitness/challenges", json=bad, headers=ana).status_code == 422
     cardio = payload(metrics=[{"key": "muscle", "muscle_group": "cardio"}])
     assert client.post("/fitness/challenges", json=cardio, headers=ana).status_code == 422
+
+
+def weigh(client, headers, day, kg):
+    response = client.post("/fitness/body-weight", json={"weight_kg": kg, "measured_on": day.isoformat()}, headers=headers)
+    assert response.status_code == 200, response.text
+
+
+def backdate_sessions(db_session, days):
+    from app.fitness_models import WorkoutSession
+    for session in db_session.query(WorkoutSession).all():
+        session.started_at -= timedelta(days=days)
+        session.completed_at -= timedelta(days=days)
+    db_session.commit()
+
+
+def test_weight_metrics_require_consent(client, ana, bruno):
+    body = payload(metrics=[{"key": "body_weight"}])
+    response = client.post("/fitness/challenges", json=body, headers=ana)
+    assert response.status_code == 422
+    challenge = create(client, ana, metrics=[{"key": "body_weight"}], accept_weight=True)
+    assert challenge["uses_weight"] is True and challenge["metrics"][0]["direction"] == "lose"
+
+    url = f"/fitness/challenges/invite/{challenge['invite_code']}/join"
+    assert client.post(url, headers=bruno).status_code == 422
+    assert client.post(url, json={"accept_weight": True}, headers=bruno).status_code == 200
+
+
+def test_progress_metric_in_percent_and_kg(client, library, ana, bruno, db_session):
+    supino = library["supino-reto"]
+    train(client, ana, library, weight=100, reps=1)
+    backdate_sessions(db_session, 20)
+    challenge = create(client, ana, metrics=[
+        {"key": "progress", "exercise_id": supino, "unit": "pct"},
+        {"key": "progress", "exercise_id": supino, "unit": "kg"},
+    ])
+    join(client, bruno, challenge)
+    train(client, ana, library, weight=110, reps=1)
+    train(client, bruno, library, weight=50, reps=1)
+    train(client, bruno, library, weight=60, reps=1)
+
+    ranking = client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"]
+    by_user = {r["username"]: r for r in ranking}
+    pct, kg = f"progress:{supino}:pct", f"progress:{supino}:kg"
+    assert by_user["ana"]["values"] == {pct: 10.0, kg: 10.0}
+    assert by_user["ana"]["details"][pct] == {"start_kg": 100.0, "best_kg": 110.0}
+    assert by_user["bruno"]["values"] == {pct: 20.0, kg: 10.0}
+
+
+def test_progress_never_goes_negative(client, library, ana, db_session):
+    train(client, ana, library, weight=100, reps=1)
+    backdate_sessions(db_session, 20)
+    challenge = create(client, ana, metrics=[{"key": "progress", "exercise_id": library["supino-reto"]}])
+    train(client, ana, library, weight=80, reps=1)
+    assert client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"][0]["score"] == 0
+
+
+def test_body_weight_metric_lose_and_gain(client, ana, bruno):
+    today = today_br()
+    weigh(client, ana, today - timedelta(days=3), 80)
+    weigh(client, ana, today, 78)
+    challenge = create(client, ana, metrics=[{"key": "body_weight", "direction": "lose"}], accept_weight=True,
+                       start_date=(today - timedelta(days=2)).isoformat())
+    client.post(f"/fitness/challenges/invite/{challenge['invite_code']}/join", json={"accept_weight": True}, headers=bruno)
+
+    ranking = client.get(f"/fitness/challenges/{challenge['id']}", headers=bruno).json()["ranking"]
+    ana_row = next(r for r in ranking if r["username"] == "ana")
+    bruno_row = next(r for r in ranking if r["username"] == "bruno")
+    assert ana_row["score"] == 2.5
+    assert ana_row["details"]["body_weight:lose"] == {"start_kg": 80.0, "current_kg": 78.0, "delta_kg": -2.0}
+    assert bruno_row["missing"] == ["body_weight:lose"]
+
+    gain = create(client, ana, metrics=[{"key": "body_weight", "direction": "gain"}], accept_weight=True,
+                  start_date=(today - timedelta(days=2)).isoformat())
+    assert gain["ranking"][0]["score"] == 0
+
+
+def test_hidden_weight_shows_only_the_percentage_to_others(client, ana, bruno):
+    today = today_br()
+    weigh(client, ana, today - timedelta(days=3), 80)
+    weigh(client, ana, today, 78)
+    challenge = create(client, ana, metrics=[{"key": "body_weight"}], accept_weight=True, hide_weight=True,
+                       start_date=(today - timedelta(days=2)).isoformat())
+    assert challenge["hide_weight"] is True
+    client.post(f"/fitness/challenges/invite/{challenge['invite_code']}/join", json={"accept_weight": True}, headers=bruno)
+
+    seen_by_bruno = next(r for r in client.get(f"/fitness/challenges/{challenge['id']}", headers=bruno).json()["ranking"] if r["username"] == "ana")
+    assert seen_by_bruno["score"] == 2.5 and seen_by_bruno["details"] == {}
+    seen_by_ana = next(r for r in client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"] if r["username"] == "ana")
+    assert seen_by_ana["details"]["body_weight:lose"]["current_kg"] == 78.0
+
+
+def test_hide_weight_is_ignored_without_weight_metrics(client, ana):
+    assert create(client, ana, hide_weight=True)["hide_weight"] is False
+
+
+def test_relative_strength_metric(client, library, ana, bruno):
+    supino = library["supino-reto"]
+    today = today_br()
+    weigh(client, ana, today, 80)
+    challenge = create(client, ana, metrics=[{"key": "relative_strength", "exercise_id": supino}], accept_weight=True, hide_weight=True)
+    client.post(f"/fitness/challenges/invite/{challenge['invite_code']}/join", json={"accept_weight": True}, headers=bruno)
+    train(client, ana, library, weight=100, reps=5)
+    train(client, bruno, library, weight=120, reps=5)
+
+    ranking = client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"]
+    ana_row = next(r for r in ranking if r["username"] == "ana")
+    bruno_row = next(r for r in ranking if r["username"] == "bruno")
+    key = f"strength:{supino}"
+    assert ana_row["score"] == 1.25
+    assert ana_row["details"][key] == {"load_kg": 100.0, "body_kg": 80.0}
+    assert bruno_row["score"] == 0 and bruno_row["missing"] == [key]
+    assert ranking[0]["username"] == "ana"
