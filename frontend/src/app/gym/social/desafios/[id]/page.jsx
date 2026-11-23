@@ -77,7 +77,7 @@ export default function ChallengePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justCreated = searchParams.get('novo') === '1';
-  const [tab, setTab] = useState({ atividade: 'activity', chat: 'chat' }[searchParams.get('aba')] ?? 'ranking');
+  const [tab, setTab] = useState({ ranking: 'ranking', chat: 'chat' }[searchParams.get('aba')] ?? 'activity');
   const toast = useToast();
   const confirmAction = useConfirm();
   const [challenge, setChallenge] = useState(() => peekCache(`fitnessChallenge:${id}`));
@@ -286,11 +286,11 @@ export default function ChallengePage() {
           )}
 
           <div className={styles.tabs} role="tablist" aria-label="Desafio">
-            <button type="button" role="tab" aria-selected={tab === 'ranking'} className={`${styles.tab} ${tab === 'ranking' ? styles.tabActive : ''}`} onClick={() => setTab('ranking')}>
-              <Crown size={15} /> Ranking
-            </button>
             <button type="button" role="tab" aria-selected={tab === 'activity'} className={`${styles.tab} ${tab === 'activity' ? styles.tabActive : ''}`} onClick={() => setTab('activity')}>
               <Activity size={15} /> Atividade
+            </button>
+            <button type="button" role="tab" aria-selected={tab === 'ranking'} className={`${styles.tab} ${tab === 'ranking' ? styles.tabActive : ''}`} onClick={() => setTab('ranking')}>
+              <Crown size={15} /> Ranking
             </button>
             <button type="button" role="tab" aria-selected={tab === 'chat'} className={`${styles.tab} ${tab === 'chat' ? styles.tabActive : ''}`} onClick={() => setTab('chat')}>
               <MessageCircle size={15} /> Chat
