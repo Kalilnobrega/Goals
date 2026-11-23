@@ -48,3 +48,34 @@
   transform: translateX(-50%);
   pointer-events: none;
 }
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.gridActive {
+  opacity: 1;
+}
+
+.lineV,
+.lineH {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.lineV {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.lineH {
+  left: 0;
+  right: 0;
+  height: 1px;
+}

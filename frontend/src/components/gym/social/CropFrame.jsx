@@ -1,5 +1,5 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { Move } from 'lucide-react';
 import { FORMATS } from '../../../lib/photos';
@@ -8,6 +8,7 @@ import styles from './CropFrame.module.css';
 export default function CropFrame({ photo, onMove, size = 'large', format = 'portrait' }) {
   const frameRef = useRef(null);
   const drag = useRef(null);
+  const [dragging, setDragging] = useState(false);
 
   const overflow = () => {
     const frame = frameRef.current.getBoundingClientRect();
@@ -19,6 +20,7 @@ export default function CropFrame({ photo, onMove, size = 'large', format = 'por
     if (!onMove) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { x: event.clientX, y: event.clientY, position: photo.position, overflow: overflow() };
+    setDragging(true);
   };
 
   const move = (event) => {
@@ -33,6 +35,7 @@ export default function CropFrame({ photo, onMove, size = 'large', format = 'por
 
   const end = () => {
     drag.current = null;
+    setDragging(false);
   };
 
   return (
@@ -54,7 +57,15 @@ export default function CropFrame({ photo, onMove, size = 'large', format = 'por
         sizes={size === 'large' ? '(max-width: 760px) 100vw, 480px' : '96px'}
         style={{ objectPosition: `${photo.position.x}% ${photo.position.y}%` }}
       />
-      {onMove && size === 'large' && <span className={styles.hint}><Move size={14} /> Arraste para ajustar</span>}
+      {onMove && size === 'large' && (
+        <span className={`${styles.grid} ${dragging ? styles.gridActive : ''}`} aria-hidden="true">
+          <span className={styles.lineV} style={{ left: '33.333%' }} />
+          <span className={styles.lineV} style={{ left: '66.666%' }} />
+          <span className={styles.lineH} style={{ top: '33.333%' }} />
+          <span className={styles.lineH} style={{ top: '66.666%' }} />
+        </span>
+      )}
+      {onMove && size === 'large' && !dragging && <span className={styles.hint}><Move size={14} /> Arraste para ajustar</span>}
     </div>
   );
 }
