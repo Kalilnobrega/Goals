@@ -392,6 +392,8 @@ class Post(Base):
     activity = Column(String(40), nullable=True)
     minutes = Column(Integer, nullable=True)
     performed_on = Column(Date, nullable=True)
+    shared_kind = Column(String(10), nullable=True)
+    shared = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 
     media = relationship("Media", order_by="Media.position", lazy="selectin")
@@ -448,6 +450,7 @@ class Notification(Base):
     post_id = Column(ForeignKey("fitness_posts.id", ondelete="CASCADE"), nullable=True)
     challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), nullable=True)
     comment_id = Column(ForeignKey("fitness_post_comments.id", ondelete="CASCADE"), nullable=True)
+    share_id = Column(ForeignKey("fitness_shared_items.id", ondelete="CASCADE"), nullable=True)
     detail = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
@@ -468,4 +471,16 @@ class CloseFriend(Base):
 
     owner_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     friend_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class SharedItem(Base):
+    __tablename__ = "fitness_shared_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sender_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    recipient_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(10), nullable=False)
+    snapshot = Column(JSON, nullable=False)
+    message = Column(String(300), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

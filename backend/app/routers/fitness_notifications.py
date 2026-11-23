@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Challenge, FitnessProfile, Notification, Post, PostComment
+from app.fitness_models import Challenge, FitnessProfile, Notification, Post, PostComment, SharedItem
 from app.fitness_schemas import NotificationsSchema
 from .auth import get_current_user
 
@@ -27,6 +27,8 @@ def serialize(db: Session, item: Notification) -> dict | None:
     comment = db.get(PostComment, item.comment_id) if item.comment_id else None
     if item.comment_id and comment is None:
         return None
+    if item.share_id and db.get(SharedItem, item.share_id) is None:
+        return None
     actor = db.get(User, item.actor_id)
     profile = db.get(FitnessProfile, item.actor_id)
     preview = None
@@ -43,6 +45,7 @@ def serialize(db: Session, item: Notification) -> dict | None:
         "challenge_name": challenge.name if challenge else None,
         "detail": item.detail,
         "preview": preview,
+        "share_id": item.share_id,
     }
 
 

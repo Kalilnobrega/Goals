@@ -1691,6 +1691,8 @@ class PostCreateSchema(BaseModel):
     media_ids: list[int] = Field(default_factory=list, max_length=4)
     minutes: int | None = Field(default=None, ge=1, le=600)
     performed_on: date | None = None
+    share_workout_id: int | None = None
+    share_plan_id: int | None = None
 
 
 class PostAuthorSchema(BaseModel):
@@ -1715,6 +1717,8 @@ class PostSchema(BaseModel):
     activity: str | None
     minutes: int | None = None
     performed_on: date | None = None
+    shared_kind: Literal["workout", "plan"] | None = None
+    shared: dict | None = None
     workout: PostWorkoutSchema | None
     media: list[MediaSchema]
     reactions: dict[str, int]
@@ -1785,7 +1789,9 @@ class CopiedWorkoutSchema(BaseModel):
 
 class NotificationSchema(BaseModel):
     id: int
-    kind: Literal["friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment"]
+    kind: Literal[
+        "friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment", "shared_item",
+    ]
     actor: PostAuthorSchema
     created_at: datetime
     read: bool
@@ -1794,6 +1800,7 @@ class NotificationSchema(BaseModel):
     challenge_name: str | None = None
     detail: str | None = None
     preview: str | None = None
+    share_id: int | None = None
 
 
 class NotificationsSchema(BaseModel):
@@ -1857,3 +1864,27 @@ class ChatMessageCreateSchema(BaseModel):
 
 class ShareWeightSchema(BaseModel):
     share: bool
+
+
+class ShareSendSchema(BaseModel):
+    kind: Literal["workout", "plan"]
+    item_id: int
+    usernames: list[str] = Field(min_length=1, max_length=20)
+    message: str | None = Field(default=None, max_length=300)
+
+
+class SharedItemSchema(BaseModel):
+    id: int
+    kind: Literal["workout", "plan"]
+    sender: PostAuthorSchema
+    created_at: datetime
+    snapshot: dict
+    message: str | None = None
+    is_mine: bool
+
+
+class CopiedSharedSchema(BaseModel):
+    kind: Literal["workout", "plan"]
+    id: int
+    name: str
+    skipped: int

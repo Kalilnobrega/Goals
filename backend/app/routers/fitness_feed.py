@@ -18,6 +18,7 @@ from app.fitness_schemas import (
     PostReportSchema,
     PostableSessionSchema,
     PostWorkoutDetailSchema,
+    CopiedSharedSchema,
     CopiedWorkoutSchema,
     WorkoutSchema,
     PostSchema,
@@ -28,6 +29,7 @@ from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from app.fitness_notifications import clear, notify, renotify
+from app.fitness_sharing import copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
 from .fitness import build_workout_cardio, build_workout_exercises
@@ -245,6 +247,8 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "activity": post.activity,
             "minutes": post.minutes,
             "performed_on": post.performed_on,
+            "shared_kind": post.shared_kind,
+            "shared": post.shared,
             "workout": workout_summary(db, post),
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
@@ -271,6 +275,15 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
     media = db.query(Media).filter(Media.id.in_(data.media_ids)).all() if data.media_ids else []
     if len(media) != len(data.media_ids) or any(m.user_id != me.user_id or m.kind != "post" or m.post_id is not None for m in media):
         raise HTTPException(status_code=422, detail="Alguma foto não pôde ser usada. Envie de novo.")
+    if data.share_workout_id is not None and data.share_plan_id is not None:
+        raise HTTPException(status_code=422, detail="Compartilhe uma ficha ou um plano por vez.")
+    shared_kind = "workout" if data.share_workout_id is not None else "plan" if data.share_plan_id is not None else None
+    shared = None
+    if shared_kind:
+        if data.session_id is not None or data.minutes is not None:
+            raise HTTPException(status_code=422, detail="Um post não pode ser treino, check-in e compartilhamento ao mesmo tempo.")
+        owner = db.get(User, me.user_id)
+        shared = snapshot_for(db, owner, shared_kind, data.share_workout_id or data.share_plan_id)
     minutes = data.minutes
     performed_on = None
     if minutes is not None:
@@ -291,7 +304,7 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         if db.query(Post.id).filter(Post.session_id == session.id).first():
             raise HTTPException(status_code=409, detail="Esse treino já foi publicado.")
         activity = None
-    elif not (caption or media or activity):
+    elif not (caption or media or activity or shared):
         raise HTTPException(status_code=422, detail="Escreva algo, escolha a atividade ou adicione uma foto.")
     post = Post(
         user_id=me.user_id,
@@ -300,6 +313,8 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         activity=activity,
         minutes=minutes,
         performed_on=performed_on,
+        shared_kind=shared_kind,
+        shared=shared,
     )
     db.add(post)
     db.flush()
@@ -572,3 +587,11 @@ def report_post(post_id: int, data: PostReportSchema, me: FitnessProfile = Depen
     ))
     db.commit()
     return {"message": "Denúncia enviada. Obrigado por avisar."}
+
+
+@fitness_feed_router.post("/posts/{post_id}/copy-shared", response_model=CopiedSharedSchema)
+def copy_post_shared(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, user.id)
+    if not post.shared_kind or not post.shared:
+        raise HTTPException(status_code=404, detail="Esse post não tem ficha nem plano.")
+    return copy_snapshot(db, user, post.shared_kind, post.shared, db.get(User, post.user_id))
