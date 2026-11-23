@@ -1,13 +1,14 @@
 'use client';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Camera, ChevronLeft, Dumbbell, ImagePlus, X } from 'lucide-react';
-import { createPost, getSession, uploadPhoto } from '../../../../lib/api';
-import { apiError, formatDay } from '../../../../lib/gym';
+import { Camera, ChevronLeft, ChevronRight, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
+import { createPost, getPostableSessions, getSession, uploadPhoto } from '../../../../lib/api';
+import { apiError, formatDay, formatVolume, plural } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
 import CropFrame from '../../../../components/gym/social/CropFrame';
+import GymSheet from '../../../../components/gym/GymSheet';
 import styles from './compose.module.css';
 
 const MAX_PHOTOS = 4;
@@ -16,10 +17,12 @@ const ACTIVITIES = ['Corrida', 'Caminhada', 'Bike', 'Natação', 'Futebol', 'Lut
 function Composer() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = Number(searchParams.get('sessao')) || null;
+  const initialSession = Number(searchParams.get('sessao')) || null;
   const toast = useToast();
   const inputRef = useRef(null);
-  const [session, setSession] = useState(null);
+  const [linked, setLinked] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [postable, setPostable] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [active, setActive] = useState(0);
   const [format, setFormat] = useState('portrait');
@@ -31,9 +34,21 @@ function Composer() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!sessionId) return;
-    getSession(sessionId).then(setSession).catch(() => setError('Não foi possível carregar o treino.'));
-  }, [sessionId]);
+    if (!initialSession) return;
+    getSession(initialSession)
+      .then((data) => setLinked({ id: data.id, name: data.name, date: data.started_at.slice(0, 10) }))
+      .catch(() => setError('Não foi possível carregar o treino.'));
+  }, [initialSession]);
+
+  const openPicker = () => {
+    setPicking(true);
+    getPostableSessions().then(setPostable).catch(() => setPostable([]));
+  };
+  const closePicker = useCallback(() => setPicking(false), []);
+  const chooseSession = (item) => {
+    setLinked(item);
+    setPicking(false);
+  };
 
   const photosRef = useRef(photos);
   useEffect(() => {
@@ -72,7 +87,7 @@ function Composer() {
   const moveCrop = (position) => setPhotos((current) => current.map((photo, i) => (i === active ? { ...photo, position } : photo)));
 
   const chosenActivity = activity === 'Outra' ? customActivity.trim() : activity;
-  const canSubmit = !progress && !preparing && (sessionId ? !!session : caption.trim() || photos.length || chosenActivity);
+  const canSubmit = !progress && !preparing && (linked || caption.trim() || photos.length || chosenActivity);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -87,9 +102,9 @@ function Composer() {
       }
       setProgress('Publicando...');
       await createPost({
-        session_id: sessionId,
+        session_id: linked?.id ?? null,
         caption: caption.trim() || null,
-        activity: sessionId ? null : chosenActivity || null,
+        activity: linked ? null : chosenActivity || null,
         media_ids: ids,
       });
       toast('Publicado no feed');
@@ -103,20 +118,33 @@ function Composer() {
   return (
     <div className={styles.page}>
       <Link href="/gym/social" className={styles.back}><ChevronLeft size={18} /> Feed</Link>
-      <h1 className={styles.title}>{sessionId ? 'Publicar treino' : 'Nova publicação'}</h1>
+      <h1 className={styles.title}>{linked ? 'Publicar treino' : 'Nova publicação'}</h1>
 
       <form className={styles.form} onSubmit={submit}>
-        {sessionId && session && (
+        {linked ? (
           <section className={styles.workout}>
             <span className={styles.workoutIcon}><Dumbbell size={18} /></span>
             <span className={styles.workoutText}>
-              <span className={styles.workoutName}>{session.name}</span>
-              <span className={styles.muted}>{formatDay(session.started_at.slice(0, 10))} · o resumo do treino vai junto</span>
+              <span className={styles.workoutName}>{linked.name}</span>
+              <span className={styles.muted}>{formatDay(linked.date)} · o resumo do treino vai junto com as fotos</span>
             </span>
+            <button type="button" className={styles.workoutChange} onClick={openPicker}>Trocar</button>
+            <button type="button" className={styles.workoutRemove} onClick={() => setLinked(null)} aria-label="Desvincular treino">
+              <X size={16} />
+            </button>
           </section>
+        ) : (
+          <button type="button" className={styles.linkWorkout} onClick={openPicker}>
+            <span className={styles.workoutIcon}><Link2 size={18} /></span>
+            <span className={styles.workoutText}>
+              <span className={styles.workoutName}>Vincular um treino do app</span>
+              <span className={styles.muted}>O resumo do treino aparece junto com as fotos</span>
+            </span>
+            <ChevronRight size={18} className={styles.muted} />
+          </button>
         )}
 
-        {!sessionId && (
+        {!linked && (
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>O que você fez? <small>opcional</small></h2>
             <div className={styles.chips}>
@@ -151,7 +179,7 @@ function Composer() {
             onChange={(e) => setCaption(e.target.value)}
             maxLength={500}
             rows={3}
-            placeholder={sessionId ? 'Como foi o treino?' : 'Conte como foi'}
+            placeholder={linked ? 'Como foi o treino?' : 'Conte como foi'}
             aria-label="Legenda"
           />
           {photos.length > 0 && (
@@ -203,6 +231,35 @@ function Composer() {
           {progress || 'Publicar'}
         </button>
       </form>
+
+      <GymSheet open={picking} onClose={closePicker} title="Vincular treino">
+        {!postable && <p className={styles.muted}>Carregando treinos...</p>}
+        {postable && postable.length === 0 && (
+          <p className={styles.muted}>Nenhum treino dos últimos 30 dias para publicar. Os treinos que já estão no feed não aparecem aqui.</p>
+        )}
+        {postable && postable.length > 0 && (
+          <ul className={styles.sessionList}>
+            {postable.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={`${styles.sessionItem} ${linked?.id === item.id ? styles.sessionActive : ''}`}
+                  onClick={() => chooseSession(item)}
+                >
+                  <span className={styles.workoutText}>
+                    <span className={styles.workoutName}>{item.name}</span>
+                    <span className={styles.muted}>
+                      {formatDay(item.date)} · <Clock size={12} /> {item.minutes} min · {plural(item.exercises, 'exercício', 'exercícios')}
+                      {item.volume_kg > 0 ? ` · ${formatVolume(item.volume_kg)}` : ''}
+                    </span>
+                  </span>
+                  <ChevronRight size={18} className={styles.muted} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </GymSheet>
     </div>
   );
 }

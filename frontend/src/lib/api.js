@@ -377,6 +377,7 @@ export const uploadMedia = (blob, fields = {}, full = null) => {
 export const deleteMedia = (id) => api.delete(`/fitness/media/${id}`);
 export const getProgressPhotos = () => cachedGet("fitnessProgressPhotos", "/fitness/progress-photos");
 export const createPost = (data) => api.post("/fitness/posts", data).then((r) => r.data);
+export const getPostableSessions = () => api.get("/fitness/posts/postable-sessions").then((r) => r.data);
 export const getFeed = (before) =>
   before ? api.get("/fitness/feed", { params: { before } }).then((r) => r.data) : cachedGet("fitnessFeed", "/fitness/feed");
 export const getUserPosts = (username) =>

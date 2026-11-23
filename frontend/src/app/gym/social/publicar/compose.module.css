@@ -261,3 +261,90 @@
   border: 1.5px solid currentColor;
   border-radius: 3px;
 }
+
+.linkWorkout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px dashed var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.linkWorkout .workoutText {
+  flex: 1;
+}
+
+.workout .workoutText {
+  flex: 1;
+}
+
+.workoutChange {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 11px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.workoutRemove {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 11px;
+  background: none;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.sessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sessionItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sessionItem .workoutText {
+  flex: 1;
+}
+
+.sessionItem .muted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sessionActive {
+  border-color: var(--gym-accent);
+}
