@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Activity, CalendarDays, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
+  Activity, CalendarDays, MessageCircle, Check, ChevronLeft, Copy, Crown, LogOut, Share2, Trash2, Trophy, UserMinus, UserPlus, Users,
 } from 'lucide-react';
 import {
   deleteChallenge, getChallenge, getFriends, inviteToChallenge, leaveChallenge, peekCache, removeChallengeMember,
@@ -17,6 +17,7 @@ import { useConfirm } from '../../../../../components/ConfirmDialog';
 import GymSheet from '../../../../../components/gym/GymSheet';
 import Avatar from '../../../../../components/gym/social/Avatar';
 import ChallengeActivity from '../../../../../components/gym/social/ChallengeActivity';
+import ChallengeChat from '../../../../../components/gym/social/ChallengeChat';
 import styles from './detail.module.css';
 
 function firstName(name) {
@@ -76,7 +77,7 @@ export default function ChallengePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justCreated = searchParams.get('novo') === '1';
-  const [tab, setTab] = useState(searchParams.get('aba') === 'atividade' ? 'activity' : 'ranking');
+  const [tab, setTab] = useState({ atividade: 'activity', chat: 'chat' }[searchParams.get('aba')] ?? 'ranking');
   const toast = useToast();
   const confirmAction = useConfirm();
   const [challenge, setChallenge] = useState(() => peekCache(`fitnessChallenge:${id}`));
@@ -97,6 +98,7 @@ export default function ChallengePage() {
   }, [load]);
 
   const closeInvite = useCallback(() => setInviting(false), []);
+  const markChatRead = useCallback(() => setChallenge((current) => (current ? { ...current, chat_unread: 0 } : current)), []);
 
   const link = challenge ? inviteUrl(challenge.invite_code) : '';
   const canShare = typeof navigator !== 'undefined' && !!navigator.share;
@@ -231,9 +233,14 @@ export default function ChallengePage() {
             <button type="button" role="tab" aria-selected={tab === 'activity'} className={`${styles.tab} ${tab === 'activity' ? styles.tabActive : ''}`} onClick={() => setTab('activity')}>
               <Activity size={15} /> Atividade
             </button>
+            <button type="button" role="tab" aria-selected={tab === 'chat'} className={`${styles.tab} ${tab === 'chat' ? styles.tabActive : ''}`} onClick={() => setTab('chat')}>
+              <MessageCircle size={15} /> Chat
+              {challenge.chat_unread > 0 && tab !== 'chat' && <span className={styles.tabBadge}>{challenge.chat_unread > 9 ? '9+' : challenge.chat_unread}</span>}
+            </button>
           </div>
 
           {tab === 'activity' && <ChallengeActivity challenge={challenge} />}
+          {tab === 'chat' && <ChallengeChat challenge={challenge} onRead={markChatRead} />}
 
           {tab === 'ranking' && (
           <section className={styles.card}>

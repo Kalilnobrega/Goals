@@ -371,6 +371,12 @@ export const getChallengeActivity = (id, page = 0) =>
   api.get(`/fitness/challenges/${id}/activity`, { params: { page } }).then((r) => r.data);
 export const getChallengeSession = (id, sessionId) =>
   api.get(`/fitness/challenges/${id}/sessions/${sessionId}`).then((r) => r.data);
+export const getChallengeChat = (id, before) =>
+  api.get(`/fitness/challenges/${id}/chat`, { params: before ? { before } : {} }).then((r) => r.data);
+export const sendChallengeMessage = (id, text) =>
+  api.post(`/fitness/challenges/${id}/chat`, { text }).then((r) => r.data);
+export const readChallengeChat = (id) => api.post(`/fitness/challenges/${id}/chat/read`);
+export const deleteChallengeMessage = (id, messageId) => api.delete(`/fitness/challenges/${id}/chat/${messageId}`);
 export const mediaSrc = (url) => `${API_BASE}${url}`;
 export const uploadMedia = (blob, fields = {}, full = null) => {
   const form = new FormData();

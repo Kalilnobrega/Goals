@@ -1,0 +1,181 @@
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.rowMine {
+  flex-direction: row-reverse;
+}
+
+.bubble {
+  max-width: 78%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--gym-surface-2);
+}
+
+.bubbleMine {
+  border-radius: 16px 16px 4px 16px;
+  background: var(--gym-accent-soft);
+  border: 1px solid rgba(198, 244, 50, 0.25);
+}
+
+.author {
+  color: var(--gym-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ref {
+  align-self: flex-start;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gym-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ref span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref svg {
+  flex-shrink: 0;
+}
+
+.text {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  align-self: flex-end;
+  color: var(--gym-faint);
+  font-size: 0.7rem;
+}
+
+.remove {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--gym-faint);
+  cursor: pointer;
+}
+
+.form {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.input {
+  min-width: 0;
+  flex: 1;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--gym-accent);
+}
+
+.send {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 14px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  cursor: pointer;
+}
+
+.send:disabled {
+  opacity: 0.4;
+}
+
+.older {
+  align-self: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: none;
+  color: var(--gym-muted);
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  color: var(--gym-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.empty svg {
+  color: var(--gym-faint);
+}
+
+.error {
+  color: var(--gym-danger);
+  font-size: 0.9rem;
+}
+
+.skeleton {
+  height: 160px;
+  border-radius: 16px;
+  background: var(--gym-surface-2);
+}

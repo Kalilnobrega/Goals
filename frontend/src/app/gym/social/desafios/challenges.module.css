@@ -124,6 +124,19 @@
   white-space: nowrap;
 }
 
+.chatBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .chevron {
   flex-shrink: 0;
   color: var(--gym-faint);

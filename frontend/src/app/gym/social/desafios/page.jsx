@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, ChevronRight, Plus, Trophy, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, MessageCircle, Plus, Trophy, Users } from 'lucide-react';
 import {
   acceptChallengeInvite, declineChallengeInvite, getChallenges, getFitnessProfile, peekCache,
 } from '../../../../lib/api';
@@ -40,6 +40,11 @@ function ChallengeCard({ challenge }) {
               : challenge.metrics.map(metricLabel).join(' + ')}
           </span>
         </span>
+        {challenge.chat_unread > 0 && (
+          <span className={styles.chatBadge} aria-label={`${challenge.chat_unread} mensagens novas`}>
+            <MessageCircle size={13} /> {challenge.chat_unread > 9 ? '9+' : challenge.chat_unread}
+          </span>
+        )}
         <ChevronRight size={18} className={styles.chevron} />
       </Link>
     </li>
