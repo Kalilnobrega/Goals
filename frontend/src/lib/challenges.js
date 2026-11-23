@@ -27,7 +27,10 @@ const measureOf = (key) => EXERCISE_MEASURES.find((measure) => measure.key === k
 
 export function metricLabel(metric) {
   if (metric.key !== 'exercise') return optionOf(metric.key)?.label ?? metric.key;
-  return `${metric.exercise_name ?? 'Exercício'} · ${measureOf(metric.measure)?.label.toLowerCase() ?? ''}`;
+  const target = metric.scope === 'family' && metric.family
+    ? `${metric.family} (todas as variações)`
+    : metric.exercise_name ?? 'Exercício';
+  return `${target} · ${measureOf(metric.measure)?.label.toLowerCase() ?? ''}`;
 }
 
 export function formatMetricValue(metric, value) {

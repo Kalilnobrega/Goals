@@ -40,6 +40,7 @@ export default function NewChallengePage() {
   const [weights, setWeights] = useState({});
   const [exercise, setExercise] = useState(null);
   const [measure, setMeasure] = useState('max_weight');
+  const [scope, setScope] = useState('exact');
   const [rule, setRule] = useState({ kind: 'none', value: null });
   const [picking, setPicking] = useState(false);
   const [exercises, setExercises] = useState(null);
@@ -79,6 +80,7 @@ export default function NewChallengePage() {
 
   const pickExercise = ([item]) => {
     setExercise(item);
+    if (!item.family) setScope('exact');
     setPicking(false);
   };
 
@@ -115,7 +117,7 @@ export default function NewChallengePage() {
       const metrics = METRIC_OPTIONS.filter((option) => selected.includes(option.key)).map((option) => ({
         key: option.key,
         weight: selected.length > 1 ? weightOf(option.key) : 1,
-        ...(option.key === 'exercise' ? { exercise_id: exercise.id, measure } : {}),
+        ...(option.key === 'exercise' ? { exercise_id: exercise.id, measure, scope: exercise.family ? scope : 'exact' } : {}),
       }));
       const challenge = await createChallenge({
         name: name.trim(),
@@ -211,6 +213,24 @@ export default function NewChallengePage() {
                       <button type="button" className={styles.exerciseButton} onClick={openPicker}>
                         <Dumbbell size={16} /> {exercise ? exercise.name : 'Escolher exercício'}
                       </button>
+                      {exercise?.family && (
+                        <div className={styles.chips}>
+                          <button
+                            type="button"
+                            className={`${styles.chip} ${scope === 'exact' ? styles.chipActive : ''}`}
+                            onClick={() => setScope('exact')}
+                          >
+                            Só esta variação
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.chip} ${scope === 'family' ? styles.chipActive : ''}`}
+                            onClick={() => setScope('family')}
+                          >
+                            Todas as variações de {exercise.family}
+                          </button>
+                        </div>
+                      )}
                       <div className={styles.chips}>
                         {EXERCISE_MEASURES.map((item) => (
                           <button

@@ -231,3 +231,36 @@ def test_pending_count(client, db_session, ana, bruno):
     client.post(f"/fitness/challenges/{challenge['id']}/invites", json={"username": "bruno"}, headers=ana)
     assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 0, "challenge_invites": 1}
     assert client.get("/fitness/challenges/pending/count", headers=ana).json() == {"friend_requests": 0, "challenge_invites": 0}
+
+
+def test_exercise_metric_can_count_the_whole_family(client, ana, db_session):
+    from app.fitness_models import Exercise
+    barra = Exercise(slug="supino-barra", name="Supino com barra", muscle_group="chest", equipment="barbell", family="Supino")
+    halter = Exercise(slug="supino-halter", name="Supino com halteres", muscle_group="chest", equipment="dumbbell", family="Supino")
+    solo = Exercise(slug="crucifixo", name="Crucifixo", muscle_group="chest", equipment="dumbbell")
+    db_session.add_all([barra, halter, solo])
+    db_session.commit()
+
+    workout = client.post("/fitness/workouts", json={"name": "Peito", "exercises": [
+        {"exercise_id": barra.id, "target_sets": 1, "reps_min": 8},
+        {"exercise_id": halter.id, "target_sets": 1, "reps_min": 8},
+    ]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 60, 10)
+    log_set(client, ana, session["exercises"][1]["id"], 30, 12)
+    assert finish(client, ana, session["id"]).status_code == 200
+
+    challenge = create(client, ana, metrics=[
+        {"key": "exercise", "exercise_id": barra.id, "measure": "reps"},
+        {"key": "exercise", "exercise_id": barra.id, "measure": "reps", "scope": "family"},
+    ])
+    exact_id = f"exercise:{barra.id}:reps"
+    family_id = f"exercise:{barra.id}:reps:family"
+    assert [m["id"] for m in challenge["metrics"]] == [exact_id, family_id]
+    assert challenge["metrics"][1]["family"] == "Supino"
+    values = challenge["ranking"][0]["values"]
+    assert values[exact_id] == 10
+    assert values[family_id] == 22
+
+    bad = payload(metrics=[{"key": "exercise", "exercise_id": solo.id, "measure": "reps", "scope": "family"}])
+    assert client.post("/fitness/challenges", json=bad, headers=ana).status_code == 422

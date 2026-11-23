@@ -1508,15 +1508,18 @@ class ChallengeMetricSchema(BaseModel):
     weight: int = Field(default=1, ge=1, le=5)
     exercise_id: int | None = None
     measure: ExerciseMeasure | None = None
+    scope: Literal["exact", "family"] | None = None
 
     @model_validator(mode="after")
     def exercise_fields(self):
         if self.key == "exercise":
             if self.exercise_id is None or self.measure is None:
                 raise ValueError("Escolha o exercício e o que conta nele.")
+            self.scope = self.scope or "exact"
         else:
             self.exercise_id = None
             self.measure = None
+            self.scope = None
         return self
 
 
@@ -1555,6 +1558,7 @@ class ChallengeCreateSchema(BaseModel):
 class ChallengeMetricOutSchema(ChallengeMetricSchema):
     id: str
     exercise_name: str | None = None
+    family: str | None = None
 
 
 class ChallengeRankingSchema(BaseModel):

@@ -28,7 +28,8 @@ MAX_MEMBERS = 100
 
 def metric_id(metric: dict) -> str:
     if metric["key"] == "exercise":
-        return f"exercise:{metric['exercise_id']}:{metric['measure']}"
+        base = f"exercise:{metric['exercise_id']}:{metric['measure']}"
+        return f"{base}:family" if metric.get("scope") == "family" else base
     return metric["key"]
 
 
@@ -40,13 +41,37 @@ def status_of(challenge: Challenge, today) -> str:
     return "active"
 
 
-def metrics_out(db: Session, challenge: Challenge) -> list[dict]:
+def exercise_info(db: Session, challenge: Challenge) -> dict[int, tuple[str, str | None]]:
     ids = [m["exercise_id"] for m in challenge.metrics if m.get("exercise_id")]
-    names = dict(db.query(Exercise.id, Exercise.name).filter(Exercise.id.in_(ids)).all()) if ids else {}
-    return [
-        {**metric, "id": metric_id(metric), "exercise_name": names.get(metric.get("exercise_id"))}
-        for metric in challenge.metrics
-    ]
+    if not ids:
+        return {}
+    rows = db.query(Exercise.id, Exercise.name, Exercise.family).filter(Exercise.id.in_(ids)).all()
+    return {row.id: (row.name, row.family) for row in rows}
+
+
+def metrics_out(db: Session, challenge: Challenge) -> list[dict]:
+    info = exercise_info(db, challenge)
+    result = []
+    for metric in challenge.metrics:
+        name, family = info.get(metric.get("exercise_id"), (None, None))
+        result.append({**metric, "id": metric_id(metric), "exercise_name": name, "family": family})
+    return result
+
+
+def family_members(db: Session, challenge: Challenge) -> dict[str, set[int]]:
+    info = exercise_info(db, challenge)
+    targets = {}
+    for metric in challenge.metrics:
+        if metric["key"] != "exercise":
+            continue
+        ids = {metric["exercise_id"]}
+        family = info.get(metric["exercise_id"], (None, None))[1]
+        if metric.get("scope") == "family" and family:
+            ids |= {
+                row.id for row in db.query(Exercise.id).filter(Exercise.family == family, Exercise.user_id.is_(None)).all()
+            }
+        targets[metric_id(metric)] = ids
+    return targets
 
 
 def qualifies(session: dict, rule: dict | None) -> bool:
@@ -57,7 +82,7 @@ def qualifies(session: dict, rule: dict | None) -> bool:
     return len(session["exercises"]) + len(session["cardio"]) >= rule["value"]
 
 
-def metric_value(metric: dict, sessions: list[dict]) -> float:
+def metric_value(metric: dict, sessions: list[dict], targets: dict[str, set[int]] | None = None) -> float:
     key = metric["key"]
     if key == "days":
         return float(len({s["day"] for s in sessions}))
@@ -73,7 +98,8 @@ def metric_value(metric: dict, sessions: list[dict]) -> float:
         return round(sum(c.get("km") or 0 for s in sessions for c in s["cardio"]), 2)
     if key == "cardio_kcal":
         return float(round(sum(c.get("calories") or 0 for s in sessions for c in s["cardio"])))
-    entries = [e for s in sessions for e in s["exercises"] if e["exercise_id"] == metric["exercise_id"]]
+    ids = (targets or {}).get(metric_id(metric), {metric["exercise_id"]})
+    entries = [e for s in sessions for e in s["exercises"] if e["exercise_id"] in ids]
     if metric["measure"] == "reps":
         return float(sum(e["reps"] for e in entries))
     if metric["measure"] == "volume":
@@ -82,6 +108,7 @@ def metric_value(metric: dict, sessions: list[dict]) -> float:
 
 
 def ranking(db: Session, challenge: Challenge, me: int) -> list[dict]:
+    targets = family_members(db, challenge)
     rows = []
     for member in challenge.members:
         user = db.get(User, member.user_id)
@@ -90,7 +117,7 @@ def ranking(db: Session, challenge: Challenge, me: int) -> list[dict]:
             s for s in completed_facts(user, db, challenge.start_date, challenge.end_date)
             if qualifies(s, challenge.min_rule)
         ]
-        values = {metric_id(metric): metric_value(metric, sessions) for metric in challenge.metrics}
+        values = {metric_id(metric): metric_value(metric, sessions, targets) for metric in challenge.metrics}
         rows.append({
             "user_id": user.id,
             "username": profile.username if profile else None,
@@ -194,6 +221,8 @@ def create_challenge(
         exercise = db.get(Exercise, metric["exercise_id"])
         if exercise is None or exercise.user_id is not None or (exercise.tracking or "reps") != "reps":
             raise HTTPException(status_code=422, detail="Escolha um exercício de musculação da biblioteca padrão.")
+        if metric["scope"] == "family" and not exercise.family:
+            raise HTTPException(status_code=422, detail="Esse exercício não tem variações. Use só o exercício escolhido.")
     challenge = Challenge(
         owner_id=me.user_id,
         name=data.name,
