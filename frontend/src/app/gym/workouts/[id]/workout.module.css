@@ -250,3 +250,8 @@
   color: var(--gym-muted);
   font-size: 0.8rem;
 }
+
+.share {
+  flex: 0 0 52px;
+  padding: 0;
+}

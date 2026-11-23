@@ -1,9 +1,11 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Search, UserPlus, X } from 'lucide-react';
-import { getFitnessProfile, getFriends, peekCache, removeFriendship, searchPeople } from '../../../../lib/api';
+import { getFitnessProfile, getFriends, getReceivedShares, peekCache, removeFriendship, searchPeople } from '../../../../lib/api';
 import { apiError, plural } from '../../../../lib/gym';
+import Link from 'next/link';
 import { useToast } from '../../../../components/Toast';
+import Avatar from '../../../../components/gym/social/Avatar';
 import PersonRow from '../../../../components/gym/social/PersonRow';
 import FriendAction from '../../../../components/gym/social/FriendAction';
 import CloseFriendToggle from '../../../../components/gym/social/CloseFriendToggle';
@@ -97,6 +99,7 @@ export default function SocialPage() {
   const [profile, setProfile] = useState(() => peekCache('fitnessProfile'));
   const [friends, setFriends] = useState(() => peekCache('fitnessFriends'));
   const [error, setError] = useState('');
+  const [received, setReceived] = useState(null);
 
   const loadFriends = useCallback(() => {
     getFriends().then(setFriends).catch((err) => setError(apiError(err, 'Não foi possível carregar seus amigos.')));
@@ -106,7 +109,10 @@ export default function SocialPage() {
     getFitnessProfile()
       .then((data) => {
         setProfile(data);
-        if (data.username) loadFriends();
+        if (data.username) {
+          loadFriends();
+          getReceivedShares().then(setReceived).catch(() => setReceived([]));
+        }
       })
       .catch(() => setError('Não foi possível carregar o Social.'));
   }, [loadFriends]);
@@ -191,6 +197,24 @@ export default function SocialPage() {
                   <p>Você ainda não tem amigos no GymGoals. Busque pelo @ de alguém para começar.</p>
                 </div>
               )}
+            </Section>
+          )}
+
+          {received && received.length > 0 && (
+            <Section title="Recebidos" count={received.length}>
+              <ul className={social.list}>
+                {received.map((item) => (
+                  <li key={item.id} className={social.row}>
+                    <Link href={`/gym/social/recebidos/${item.id}`} className={social.rowLink}>
+                      <Avatar name={item.sender.name} />
+                      <span className={social.rowText}>
+                        <span className={social.rowName}>{item.snapshot.name}</span>
+                        <span className={social.rowHandle}>{item.kind === 'plan' ? 'Plano' : 'Ficha'} de {item.sender.name.split(' ')[0]}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </Section>
           )}
 

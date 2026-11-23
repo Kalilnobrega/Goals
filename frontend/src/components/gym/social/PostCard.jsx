@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Clock, Dumbbell, Flag, MessageCircle, MoreHorizontal, Trash2, X } from 'lucide-react';
-import { deletePost, mediaSrc, reactToPost, removeReaction, reportPost } from '../../../lib/api';
+import { copyPostShared, deletePost, mediaSrc, reactToPost, removeReaction, reportPost } from '../../../lib/api';
+import SharedCard from './SharedCard';
 import { apiError, formatVolume, plural } from '../../../lib/gym';
 import { timeAgo } from '../../../lib/photos';
 import { useToast } from '../../Toast';
@@ -224,6 +225,10 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
       )}
 
       {post.caption && <p className={styles.caption}>{post.caption}</p>}
+
+      {post.shared && post.shared_kind && (
+        <SharedCard kind={post.shared_kind} snapshot={post.shared} mine={post.is_mine} onCopy={() => copyPostShared(post.id)} />
+      )}
 
       <PostPhotos media={post.media} />
 

@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, HeartPulse, Link2, Pencil, Timer, TrendingUp } from 'lucide-react';
+import { ChevronLeft, HeartPulse, Link2, Pencil, Share2, Timer, TrendingUp } from 'lucide-react';
+import ShareSheet from '../../../../components/gym/social/ShareSheet';
 import { getWorkout, peekCache } from '../../../../lib/api';
 import { equipmentLabel, plural, prescription, formatRest, groupsLabel, canLoadPerSide, cardioNote, supersetMarks, planSummary } from '../../../../lib/gym';
 import WorkoutBodyMap from '../../../../components/gym/WorkoutBodyMap';
@@ -13,6 +14,8 @@ export default function WorkoutDetailPage() {
   const { id } = useParams();
   const [workout, setWorkout] = useState(() => peekCache(`fitnessWorkout:${id}`) ?? null);
   const [status, setStatus] = useState(workout ? 'ready' : 'loading');
+  const [sharing, setSharing] = useState(false);
+  const closeShare = useCallback(() => setSharing(false), []);
 
   const load = useCallback(() => (
     getWorkout(id)
@@ -71,7 +74,9 @@ export default function WorkoutDetailPage() {
       <div className={styles.actions}>
         <Link href={`/gym/workouts/${workout.id}/edit`} className={styles.edit}><Pencil size={18} /> Editar</Link>
         <Link href={`/gym/progress/workouts/${workout.id}`} className={styles.edit}><TrendingUp size={18} /> Evolução</Link>
+        <button type="button" className={`${styles.edit} ${styles.share}`} onClick={() => setSharing(true)} aria-label="Compartilhar" title="Compartilhar"><Share2 size={18} /></button>
       </div>
+      <ShareSheet open={sharing} onClose={closeShare} kind="workout" itemId={workout.id} />
 
       {cardioCard(workout, 'start', 'Cardio no início')}
 

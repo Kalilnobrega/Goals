@@ -24,6 +24,11 @@ function describe(item) {
       const emoji = REACTIONS.find((reaction) => reaction.key === item.detail)?.emoji ?? '';
       return { text: <>{name} reagiu {emoji} ao seu post</>, href: `/gym/social/post/${item.post_id}` };
     }
+    case 'shared_item':
+      return {
+        text: <>{name} te enviou {item.detail === 'plan' ? 'um plano' : 'uma ficha'}</>,
+        href: item.share_id ? `/gym/social/recebidos/${item.share_id}` : '/gym/social/amigos',
+      };
     case 'post_comment':
       return { text: <>{name} comentou no seu post</>, href: `/gym/social/post/${item.post_id}`, preview: item.preview };
     default:

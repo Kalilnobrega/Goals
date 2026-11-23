@@ -407,6 +407,12 @@ export const deleteMedia = (id) => api.delete(`/fitness/media/${id}`);
 export const getProgressPhotos = () => cachedGet("fitnessProgressPhotos", "/fitness/progress-photos");
 export const createPost = (data) => api.post("/fitness/posts", data).then((r) => r.data);
 export const getPostableSessions = () => api.get("/fitness/posts/postable-sessions").then((r) => r.data);
+export const copyPostShared = (id) => api.post(`/fitness/posts/${id}/copy-shared`).then((r) => r.data);
+export const shareToFriends = (data) => api.post("/fitness/shares", data).then((r) => r.data);
+export const getReceivedShares = () => api.get("/fitness/shares/received").then((r) => r.data);
+export const getShare = (id) => api.get(`/fitness/shares/${id}`).then((r) => r.data);
+export const copyShare = (id) => api.post(`/fitness/shares/${id}/copy`).then((r) => r.data);
+export const deleteShare = (id) => api.delete(`/fitness/shares/${id}`);
 export const getFeed = (before) =>
   before ? api.get("/fitness/feed", { params: { before } }).then((r) => r.data) : cachedGet("fitnessFeed", "/fitness/feed");
 export const getUserPosts = (username) =>

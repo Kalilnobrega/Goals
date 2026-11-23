@@ -149,3 +149,8 @@
 .skeletonTall {
   height: 320px;
 }
+
+.share {
+  flex: 0 0 52px;
+  padding: 0;
+}

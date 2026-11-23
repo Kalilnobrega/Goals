@@ -2,8 +2,8 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Camera, ChevronLeft, ChevronRight, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
-import { createPost, getPostableSessions, getSession, uploadPhoto } from '../../../../lib/api';
+import { CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
+import { createPost, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
 import { addDays, apiError, formatDay, formatVolume, plural, todayIso } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
@@ -19,6 +19,10 @@ function Composer() {
   const searchParams = useSearchParams();
   const initialSession = Number(searchParams.get('sessao')) || null;
   const checkin = searchParams.get('checkin') === '1';
+  const shareWorkoutId = Number(searchParams.get('ficha')) || null;
+  const sharePlanId = Number(searchParams.get('plano')) || null;
+  const sharing = !!(shareWorkoutId || sharePlanId);
+  const [sharedName, setSharedName] = useState('');
   const challengeId = Number(searchParams.get('desafio')) || null;
   const backHref = challengeId ? `/gym/social/desafios/${challengeId}?aba=atividade` : '/gym/social';
   const [minutes, setMinutes] = useState('');
@@ -37,6 +41,11 @@ function Composer() {
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (shareWorkoutId) getWorkout(shareWorkoutId).then((data) => setSharedName(data.name)).catch(() => setError('Ficha não encontrada.'));
+    if (sharePlanId) getPlan(sharePlanId).then((data) => setSharedName(data.name)).catch(() => setError('Plano não encontrado.'));
+  }, [shareWorkoutId, sharePlanId]);
 
   useEffect(() => {
     if (!initialSession) return;
@@ -94,7 +103,7 @@ function Composer() {
   const chosenActivity = activity === 'Outra' ? customActivity.trim() : activity;
   const minutesValue = Number(minutes);
   const checkinReady = !!chosenActivity && minutesValue >= 1 && minutesValue <= 600 && photos.length > 0;
-  const canSubmit = !progress && !preparing && (checkin ? checkinReady : linked || caption.trim() || photos.length || chosenActivity);
+  const canSubmit = !progress && !preparing && (sharing ? !!sharedName : checkin ? checkinReady : linked || caption.trim() || photos.length || chosenActivity);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -109,9 +118,11 @@ function Composer() {
       }
       setProgress('Publicando...');
       await createPost({
-        session_id: linked?.id ?? null,
+        session_id: sharing ? null : linked?.id ?? null,
         caption: caption.trim() || null,
-        activity: linked ? null : chosenActivity || null,
+        activity: linked || sharing ? null : chosenActivity || null,
+        share_workout_id: shareWorkoutId,
+        share_plan_id: sharePlanId,
         media_ids: ids,
         ...(checkin ? { minutes: minutesValue, performed_on: performedOn } : {}),
       });
@@ -126,11 +137,23 @@ function Composer() {
   return (
     <div className={styles.page}>
       <Link href={backHref} className={styles.back}><ChevronLeft size={18} /> {challengeId ? 'Desafio' : 'Feed'}</Link>
-      <h1 className={styles.title}>{checkin ? 'Check-in manual' : linked ? 'Publicar treino' : 'Nova publicação'}</h1>
+      <h1 className={styles.title}>
+        {shareWorkoutId ? 'Compartilhar ficha' : sharePlanId ? 'Compartilhar plano' : checkin ? 'Check-in manual' : linked ? 'Publicar treino' : 'Nova publicação'}
+      </h1>
       {checkin && <p className={styles.muted}>Para treinos feitos fora do app. A foto é obrigatória e serve de prova para o grupo.</p>}
 
       <form className={styles.form} onSubmit={submit}>
-        {checkin ? null : linked ? (
+        {sharing && (
+          <section className={styles.workout}>
+            <span className={styles.workoutIcon}>{sharePlanId ? <CalendarDays size={18} /> : <ClipboardList size={18} />}</span>
+            <span className={styles.workoutText}>
+              <span className={styles.workoutName}>{sharedName || 'Carregando...'}</span>
+              <span className={styles.muted}>Quem vir o post pode copiar {sharePlanId ? 'o plano' : 'a ficha'}</span>
+            </span>
+          </section>
+        )}
+
+        {checkin || sharing ? null : linked ? (
           <section className={styles.workout}>
             <span className={styles.workoutIcon}><Dumbbell size={18} /></span>
             <span className={styles.workoutText}>
@@ -153,7 +176,7 @@ function Composer() {
           </button>
         )}
 
-        {!linked && (
+        {!linked && !sharing && (
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>O que você fez? {!checkin && <small>opcional</small>}</h2>
             <div className={styles.chips}>
