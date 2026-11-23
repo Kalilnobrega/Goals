@@ -184,6 +184,11 @@ export default function ChallengePage() {
             <div className={styles.heroTop}>
               <span className={`${styles.status} ${styles[`status_${challenge.status}`]}`}>{STATUS_LABEL[challenge.status]}</span>
               <span className={styles.timeLeft}>{timeLeftLabel(challenge)}</span>
+              {!finished && (
+                <button type="button" className={styles.headerInvite} onClick={() => setInviting(true)}>
+                  <UserPlus size={15} /> Convidar
+                </button>
+              )}
             </div>
             <h1 className={styles.name}>{challenge.name}</h1>
             {challenge.description && <p className={styles.description}>{challenge.description}</p>}
@@ -214,9 +219,10 @@ export default function ChallengePage() {
             </section>
           )}
 
-          {!finished && (
-            <section className={`${styles.card} ${justCreated ? styles.highlight : ''}`}>
-              <h2 className={styles.cardTitle}>{justCreated ? 'Desafio criado! Agora chame a galera' : 'Convidar'}</h2>
+          {!finished && (justCreated || challenge.member_count <= 1) && (
+            <section className={`${styles.card} ${styles.highlight}`}>
+              <h2 className={styles.cardTitle}>{justCreated ? 'Desafio criado! Agora chame a galera' : 'Chame a galera para começar'}</h2>
+              {!justCreated && <p className={styles.muted}>Com mais gente o ranking, a atividade e o chat ganham vida.</p>}
               <p className={styles.link}>{link}</p>
               <div className={styles.inviteActions}>
                 <button type="button" className={styles.secondary} onClick={copyLink}><Copy size={16} /> Copiar link</button>
@@ -299,8 +305,18 @@ export default function ChallengePage() {
             )}
           </div>
 
-          <GymSheet open={inviting} onClose={closeInvite} title="Convidar amigos">
-            {inviting && <InviteFriends challenge={challenge} />}
+          <GymSheet open={inviting} onClose={closeInvite} title="Convidar">
+            {inviting && (
+              <div className={styles.inviteSheet}>
+                <p className={styles.link}>{link}</p>
+                <div className={styles.inviteActions}>
+                  <button type="button" className={styles.secondary} onClick={copyLink}><Copy size={16} /> Copiar link</button>
+                  {canShare && <button type="button" className={styles.secondary} onClick={shareLink}><Share2 size={16} /> Compartilhar</button>}
+                </div>
+                <h3 className={styles.sheetTitle}>Amigos</h3>
+                <InviteFriends challenge={challenge} />
+              </div>
+            )}
           </GymSheet>
         </>
       )}

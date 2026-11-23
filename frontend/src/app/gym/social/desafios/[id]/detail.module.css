@@ -58,9 +58,51 @@
 }
 
 .timeLeft {
+  margin-left: auto;
   color: var(--gym-muted);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.headerInvite {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.headerInvite svg {
+  color: var(--gym-accent);
+}
+
+@media (hover: hover) {
+  .headerInvite:hover {
+    border-color: var(--gym-accent);
+  }
+}
+
+.inviteSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheetTitle {
+  margin-top: 4px;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .name {
