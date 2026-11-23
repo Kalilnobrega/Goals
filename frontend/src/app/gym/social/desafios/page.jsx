@@ -112,10 +112,7 @@ export default function ChallengesPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.top}>
-        <h1 className={styles.title}>Social</h1>
-        <p className={styles.subtitle}>Desafios com seus amigos</p>
-      </header>
+      <h1 className="visually-hidden">Social: desafios</h1>
 
       <SocialTabs />
 

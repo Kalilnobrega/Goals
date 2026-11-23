@@ -4,25 +4,6 @@
   gap: 14px;
 }
 
-.top {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-
-.subtitle {
-  color: var(--gym-muted);
-  font-size: 0.95rem;
-}
-
 .compose {
   height: 52px;
   display: flex;

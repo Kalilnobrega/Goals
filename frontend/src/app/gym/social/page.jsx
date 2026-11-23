@@ -45,10 +45,7 @@ export default function FeedPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.top}>
-        <h1 className={styles.title}>Social</h1>
-        <p className={styles.subtitle}>O que seus amigos andam treinando</p>
-      </header>
+      <h1 className="visually-hidden">Social: feed</h1>
 
       <SocialTabs />
 

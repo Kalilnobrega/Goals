@@ -125,12 +125,7 @@ export default function SocialPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.top}>
-        <h1 className={styles.title}>Social</h1>
-        <p className={styles.subtitle}>
-          {profile?.username ? <>Você é <strong>@{profile.username}</strong></> : 'Amigos, desafios e feed'}
-        </p>
-      </header>
+      <h1 className="visually-hidden">Social: amigos</h1>
 
       <SocialTabs />
 
