@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dates import today_br
+from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
     ChallengeMember, FitnessProfile, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
@@ -16,6 +16,7 @@ from app.fitness_schemas import (
     PostCreateSchema,
     PostDetailSchema,
     PostReportSchema,
+    PostableSessionSchema,
     PostSchema,
     ProgressPhotoSchema,
     ReactionSchema,
@@ -280,6 +281,40 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
     db.commit()
     db.refresh(post)
     return serialize(db, [post], me.user_id)[0]
+
+
+POSTABLE_DAYS = 30
+POSTABLE_LIMIT = 20
+
+
+@fitness_feed_router.get("/posts/postable-sessions", response_model=list[PostableSessionSchema])
+def postable_sessions(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    since = datetime.now(timezone.utc) - timedelta(days=POSTABLE_DAYS)
+    posted = db.query(Post.session_id).filter(Post.user_id == user.id, Post.session_id.isnot(None))
+    sessions = (
+        db.query(WorkoutSession)
+        .filter(
+            WorkoutSession.user_id == user.id,
+            WorkoutSession.status == COMPLETED,
+            WorkoutSession.started_at >= since,
+            WorkoutSession.id.notin_(posted),
+        )
+        .order_by(WorkoutSession.started_at.desc())
+        .limit(POSTABLE_LIMIT)
+        .all()
+    )
+    result = []
+    for session in sessions:
+        facts = session_facts(session)
+        result.append({
+            "id": session.id,
+            "name": session.name,
+            "date": to_br_date(session.started_at),
+            "minutes": round(facts["minutes"]),
+            "exercises": len(facts["exercises"]) + len(facts["cardio"]),
+            "volume_kg": round(facts["volume"], 1),
+        })
+    return result
 
 
 @fitness_feed_router.get("/feed", response_model=FeedSchema)

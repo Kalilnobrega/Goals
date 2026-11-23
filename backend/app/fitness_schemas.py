@@ -1737,3 +1737,12 @@ class CommentCreateSchema(BaseModel):
 class PostReportSchema(BaseModel):
     reason: Literal["spam", "offensive", "fake", "other"]
     details: str | None = Field(default=None, max_length=500)
+
+
+class PostableSessionSchema(BaseModel):
+    id: int
+    name: str
+    date: date
+    minutes: int
+    exercises: int
+    volume_kg: float

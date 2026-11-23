@@ -203,3 +203,23 @@ def test_full_size_version_is_stored_and_served_separately(client, ana, media_di
     assert len(list(media_dir.rglob("*.*"))) == 2
     client.delete(f"/fitness/posts/{created['id']}", headers=ana)
     assert list(media_dir.rglob("*.*")) == []
+
+
+def test_postable_sessions_lists_recent_unposted_workouts(client, library, ana, bruno, db_session):
+    from datetime import timedelta
+    from app.fitness_models import WorkoutSession
+    first = finished_session(client, ana, library)
+    second = finished_session(client, ana, library)
+    old = finished_session(client, ana, library)
+    stale = db_session.get(WorkoutSession, old["id"])
+    stale.started_at -= timedelta(days=40)
+    stale.completed_at -= timedelta(days=40)
+    db_session.commit()
+    finished_session(client, bruno, library)
+
+    listed = client.get("/fitness/posts/postable-sessions", headers=ana).json()
+    assert [s["id"] for s in listed] == [second["id"], first["id"]]
+    assert listed[0]["name"] == "Treino A" and listed[0]["exercises"] == 1
+
+    post(client, ana, session_id=second["id"], caption="pago")
+    assert [s["id"] for s in client.get("/fitness/posts/postable-sessions", headers=ana).json()] == [first["id"]]
