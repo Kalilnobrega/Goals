@@ -1,13 +1,13 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Camera, ChevronLeft, Dumbbell, ImagePlus, X } from 'lucide-react';
-import { createPost, getSession, uploadMedia } from '../../../../lib/api';
+import { createPost, getSession, uploadPhoto } from '../../../../lib/api';
 import { apiError, formatDay } from '../../../../lib/gym';
-import { compressPhoto } from '../../../../lib/photos';
+import { preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
+import CropFrame from '../../../../components/gym/social/CropFrame';
 import styles from './compose.module.css';
 
 const MAX_PHOTOS = 4;
@@ -21,6 +21,7 @@ function Composer() {
   const inputRef = useRef(null);
   const [session, setSession] = useState(null);
   const [photos, setPhotos] = useState([]);
+  const [active, setActive] = useState(0);
   const [caption, setCaption] = useState('');
   const [activity, setActivity] = useState('');
   const [customActivity, setCustomActivity] = useState('');
@@ -37,7 +38,7 @@ function Composer() {
   useEffect(() => {
     photosRef.current = photos;
   }, [photos]);
-  useEffect(() => () => photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.preview)), []);
+  useEffect(() => () => photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url)), []);
 
   const addPhotos = async (event) => {
     const files = [...event.target.files].slice(0, MAX_PHOTOS - photos.length);
@@ -48,19 +49,26 @@ function Composer() {
     const ready = [];
     for (const file of files) {
       try {
-        ready.push(await compressPhoto(file));
+        ready.push(await preparePhoto(file));
       } catch {
         setError('Não foi possível ler uma das fotos. Tente outra imagem em JPEG ou PNG.');
       }
     }
-    setPhotos((current) => [...current, ...ready].slice(0, MAX_PHOTOS));
+    setPhotos((current) => {
+      const next = [...current, ...ready].slice(0, MAX_PHOTOS);
+      if (ready.length) setActive(current.length);
+      return next;
+    });
     setPreparing(false);
   };
 
   const removePhoto = (index) => {
-    URL.revokeObjectURL(photos[index].preview);
+    URL.revokeObjectURL(photos[index].url);
     setPhotos((current) => current.filter((_, i) => i !== index));
+    setActive((current) => Math.max(0, current > index ? current - 1 : Math.min(current, photos.length - 2)));
   };
+
+  const moveCrop = (position) => setPhotos((current) => current.map((photo, i) => (i === active ? { ...photo, position } : photo)));
 
   const chosenActivity = activity === 'Outra' ? customActivity.trim() : activity;
   const canSubmit = !progress && !preparing && (sessionId ? !!session : caption.trim() || photos.length || chosenActivity);
@@ -73,7 +81,7 @@ function Composer() {
       const ids = [];
       for (const [index, photo] of photos.entries()) {
         setProgress(photos.length > 1 ? `Enviando foto ${index + 1} de ${photos.length}...` : 'Enviando foto...');
-        const media = await uploadMedia(photo.blob, { kind: 'post', width: photo.width, height: photo.height });
+        const media = await uploadPhoto(photo, { kind: 'post' });
         ids.push(media.id);
       }
       setProgress('Publicando...');
@@ -145,10 +153,13 @@ function Composer() {
             placeholder={sessionId ? 'Como foi o treino?' : 'Conte como foi'}
             aria-label="Legenda"
           />
+          {photos[active] && <CropFrame photo={photos[active]} onMove={moveCrop} />}
           <div className={styles.photos}>
             {photos.map((photo, index) => (
-              <div key={photo.preview} className={styles.thumb}>
-                <Image src={photo.preview} alt="" fill unoptimized sizes="120px" />
+              <div key={photo.url} className={`${styles.thumb} ${index === active ? styles.thumbActive : ''}`}>
+                <button type="button" className={styles.thumbButton} onClick={() => setActive(index)} aria-label={`Ajustar foto ${index + 1}`}>
+                  <CropFrame photo={photo} size="small" />
+                </button>
                 <button type="button" className={styles.removePhoto} onClick={() => removePhoto(index)} aria-label={`Remover foto ${index + 1}`}>
                   <X size={14} />
                 </button>
@@ -160,7 +171,7 @@ function Composer() {
               </button>
             )}
           </div>
-          <p className={styles.muted}>Até {MAX_PHOTOS} fotos. Elas são reduzidas no celular e a localização gravada pela câmera é removida.</p>
+          <p className={styles.muted}>Até {MAX_PHOTOS} fotos. No feed elas aparecem em 4:5; ao tocar, abrem inteiras em alta qualidade. A localização gravada pela câmera é removida.</p>
           <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={addPhotos} />
         </section>
 

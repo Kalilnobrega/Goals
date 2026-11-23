@@ -1,8 +1,8 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Dumbbell, Flag, MessageCircle, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Dumbbell, Flag, MessageCircle, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { deletePost, mediaSrc, reactToPost, removeReaction, reportPost } from '../../../lib/api';
 import { apiError, formatVolume, plural } from '../../../lib/gym';
 import { timeAgo } from '../../../lib/photos';
@@ -26,36 +26,85 @@ const REASONS = [
   { key: 'other', label: 'Outro motivo' },
 ];
 
-function PhotoGrid({ media, onOpen }) {
+function PhotoCarousel({ media, onOpen }) {
+  const trackRef = useRef(null);
+  const [index, setIndex] = useState(0);
   if (!media.length) return null;
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    setIndex(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
+  const go = (next) => {
+    const track = trackRef.current;
+    track.scrollTo({ left: next * track.clientWidth, behavior: 'smooth' });
+  };
+
   return (
-    <div className={`${styles.photos} ${styles[`photos${Math.min(media.length, 4)}`]}`}>
-      {media.map((item, index) => (
-        <button
-          key={item.id}
-          type="button"
-          className={styles.photo}
-          style={media.length === 1 && item.width && item.height ? { aspectRatio: String(Math.max(item.width / item.height, 0.8)) } : undefined}
-          onClick={() => onOpen(index)}
-          aria-label={`Abrir foto ${index + 1}`}
-        >
-          <Image src={mediaSrc(item.url)} alt="" fill unoptimized sizes="(max-width: 760px) 100vw, 760px" />
-        </button>
-      ))}
+    <div className={styles.carousel}>
+      <div ref={trackRef} className={styles.track} onScroll={onScroll}>
+        {media.map((item, position) => (
+          <button key={item.id} type="button" className={styles.slide} onClick={() => onOpen(position)} aria-label={`Abrir foto ${position + 1} de ${media.length}`}>
+            <Image src={mediaSrc(item.url)} alt="" fill unoptimized sizes="(max-width: 760px) 100vw, 760px" />
+          </button>
+        ))}
+      </div>
+      {media.length > 1 && (
+        <>
+          {index > 0 && (
+            <button type="button" className={`${styles.arrow} ${styles.arrowLeft}`} onClick={() => go(index - 1)} aria-label="Foto anterior">
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          {index < media.length - 1 && (
+            <button type="button" className={`${styles.arrow} ${styles.arrowRight}`} onClick={() => go(index + 1)} aria-label="Próxima foto">
+              <ChevronRight size={18} />
+            </button>
+          )}
+          <span className={styles.counter}>{index + 1}/{media.length}</span>
+          <div className={styles.dots} aria-hidden="true">
+            {media.map((item, position) => (
+              <span key={item.id} className={`${styles.dot} ${position === index ? styles.dotActive : ''}`} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function Lightbox({ media, index, onClose, onMove }) {
+  useEffect(() => {
+    if (index === null) return undefined;
+    const handleKey = (event) => {
+      if (event.key === 'Escape') onClose();
+      if (media.length > 1 && event.key === 'ArrowRight') onMove((index + 1) % media.length);
+      if (media.length > 1 && event.key === 'ArrowLeft') onMove((index - 1 + media.length) % media.length);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [index, media.length, onClose, onMove]);
+
   if (index === null) return null;
   const item = media[index];
+  const step = (delta) => (event) => {
+    event.stopPropagation();
+    onMove((index + delta + media.length) % media.length);
+  };
   return (
     <div className={styles.lightbox} role="dialog" aria-modal="true" aria-label="Foto" onClick={onClose}>
       <button type="button" className={styles.lightboxClose} onClick={onClose} aria-label="Fechar foto"><X size={22} /></button>
-      <div className={styles.lightboxImage} onClick={(e) => { e.stopPropagation(); if (media.length > 1) onMove((index + 1) % media.length); }}>
-        <Image src={mediaSrc(item.url)} alt="" fill unoptimized sizes="100vw" />
+      <div className={styles.lightboxImage}>
+        <Image src={mediaSrc(item.full_url ?? item.url)} alt="" fill unoptimized sizes="100vw" />
       </div>
-      {media.length > 1 && <span className={styles.lightboxCount}>{index + 1} / {media.length}</span>}
+      {media.length > 1 && (
+        <>
+          <button type="button" className={`${styles.lightboxNav} ${styles.arrowLeft}`} onClick={step(-1)} aria-label="Foto anterior"><ChevronLeft size={22} /></button>
+          <button type="button" className={`${styles.lightboxNav} ${styles.arrowRight}`} onClick={step(1)} aria-label="Próxima foto"><ChevronRight size={22} /></button>
+          <span className={styles.lightboxCount}>{index + 1} / {media.length}</span>
+        </>
+      )}
     </div>
   );
 }
@@ -70,6 +119,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
   const [busy, setBusy] = useState(false);
 
   const closeMenu = useCallback(() => setMenu(false), []);
+  const closeLightbox = useCallback(() => setOpen(null), []);
   const closeReport = useCallback(() => {
     setReporting(false);
     setReason('');
@@ -157,7 +207,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
 
       {post.caption && <p className={styles.caption}>{post.caption}</p>}
 
-      <PhotoGrid media={post.media} onOpen={setOpen} />
+      <PhotoCarousel media={post.media} onOpen={setOpen} />
 
       <footer className={styles.footer}>
         <div className={styles.reactions} role="group" aria-label="Reações">
@@ -184,7 +234,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
         )}
       </footer>
 
-      <Lightbox media={post.media} index={open} onClose={() => setOpen(null)} onMove={setOpen} />
+      <Lightbox media={post.media} index={open} onClose={closeLightbox} onMove={setOpen} />
 
       <GymSheet open={menu} onClose={closeMenu} title="Post">
         <div className={styles.menu}>

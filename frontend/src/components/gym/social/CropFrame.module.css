@@ -1,0 +1,50 @@
+.frame {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--gym-surface-2);
+  user-select: none;
+}
+
+.frame img {
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.large {
+  width: 100%;
+  max-width: 480px;
+  align-self: center;
+  border-radius: 16px;
+}
+
+.small {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.movable {
+  touch-action: none;
+  cursor: grab;
+}
+
+.movable:active {
+  cursor: grabbing;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transform: translateX(-50%);
+  pointer-events: none;
+}

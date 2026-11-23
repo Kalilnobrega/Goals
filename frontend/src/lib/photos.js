@@ -1,5 +1,9 @@
-const MAX_SIDE = 1600;
-const QUALITY = 0.82;
+const FULL_SIDE = 2560;
+const FULL_QUALITY = 0.9;
+const FEED_WIDTH = 1080;
+const FEED_HEIGHT = 1350;
+const FEED_QUALITY = 0.8;
+export const FEED_RATIO = FEED_WIDTH / FEED_HEIGHT;
 
 async function decode(file) {
   if ('createImageBitmap' in window) {
@@ -22,21 +26,44 @@ async function decode(file) {
   });
 }
 
-export async function compressPhoto(file) {
+function encode(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('encode'))), 'image/jpeg', quality);
+  });
+}
+
+export async function preparePhoto(file) {
   const source = await decode(file);
-  const sourceWidth = source.width;
-  const sourceHeight = source.height;
-  const scale = Math.min(1, MAX_SIDE / Math.max(sourceWidth, sourceHeight));
-  const width = Math.round(sourceWidth * scale);
-  const height = Math.round(sourceHeight * scale);
+  const scale = Math.min(1, FULL_SIDE / Math.max(source.width, source.height));
+  const width = Math.round(source.width * scale);
+  const height = Math.round(source.height * scale);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   canvas.getContext('2d').drawImage(source, 0, 0, width, height);
   if (source.close) source.close();
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
-  if (!blob) throw new Error('encode');
-  return { blob, width, height, preview: URL.createObjectURL(blob) };
+  const blob = await encode(canvas, FULL_QUALITY);
+  return { blob, width, height, url: URL.createObjectURL(blob), position: { x: 50, y: 50 } };
+}
+
+export function cropBox(width, height, position) {
+  if (width / height > FEED_RATIO) {
+    const cropWidth = height * FEED_RATIO;
+    return { x: (width - cropWidth) * (position.x / 100), y: 0, width: cropWidth, height };
+  }
+  const cropHeight = width / FEED_RATIO;
+  return { x: 0, y: (height - cropHeight) * (position.y / 100), width, height: cropHeight };
+}
+
+export async function cropForFeed(photo) {
+  const source = await decode(photo.blob);
+  const box = cropBox(source.width, source.height, photo.position);
+  const canvas = document.createElement('canvas');
+  canvas.width = FEED_WIDTH;
+  canvas.height = FEED_HEIGHT;
+  canvas.getContext('2d').drawImage(source, box.x, box.y, box.width, box.height, 0, 0, FEED_WIDTH, FEED_HEIGHT);
+  if (source.close) source.close();
+  return { blob: await encode(canvas, FEED_QUALITY), width: FEED_WIDTH, height: FEED_HEIGHT };
 }
 
 const relative = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });

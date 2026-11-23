@@ -150,17 +150,25 @@
 .thumb,
 .addPhoto {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
   border-radius: 14px;
-  overflow: hidden;
 }
 
 .thumb {
-  background: var(--gym-surface-2);
+  border: 2px solid transparent;
 }
 
-.thumb img {
-  object-fit: cover;
+.thumbActive {
+  border-color: var(--gym-accent);
+}
+
+.thumbButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
 .removePhoto {

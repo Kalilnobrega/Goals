@@ -104,59 +104,97 @@
   overflow-wrap: anywhere;
 }
 
-.photos {
-  display: grid;
-  gap: 4px;
-  margin: 0 -14px;
-  overflow: hidden;
-}
-
-.photos1 {
-  grid-template-columns: 1fr;
-}
-
-.photos2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.photos3 {
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  aspect-ratio: 3 / 2;
-}
-
-.photos3 .photo:first-child {
-  grid-row: span 2;
-}
-
-.photos4 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.photo {
+.carousel {
   position: relative;
+  margin: 0 -14px;
+}
+
+.track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.slide {
+  position: relative;
+  flex: 0 0 100%;
+  aspect-ratio: 4 / 5;
   padding: 0;
   border: none;
   background: var(--gym-surface-2);
+  scroll-snap-align: start;
   cursor: zoom-in;
-  overflow: hidden;
 }
 
-.photos1 .photo {
-  aspect-ratio: 4 / 5;
-}
-
-.photos2 .photo,
-.photos4 .photo {
-  aspect-ratio: 1;
-}
-
-.photos3 .photo {
-  min-height: 0;
-}
-
-.photo img {
+.slide img {
   object-fit: cover;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  display: none;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.arrowLeft {
+  left: 10px;
+}
+
+.arrowRight {
+  right: 10px;
+}
+
+@media (hover: hover) {
+  .arrow {
+    display: grid;
+  }
+}
+
+.counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  padding-top: 10px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gym-surface-3);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.dotActive {
+  background: var(--gym-accent);
+  transform: scale(1.2);
 }
 
 .footer {
@@ -242,6 +280,21 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+  cursor: pointer;
+}
+
+.lightboxNav {
+  position: absolute;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateY(-50%);
   cursor: pointer;
 }
 

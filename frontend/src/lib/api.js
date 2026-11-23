@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getToken, saveToken, getRefreshToken, saveRefreshToken, clearToken } from "./auth";
+import { cropForFeed } from "./photos";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -364,9 +365,10 @@ export const removeChallengeMember = (id, username) =>
   api.delete(`/fitness/challenges/${id}/members/${encodeURIComponent(username)}`);
 export const deleteChallenge = (id) => api.delete(`/fitness/challenges/${id}`);
 export const mediaSrc = (url) => `${API_BASE}${url}`;
-export const uploadMedia = (blob, fields = {}) => {
+export const uploadMedia = (blob, fields = {}, full = null) => {
   const form = new FormData();
   form.append("file", blob, "foto.jpg");
+  if (full) form.append("full", full, "foto-completa.jpg");
   Object.entries(fields).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") form.append(key, String(value));
   });
@@ -393,3 +395,12 @@ export const exportFitnessData = (params) =>
     const match = /filename="([^"]+)"/.exec(r.headers["content-disposition"] ?? "");
     return { blob: r.data, filename: match ? match[1] : `gymgoals.${params.format}` };
   });
+
+export async function uploadPhoto(photo, fields = {}) {
+  const feed = await cropForFeed(photo);
+  return uploadMedia(
+    feed.blob,
+    { ...fields, width: feed.width, height: feed.height, full_width: photo.width, full_height: photo.height },
+    photo.blob,
+  );
+}

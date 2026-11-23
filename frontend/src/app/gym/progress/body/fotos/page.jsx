@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeftRight, Camera, ChevronLeft, Lock, Trash2, X } from 'lucide-react';
-import { deleteMedia, getProgressPhotos, mediaSrc, peekCache, uploadMedia } from '../../../../../lib/api';
+import { deleteMedia, getProgressPhotos, mediaSrc, peekCache, uploadPhoto } from '../../../../../lib/api';
 import { apiError, formatDay, formatLongDay, todayIso } from '../../../../../lib/gym';
-import { compressPhoto } from '../../../../../lib/photos';
+import { preparePhoto } from '../../../../../lib/photos';
 import { useToast } from '../../../../../components/Toast';
 import { useConfirm } from '../../../../../components/ConfirmDialog';
 import GymSheet from '../../../../../components/gym/GymSheet';
+import CropFrame from '../../../../../components/gym/social/CropFrame';
 import styles from './photos.module.css';
 
 function daysBetween(a, b) {
@@ -40,7 +41,7 @@ export default function ProgressPhotosPage() {
     event.target.value = '';
     if (!file) return;
     try {
-      const photo = await compressPhoto(file);
+      const photo = await preparePhoto(file);
       setDraft({ ...photo, taken_on: todayIso(), note: '' });
     } catch {
       toast({ tone: 'danger', message: 'Não foi possível ler a foto. Tente uma imagem em JPEG ou PNG.' });
@@ -49,7 +50,7 @@ export default function ProgressPhotosPage() {
 
   const closeDraft = useCallback(() => {
     setDraft((current) => {
-      if (current) URL.revokeObjectURL(current.preview);
+      if (current) URL.revokeObjectURL(current.url);
       return null;
     });
   }, []);
@@ -57,13 +58,7 @@ export default function ProgressPhotosPage() {
   const save = async () => {
     setSaving(true);
     try {
-      await uploadMedia(draft.blob, {
-        kind: 'progress',
-        width: draft.width,
-        height: draft.height,
-        taken_on: draft.taken_on,
-        note: draft.note.trim(),
-      });
+      await uploadPhoto(draft, { kind: 'progress', taken_on: draft.taken_on, note: draft.note.trim() });
       toast('Foto salva');
       closeDraft();
       load();
@@ -159,9 +154,7 @@ export default function ProgressPhotosPage() {
       <GymSheet open={!!draft} onClose={closeDraft} title="Nova foto">
         {draft && (
           <div className={styles.sheet}>
-            <div className={styles.draftPreview}>
-              <Image src={draft.preview} alt="" fill unoptimized sizes="320px" />
-            </div>
+            <CropFrame photo={draft} onMove={(position) => setDraft((current) => ({ ...current, position }))} />
             <label className={styles.field}>
               <span className={styles.label}>Data</span>
               <input
@@ -193,7 +186,7 @@ export default function ProgressPhotosPage() {
         {viewing && (
           <div className={styles.sheet}>
             <div className={styles.viewer}>
-              <Image src={mediaSrc(viewing.url)} alt="" fill unoptimized sizes="100vw" />
+              <Image src={mediaSrc(viewing.full_url)} alt="" fill unoptimized sizes="100vw" />
             </div>
             {viewing.note && <p className={styles.note}>{viewing.note}</p>}
             <button type="button" className={styles.danger} onClick={() => remove(viewing)}><Trash2 size={16} /> Apagar foto</button>
@@ -209,7 +202,7 @@ export default function ProgressPhotosPage() {
             {pair.map((photo) => (
               <figure key={photo.id} className={styles.compareItem}>
                 <div className={styles.compareImage}>
-                  <Image src={mediaSrc(photo.url)} alt="" fill unoptimized sizes="50vw" />
+                  <Image src={mediaSrc(photo.full_url)} alt="" fill unoptimized sizes="50vw" />
                 </div>
                 <figcaption>{formatLongDay(photo.taken_on)}</figcaption>
               </figure>

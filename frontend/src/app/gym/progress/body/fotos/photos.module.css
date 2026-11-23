@@ -107,7 +107,7 @@
 .tile {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 12px;
