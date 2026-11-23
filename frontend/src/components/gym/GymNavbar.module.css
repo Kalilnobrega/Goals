@@ -3,8 +3,8 @@
   top: 0;
   z-index: 50;
   background: var(--gym-header-bg);
-  backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--gym-border);
   padding-top: env(safe-area-inset-top);
   transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
@@ -148,8 +148,8 @@
   height: calc(var(--gym-tabbar-h) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--gym-tabbar-bg);
-  backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
   border-top: 1px solid var(--gym-border);
 }
 

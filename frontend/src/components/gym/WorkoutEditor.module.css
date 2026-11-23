@@ -342,8 +342,8 @@
   margin: 0 -10px;
   border-radius: 22px;
   background: var(--gym-tabbar-bg);
-  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .submit {
