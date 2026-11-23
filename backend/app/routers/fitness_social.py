@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import FitnessProfile, Friendship, UserBlock, UserReport
+from app.fitness_models import ChallengeMember, FitnessProfile, Friendship, UserBlock, UserReport
 from app.fitness_schemas import (
     FriendRequestSchema,
     FriendsSchema,
@@ -88,14 +88,30 @@ def social_user(db: Session, me: int, profile: FitnessProfile, user: User | None
     return {"username": profile.username, "name": owner.name, "relation": relation_to(db, me, profile.user_id)}
 
 
-def can_view(visibility: str, relation: str) -> bool:
+def shares_challenge(db: Session, a: int, b: int) -> bool:
+    mine = db.query(ChallengeMember.challenge_id).filter(ChallengeMember.user_id == a)
+    return (
+        db.query(ChallengeMember.challenge_id)
+        .filter(ChallengeMember.user_id == b, ChallengeMember.challenge_id.in_(mine))
+        .first()
+        is not None
+    )
+
+
+def is_close(db: Session, viewer: int, owner: int, relation: str) -> bool:
+    if relation in ("self", "friends"):
+        return True
+    return relation == "none" and shares_challenge(db, viewer, owner)
+
+
+def can_view(visibility: str, relation: str, close: bool = False) -> bool:
     if relation == "self":
         return True
     if relation == "blocked" or visibility == "private":
         return False
     if visibility == "public":
         return True
-    return relation == "friends"
+    return close
 
 
 def friend_count(db: Session, user_id: int) -> int:
@@ -191,7 +207,8 @@ def get_social_profile(
     owner = db.get(User, target.user_id)
     relation = relation_to(db, user.id, target.user_id)
     visibility = target.visibility or "friends"
-    viewable = can_view(visibility, relation)
+    close = is_close(db, user.id, target.user_id, relation)
+    viewable = can_view(visibility, relation, close)
     response = {
         "username": target.username,
         "name": owner.name,
@@ -200,7 +217,7 @@ def get_social_profile(
         "can_view": viewable,
     }
     if viewable:
-        response.update(profile_details(db, owner, relation in ("self", "friends")))
+        response.update(profile_details(db, owner, close))
     return response
 
 

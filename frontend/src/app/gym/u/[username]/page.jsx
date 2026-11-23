@@ -36,7 +36,7 @@ function firstName(name) {
 function lockedMessage(profile) {
   if (profile.relation === 'blocked') return `Você bloqueou ${profile.name}. Desbloqueie para ver o perfil e enviar pedidos.`;
   if (profile.visibility === 'private') return `${firstName(profile.name)} deixou o perfil privado. Treinos e recordes não aparecem para ninguém.`;
-  return `Só amigos de ${firstName(profile.name)} veem os treinos e recordes.`;
+  return `Só amigos de ${firstName(profile.name)} e quem está nos mesmos desafios veem os treinos e recordes.`;
 }
 
 function Stat({ value, label, sub }) {
@@ -254,7 +254,7 @@ export default function SocialProfilePage() {
                   )}
                 </section>
               ) : (
-                <p className={styles.note}>Os últimos treinos aparecem só para amigos.</p>
+                <p className={styles.note}>Os últimos treinos aparecem só para amigos e quem está nos mesmos desafios.</p>
               )}
             </>
           )}

@@ -175,13 +175,13 @@ const VISIBILITY_OPTIONS = [
     key: 'public',
     label: 'Público',
     icon: Globe,
-    description: 'Qualquer pessoa vê seus números e recordes. Os últimos treinos ficam só para amigos.',
+    description: 'Qualquer pessoa vê seus números e recordes. Os últimos treinos ficam para amigos e quem está nos mesmos desafios.',
   },
   {
     key: 'friends',
     label: 'Amigos',
     icon: Users,
-    description: 'Só seus amigos veem seus números, recordes e últimos treinos.',
+    description: 'Só seus amigos e quem está nos mesmos desafios veem seus números, recordes e últimos treinos.',
   },
   {
     key: 'private',

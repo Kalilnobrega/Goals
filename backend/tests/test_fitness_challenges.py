@@ -440,3 +440,22 @@ def test_relative_strength_metric(client, library, ana, bruno):
     assert ana_row["details"][key] == {"load_kg": 100.0, "body_kg": 80.0}
     assert bruno_row["score"] == 0 and bruno_row["missing"] == [key]
     assert ranking[0]["username"] == "ana"
+
+
+def test_challenge_members_count_as_close_for_friends_only_profiles(client, library, ana, bruno, carla):
+    train(client, bruno, library)
+    assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is False
+
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    profile = client.get("/fitness/social/users/bruno", headers=ana).json()
+    assert profile["relation"] == "none"
+    assert profile["can_view"] is True and profile["recent_sessions"]
+    assert client.get("/fitness/social/users/bruno", headers=carla).json()["can_view"] is False
+
+    client.put("/fitness/profile/visibility", json={"visibility": "private"}, headers=bruno)
+    assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is False
+
+    client.put("/fitness/profile/visibility", json={"visibility": "friends"}, headers=bruno)
+    client.delete(f"/fitness/challenges/{challenge['id']}/members/me", headers=bruno)
+    assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is False
