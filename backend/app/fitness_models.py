@@ -276,6 +276,7 @@ class FitnessProfile(Base):
     username = Column(String(20), nullable=True, unique=True, index=True)
     current_gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
     visibility = Column(String(10), nullable=False, default="friends", server_default="friends")
+    share_weight_close = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
@@ -460,3 +461,11 @@ class ChallengeMessage(Base):
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     text = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+
+class CloseFriend(Base):
+    __tablename__ = "fitness_close_friends"
+
+    owner_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    friend_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

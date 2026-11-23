@@ -1327,6 +1327,7 @@ class FitnessProfileResponseSchema(BaseModel):
     body_type: Literal["male", "female"]
     username: str | None = None
     visibility: Literal["public", "friends", "private"] = "friends"
+    share_weight_close: bool = False
 
 
 class VisibilityUpdateSchema(BaseModel):
@@ -1346,6 +1347,7 @@ class FriendSchema(BaseModel):
     username: str
     name: str
     since: datetime | None = None
+    close: bool = False
 
 
 class FriendsSchema(BaseModel):
@@ -1385,6 +1387,9 @@ class SocialProfileSchema(BaseModel):
     visibility: Literal["public", "friends", "private"]
     relation: Relation
     can_view: bool
+    close_access: bool = False
+    is_close_friend: bool = False
+    weight_shared: bool = False
     stats: SocialStatsSchema | None = None
     records: list[SocialRecordSchema] | None = None
     recent_sessions: list[SocialSessionSchema] | None = None
@@ -1848,3 +1853,7 @@ class ChatPageSchema(BaseModel):
 
 class ChatMessageCreateSchema(BaseModel):
     text: str = Field(min_length=1, max_length=500)
+
+
+class ShareWeightSchema(BaseModel):
+    share: bool

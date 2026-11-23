@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import ChallengeMember, FitnessProfile, Friendship, UserBlock, UserReport
+from app.fitness_models import ChallengeMember, CloseFriend, FitnessProfile, Friendship, UserBlock, UserReport
 from app.fitness_schemas import (
     FriendRequestSchema,
     FriendsSchema,
@@ -210,16 +210,33 @@ def get_social_profile(
     visibility = target.visibility or "friends"
     close = is_close(db, user.id, target.user_id, relation)
     viewable = can_view(visibility, relation, close)
+    close_access = relation == "friends" and is_close_friend(db, target.user_id, user.id)
     response = {
         "username": target.username,
         "name": owner.name,
         "visibility": visibility,
         "relation": relation,
         "can_view": viewable,
+        "close_access": close_access,
+        "is_close_friend": relation == "friends" and is_close_friend(db, user.id, target.user_id),
+        "weight_shared": close_access and bool(target.share_weight_close),
     }
     if viewable:
         response.update(profile_details(db, owner, close))
     return response
+
+
+def is_close_friend(db: Session, owner: int, friend: int) -> bool:
+    return db.get(CloseFriend, (owner, friend)) is not None
+
+
+def drop_close_friends(db: Session, a: int, b: int) -> None:
+    db.query(CloseFriend).filter(
+        or_(
+            and_(CloseFriend.owner_id == a, CloseFriend.friend_id == b),
+            and_(CloseFriend.owner_id == b, CloseFriend.friend_id == a),
+        )
+    ).delete(synchronize_session=False)
 
 
 def friend_entry(db: Session, friendship: Friendship, me: int) -> dict | None:
@@ -232,6 +249,7 @@ def friend_entry(db: Session, friendship: Friendship, me: int) -> dict | None:
         "username": profile.username,
         "name": other.name,
         "since": friendship.accepted_at if friendship.status == "accepted" else friendship.created_at,
+        "close": friendship.status == "accepted" and is_close_friend(db, me, other_id),
     }
 
 
@@ -317,6 +335,7 @@ def remove_friendship(
     if friendship.status == "pending":
         clear(db, target.user_id, me.user_id, "friend_request")
         clear(db, me.user_id, target.user_id, "friend_request")
+    drop_close_friends(db, me.user_id, target.user_id)
     db.delete(friendship)
     db.commit()
     return social_user(db, me.user_id, target)
@@ -347,6 +366,7 @@ def block_user(
     friendship = friendship_between(db, me.user_id, target.user_id)
     if friendship is not None:
         db.delete(friendship)
+    drop_close_friends(db, me.user_id, target.user_id)
     try:
         db.commit()
     except IntegrityError:
@@ -380,3 +400,35 @@ def report_user(
     db.add(UserReport(reporter_id=me.user_id, reported_id=target.user_id, reason=data.reason, details=details))
     db.commit()
     return {"message": "Denúncia enviada. Obrigado por avisar."}
+
+
+@fitness_social_router.get("/close-friends", response_model=list[SocialUserSchema])
+def list_close_friends(me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    rows = (
+        db.query(FitnessProfile, User)
+        .join(CloseFriend, CloseFriend.friend_id == FitnessProfile.user_id)
+        .join(User, User.id == FitnessProfile.user_id)
+        .filter(CloseFriend.owner_id == me.user_id)
+        .order_by(User.name)
+        .all()
+    )
+    return [{"username": profile.username, "name": user.name, "relation": "friends"} for profile, user in rows]
+
+
+@fitness_social_router.put("/close-friends/{username}", response_model=SocialUserSchema)
+def add_close_friend(username: str, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    target = other_target(db, me.user_id, username)
+    if relation_to(db, me.user_id, target.user_id) != "friends":
+        raise HTTPException(status_code=409, detail="Só dá para marcar como melhor amigo quem já é seu amigo.")
+    if not is_close_friend(db, me.user_id, target.user_id):
+        db.add(CloseFriend(owner_id=me.user_id, friend_id=target.user_id))
+        db.commit()
+    return social_user(db, me.user_id, target)
+
+
+@fitness_social_router.delete("/close-friends/{username}", response_model=SocialUserSchema)
+def remove_close_friend(username: str, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+    target = other_target(db, me.user_id, username)
+    db.query(CloseFriend).filter(CloseFriend.owner_id == me.user_id, CloseFriend.friend_id == target.user_id).delete()
+    db.commit()
+    return social_user(db, me.user_id, target)
