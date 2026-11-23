@@ -7,6 +7,21 @@ from app.fitness_models import Exercise, ExerciseMuscle, Plan, PlanDay, Workout
 from app.fitness_schemas import WorkoutSchema
 
 
+def exercise_snapshot(exercise: Exercise) -> dict:
+    return {
+        "name": exercise.name,
+        "muscle_group": exercise.muscle_group,
+        "equipment": exercise.equipment,
+        "grip": exercise.grip,
+        "is_unilateral": bool(exercise.is_unilateral),
+        "family": exercise.family,
+        "bodyweight_factor": float(exercise.bodyweight_factor) if exercise.bodyweight_factor is not None else None,
+        "tracking": exercise.tracking or "reps",
+        "intensity": exercise.intensity,
+        "muscles": [{"muscle": m.muscle, "role": m.role} for m in exercise.muscles],
+    }
+
+
 def workout_snapshot(workout: Workout) -> dict:
     return {
         "name": workout.name,
@@ -24,6 +39,7 @@ def workout_snapshot(workout: Workout) -> dict:
                 "load_mode": item.load_mode,
                 "superset": item.superset,
                 "set_plan": item.set_plan,
+                "custom": exercise_snapshot(item.exercise) if item.exercise.user_id is not None else None,
             }
             for item in workout.exercises
         ],
@@ -33,6 +49,7 @@ def workout_snapshot(workout: Workout) -> dict:
                 "name": item.exercise.name if item.exercise else "Cardio",
                 "phase": item.phase,
                 "minutes": item.minutes,
+                "custom": exercise_snapshot(item.exercise) if item.exercise and item.exercise.user_id is not None else None,
             }
             for item in workout.cardio
         ],
@@ -48,21 +65,6 @@ def plan_snapshot(plan: Plan) -> dict:
             workouts[key] = workout_snapshot(day.workout)
         days.append({"weekday": day.weekday, "workout": key})
     return {"name": plan.name, "days": days, "workouts": workouts}
-
-
-def exercise_snapshot(exercise: Exercise) -> dict:
-    return {
-        "name": exercise.name,
-        "muscle_group": exercise.muscle_group,
-        "equipment": exercise.equipment,
-        "grip": exercise.grip,
-        "is_unilateral": bool(exercise.is_unilateral),
-        "family": exercise.family,
-        "bodyweight_factor": float(exercise.bodyweight_factor) if exercise.bodyweight_factor is not None else None,
-        "tracking": exercise.tracking or "reps",
-        "intensity": exercise.intensity,
-        "muscles": [{"muscle": m.muscle, "role": m.role} for m in exercise.muscles],
-    }
 
 
 def own_exercise(db: Session, user: User, exercise_id: int) -> Exercise:
@@ -104,19 +106,37 @@ def usable_exercises(db: Session, user: User, ids: list[int]) -> set[int]:
     }
 
 
-def build_copy(db: Session, user: User, snapshot: dict, name: str, description: str | None) -> tuple[Workout | None, int]:
+FIELDS = ("target_sets", "reps_min", "reps_max", "rest_seconds", "unilateral", "load_mode", "superset", "set_plan")
+
+
+def build_copy(
+    db: Session,
+    user: User,
+    snapshot: dict,
+    name: str,
+    description: str | None,
+    author: User | None = None,
+    cache: dict | None = None,
+) -> tuple[Workout | None, int]:
     from app.routers.fitness import build_workout_cardio, build_workout_exercises
 
+    cache = {} if cache is None else cache
     usable = usable_exercises(
         db, user, [e["exercise_id"] for e in snapshot["exercises"]] + [c["exercise_id"] for c in snapshot["cardio"]]
     )
-    exercises = [
-        {key: e[key] for key in ("exercise_id", "target_sets", "reps_min", "reps_max", "rest_seconds", "unilateral", "load_mode", "superset", "set_plan")}
-        for e in snapshot["exercises"]
-        if e["exercise_id"] in usable
-    ]
+
+    def target(entry: dict) -> int | None:
+        if entry.get("exercise_id") in usable:
+            return entry["exercise_id"]
+        return resolve_custom(db, user, author, entry, cache)
+
+    exercises = []
+    for entry in snapshot["exercises"]:
+        exercise_id = target(entry)
+        if exercise_id is not None:
+            exercises.append({"exercise_id": exercise_id, **{key: entry.get(key) for key in FIELDS}})
     cardio = [
-        {"exercise_id": c["exercise_id"] if c["exercise_id"] in usable else None, "phase": c["phase"], "minutes": c["minutes"]}
+        {"exercise_id": target(c) if c.get("exercise_id") else None, "phase": c["phase"], "minutes": c["minutes"]}
         for c in snapshot["cardio"]
     ]
     skipped = len(snapshot["exercises"]) - len(exercises)
@@ -138,7 +158,7 @@ def build_copy(db: Session, user: User, snapshot: dict, name: str, description: 
 def copy_workout(db: Session, user: User, snapshot: dict, author: User) -> dict:
     mine = author.id == user.id
     name = snapshot["name"] if mine else f"{snapshot['name']} ({author.name.split(' ')[0]})"
-    workout, skipped = build_copy(db, user, snapshot, name, None if mine else f"Copiada da ficha de {author.name}.")
+    workout, skipped = build_copy(db, user, snapshot, name, None if mine else f"Copiada da ficha de {author.name}.", author)
     if workout is None:
         raise HTTPException(status_code=422, detail="Nenhum exercício dessa ficha pode ser copiado.")
     db.commit()
@@ -150,9 +170,10 @@ def copy_plan(db: Session, user: User, snapshot: dict, author: User) -> dict:
     mine = author.id == user.id
     created = {}
     skipped = 0
+    cache: dict = {}
     for key, workout_snap in snapshot["workouts"].items():
         name = workout_snap["name"] if mine else f"{workout_snap['name']} ({first})"
-        workout, missing = build_copy(db, user, workout_snap, name, None if mine else f"Do plano de {author.name}.")
+        workout, missing = build_copy(db, user, workout_snap, name, None if mine else f"Do plano de {author.name}.", author, cache)
         skipped += missing
         if workout is not None:
             created[key] = workout
@@ -176,12 +197,13 @@ def name_taken(db: Session, user: User, name: str) -> bool:
     return visible_exercises(user, db).filter(func.lower(Exercise.name) == name.lower()).first() is not None
 
 
-def copy_exercise(db: Session, user: User, snapshot: dict, author: User) -> dict:
+def create_exercise_copy(db: Session, user: User, snapshot: dict, author: User | None) -> Exercise | None:
     base = snapshot["name"]
-    candidates = [base, f"{base} ({author.name.split(' ')[0]})"] + [f"{base} {number}" for number in range(2, 20)]
+    suffix = [f"{base} ({author.name.split(' ')[0]})"] if author else []
+    candidates = [base] + suffix + [f"{base} {number}" for number in range(2, 20)]
     name = next((candidate[:60] for candidate in candidates if not name_taken(db, user, candidate[:60])), None)
     if name is None:
-        raise HTTPException(status_code=409, detail="Você já tem exercícios com esse nome.")
+        return None
     exercise = Exercise(
         user_id=user.id,
         name=name,
@@ -196,6 +218,43 @@ def copy_exercise(db: Session, user: User, snapshot: dict, author: User) -> dict
         muscles=[ExerciseMuscle(muscle=m["muscle"], role=m["role"]) for m in snapshot.get("muscles", [])],
     )
     db.add(exercise)
+    db.flush()
+    return exercise
+
+
+def matching_own_exercise(db: Session, user: User, snapshot: dict) -> Exercise | None:
+    return (
+        db.query(Exercise)
+        .filter(
+            Exercise.user_id == user.id,
+            func.lower(Exercise.name) == snapshot["name"].lower(),
+            Exercise.muscle_group == snapshot["muscle_group"],
+            Exercise.equipment == snapshot["equipment"],
+        )
+        .first()
+    )
+
+
+def resolve_custom(db: Session, user: User, author: User | None, entry: dict, cache: dict) -> int | None:
+    source_id = entry.get("exercise_id")
+    if source_id in cache:
+        return cache[source_id]
+    data = entry.get("custom")
+    if data is None and source_id and author is not None:
+        source = db.get(Exercise, source_id)
+        if source is not None and source.user_id == author.id:
+            data = exercise_snapshot(source)
+    if data is None:
+        return None
+    exercise = matching_own_exercise(db, user, data) or create_exercise_copy(db, user, data, author)
+    cache[source_id] = exercise.id if exercise else None
+    return cache[source_id]
+
+
+def copy_exercise(db: Session, user: User, snapshot: dict, author: User) -> dict:
+    exercise = create_exercise_copy(db, user, snapshot, author)
+    if exercise is None:
+        raise HTTPException(status_code=409, detail="Você já tem exercícios com esse nome.")
     db.commit()
     return {"kind": "exercise", "id": exercise.id, "name": exercise.name, "skipped": 0}
 

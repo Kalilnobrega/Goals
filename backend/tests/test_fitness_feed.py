@@ -271,9 +271,12 @@ def test_copy_post_workout_into_own_workouts(client, library, ana, bruno, carla,
     copied = client.post(f"/fitness/posts/{created['id']}/copy-workout", headers=bruno)
     assert copied.status_code == 200, copied.text
     body = copied.json()
-    assert body["name"] == "Peito da Ana (Ana)" and body["skipped"] == 1
+    assert body["name"] == "Peito da Ana (Ana)" and body["skipped"] == 0
     fichas = client.get("/fitness/workouts", headers=bruno).json()
     assert len(fichas) == 1
+    copied_custom = fichas[0]["exercises"][1]["exercise"]
+    assert copied_custom["name"] == "Meu exercício" and copied_custom["is_custom"] is True
+    assert copied_custom["id"] != custom["id"]
     item = fichas[0]["exercises"][0]
     assert item["exercise"]["id"] == library["supino-reto"]
     assert (item["target_sets"], item["reps_min"], item["reps_max"], item["rest_seconds"]) == (2, 8, 12, 90)

@@ -112,3 +112,28 @@ def test_share_custom_exercise_and_copy(client, ana, bruno, library):
 
     sent = client.post("/fitness/shares", json={"kind": "exercise", "item_id": custom["id"], "usernames": ["bruno"]}, headers=ana)
     assert sent.status_code == 200 and sent.json()[0]["kind"] == "exercise"
+
+
+def test_copying_a_plan_brings_custom_exercises_once(client, ana, bruno, library):
+    befriend(client, ana, bruno, "bruno", "ana")
+    custom = client.post("/fitness/exercises", json={"name": "Remada da Ana", "muscle_group": "back", "equipment": "machine"}, headers=ana).json()
+    fichas = []
+    for name in ("Treino A", "Treino B"):
+        fichas.append(client.post("/fitness/workouts", json={"name": name, "exercises": [
+            {"exercise_id": custom["id"], "target_sets": 3, "reps_min": 10},
+            {"exercise_id": library["supino-reto"], "target_sets": 3, "reps_min": 8},
+        ]}, headers=ana).json())
+    plan = client.post("/fitness/plans", json={"name": "AB", "days": [
+        {"weekday": 0, "workout_id": fichas[0]["id"]}, {"weekday": 3, "workout_id": fichas[1]["id"]},
+    ]}, headers=ana).json()
+    post = client.post("/fitness/posts", json={"share_plan_id": plan["id"]}, headers=ana).json()
+
+    copied = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno).json()
+    assert copied["skipped"] == 0
+    customs = [e for e in client.get("/fitness/exercises", headers=bruno).json() if e["is_custom"]]
+    assert [e["name"] for e in customs] == ["Remada da Ana"]
+
+    single = client.post("/fitness/posts", json={"share_workout_id": fichas[0]["id"]}, headers=ana).json()
+    client.post(f"/fitness/posts/{single['id']}/copy-shared", headers=bruno)
+    customs = [e for e in client.get("/fitness/exercises", headers=bruno).json() if e["is_custom"]]
+    assert [e["name"] for e in customs] == ["Remada da Ana"]

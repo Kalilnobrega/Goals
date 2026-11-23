@@ -29,7 +29,7 @@ from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from app.fitness_notifications import clear, notify, renotify
-from app.fitness_sharing import copy_snapshot, snapshot_for
+from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
 from .fitness import build_workout_cardio, build_workout_exercises
@@ -457,18 +457,8 @@ def copy_post_workout(post_id: int, user: User = Depends(get_current_user), db: 
     if session is None:
         raise HTTPException(status_code=404, detail="Esse post não tem treino vinculado.")
     items = [item for item in session.exercises if item.sets]
-    usable = {
-        row.id
-        for row in db.query(Exercise.id).filter(
-            Exercise.id.in_([item.exercise_id for item in items if item.exercise_id]),
-            or_(Exercise.user_id.is_(None), Exercise.user_id == user.id),
-        )
-    }
-    exercises, cardio, skipped = [], [], 0
+    exercises, cardio = [], []
     for item in items:
-        if item.exercise_id not in usable:
-            skipped += 1
-            continue
         if item.tracking == "cardio":
             seconds = sum(entry.duration_seconds or 0 for entry in item.sets)
             cardio.append({
@@ -489,25 +479,13 @@ def copy_post_workout(post_id: int, user: User = Depends(get_current_user), db: 
             "superset": item.superset,
             "set_plan": item.set_plan,
         })
-    if not exercises and not cardio:
-        raise HTTPException(status_code=422, detail="Nenhum exercício desse treino pode ser copiado.")
     owner = db.get(User, post.user_id)
     mine = post.user_id == user.id
     name = session.name if mine else f"{session.name} ({owner.name.split(' ')[0]})"
-    data = WorkoutSchema(
-        name=name[:60],
-        description=None if mine else f"Copiada do treino de {owner.name} em {to_br_date(session.started_at).strftime('%d/%m/%Y')}.",
-        exercises=exercises[:40],
-        cardio=cardio[:6],
-    )
-    workout = Workout(
-        user_id=user.id,
-        name=data.name,
-        description=data.description,
-        exercises=build_workout_exercises(data, user, db),
-        cardio=build_workout_cardio(data),
-    )
-    db.add(workout)
+    description = None if mine else f"Copiada do treino de {owner.name} em {to_br_date(session.started_at).strftime('%d/%m/%Y')}."
+    workout, skipped = build_copy(db, user, {"exercises": exercises[:40], "cardio": cardio[:6]}, name, description, owner)
+    if workout is None:
+        raise HTTPException(status_code=422, detail="Nenhum exercício desse treino pode ser copiado.")
     db.commit()
     return {"workout_id": workout.id, "name": workout.name, "skipped": skipped}
 

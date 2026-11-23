@@ -17,6 +17,7 @@ from app.fitness_schemas import (
     WorkoutResponseSchema,
     WorkoutSchema,
 )
+from app.fitness_sharing import build_copy, workout_snapshot
 from .auth import get_current_user
 from .fitness import build_workout_cardio, build_workout_exercises, list_workouts
 from .fitness_feed import workout_detail
@@ -123,46 +124,15 @@ def copy_close_workout(username: str, workout_id: int, user: User = Depends(get_
     source = db.get(Workout, workout_id)
     if source is None or source.user_id != owner.id:
         raise HTTPException(status_code=404, detail="Ficha não encontrada.")
-    ids = [item.exercise_id for item in source.exercises] + [item.exercise_id for item in source.cardio if item.exercise_id]
-    usable = {
-        row.id
-        for row in db.query(Exercise.id).filter(Exercise.id.in_(ids), or_(Exercise.user_id.is_(None), Exercise.user_id == user.id))
-    } if ids else set()
-    exercises = [
-        {
-            "exercise_id": item.exercise_id,
-            "target_sets": item.target_sets,
-            "reps_min": item.reps_min,
-            "reps_max": item.reps_max,
-            "rest_seconds": item.rest_seconds,
-            "unilateral": item.unilateral,
-            "load_mode": item.load_mode,
-            "superset": item.superset,
-            "set_plan": item.set_plan,
-        }
-        for item in source.exercises
-        if item.exercise_id in usable
-    ]
-    cardio = [
-        {"exercise_id": item.exercise_id if item.exercise_id in usable else None, "phase": item.phase, "minutes": item.minutes}
-        for item in source.cardio
-    ]
-    skipped = len(source.exercises) - len(exercises)
-    if not exercises and not cardio:
+    workout, skipped = build_copy(
+        db,
+        user,
+        workout_snapshot(source),
+        f"{source.name} ({owner.name.split(' ')[0]})",
+        f"Copiada da ficha de {owner.name}.",
+        owner,
+    )
+    if workout is None:
         raise HTTPException(status_code=422, detail="Nenhum exercício dessa ficha pode ser copiado.")
-    data = WorkoutSchema(
-        name=f"{source.name} ({owner.name.split(' ')[0]})"[:60],
-        description=f"Copiada da ficha de {owner.name}.",
-        exercises=exercises,
-        cardio=cardio,
-    )
-    workout = Workout(
-        user_id=user.id,
-        name=data.name,
-        description=data.description,
-        exercises=build_workout_exercises(data, user, db),
-        cardio=build_workout_cardio(data),
-    )
-    db.add(workout)
     db.commit()
     return {"workout_id": workout.id, "name": workout.name, "skipped": skipped}
