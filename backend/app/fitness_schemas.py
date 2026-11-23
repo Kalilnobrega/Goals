@@ -1761,3 +1761,9 @@ class PostWorkoutDetailSchema(BaseModel):
     session: SessionResponseSchema
     records: list[PostRecordSchema]
     muscle_sets: list[dict]
+
+
+class CopiedWorkoutSchema(BaseModel):
+    workout_id: int
+    name: str
+    skipped: int

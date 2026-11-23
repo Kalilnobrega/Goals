@@ -251,3 +251,34 @@ def test_post_workout_detail_follows_post_visibility_and_hides_notes(client, lib
 
     assert client.get(f"/fitness/posts/{created['id']}/workout", headers=carla).status_code == 404
     assert client.get(f"/fitness/posts/{free['id']}/workout", headers=bruno).status_code == 404
+
+
+def test_copy_post_workout_into_own_workouts(client, library, ana, bruno, carla, db_session):
+    from app.fitness_models import Exercise
+    befriend(client, ana, bruno, "bruno", "ana")
+    custom = client.post("/fitness/exercises", json={"name": "Meu exercício", "muscle_group": "chest", "equipment": "machine"}, headers=ana).json()
+    workout = client.post("/fitness/workouts", json={"name": "Peito da Ana", "exercises": [
+        {"exercise_id": library["supino-reto"], "target_sets": 4, "reps_min": 8, "reps_max": 12, "rest_seconds": 90},
+        {"exercise_id": custom["id"], "target_sets": 2, "reps_min": 10},
+    ]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 60, 10)
+    log_set(client, ana, session["exercises"][0]["id"], 60, 9)
+    log_set(client, ana, session["exercises"][1]["id"], 30, 10)
+    assert finish(client, ana, session["id"]).status_code == 200
+    created = post(client, ana, session_id=session["id"])
+
+    copied = client.post(f"/fitness/posts/{created['id']}/copy-workout", headers=bruno)
+    assert copied.status_code == 200, copied.text
+    body = copied.json()
+    assert body["name"] == "Peito da Ana (Ana)" and body["skipped"] == 1
+    fichas = client.get("/fitness/workouts", headers=bruno).json()
+    assert len(fichas) == 1
+    item = fichas[0]["exercises"][0]
+    assert item["exercise"]["id"] == library["supino-reto"]
+    assert (item["target_sets"], item["reps_min"], item["reps_max"], item["rest_seconds"]) == (2, 8, 12, 90)
+    assert "Copiada do treino de Ana Souza" in fichas[0]["description"]
+
+    assert client.post(f"/fitness/posts/{created['id']}/copy-workout", headers=carla).status_code == 404
+    free = post(client, ana, caption="sem treino")
+    assert client.post(f"/fitness/posts/{free['id']}/copy-workout", headers=bruno).status_code == 404

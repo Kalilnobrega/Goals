@@ -7,7 +7,7 @@ from app.database import get_db
 from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
-    ChallengeMember, FitnessProfile, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
+    ChallengeMember, Exercise, FitnessProfile, Workout, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
 )
 from app.fitness_schemas import (
     CommentCreateSchema,
@@ -18,6 +18,8 @@ from app.fitness_schemas import (
     PostReportSchema,
     PostableSessionSchema,
     PostWorkoutDetailSchema,
+    CopiedWorkoutSchema,
+    WorkoutSchema,
     PostSchema,
     ProgressPhotoSchema,
     ReactionSchema,
@@ -26,7 +28,8 @@ from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from .auth import get_current_user
-from .fitness_sessions import COMPLETED, serialize_session
+from .fitness_sessions import COMPLETED, serialize_session, series_count
+from .fitness import build_workout_cardio, build_workout_exercises
 from .fitness_social import can_view, has_blocked, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
@@ -400,6 +403,68 @@ def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: S
             for r in records
         ],
     }
+
+
+@fitness_feed_router.post("/posts/{post_id}/copy-workout", response_model=CopiedWorkoutSchema)
+def copy_post_workout(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, user.id)
+    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
+    if session is None:
+        raise HTTPException(status_code=404, detail="Esse post não tem treino vinculado.")
+    items = [item for item in session.exercises if item.sets]
+    usable = {
+        row.id
+        for row in db.query(Exercise.id).filter(
+            Exercise.id.in_([item.exercise_id for item in items if item.exercise_id]),
+            or_(Exercise.user_id.is_(None), Exercise.user_id == user.id),
+        )
+    }
+    exercises, cardio, skipped = [], [], 0
+    for item in items:
+        if item.exercise_id not in usable:
+            skipped += 1
+            continue
+        if item.tracking == "cardio":
+            seconds = sum(entry.duration_seconds or 0 for entry in item.sets)
+            cardio.append({
+                "exercise_id": item.exercise_id,
+                "phase": item.phase or "end",
+                "minutes": min(300, max(1, round(seconds / 60) or (item.reps_min or 10))),
+            })
+            continue
+        reps_min = min(600, max(1, item.reps_min or 10))
+        exercises.append({
+            "exercise_id": item.exercise_id,
+            "target_sets": min(20, max(1, series_count(item.sets) or item.target_sets or 3)),
+            "reps_min": reps_min,
+            "reps_max": item.reps_max if item.reps_max and item.reps_max >= reps_min else None,
+            "rest_seconds": item.rest_seconds,
+            "unilateral": item.unilateral,
+            "load_mode": item.load_mode,
+            "superset": item.superset,
+            "set_plan": item.set_plan,
+        })
+    if not exercises and not cardio:
+        raise HTTPException(status_code=422, detail="Nenhum exercício desse treino pode ser copiado.")
+    owner = db.get(User, post.user_id)
+    mine = post.user_id == user.id
+    name = session.name if mine else f"{session.name} ({owner.name.split(' ')[0]})"
+    data = WorkoutSchema(
+        name=name[:60],
+        description=None if mine else f"Copiada do treino de {owner.name} em {to_br_date(session.started_at).strftime('%d/%m/%Y')}.",
+        exercises=exercises[:40],
+        cardio=cardio[:6],
+    )
+    workout = Workout(
+        user_id=user.id,
+        name=data.name,
+        description=data.description,
+        exercises=build_workout_exercises(data, user, db),
+        cardio=build_workout_cardio(data),
+    )
+    db.add(workout)
+    db.commit()
+    return {"workout_id": workout.id, "name": workout.name, "skipped": skipped}
 
 
 @fitness_feed_router.delete("/posts/{post_id}", status_code=204)
