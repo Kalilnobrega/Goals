@@ -1,11 +1,12 @@
 import secrets
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile
+from app.fitness_models import Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
@@ -381,3 +382,26 @@ def delete_challenge(challenge_id: int, user: User = Depends(get_current_user), 
     db.query(ChallengeInvite).filter(ChallengeInvite.challenge_id == challenge.id).delete()
     db.delete(challenge)
     db.commit()
+
+
+@fitness_challenges_router.get("/pending/count")
+def pending_count(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.get(FitnessProfile, user.id)
+    if profile is None or not profile.username:
+        return {"friend_requests": 0, "challenge_invites": 0}
+    requests = (
+        db.query(func.count(Friendship.id))
+        .filter(
+            Friendship.status == "pending",
+            Friendship.requester_id != user.id,
+            or_(Friendship.user_low_id == user.id, Friendship.user_high_id == user.id),
+        )
+        .scalar()
+    )
+    invites = (
+        db.query(func.count(ChallengeInvite.challenge_id))
+        .join(Challenge, Challenge.id == ChallengeInvite.challenge_id)
+        .filter(ChallengeInvite.user_id == user.id, Challenge.end_date >= today_br())
+        .scalar()
+    )
+    return {"friend_requests": requests, "challenge_invites": invites}

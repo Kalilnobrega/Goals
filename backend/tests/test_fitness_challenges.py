@@ -218,3 +218,16 @@ def test_private_profiles_still_show_name_and_score(client, library, ana, bruno)
     train(client, bruno, library)
     ranking = client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"]
     assert ranking[0]["name"] == "Bruno Lima" and ranking[0]["score"] == 1
+
+
+def test_pending_count(client, db_session, ana, bruno):
+    assert client.get("/fitness/challenges/pending/count", headers=headers_for(make_user(db_session, "Sem Nome"))).json() == {
+        "friend_requests": 0, "challenge_invites": 0,
+    }
+    client.post("/fitness/social/friends/requests", json={"username": "bruno"}, headers=ana)
+    assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 1, "challenge_invites": 0}
+    client.post("/fitness/social/friends/ana/accept", headers=bruno)
+    challenge = create(client, ana)
+    client.post(f"/fitness/challenges/{challenge['id']}/invites", json={"username": "bruno"}, headers=ana)
+    assert client.get("/fitness/challenges/pending/count", headers=bruno).json() == {"friend_requests": 0, "challenge_invites": 1}
+    assert client.get("/fitness/challenges/pending/count", headers=ana).json() == {"friend_requests": 0, "challenge_invites": 0}
