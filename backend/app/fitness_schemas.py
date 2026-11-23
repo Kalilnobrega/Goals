@@ -1564,6 +1564,7 @@ class ChallengeCreateSchema(BaseModel):
     min_rule: ChallengeMinRuleSchema = Field(default_factory=ChallengeMinRuleSchema)
     hide_weight: bool = False
     accept_weight: bool = False
+    allow_manual: bool = False
 
     @field_validator("name")
     @classmethod
@@ -1620,6 +1621,7 @@ class ChallengePreviewSchema(BaseModel):
     is_member: bool
     hide_weight: bool = False
     uses_weight: bool = False
+    allow_manual: bool = False
 
 
 class ChallengeListsSchema(BaseModel):
@@ -1643,6 +1645,7 @@ class ChallengeDetailSchema(BaseModel):
     is_owner: bool
     hide_weight: bool = False
     uses_weight: bool = False
+    allow_manual: bool = False
     invite_code: str
     member_count: int
     ranking: list[ChallengeRankingSchema]
@@ -1679,6 +1682,8 @@ class PostCreateSchema(BaseModel):
     caption: str | None = Field(default=None, max_length=500)
     activity: str | None = Field(default=None, max_length=40)
     media_ids: list[int] = Field(default_factory=list, max_length=4)
+    minutes: int | None = Field(default=None, ge=1, le=600)
+    performed_on: date | None = None
 
 
 class PostAuthorSchema(BaseModel):
@@ -1701,6 +1706,8 @@ class PostSchema(BaseModel):
     created_at: datetime
     caption: str | None
     activity: str | None
+    minutes: int | None = None
+    performed_on: date | None = None
     workout: PostWorkoutSchema | None
     media: list[MediaSchema]
     reactions: dict[str, int]
@@ -1786,3 +1793,26 @@ class NotificationsSchema(BaseModel):
     notifications: list[NotificationSchema]
     next_before: int | None
     unread: int
+
+
+class ChallengeActivitySchema(BaseModel):
+    kind: Literal["workout", "checkin"]
+    author: PostAuthorSchema
+    is_mine: bool
+    day: date
+    at: datetime
+    name: str
+    minutes: int
+    exercises: int | None = None
+    volume_kg: float | None = None
+    highlights: list[str] = []
+    counts: bool
+    session_id: int | None = None
+    post_id: int | None = None
+    caption: str | None = None
+    media: list[MediaSchema] = []
+
+
+class ChallengeActivityPageSchema(BaseModel):
+    items: list[ChallengeActivitySchema]
+    next_before: str | None

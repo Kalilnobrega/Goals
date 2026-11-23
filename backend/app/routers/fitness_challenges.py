@@ -4,14 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dates import today_br
+from app.dates import br_day_start_utc, to_br_date, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship, Notification
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship, Notification, Post, WorkoutSession
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
+    ChallengeActivityPageSchema,
     ChallengeInviteSchema,
     ChallengeJoinSchema,
+    PostWorkoutDetailSchema,
     ChallengeListsSchema,
     ChallengePreviewSchema,
     EXERCISE_METRICS,
@@ -103,7 +105,41 @@ def qualifies(session: dict, rule: dict | None) -> bool:
         return True
     if rule["kind"] == "minutes":
         return session["minutes"] >= rule["value"]
+    if session.get("manual"):
+        return True
     return len(session["exercises"]) + len(session["cardio"]) >= rule["value"]
+
+
+def checkin_posts(db: Session, challenge: Challenge, user_ids: list[int]) -> list[Post]:
+    if not challenge.allow_manual or not user_ids:
+        return []
+    posts = (
+        db.query(Post)
+        .filter(
+            Post.user_id.in_(user_ids),
+            Post.session_id.is_(None),
+            Post.minutes.isnot(None),
+            Post.performed_on >= challenge.start_date,
+            Post.performed_on <= challenge.end_date,
+        )
+        .order_by(Post.performed_on, Post.id)
+        .all()
+    )
+    return [post for post in posts if post.media]
+
+
+def checkin_fact(post: Post) -> dict:
+    return {
+        "id": f"checkin-{post.id}",
+        "manual": True,
+        "day": post.performed_on,
+        "minutes": float(post.minutes),
+        "exercises": [],
+        "cardio": [],
+        "sets": 0,
+        "reps": 0,
+        "volume": 0.0,
+    }
 
 
 def muscle_sets(sessions: list[dict], group: str) -> float:
@@ -220,6 +256,9 @@ def member_values(db: Session, challenge: Challenge, user: User, targets: dict[s
     else:
         history = []
         sessions = [s for s in completed_facts(user, db, challenge.start_date, challenge.end_date) if qualifies(s, challenge.min_rule)]
+    real = sessions
+    manual = [checkin_fact(post) for post in checkin_posts(db, challenge, [user.id])]
+    sessions = real + [fact for fact in manual if qualifies(fact, challenge.min_rule)]
     counted = {s["id"] for s in sessions}
     values, details, missing = {}, {}, []
     weights = BodyWeights(user.id, db) if "relative_strength" in keys else None
@@ -229,7 +268,7 @@ def member_values(db: Session, challenge: Challenge, user: User, targets: dict[s
         if metric["key"] == "records":
             value = float(len(weight_records(history, lambda s: s["id"] in counted)))
         elif metric["key"] == "plan":
-            value = plan_pct(db, user, sessions, challenge)
+            value = plan_pct(db, user, real, challenge)
         elif metric["key"] == "progress":
             value, info = progress_value(metric, history, sessions, targets[key], challenge.start_date)
         elif metric["key"] == "body_weight":
@@ -323,6 +362,7 @@ def preview(db: Session, challenge: Challenge, user_id: int) -> dict:
         "is_member": user_id in member_ids(challenge),
         "hide_weight": challenge.hide_weight,
         "uses_weight": uses_weight(challenge),
+        "allow_manual": challenge.allow_manual,
     }
 
 
@@ -380,6 +420,7 @@ def create_challenge(
         min_rule=data.min_rule.model_dump(),
         invite_code=secrets.token_urlsafe(9)[:12],
         hide_weight=data.hide_weight and any(m["key"] in WEIGHT_METRICS for m in metrics),
+        allow_manual=data.allow_manual,
     )
     db.add(challenge)
     db.flush()
@@ -455,6 +496,7 @@ def detail(db: Session, challenge: Challenge, user_id: int) -> dict:
         "is_owner": challenge.owner_id == user_id,
         "hide_weight": challenge.hide_weight,
         "uses_weight": uses_weight(challenge),
+        "allow_manual": challenge.allow_manual,
         "invite_code": challenge.invite_code,
         "member_count": len(challenge.members),
         "ranking": [
@@ -605,3 +647,108 @@ def pending_count(user: User = Depends(get_current_user), db: Session = Depends(
         .scalar()
     )
     return {"friend_requests": requests, "challenge_invites": invites, "notifications": unread}
+
+
+ACTIVITY_PAGE = 20
+
+
+def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
+    from .fitness_feed import media_out, session_facts
+    from .fitness_sessions import aware
+
+    items = []
+    members = [member.user_id for member in challenge.members]
+    for user_id in members:
+        user = db.get(User, user_id)
+        profile = db.get(FitnessProfile, user_id)
+        author = {"username": profile.username if profile else None, "name": user.name}
+        sessions = (
+            db.query(WorkoutSession)
+            .filter(
+                WorkoutSession.user_id == user_id,
+                WorkoutSession.status == "completed",
+                WorkoutSession.started_at >= br_day_start_utc(challenge.start_date),
+                WorkoutSession.started_at < br_day_start_utc(challenge.end_date + timedelta(days=1)),
+            )
+            .all()
+        )
+        posts = {
+            post.session_id: post
+            for post in db.query(Post).filter(Post.session_id.in_([s.id for s in sessions])).all()
+        } if sessions else {}
+        for session in sessions:
+            facts = session_facts(session)
+            post = posts.get(session.id)
+            ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
+            items.append({
+                "kind": "workout",
+                "author": author,
+                "is_mine": user_id == me,
+                "day": facts["day"],
+                "at": facts["started_at"],
+                "name": session.name,
+                "minutes": round(facts["minutes"]),
+                "exercises": len(facts["exercises"]) + len(facts["cardio"]),
+                "volume_kg": round(facts["volume"], 1),
+                "highlights": ([e["name"] for e in ranked] + [c["name"] for c in facts["cardio"]])[:3],
+                "counts": qualifies(facts, challenge.min_rule),
+                "session_id": session.id,
+                "post_id": post.id if post else None,
+                "caption": post.caption if post else None,
+                "media": [media_out(m) for m in post.media] if post else [],
+            })
+    for post in checkin_posts(db, challenge, members):
+        user = db.get(User, post.user_id)
+        profile = db.get(FitnessProfile, post.user_id)
+        fact = checkin_fact(post)
+        items.append({
+            "kind": "checkin",
+            "author": {"username": profile.username if profile else None, "name": user.name},
+            "is_mine": post.user_id == me,
+            "day": post.performed_on,
+            "at": aware(post.created_at),
+            "name": post.activity,
+            "minutes": post.minutes,
+            "counts": qualifies(fact, challenge.min_rule),
+            "post_id": post.id,
+            "caption": post.caption,
+            "media": [media_out(m) for m in post.media],
+        })
+    items.sort(key=lambda item: (item["day"], item["at"]), reverse=True)
+    return items
+
+
+@fitness_challenges_router.get("/{challenge_id}/activity", response_model=ChallengeActivityPageSchema)
+def challenge_activity(
+    challenge_id: int,
+    page: int = 0,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    items = activity_items(db, challenge, user.id)
+    start = max(page, 0) * ACTIVITY_PAGE
+    chunk = items[start:start + ACTIVITY_PAGE]
+    more = len(items) > start + ACTIVITY_PAGE
+    return {"items": chunk, "next_before": str(page + 1) if more else None}
+
+
+@fitness_challenges_router.get("/{challenge_id}/sessions/{session_id}", response_model=PostWorkoutDetailSchema)
+def challenge_session(
+    challenge_id: int,
+    session_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from .fitness_feed import workout_detail
+
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    session = db.get(WorkoutSession, session_id)
+    if (
+        session is None
+        or session.user_id not in member_ids(challenge)
+        or session.status != "completed"
+        or not (challenge.start_date <= to_br_date(session.started_at) <= challenge.end_date)
+    ):
+        raise HTTPException(status_code=404, detail="Treino não encontrado neste desafio.")
+    return workout_detail(db, session, user.id)

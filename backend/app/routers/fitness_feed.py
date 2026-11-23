@@ -37,6 +37,7 @@ from .fitness_stats import completed_facts, session_facts, weight_records
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
 PAGE_SIZE = 20
+CHECKIN_PAST_DAYS = 7
 MAX_MEDIA = 4
 PENDING_TTL = timedelta(days=1)
 NOT_FOUND = "Post não encontrado."
@@ -242,6 +243,8 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "created_at": post.created_at,
             "caption": post.caption,
             "activity": post.activity,
+            "minutes": post.minutes,
+            "performed_on": post.performed_on,
             "workout": workout_summary(db, post),
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
@@ -268,6 +271,19 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
     media = db.query(Media).filter(Media.id.in_(data.media_ids)).all() if data.media_ids else []
     if len(media) != len(data.media_ids) or any(m.user_id != me.user_id or m.kind != "post" or m.post_id is not None for m in media):
         raise HTTPException(status_code=422, detail="Alguma foto não pôde ser usada. Envie de novo.")
+    minutes = data.minutes
+    performed_on = None
+    if minutes is not None:
+        if data.session_id is not None:
+            raise HTTPException(status_code=422, detail="O check-in manual é para treinos feitos fora do app.")
+        if not activity:
+            raise HTTPException(status_code=422, detail="Diga qual atividade você fez.")
+        if not media:
+            raise HTTPException(status_code=422, detail="O check-in precisa de pelo menos uma foto.")
+        today = today_br()
+        performed_on = data.performed_on or today
+        if performed_on > today or performed_on < today - timedelta(days=CHECKIN_PAST_DAYS):
+            raise HTTPException(status_code=422, detail="A data do check-in pode ser de hoje até 7 dias atrás.")
     if data.session_id is not None:
         session = db.get(WorkoutSession, data.session_id)
         if session is None or session.user_id != me.user_id or session.status != COMPLETED:
@@ -277,7 +293,14 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         activity = None
     elif not (caption or media or activity):
         raise HTTPException(status_code=422, detail="Escreva algo, escolha a atividade ou adicione uma foto.")
-    post = Post(user_id=me.user_id, session_id=data.session_id, caption=caption, activity=activity)
+    post = Post(
+        user_id=me.user_id,
+        session_id=data.session_id,
+        caption=caption,
+        activity=activity,
+        minutes=minutes,
+        performed_on=performed_on,
+    )
     db.add(post)
     db.flush()
     order = {media_id: index for index, media_id in enumerate(data.media_ids)}
@@ -376,18 +399,13 @@ def get_post(post_id: int, user: User = Depends(get_current_user), db: Session =
     return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in visible]}
 
 
-@fitness_feed_router.get("/posts/{post_id}/workout", response_model=PostWorkoutDetailSchema)
-def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    post = visible_post(db, post_id, user.id)
-    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
-    if session is None:
-        raise HTTPException(status_code=404, detail="Esse post não tem treino vinculado.")
+def workout_detail(db: Session, session: WorkoutSession, viewer_id: int) -> dict:
     detail = serialize_session(session, db)
-    mine = post.user_id == user.id
+    mine = session.user_id == viewer_id
     if not mine:
         for item in detail["exercises"]:
             item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])
-    owner, profile = author_profile(db, post.user_id)
+    owner, profile = author_profile(db, session.user_id)
     day = to_br_date(session.started_at)
     records = weight_records(completed_facts(owner, db, None, day), lambda s: s["id"] == session.id)
     muscle_sets: dict[str, float] = {}
@@ -404,6 +422,15 @@ def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: S
             for r in records
         ],
     }
+
+
+@fitness_feed_router.get("/posts/{post_id}/workout", response_model=PostWorkoutDetailSchema)
+def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = visible_post(db, post_id, user.id)
+    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
+    if session is None:
+        raise HTTPException(status_code=404, detail="Esse post não tem treino vinculado.")
+    return workout_detail(db, session, user.id)
 
 
 @fitness_feed_router.post("/posts/{post_id}/copy-workout", response_model=CopiedWorkoutSchema)

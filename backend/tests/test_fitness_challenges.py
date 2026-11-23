@@ -460,3 +460,72 @@ def test_challenge_members_count_as_close_for_friends_only_profiles(client, libr
     client.put("/fitness/profile/visibility", json={"visibility": "friends"}, headers=bruno)
     client.delete(f"/fitness/challenges/{challenge['id']}/members/me", headers=bruno)
     assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is False
+
+
+JPEG = b"\xff\xd8\xff\xe0" + b"0" * 200
+
+
+@pytest.fixture()
+def media_dir(tmp_path, monkeypatch):
+    monkeypatch.setenv("FITNESS_MEDIA_DIR", str(tmp_path))
+    monkeypatch.delenv("MEDIA_BUCKET", raising=False)
+    return tmp_path
+
+
+def checkin(client, headers, minutes=40, activity="Corrida", photo=True, **extra):
+    ids = []
+    if photo:
+        ids.append(client.post("/fitness/media", files={"file": ("f.jpg", JPEG, "image/jpeg")}, headers=headers).json()["id"])
+    return client.post("/fitness/posts", json={"activity": activity, "minutes": minutes, "media_ids": ids, **extra}, headers=headers)
+
+
+def test_checkin_requires_photo_activity_and_recent_date(client, ana, media_dir):
+    assert checkin(client, ana, photo=False).status_code == 422
+    assert checkin(client, ana, activity=None).status_code == 422
+    old = (today_br() - timedelta(days=10)).isoformat()
+    assert checkin(client, ana, performed_on=old).status_code == 422
+    created = checkin(client, ana)
+    assert created.status_code == 200 and created.json()["minutes"] == 40
+
+
+def test_checkins_count_only_when_the_challenge_allows(client, library, ana, bruno, media_dir):
+    closed = create(client, ana, metrics=[{"key": "days"}, {"key": "minutes"}])
+    open_challenge = create(client, ana, metrics=[{"key": "days"}, {"key": "minutes"}], allow_manual=True)
+    assert open_challenge["allow_manual"] is True
+    checkin(client, ana, minutes=45)
+
+    open_row = client.get(f"/fitness/challenges/{open_challenge['id']}", headers=ana).json()["ranking"][0]
+    assert open_row["values"] == {"days": 1, "minutes": 45}
+    closed_row = client.get(f"/fitness/challenges/{closed['id']}", headers=ana).json()["ranking"][0]
+    assert closed_row["values"] == {"days": 0, "minutes": 0}
+
+
+def test_checkins_respect_minimum_minutes_but_not_exercise_count(client, ana, media_dir):
+    by_minutes = create(client, ana, metrics=[{"key": "workouts"}], allow_manual=True, min_rule={"kind": "minutes", "value": 30})
+    by_exercises = create(client, ana, metrics=[{"key": "workouts"}], allow_manual=True, min_rule={"kind": "exercises", "value": 3})
+    checkin(client, ana, minutes=20)
+    assert client.get(f"/fitness/challenges/{by_minutes['id']}", headers=ana).json()["ranking"][0]["score"] == 0
+    assert client.get(f"/fitness/challenges/{by_exercises['id']}", headers=ana).json()["ranking"][0]["score"] == 1
+
+
+def test_challenge_activity_shows_members_workouts_and_checkins(client, library, ana, bruno, carla, media_dir):
+    client.put("/fitness/profile/visibility", json={"visibility": "private"}, headers=bruno)
+    challenge = create(client, ana, allow_manual=True, min_rule={"kind": "exercises", "value": 2})
+    join(client, bruno, challenge)
+    train(client, bruno, library)
+    checkin(client, ana, minutes=30, caption="corridinha")
+    train(client, carla, library)
+
+    activity = client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=ana).json()
+    kinds = [(item["kind"], item["author"]["username"], item["counts"]) for item in activity["items"]]
+    assert ("workout", "bruno", False) in kinds
+    assert ("checkin", "ana", True) in kinds
+    assert all(username != "carla" for _, username, _ in kinds)
+    checkin_item = next(item for item in activity["items"] if item["kind"] == "checkin")
+    assert checkin_item["name"] == "Corrida" and checkin_item["caption"] == "corridinha" and len(checkin_item["media"]) == 1
+
+    workout_item = next(item for item in activity["items"] if item["kind"] == "workout")
+    detail = client.get(f"/fitness/challenges/{challenge['id']}/sessions/{workout_item['session_id']}", headers=ana)
+    assert detail.status_code == 200 and detail.json()["author"]["username"] == "bruno"
+    assert client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=carla).status_code == 404
+    assert client.get(f"/fitness/challenges/{challenge['id']}/sessions/{workout_item['session_id']}", headers=carla).status_code == 404
