@@ -65,11 +65,11 @@
 }
 
 .headerInvite {
+  width: 32px;
   height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   border-radius: 10px;
   border: 1px solid var(--gym-border-strong);
   background: var(--gym-surface-2);

@@ -185,8 +185,8 @@ export default function ChallengePage() {
               <span className={`${styles.status} ${styles[`status_${challenge.status}`]}`}>{STATUS_LABEL[challenge.status]}</span>
               <span className={styles.timeLeft}>{timeLeftLabel(challenge)}</span>
               {!finished && (
-                <button type="button" className={styles.headerInvite} onClick={() => setInviting(true)}>
-                  <UserPlus size={15} /> Convidar
+                <button type="button" className={styles.headerInvite} onClick={() => setInviting(true)} aria-label="Convidar" title="Convidar">
+                  <UserPlus size={16} />
                 </button>
               )}
             </div>
