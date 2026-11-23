@@ -57,8 +57,8 @@ export default function CropFrame({ photo, onMove, size = 'large', format = 'por
         sizes={size === 'large' ? '(max-width: 760px) 100vw, 480px' : '96px'}
         style={{ objectPosition: `${photo.position.x}% ${photo.position.y}%` }}
       />
-      {onMove && size === 'large' && (
-        <span className={`${styles.grid} ${dragging ? styles.gridActive : ''}`} aria-hidden="true">
+      {onMove && size === 'large' && dragging && (
+        <span className={styles.grid} aria-hidden="true">
           <span className={styles.lineV} style={{ left: '33.333%' }} />
           <span className={styles.lineV} style={{ left: '66.666%' }} />
           <span className={styles.lineH} style={{ top: '33.333%' }} />

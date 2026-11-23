@@ -1,17 +1,35 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
-import { getPostWorkout } from '../../../../../../lib/api';
+import { useParams, useRouter } from 'next/navigation';
+import { ChevronLeft, Copy } from 'lucide-react';
+import { copyPostWorkout, getPostWorkout } from '../../../../../../lib/api';
 import { apiError } from '../../../../../../lib/gym';
 import SessionSummary from '../../../../../../components/gym/SessionSummary';
+import { useToast } from '../../../../../../components/Toast';
 import styles from './workout.module.css';
 
 export default function PostWorkoutPage() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [copying, setCopying] = useState(false);
+  const router = useRouter();
+  const toast = useToast();
+
+  const copy = async () => {
+    setCopying(true);
+    try {
+      const result = await copyPostWorkout(id);
+      toast(result.skipped
+        ? `Ficha "${result.name}" criada. ${result.skipped === 1 ? '1 exercício personalizado ficou' : `${result.skipped} exercícios personalizados ficaram`} de fora.`
+        : `Ficha "${result.name}" criada`);
+      router.push(`/gym/workouts/${result.workout_id}`);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível copiar a ficha.') });
+      setCopying(false);
+    }
+  };
 
   useEffect(() => {
     getPostWorkout(id)
@@ -34,6 +52,11 @@ export default function PostWorkoutPage() {
             </p>
             <h1 className={styles.title}>{data.session.name}</h1>
           </header>
+          {!data.is_mine && (
+            <button type="button" className={styles.copy} onClick={copy} disabled={copying}>
+              <Copy size={17} /> {copying ? 'Copiando...' : 'Copiar para minhas fichas'}
+            </button>
+          )}
           <SessionSummary session={data.session} insights={{ records: data.records, muscle_sets: data.muscle_sets }} />
         </>
       )}

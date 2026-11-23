@@ -199,9 +199,12 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
           <span className={styles.workoutIcon}><Dumbbell size={16} /></span>
           <span className={styles.workoutText}>
             <span className={styles.workoutName}>{post.workout.name}</span>
-            <span className={styles.meta}>
-              <Clock size={12} /> {post.workout.minutes} min · {plural(post.workout.exercises, 'exercício', 'exercícios')}
-              {post.workout.volume_kg > 0 ? ` · ${formatVolume(post.workout.volume_kg)}` : ''}
+            <span className={styles.workoutMeta}>
+              <Clock size={12} />
+              <span>
+                {post.workout.minutes} min · {plural(post.workout.exercises, 'exercício', 'exercícios')}
+                {post.workout.volume_kg > 0 ? ` · ${formatVolume(post.workout.volume_kg)}` : ''}
+              </span>
             </span>
             {post.workout.highlights.length > 0 && <span className={styles.highlights}>{post.workout.highlights.join(' · ')}</span>}
           </span>

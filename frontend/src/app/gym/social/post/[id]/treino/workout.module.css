@@ -53,3 +53,23 @@
   border-radius: 20px;
   background: var(--gym-surface);
 }
+
+.copy {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 16px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.copy:disabled {
+  opacity: 0.5;
+}

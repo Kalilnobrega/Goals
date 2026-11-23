@@ -97,6 +97,26 @@
   flex: 1;
 }
 
+.workoutMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.workoutMeta svg {
+  flex-shrink: 0;
+}
+
+.workoutMeta span,
+.workoutName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workoutLink {
   flex-shrink: 0;
   display: inline-flex;

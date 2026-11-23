@@ -52,20 +52,14 @@
 .grid {
   position: absolute;
   inset: 0;
-  opacity: 0.35;
   pointer-events: none;
-  transition: opacity var(--dur-fast) var(--ease-out);
-}
-
-.gridActive {
-  opacity: 1;
+  animation: gridIn var(--dur-fast) var(--ease-out);
 }
 
 .lineV,
 .lineH {
   position: absolute;
-  background: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+  background: rgba(170, 176, 184, 0.7);
 }
 
 .lineV {
@@ -78,4 +72,10 @@
   left: 0;
   right: 0;
   height: 1px;
+}
+
+@keyframes gridIn {
+  from {
+    opacity: 0;
+  }
 }
