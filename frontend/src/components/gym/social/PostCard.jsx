@@ -205,6 +205,9 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
             </span>
             {post.workout.highlights.length > 0 && <span className={styles.highlights}>{post.workout.highlights.join(' · ')}</span>}
           </span>
+          <Link href={`/gym/social/post/${post.id}/treino`} className={styles.workoutLink}>
+            Ver treino <ChevronRight size={14} />
+          </Link>
         </div>
       )}
 

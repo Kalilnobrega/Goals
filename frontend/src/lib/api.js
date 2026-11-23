@@ -383,6 +383,7 @@ export const getFeed = (before) =>
 export const getUserPosts = (username) =>
   api.get(`/fitness/users/${encodeURIComponent(username)}/posts`).then((r) => r.data);
 export const getPost = (id) => api.get(`/fitness/posts/${id}`).then((r) => r.data);
+export const getPostWorkout = (id) => api.get(`/fitness/posts/${id}/workout`).then((r) => r.data);
 export const deletePost = (id) => api.delete(`/fitness/posts/${id}`);
 export const reactToPost = (id, kind) => api.put(`/fitness/posts/${id}/reaction`, { kind }).then((r) => r.data);
 export const removeReaction = (id) => api.delete(`/fitness/posts/${id}/reaction`).then((r) => r.data);
