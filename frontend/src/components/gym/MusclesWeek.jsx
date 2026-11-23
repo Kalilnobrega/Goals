@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Check, Target } from 'lucide-react';
 import { formatSets, muscleLabel, muscleName, plural, volumeBand } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import styles from './MusclesWeek.module.css';
 
 const VISIBLE = 6;
@@ -36,7 +36,7 @@ function describeMuscle(entry, hasPlan) {
 export default function MusclesWeek({ muscles, muscleMap = [], hasPlan }) {
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   if (!muscles.length && !muscleMap.length) return null;
   const byMuscle = new Map(muscleMap.map(m => [m.muscle, m]));
 
@@ -59,7 +59,6 @@ export default function MusclesWeek({ muscles, muscleMap = [], hasPlan }) {
         <div className={styles.body}>
           <div className={styles.bodyTop}>
             <span className={styles.bodyHint}>{hasPlan ? 'Mais forte = mais perto da meta' : 'Cor pelo volume da semana'}</span>
-            <BodyTypeToggle value={bodyType} onChange={setBodyType} />
           </div>
           <BodyMap
             colors={bodyColors(muscleMap, hasPlan)}

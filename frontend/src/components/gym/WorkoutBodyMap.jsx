@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
 import { formatSets, muscleName, muscleSets } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import styles from './WorkoutBodyMap.module.css';
 
 export function workoutEntries(exercises) {
@@ -31,7 +31,7 @@ export function WorkoutBodyMini({ exercises, sex }) {
 }
 
 export default function WorkoutBodyMap({ exercises }) {
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const [selected, setSelected] = useState(null);
   const sets = muscleSets(workoutEntries(exercises));
   if (!Object.keys(sets).length) return null;
@@ -42,7 +42,6 @@ export default function WorkoutBodyMap({ exercises }) {
       <div className={styles.header}>
         <Activity size={16} className={styles.icon} aria-hidden="true" />
         <h2 id="workout-body-title" className={styles.title}>O que esta ficha treina</h2>
-        <BodyTypeToggle value={bodyType} onChange={setBodyType} />
       </div>
       <p className={styles.hint}>Mais forte = mais séries por treino. Principal conta 1 série; secundário, meia; auxiliar, um quarto.</p>
       <BodyMap

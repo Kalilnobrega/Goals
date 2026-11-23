@@ -6,7 +6,7 @@ import {
   setSummary,
   formatDay, formatDelta, formatDuration, formatKg, formatLongDate, formatSets, formatTime, formatVolume, muscleName, plural, seriesCount, seriesRows, SIDE_LABEL, formatSeconds, groupsLabel,
 } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import UnilateralTag from './UnilateralTag';
 import styles from './SessionSummary.module.css';
 
@@ -113,7 +113,7 @@ function AverageTile({ label, value }) {
 const setLabel = (weight, reps, extra = false) => `${weight > 0 ? `${extra ? 'PC + ' : ''}${formatKg(weight)} kg` : 'Peso corporal'} × ${reps}`;
 
 function MusclesWorked({ muscleSets }) {
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const [selected, setSelected] = useState(null);
   const sets = Object.fromEntries(muscleSets.map(m => [m.muscle, m.sets]));
   const max = Math.max(...muscleSets.map(m => m.sets), 1);
@@ -124,7 +124,6 @@ function MusclesWorked({ muscleSets }) {
       <div className={styles.cardHeader}>
         <Activity size={16} className={styles.cardIcon} aria-hidden="true" />
         <h2 id="worked-title" className={styles.cardTitle}>Músculos trabalhados</h2>
-        <BodyTypeToggle value={bodyType} onChange={setBodyType} />
       </div>
       <BodyMap
         colors={colors}

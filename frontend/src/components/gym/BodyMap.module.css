@@ -109,33 +109,6 @@
   text-transform: uppercase;
 }
 
-.toggle {
-  display: inline-grid;
-  grid-auto-flow: column;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--gym-surface-2);
-}
-
-.toggleOption {
-  height: 30px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--gym-muted);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.toggleActive {
-  background: var(--gym-surface-3);
-  color: var(--gym-text);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .muscle {
     transition: none;

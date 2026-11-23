@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
 import { formatSets, muscleName, muscleSets, VOLUME_BANDS, volumeBand } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import styles from './PlanBodyMap.module.css';
 
 export function planMuscleSets(week, byId) {
@@ -15,7 +15,7 @@ export function planMuscleSets(week, byId) {
 }
 
 export default function PlanBodyMap({ sets }) {
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const [selected, setSelected] = useState(null);
   const colors = Object.fromEntries(Object.entries(sets).filter(([, value]) => value > 0).map(([key, value]) => [key, volumeBand(value).color]));
   const value = selected ? sets[selected] ?? 0 : 0;
@@ -25,7 +25,6 @@ export default function PlanBodyMap({ sets }) {
       <div className={styles.header}>
         <Activity size={16} className={styles.icon} aria-hidden="true" />
         <h2 id="plan-body-title" className={styles.title}>Mapa muscular</h2>
-        <BodyTypeToggle value={bodyType} onChange={setBodyType} />
       </div>
       <ul className={styles.legend} aria-label="Faixas de volume semanal">
         {VOLUME_BANDS.map(band => (

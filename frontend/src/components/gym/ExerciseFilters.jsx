@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { PersonStanding, X } from 'lucide-react';
 import { EQUIPMENT, MUSCLE_GROUPS, exerciseGroups, muscleName, normalize } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import styles from './ExerciseFilters.module.css';
 
 const ROLE_ORDER = { primary: 0, secondary: 1, auxiliary: 2 };
@@ -63,7 +63,7 @@ function Chips({ options, value, onChange, label }) {
 
 export default function ExerciseFilters({ filters, exercises, allowMine = false }) {
   const [bodyOpen, setBodyOpen] = useState(false);
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const { group, setGroup, equipment, setEquipment, muscle, setMuscle } = filters;
 
   const usedGroups = useMemo(() => new Set((exercises ?? []).flatMap(exerciseGroups)), [exercises]);
@@ -139,7 +139,6 @@ export default function ExerciseFilters({ filters, exercises, allowMine = false 
             <p className={styles.bodyHint}>
               {muscle ? <>Mostrando exercícios para <strong>{muscleName(muscle)}</strong></> : 'Toque no músculo que você quer treinar'}
             </p>
-            <BodyTypeToggle value={bodyType} onChange={setBodyType} />
           </div>
           <BodyMap
             colors={colors}

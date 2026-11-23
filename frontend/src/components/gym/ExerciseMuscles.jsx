@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { muscleName } from '../../lib/gym';
-import BodyMap, { BodyTypeToggle, useBodyType } from './BodyMap';
+import BodyMap, { useBodyType } from './BodyMap';
 import styles from './ExerciseMuscles.module.css';
 
 export const ROLES = [
@@ -29,7 +29,7 @@ export function MuscleLegend() {
 }
 
 export default function ExerciseMuscles({ muscles }) {
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const [selected, setSelected] = useState(null);
   const roles = new Map(muscles.map(m => [m.muscle, m.role]));
 
@@ -41,7 +41,6 @@ export default function ExerciseMuscles({ muscles }) {
     <div className={styles.wrap}>
       <div className={styles.top}>
         <MuscleLegend />
-        <BodyTypeToggle value={bodyType} onChange={setBodyType} />
       </div>
       <BodyMap
         colors={roleColors(muscles)}
@@ -79,7 +78,7 @@ export default function ExerciseMuscles({ muscles }) {
 }
 
 export function MusclePicker({ value, onChange }) {
-  const [bodyType, setBodyType] = useBodyType();
+  const [bodyType] = useBodyType();
   const roles = new Map(value.map(m => [m.muscle, m.role]));
 
   const cycle = (key) => {
@@ -94,7 +93,6 @@ export function MusclePicker({ value, onChange }) {
     <div className={styles.wrap}>
       <div className={styles.top}>
         <MuscleLegend />
-        <BodyTypeToggle value={bodyType} onChange={setBodyType} />
       </div>
       <p className={styles.hint}>Cada toque muda o nível: principal, secundário, auxiliar e, no quarto toque, tira o músculo.</p>
       <BodyMap

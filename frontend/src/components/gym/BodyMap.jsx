@@ -26,25 +26,6 @@ export function useBodyType() {
   return [bodyType, change];
 }
 
-export function BodyTypeToggle({ value, onChange }) {
-  return (
-    <div className={styles.toggle} role="radiogroup" aria-label="Boneco">
-      {[{ key: 'male', label: 'Masculino' }, { key: 'female', label: 'Feminino' }].map(option => (
-        <button
-          key={option.key}
-          type="button"
-          role="radio"
-          aria-checked={value === option.key}
-          className={`${styles.toggleOption} ${value === option.key ? styles.toggleActive : ''}`}
-          onClick={() => onChange(option.key)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function fillFor(value) {
   if (!value) return 'var(--gym-surface-3)';
   const strength = Math.round(30 + Math.min(value, 1) * 70);
