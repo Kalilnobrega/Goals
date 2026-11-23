@@ -90,3 +90,25 @@ def test_send_to_friends_notifies_and_can_be_copied(client, library, ana, bruno,
     assert client.delete(f"/fitness/shares/{share['id']}", headers=bruno).status_code == 204
     assert client.get("/fitness/shares/received", headers=bruno).json() == []
     assert all(n["kind"] != "shared_item" for n in client.get("/fitness/notifications", headers=bruno).json()["notifications"])
+
+
+def test_share_custom_exercise_and_copy(client, ana, bruno, library):
+    befriend(client, ana, bruno, "bruno", "ana")
+    custom = client.post("/fitness/exercises", json={
+        "name": "Supino maluco", "muscle_group": "chest", "equipment": "machine",
+        "muscles": [{"muscle": "chest_mid", "role": "primary"}],
+    }, headers=ana).json()
+    assert client.post("/fitness/posts", json={"share_exercise_id": library["supino-reto"]}, headers=ana).status_code == 404
+    post = client.post("/fitness/posts", json={"share_exercise_id": custom["id"]}, headers=ana).json()
+    assert post["shared_kind"] == "exercise" and post["shared"]["name"] == "Supino maluco"
+
+    copied = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno).json()
+    assert copied["kind"] == "exercise" and copied["name"] == "Supino maluco"
+    again = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno).json()
+    assert again["name"] == "Supino maluco (Ana)"
+    mine = [e for e in client.get("/fitness/exercises", headers=bruno).json() if e["is_custom"]]
+    assert sorted(e["name"] for e in mine) == ["Supino maluco", "Supino maluco (Ana)"]
+    assert mine[0]["muscles"][0]["muscle"] == "chest_mid"
+
+    sent = client.post("/fitness/shares", json={"kind": "exercise", "item_id": custom["id"], "usernames": ["bruno"]}, headers=ana)
+    assert sent.status_code == 200 and sent.json()[0]["kind"] == "exercise"

@@ -2,7 +2,8 @@ from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models import User
-from app.fitness_models import Exercise, Plan, PlanDay, Workout
+from sqlalchemy import func
+from app.fitness_models import Exercise, ExerciseMuscle, Plan, PlanDay, Workout
 from app.fitness_schemas import WorkoutSchema
 
 
@@ -49,6 +50,28 @@ def plan_snapshot(plan: Plan) -> dict:
     return {"name": plan.name, "days": days, "workouts": workouts}
 
 
+def exercise_snapshot(exercise: Exercise) -> dict:
+    return {
+        "name": exercise.name,
+        "muscle_group": exercise.muscle_group,
+        "equipment": exercise.equipment,
+        "grip": exercise.grip,
+        "is_unilateral": bool(exercise.is_unilateral),
+        "family": exercise.family,
+        "bodyweight_factor": float(exercise.bodyweight_factor) if exercise.bodyweight_factor is not None else None,
+        "tracking": exercise.tracking or "reps",
+        "intensity": exercise.intensity,
+        "muscles": [{"muscle": m.muscle, "role": m.role} for m in exercise.muscles],
+    }
+
+
+def own_exercise(db: Session, user: User, exercise_id: int) -> Exercise:
+    exercise = db.get(Exercise, exercise_id)
+    if exercise is None or exercise.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Só dá para compartilhar exercícios que você criou.")
+    return exercise
+
+
 def own_workout(db: Session, user: User, workout_id: int) -> Workout:
     workout = db.get(Workout, workout_id)
     if workout is None or workout.user_id != user.id:
@@ -66,6 +89,8 @@ def own_plan(db: Session, user: User, plan_id: int) -> Plan:
 def snapshot_for(db: Session, user: User, kind: str, item_id: int) -> dict:
     if kind == "workout":
         return workout_snapshot(own_workout(db, user, item_id))
+    if kind == "exercise":
+        return exercise_snapshot(own_exercise(db, user, item_id))
     return plan_snapshot(own_plan(db, user, item_id))
 
 
@@ -145,7 +170,39 @@ def copy_plan(db: Session, user: User, snapshot: dict, author: User) -> dict:
     return {"kind": "plan", "id": plan.id, "name": plan.name, "skipped": skipped}
 
 
+def name_taken(db: Session, user: User, name: str) -> bool:
+    from app.routers.fitness import visible_exercises
+
+    return visible_exercises(user, db).filter(func.lower(Exercise.name) == name.lower()).first() is not None
+
+
+def copy_exercise(db: Session, user: User, snapshot: dict, author: User) -> dict:
+    base = snapshot["name"]
+    candidates = [base, f"{base} ({author.name.split(' ')[0]})"] + [f"{base} {number}" for number in range(2, 20)]
+    name = next((candidate[:60] for candidate in candidates if not name_taken(db, user, candidate[:60])), None)
+    if name is None:
+        raise HTTPException(status_code=409, detail="Você já tem exercícios com esse nome.")
+    exercise = Exercise(
+        user_id=user.id,
+        name=name,
+        muscle_group=snapshot["muscle_group"],
+        equipment=snapshot["equipment"],
+        grip=snapshot.get("grip"),
+        is_unilateral=snapshot.get("is_unilateral", False),
+        family=snapshot.get("family"),
+        bodyweight_factor=snapshot.get("bodyweight_factor"),
+        tracking=snapshot.get("tracking") or "reps",
+        intensity=snapshot.get("intensity"),
+        muscles=[ExerciseMuscle(muscle=m["muscle"], role=m["role"]) for m in snapshot.get("muscles", [])],
+    )
+    db.add(exercise)
+    db.commit()
+    return {"kind": "exercise", "id": exercise.id, "name": exercise.name, "skipped": 0}
+
+
 def copy_snapshot(db: Session, user: User, kind: str, snapshot: dict, author: User) -> dict:
+    if kind == "exercise":
+        return copy_exercise(db, user, snapshot, author)
     if kind == "workout":
         return copy_workout(db, user, snapshot, author)
     return copy_plan(db, user, snapshot, author)

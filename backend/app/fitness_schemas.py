@@ -1693,6 +1693,7 @@ class PostCreateSchema(BaseModel):
     performed_on: date | None = None
     share_workout_id: int | None = None
     share_plan_id: int | None = None
+    share_exercise_id: int | None = None
 
 
 class PostAuthorSchema(BaseModel):
@@ -1717,7 +1718,7 @@ class PostSchema(BaseModel):
     activity: str | None
     minutes: int | None = None
     performed_on: date | None = None
-    shared_kind: Literal["workout", "plan"] | None = None
+    shared_kind: Literal["workout", "plan", "exercise"] | None = None
     shared: dict | None = None
     workout: PostWorkoutSchema | None
     media: list[MediaSchema]
@@ -1867,7 +1868,7 @@ class ShareWeightSchema(BaseModel):
 
 
 class ShareSendSchema(BaseModel):
-    kind: Literal["workout", "plan"]
+    kind: Literal["workout", "plan", "exercise"]
     item_id: int
     usernames: list[str] = Field(min_length=1, max_length=20)
     message: str | None = Field(default=None, max_length=300)
@@ -1875,7 +1876,7 @@ class ShareSendSchema(BaseModel):
 
 class SharedItemSchema(BaseModel):
     id: int
-    kind: Literal["workout", "plan"]
+    kind: Literal["workout", "plan", "exercise"]
     sender: PostAuthorSchema
     created_at: datetime
     snapshot: dict
@@ -1884,7 +1885,7 @@ class SharedItemSchema(BaseModel):
 
 
 class CopiedSharedSchema(BaseModel):
-    kind: Literal["workout", "plan"]
+    kind: Literal["workout", "plan", "exercise"]
     id: int
     name: str
     skipped: int

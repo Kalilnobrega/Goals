@@ -275,15 +275,17 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
     media = db.query(Media).filter(Media.id.in_(data.media_ids)).all() if data.media_ids else []
     if len(media) != len(data.media_ids) or any(m.user_id != me.user_id or m.kind != "post" or m.post_id is not None for m in media):
         raise HTTPException(status_code=422, detail="Alguma foto não pôde ser usada. Envie de novo.")
-    if data.share_workout_id is not None and data.share_plan_id is not None:
-        raise HTTPException(status_code=422, detail="Compartilhe uma ficha ou um plano por vez.")
-    shared_kind = "workout" if data.share_workout_id is not None else "plan" if data.share_plan_id is not None else None
+    share_ids = {"workout": data.share_workout_id, "plan": data.share_plan_id, "exercise": data.share_exercise_id}
+    chosen = [kind for kind, value in share_ids.items() if value is not None]
+    if len(chosen) > 1:
+        raise HTTPException(status_code=422, detail="Compartilhe um item por vez.")
+    shared_kind = chosen[0] if chosen else None
     shared = None
     if shared_kind:
         if data.session_id is not None or data.minutes is not None:
             raise HTTPException(status_code=422, detail="Um post não pode ser treino, check-in e compartilhamento ao mesmo tempo.")
         owner = db.get(User, me.user_id)
-        shared = snapshot_for(db, owner, shared_kind, data.share_workout_id or data.share_plan_id)
+        shared = snapshot_for(db, owner, shared_kind, share_ids[shared_kind])
     minutes = data.minutes
     performed_on = None
     if minutes is not None:
