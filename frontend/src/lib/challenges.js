@@ -12,7 +12,13 @@ export const METRIC_OPTIONS = [
   { key: 'muscle', label: 'Grupo muscular', short: 'séries', description: 'Séries de um grupo, contando músculos secundários pela metade' },
   { key: 'records', label: 'Recordes batidos', short: 'recordes', description: 'Quantos recordes de carga cada um bate' },
   { key: 'plan', label: 'Seguir o plano', short: '%', description: '% dos treinos do próprio plano cumpridos' },
+  { key: 'progress', label: 'Progressão de carga', short: '', description: 'Quanto a carga (1RM estimado) subiu num exercício' },
+  { key: 'body_weight', label: 'Peso corporal', short: '%', description: 'Perder ou ganhar peso, em % do peso inicial' },
+  { key: 'relative_strength', label: 'Carga × peso corporal', short: '×', description: 'Maior carga dividida pelo peso corporal' },
 ];
+
+export const EXERCISE_KEYS = ['exercise', 'progress', 'relative_strength'];
+export const WEIGHT_KEYS = ['body_weight', 'relative_strength'];
 
 export const CHALLENGE_MUSCLE_GROUPS = MUSCLE_GROUPS.filter((group) => group.value !== 'cardio' && group.value !== 'other');
 
@@ -26,17 +32,24 @@ export const STATUS_LABEL = { upcoming: 'Começa em breve', active: 'Em andament
 
 const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 const distance = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+const ratio = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const optionOf = (key) => METRIC_OPTIONS.find((option) => option.key === key);
 const measureOf = (key) => EXERCISE_MEASURES.find((measure) => measure.key === key);
 
-export function metricLabel(metric) {
-  if (metric.key === 'muscle') return `Séries de ${muscleLabel(metric.muscle_group).toLowerCase()}`;
-  if (metric.key !== 'exercise') return optionOf(metric.key)?.label ?? metric.key;
-  const target = metric.scope === 'family' && metric.family
+function exerciseTarget(metric) {
+  return metric.scope === 'family' && metric.family
     ? `${metric.family} (todas as variações)`
     : metric.exercise_name ?? 'Exercício';
-  return `${target} · ${measureOf(metric.measure)?.label.toLowerCase() ?? ''}`;
+}
+
+export function metricLabel(metric) {
+  if (metric.key === 'muscle') return `Séries de ${muscleLabel(metric.muscle_group).toLowerCase()}`;
+  if (metric.key === 'progress') return `Progressão ${metric.unit === 'kg' ? 'em kg' : 'em %'} · ${exerciseTarget(metric)}`;
+  if (metric.key === 'relative_strength') return `Carga × peso · ${exerciseTarget(metric)}`;
+  if (metric.key === 'body_weight') return metric.direction === 'gain' ? 'Ganhar peso' : 'Perder peso';
+  if (metric.key !== 'exercise') return optionOf(metric.key)?.label ?? metric.key;
+  return `${exerciseTarget(metric)} · ${measureOf(metric.measure)?.label.toLowerCase() ?? ''}`;
 }
 
 export function formatMetricValue(metric, value) {
@@ -49,6 +62,15 @@ export function formatMetricValue(metric, value) {
   if (metric.key === 'muscle') return `${number.format(value)} ${value === 1 ? 'série' : 'séries'}`;
   if (metric.key === 'records') return `${value} ${value === 1 ? 'recorde' : 'recordes'}`;
   if (metric.key === 'plan') return `${Math.round(value)}%`;
+  if (metric.key === 'progress') {
+    const sign = value > 0 ? '+' : '';
+    return metric.unit === 'kg' ? `${sign}${formatKg(value)} kg` : `${sign}${number.format(value)}%`;
+  }
+  if (metric.key === 'body_weight') {
+    const sign = value > 0 ? (metric.direction === 'gain' ? '+' : '−') : '';
+    return `${sign}${number.format(value)}%`;
+  }
+  if (metric.key === 'relative_strength') return `${ratio.format(value)}×`;
   if (metric.measure === 'reps') return `${number.format(value)} reps`;
   if (metric.measure === 'max_weight') return `${formatKg(value)} kg`;
   return `${number.format(Math.round(value))} kg`;
@@ -83,4 +105,12 @@ export function timeLeftLabel(challenge) {
 
 export function inviteUrl(code) {
   return `${window.location.origin}/gym/convite/${code}`;
+}
+
+export function metricDetail(metric, details) {
+  if (!details) return null;
+  if (metric.key === 'body_weight') return `${formatKg(details.start_kg)} → ${formatKg(details.current_kg)} kg`;
+  if (metric.key === 'relative_strength') return `${formatKg(details.load_kg)} kg com ${formatKg(details.body_kg)} kg de peso`;
+  if (metric.key === 'progress') return `1RM ${formatKg(details.start_kg)} → ${formatKg(details.best_kg)} kg`;
+  return null;
 }

@@ -80,6 +80,10 @@ export default function ChallengesPage() {
   }, [load]);
 
   const accept = async (invite) => {
+    if (invite.uses_weight) {
+      router.push(`/gym/convite/${invite.code}`);
+      return;
+    }
     setBusy(invite.id);
     try {
       await acceptChallengeInvite(invite.id);

@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Dumbbell, Minus, Plus } from 'lucide-react';
 import { createChallenge, getExercises } from '../../../../../lib/api';
 import { addDays, apiError, todayIso } from '../../../../../lib/gym';
-import { CHALLENGE_MUSCLE_GROUPS, EXERCISE_MEASURES, METRIC_OPTIONS, formatRange } from '../../../../../lib/challenges';
+import {
+  CHALLENGE_MUSCLE_GROUPS, EXERCISE_KEYS, EXERCISE_MEASURES, METRIC_OPTIONS, WEIGHT_KEYS, formatRange,
+} from '../../../../../lib/challenges';
 import GymSheet from '../../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../../components/gym/ExercisePicker';
 import styles from './new.module.css';
@@ -38,12 +40,15 @@ export default function NewChallengePage() {
   const [end, setEnd] = useState(addDays(today, 6));
   const [selected, setSelected] = useState(['days']);
   const [weights, setWeights] = useState({});
-  const [exercise, setExercise] = useState(null);
+  const [picks, setPicks] = useState({});
   const [measure, setMeasure] = useState('max_weight');
-  const [scope, setScope] = useState('exact');
+  const [unit, setUnit] = useState('pct');
+  const [direction, setDirection] = useState('lose');
   const [muscleGroup, setMuscleGroup] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [hideWeight, setHideWeight] = useState(false);
   const [rule, setRule] = useState({ kind: 'none', value: null });
-  const [picking, setPicking] = useState(false);
+  const [pickingFor, setPickingFor] = useState(null);
   const [exercises, setExercises] = useState(null);
   const [exercisesError, setExercisesError] = useState(false);
   const [error, setError] = useState('');
@@ -58,12 +63,12 @@ export default function NewChallengePage() {
       .catch(() => setExercisesError(true));
   }, []);
 
-  const openPicker = () => {
+  const openPicker = (key) => {
     if (!exercises) loadExercises();
-    setPicking(true);
+    setPickingFor(key);
   };
 
-  const closePicker = useCallback(() => setPicking(false), []);
+  const closePicker = useCallback(() => setPickingFor(null), []);
 
   const toggleMetric = (key) => {
     setError('');
@@ -76,14 +81,16 @@ export default function NewChallengePage() {
       return;
     }
     setSelected((list) => [...list, key]);
-    if (key === 'exercise' && !exercise) openPicker();
+    if (EXERCISE_KEYS.includes(key) && !picks[key]) openPicker(key);
   };
 
   const pickExercise = ([item]) => {
-    setExercise(item);
-    if (!item.family) setScope('exact');
-    setPicking(false);
+    setPicks((current) => ({ ...current, [pickingFor]: { item, scope: 'exact' } }));
+    setPickingFor(null);
   };
+
+  const setScopeFor = (key, value) => setPicks((current) => ({ ...current, [key]: { ...current[key], scope: value } }));
+  const usesWeight = selected.some((key) => WEIGHT_KEYS.includes(key));
 
   const setDuration = (days) => setEnd(addDays(start, days - 1));
 
@@ -107,9 +114,10 @@ export default function NewChallengePage() {
     e.preventDefault();
     if (!name.trim()) return setError('Dê um nome ao desafio.');
     if (!selected.length) return setError('Escolha pelo menos uma métrica.');
-    if (selected.includes('exercise') && !exercise) return setError('Escolha o exercício do desafio.');
+    if (EXERCISE_KEYS.some((key) => selected.includes(key) && !picks[key])) return setError('Escolha o exercício de cada métrica.');
     if (selected.includes('muscle') && !muscleGroup) return setError('Escolha o grupo muscular do desafio.');
     if (!length) return setError('O fim precisa ser depois do início.');
+    if (usesWeight && !consent) return setError('Aceite compartilhar seu peso corporal para criar esse desafio.');
     if (ruleOption.unit && !(rule.value >= ruleOption.min && rule.value <= ruleOption.max)) {
       return setError(`O treino mínimo deve ficar entre ${ruleOption.min} e ${ruleOption.max} ${ruleOption.unit}.`);
     }
@@ -119,7 +127,12 @@ export default function NewChallengePage() {
       const metrics = METRIC_OPTIONS.filter((option) => selected.includes(option.key)).map((option) => ({
         key: option.key,
         weight: selected.length > 1 ? weightOf(option.key) : 1,
-        ...(option.key === 'exercise' ? { exercise_id: exercise.id, measure, scope: exercise.family ? scope : 'exact' } : {}),
+        ...(EXERCISE_KEYS.includes(option.key)
+          ? { exercise_id: picks[option.key].item.id, scope: picks[option.key].item.family ? picks[option.key].scope : 'exact' }
+          : {}),
+        ...(option.key === 'exercise' ? { measure } : {}),
+        ...(option.key === 'progress' ? { unit } : {}),
+        ...(option.key === 'body_weight' ? { direction } : {}),
         ...(option.key === 'muscle' ? { muscle_group: muscleGroup } : {}),
       }));
       const challenge = await createChallenge({
@@ -129,6 +142,8 @@ export default function NewChallengePage() {
         end_date: end,
         metrics,
         min_rule: rule,
+        accept_weight: usesWeight && consent,
+        hide_weight: usesWeight && hideWeight,
       });
       router.replace(`/gym/social/desafios/${challenge.id}?novo=1`);
     } catch (err) {
@@ -211,41 +226,80 @@ export default function NewChallengePage() {
                       <span className={styles.metricDescription}>{option.description}</span>
                     </span>
                   </button>
-                  {active && option.key === 'exercise' && (
+                  {active && EXERCISE_KEYS.includes(option.key) && (
                     <div className={styles.metricExtra}>
-                      <button type="button" className={styles.exerciseButton} onClick={openPicker}>
-                        <Dumbbell size={16} /> {exercise ? exercise.name : 'Escolher exercício'}
+                      <button type="button" className={styles.exerciseButton} onClick={() => openPicker(option.key)}>
+                        <Dumbbell size={16} /> {picks[option.key] ? picks[option.key].item.name : 'Escolher exercício'}
                       </button>
-                      {exercise?.family && (
+                      {picks[option.key]?.item.family && (
                         <div className={styles.chips}>
                           <button
                             type="button"
-                            className={`${styles.chip} ${scope === 'exact' ? styles.chipActive : ''}`}
-                            onClick={() => setScope('exact')}
+                            className={`${styles.chip} ${picks[option.key].scope === 'exact' ? styles.chipActive : ''}`}
+                            onClick={() => setScopeFor(option.key, 'exact')}
                           >
                             Só esta variação
                           </button>
                           <button
                             type="button"
-                            className={`${styles.chip} ${scope === 'family' ? styles.chipActive : ''}`}
-                            onClick={() => setScope('family')}
+                            className={`${styles.chip} ${picks[option.key].scope === 'family' ? styles.chipActive : ''}`}
+                            onClick={() => setScopeFor(option.key, 'family')}
                           >
-                            Todas as variações de {exercise.family}
+                            Todas as variações de {picks[option.key].item.family}
                           </button>
                         </div>
                       )}
+                      {option.key === 'exercise' && (
+                        <div className={styles.chips}>
+                          {EXERCISE_MEASURES.map((item) => (
+                            <button
+                              key={item.key}
+                              type="button"
+                              className={`${styles.chip} ${measure === item.key ? styles.chipActive : ''}`}
+                              onClick={() => setMeasure(item.key)}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {option.key === 'progress' && (
+                        <div className={styles.chips}>
+                          {[{ key: 'pct', label: 'Em %' }, { key: 'kg', label: 'Em kg' }].map((item) => (
+                            <button
+                              key={item.key}
+                              type="button"
+                              className={`${styles.chip} ${unit === item.key ? styles.chipActive : ''}`}
+                              onClick={() => setUnit(item.key)}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {option.key === 'progress' && (
+                        <p className={styles.hint}>Compara o melhor 1RM estimado no desafio com o melhor de antes. Quem nunca fez o exercício parte do primeiro treino dele no desafio.</p>
+                      )}
+                      {option.key === 'relative_strength' && (
+                        <p className={styles.hint}>Maior carga levantada dividida pelo peso corporal do dia. Ex.: 100 kg pesando 80 kg = 1,25×.</p>
+                      )}
+                    </div>
+                  )}
+                  {active && option.key === 'body_weight' && (
+                    <div className={styles.metricExtra}>
                       <div className={styles.chips}>
-                        {EXERCISE_MEASURES.map((item) => (
+                        {[{ key: 'lose', label: 'Perder peso' }, { key: 'gain', label: 'Ganhar peso' }].map((item) => (
                           <button
                             key={item.key}
                             type="button"
-                            className={`${styles.chip} ${measure === item.key ? styles.chipActive : ''}`}
-                            onClick={() => setMeasure(item.key)}
+                            className={`${styles.chip} ${direction === item.key ? styles.chipActive : ''}`}
+                            onClick={() => setDirection(item.key)}
                           >
                             {item.label}
                           </button>
                         ))}
                       </div>
+                      <p className={styles.hint}>Compara a última pesagem com a pesagem do início (ou a primeira depois dele).</p>
                     </div>
                   )}
                   {active && option.key === 'muscle' && (
@@ -280,6 +334,29 @@ export default function NewChallengePage() {
             })}
           </div>
         </section>
+
+        {usesWeight && (
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Peso corporal</h2>
+            <p className={styles.hint}>
+              Esse desafio usa o peso corporal de cada participante. Todo mundo precisa aceitar compartilhar o peso ao entrar.
+            </p>
+            <label className={styles.check}>
+              <input type="checkbox" checked={hideWeight} onChange={(e) => setHideWeight(e.target.checked)} />
+              <span>
+                <strong>Esconder o peso</strong>
+                <small>O ranking mostra só a porcentagem ou a razão, nunca os quilos.</small>
+              </span>
+            </label>
+            <label className={styles.check}>
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span>
+                <strong>Aceito compartilhar meu peso corporal neste desafio</strong>
+                <small>{hideWeight ? 'Os outros participantes veem só a sua porcentagem.' : 'Os outros participantes veem seu peso inicial e o atual.'}</small>
+              </span>
+            </label>
+          </section>
+        )}
 
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Treino mínimo</h2>
@@ -318,7 +395,7 @@ export default function NewChallengePage() {
         </button>
       </form>
 
-      <GymSheet open={picking} onClose={closePicker} title="Exercício do desafio">
+      <GymSheet open={!!pickingFor} onClose={closePicker} title="Exercício do desafio">
         <ExercisePicker single exercises={exercises} loadError={exercisesError} onRetry={loadExercises} onConfirm={pickExercise} />
       </GymSheet>
     </div>

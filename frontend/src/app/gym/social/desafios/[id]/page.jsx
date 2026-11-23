@@ -10,7 +10,7 @@ import {
 } from '../../../../../lib/api';
 import { apiError } from '../../../../../lib/gym';
 import {
-  STATUS_LABEL, formatMetricValue, formatRange, formatScore, inviteUrl, metricLabel, minRuleLabel, timeLeftLabel,
+  STATUS_LABEL, formatMetricValue, formatRange, formatScore, inviteUrl, metricDetail, metricLabel, minRuleLabel, timeLeftLabel,
 } from '../../../../../lib/challenges';
 import { useToast } from '../../../../../components/Toast';
 import { useConfirm } from '../../../../../components/ConfirmDialog';
@@ -195,6 +195,7 @@ export default function ChallengePage() {
                 </li>
               ))}
               <li className={`${styles.rule} ${styles.ruleMuted}`}>{minRuleLabel(challenge.min_rule)}</li>
+              {challenge.hide_weight && <li className={`${styles.rule} ${styles.ruleMuted}`}>Peso escondido</li>}
             </ul>
           </section>
 
@@ -244,6 +245,17 @@ export default function ChallengePage() {
                         {challenge.metrics.map((metric) => formatMetricValue(metric, row.values[metric.id] ?? 0)).join(' · ')}
                       </span>
                     )}
+                    {started && challenge.metrics.map((metric) => {
+                      if (row.missing.includes(metric.id)) {
+                        return row.is_me ? (
+                          <Link key={metric.id} href="/gym/progress/body" className={styles.rowMissing}>Registre uma pesagem para pontuar</Link>
+                        ) : (
+                          <span key={metric.id} className={styles.rowValues}>Sem pesagem ainda</span>
+                        );
+                      }
+                      const detail = metricDetail(metric, row.details[metric.id]);
+                      return detail ? <span key={metric.id} className={styles.rowValues}>{detail}</span> : null;
+                    })}
                   </span>
                   <span className={styles.score}>{started ? formatScore(challenge, row.score) : ''}</span>
                   {challenge.is_owner && !row.is_me && row.username && (

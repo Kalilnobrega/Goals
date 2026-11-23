@@ -18,6 +18,7 @@ export default function ChallengeInvitePage() {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
   const [joining, setJoining] = useState(false);
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     Promise.all([getChallengeInvite(code), getFitnessProfile()])
@@ -31,7 +32,7 @@ export default function ChallengeInvitePage() {
   const join = async () => {
     setJoining(true);
     try {
-      const challenge = await joinChallengeByCode(code);
+      const challenge = await joinChallengeByCode(code, consent);
       toast(`Você entrou em ${challenge.name}`);
       router.replace(`/gym/social/desafios/${challenge.id}`);
     } catch (err) {
@@ -76,9 +77,24 @@ export default function ChallengeInvitePage() {
           ) : invite.status === 'finished' ? (
             <p className={styles.muted}>Esse desafio já terminou.</p>
           ) : profile && !profile.username ? null : (
-            <button type="button" className={styles.primary} onClick={join} disabled={joining}>
-              {joining ? 'Entrando...' : 'Entrar no desafio'}
-            </button>
+            <>
+              {invite.uses_weight && (
+                <label className={styles.check}>
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                  <span>
+                    <strong>Aceito compartilhar meu peso corporal neste desafio</strong>
+                    <small>
+                      {invite.hide_weight
+                        ? 'O peso fica escondido: os outros participantes veem só a sua porcentagem ou razão.'
+                        : 'Os outros participantes veem seu peso inicial e o atual.'}
+                    </small>
+                  </span>
+                </label>
+              )}
+              <button type="button" className={styles.primary} onClick={join} disabled={joining || (invite.uses_weight && !consent)}>
+                {joining ? 'Entrando...' : 'Entrar no desafio'}
+              </button>
+            </>
           )}
         </section>
       )}

@@ -352,11 +352,12 @@ export const getChallenge = (id) => cachedGet(`fitnessChallenge:${id}`, `/fitnes
 export const createChallenge = (data) => api.post("/fitness/challenges", data).then((r) => r.data);
 export const getChallengeInvite = (code) =>
   api.get(`/fitness/challenges/invite/${encodeURIComponent(code)}`).then((r) => r.data);
-export const joinChallengeByCode = (code) =>
-  api.post(`/fitness/challenges/invite/${encodeURIComponent(code)}/join`).then((r) => r.data);
+export const joinChallengeByCode = (code, acceptWeight = false) =>
+  api.post(`/fitness/challenges/invite/${encodeURIComponent(code)}/join`, { accept_weight: acceptWeight }).then((r) => r.data);
 export const inviteToChallenge = (id, username) =>
   api.post(`/fitness/challenges/${id}/invites`, { username }).then((r) => r.data);
-export const acceptChallengeInvite = (id) => api.post(`/fitness/challenges/${id}/join`).then((r) => r.data);
+export const acceptChallengeInvite = (id, acceptWeight = false) =>
+  api.post(`/fitness/challenges/${id}/join`, { accept_weight: acceptWeight }).then((r) => r.data);
 export const declineChallengeInvite = (id) => api.delete(`/fitness/challenges/${id}/invites/me`);
 export const leaveChallenge = (id) => api.delete(`/fitness/challenges/${id}/members/me`);
 export const removeChallengeMember = (id, username) =>

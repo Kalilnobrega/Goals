@@ -302,6 +302,13 @@
   white-space: nowrap;
 }
 
+.rowMissing {
+  color: var(--gym-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .score {
   flex-shrink: 0;
   font-family: var(--font-display);

@@ -292,3 +292,37 @@
 .submit:disabled {
   opacity: 0.5;
 }
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: var(--gym-accent);
+}
+
+.check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.check strong {
+  font-weight: 600;
+}
+
+.check small {
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
