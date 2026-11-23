@@ -90,14 +90,14 @@ def secret() -> bytes:
     return SECRET_KEY.encode()
 
 
-def signature(media_id: int, expires: int) -> str:
-    return hmac.new(secret(), f"media:{media_id}:{expires}".encode(), hashlib.sha256).hexdigest()[:32]
+def signature(media_id: int, variant: str, expires: int) -> str:
+    return hmac.new(secret(), f"media:{media_id}:{variant}:{expires}".encode(), hashlib.sha256).hexdigest()[:32]
 
 
-def media_url(media_id: int) -> str:
+def media_url(media_id: int, variant: str = "feed") -> str:
     expires = (int(time.time()) // 3600 + 1) * 3600 + URL_LIFETIME
-    return f"/fitness/media/{media_id}?exp={expires}&sig={signature(media_id, expires)}"
+    return f"/fitness/media/{media_id}?v={variant}&exp={expires}&sig={signature(media_id, variant, expires)}"
 
 
-def valid_signature(media_id: int, expires: int, sig: str) -> bool:
-    return expires >= time.time() and hmac.compare_digest(signature(media_id, expires), sig)
+def valid_signature(media_id: int, variant: str, expires: int, sig: str) -> bool:
+    return expires >= time.time() and hmac.compare_digest(signature(media_id, variant, expires), sig)

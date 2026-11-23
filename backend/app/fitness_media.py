@@ -6,10 +6,13 @@ from app.fitness_storage import get_storage
 def delete_files(media: list[Media]) -> None:
     storage = get_storage()
     for item in media:
-        try:
-            storage.delete(item.storage_key)
-        except Exception:
-            pass
+        for key in (item.storage_key, item.full_key):
+            if not key:
+                continue
+            try:
+                storage.delete(key)
+            except Exception:
+                pass
 
 
 def purge_session_posts(db: Session, session_id: int) -> None:

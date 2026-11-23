@@ -36,7 +36,30 @@ NOT_FOUND = "Post não encontrado."
 
 
 def media_out(item: Media) -> dict:
-    return {"id": item.id, "url": media_url(item.id), "width": item.width, "height": item.height}
+    url = media_url(item.id)
+    return {
+        "id": item.id,
+        "url": url,
+        "full_url": media_url(item.id, "full") if item.full_key else url,
+        "width": item.width,
+        "height": item.height,
+        "full_width": item.full_width or item.width,
+        "full_height": item.full_height or item.height,
+    }
+
+
+async def read_image(upload: UploadFile) -> tuple[bytes, str]:
+    data = await upload.read(MAX_BYTES + 1)
+    if len(data) > MAX_BYTES:
+        raise HTTPException(status_code=413, detail="A foto pode ter no máximo 8 MB.")
+    content_type = sniff(data)
+    if content_type is None:
+        raise HTTPException(status_code=415, detail="Envie uma foto em JPEG, PNG ou WebP.")
+    return data, content_type
+
+
+def dimension(value: int | None) -> int | None:
+    return value if value and 0 < value < 20000 else None
 
 
 def drop_stale_pending(db: Session, user_id: int) -> None:
@@ -56,9 +79,12 @@ def drop_stale_pending(db: Session, user_id: int) -> None:
 @fitness_feed_router.post("/media", response_model=ProgressPhotoSchema)
 async def upload_media(
     file: UploadFile = File(...),
+    full: UploadFile | None = File(None),
     kind: str = Form("post"),
     width: int | None = Form(None),
     height: int | None = Form(None),
+    full_width: int | None = Form(None),
+    full_height: int | None = Form(None),
     taken_on: date | None = Form(None),
     note: str | None = Form(None),
     user: User = Depends(get_current_user),
@@ -66,25 +92,30 @@ async def upload_media(
 ):
     if kind not in ("post", "progress"):
         raise HTTPException(status_code=422, detail="Tipo de foto inválido.")
-    data = await file.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        raise HTTPException(status_code=413, detail="A foto pode ter no máximo 8 MB.")
-    content_type = sniff(data)
-    if content_type is None:
-        raise HTTPException(status_code=415, detail="Envie uma foto em JPEG, PNG ou WebP.")
+    data, content_type = await read_image(file)
+    full_data, full_type = await read_image(full) if full is not None else (None, None)
     if taken_on and taken_on > today_br():
         raise HTTPException(status_code=422, detail="A data da foto não pode ser no futuro.")
     drop_stale_pending(db, user.id)
-    key = f"{user.id}/{secrets.token_urlsafe(16)}.{EXTENSIONS[content_type]}"
-    get_storage().save(key, data, content_type)
+    base = f"{user.id}/{secrets.token_urlsafe(16)}"
+    key = f"{base}.{EXTENSIONS[content_type]}"
+    storage = get_storage()
+    storage.save(key, data, content_type)
+    full_key = f"{base}-full.{EXTENSIONS[full_type]}" if full_data else None
+    if full_key:
+        storage.save(full_key, full_data, full_type)
     media = Media(
         user_id=user.id,
         kind=kind,
         storage_key=key,
         content_type=content_type,
         size=len(data),
-        width=width if width and 0 < width < 20000 else None,
-        height=height if height and 0 < height < 20000 else None,
+        width=dimension(width),
+        height=dimension(height),
+        full_key=full_key,
+        full_content_type=full_type,
+        full_width=dimension(full_width) if full_key else None,
+        full_height=dimension(full_height) if full_key else None,
         taken_on=(taken_on or today_br()) if kind == "progress" else None,
         note=((note or "").strip()[:140] or None) if kind == "progress" else None,
     )
@@ -94,14 +125,23 @@ async def upload_media(
 
 
 @fitness_feed_router.get("/media/{media_id}")
-def serve_media(media_id: int, exp: int = Query(...), sig: str = Query(..., max_length=64), db: Session = Depends(get_db)):
-    if not valid_signature(media_id, exp, sig):
+def serve_media(
+    media_id: int,
+    v: str = Query(default="feed", pattern="^(feed|full)$"),
+    exp: int = Query(...),
+    sig: str = Query(..., max_length=64),
+    db: Session = Depends(get_db),
+):
+    if not valid_signature(media_id, v, exp, sig):
         raise HTTPException(status_code=403, detail="Link da foto expirado.")
     media = db.get(Media, media_id)
-    data = get_storage().read(media.storage_key) if media else None
+    full = v == "full" and media is not None and media.full_key
+    key = (media.full_key if full else media.storage_key) if media else None
+    data = get_storage().read(key) if key else None
     if data is None:
         raise HTTPException(status_code=404, detail="Foto não encontrada.")
-    return Response(content=data, media_type=media.content_type, headers={"Cache-Control": "private, max-age=3600"})
+    content_type = media.full_content_type if full else media.content_type
+    return Response(content=data, media_type=content_type, headers={"Cache-Control": "private, max-age=3600"})
 
 
 @fitness_feed_router.get("/progress-photos", response_model=list[ProgressPhotoSchema])

@@ -53,7 +53,8 @@ def test_upload_validates_and_serves_with_signed_url(client, ana, media_dir):
     response = upload(client, ana, data=PNG, width="800", height="600")
     assert response.status_code == 200
     media = response.json()
-    assert media["width"] == 800 and media["url"].startswith(f"/fitness/media/{media['id']}?exp=")
+    assert media["width"] == 800 and media["url"].startswith(f"/fitness/media/{media['id']}?v=feed&exp=")
+    assert media["full_url"] == media["url"]
     assert len(list(media_dir.rglob("*.png"))) == 1
 
     served = client.get(media["url"])
@@ -180,3 +181,25 @@ def test_account_deletion_removes_photos(client, db_session, media_dir):
     assert list(media_dir.rglob("*.jpg"))
     assert client.request("DELETE", "/auth/me", json={"password": None}, headers=headers).status_code == 200
     assert list(media_dir.rglob("*.jpg")) == []
+
+
+def test_full_size_version_is_stored_and_served_separately(client, ana, media_dir):
+    response = client.post(
+        "/fitness/media",
+        files={"file": ("feed.jpg", JPEG, "image/jpeg"), "full": ("full.png", PNG, "image/png")},
+        data={"width": "1080", "height": "1350", "full_width": "2560", "full_height": "1920"},
+        headers=ana,
+    )
+    assert response.status_code == 200, response.text
+    media = response.json()
+    assert media["full_url"] != media["url"] and "v=full" in media["full_url"]
+    assert media["full_width"] == 2560 and media["width"] == 1080
+    assert client.get(media["url"]).content == JPEG
+    full = client.get(media["full_url"])
+    assert full.content == PNG and full.headers["content-type"] == "image/png"
+    assert client.get(media["url"].replace("v=feed", "v=full")).status_code == 403
+
+    created = client.post("/fitness/posts", json={"caption": "x", "media_ids": [media["id"]]}, headers=ana).json()
+    assert len(list(media_dir.rglob("*.*"))) == 2
+    client.delete(f"/fitness/posts/{created['id']}", headers=ana)
+    assert list(media_dir.rglob("*.*")) == []

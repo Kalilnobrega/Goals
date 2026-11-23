@@ -1662,8 +1662,11 @@ ReactionKind = Literal["strong", "fire", "clap", "wow"]
 class MediaSchema(BaseModel):
     id: int
     url: str
+    full_url: str
     width: int | None = None
     height: int | None = None
+    full_width: int | None = None
+    full_height: int | None = None
 
 
 class ProgressPhotoSchema(MediaSchema):
