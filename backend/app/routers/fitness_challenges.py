@@ -1,16 +1,19 @@
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, to_br_date, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, Exercise, FitnessProfile, Friendship, Notification, Post, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, WorkoutSession
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
     ChallengeActivityPageSchema,
+    ChatItemSchema,
+    ChatMessageCreateSchema,
+    ChatPageSchema,
     ChallengeInviteSchema,
     ChallengeJoinSchema,
     PostWorkoutDetailSchema,
@@ -457,6 +460,7 @@ def list_challenges(me: FitnessProfile = Depends(own_profile), db: Session = Dep
             rows = ranking(db, challenge, me.user_id)
             mine = next(row for row in rows if row["is_me"])
             summary.update(my_position=mine["position"], my_score=mine["score"], leader_name=rows[0]["name"])
+        summary["chat_unread"] = chat_unread(db, challenge, me.user_id)
         result[status].append(summary)
     result["active"].sort(key=lambda c: c["end_date"])
     result["upcoming"].sort(key=lambda c: c["start_date"])
@@ -503,6 +507,7 @@ def detail(db: Session, challenge: Challenge, user_id: int) -> dict:
             {key: row[key] for key in ("position", "username", "name", "score", "values", "details", "missing", "is_me")}
             for row in rows
         ],
+        "chat_unread": chat_unread(db, challenge, user_id),
     }
 
 
@@ -617,6 +622,7 @@ def delete_challenge(challenge_id: int, user: User = Depends(get_current_user), 
     challenge = get_owned_challenge(db, challenge_id, user.id)
     db.query(ChallengeInvite).filter(ChallengeInvite.challenge_id == challenge.id).delete()
     db.query(Notification).filter(Notification.challenge_id == challenge.id).delete(synchronize_session=False)
+    db.query(ChallengeMessage).filter(ChallengeMessage.challenge_id == challenge.id).delete(synchronize_session=False)
     db.delete(challenge)
     db.commit()
 
@@ -752,3 +758,181 @@ def challenge_session(
     ):
         raise HTTPException(status_code=404, detail="Treino não encontrado neste desafio.")
     return workout_detail(db, session, user.id)
+
+
+CHAT_PAGE = 50
+
+
+def challenge_post_refs(db: Session, challenge: Challenge) -> dict[int, dict]:
+    members = [member.user_id for member in challenge.members]
+    if not members:
+        return {}
+    sessions = (
+        db.query(WorkoutSession.id, WorkoutSession.name, WorkoutSession.started_at, WorkoutSession.user_id)
+        .filter(
+            WorkoutSession.user_id.in_(members),
+            WorkoutSession.status == "completed",
+            WorkoutSession.started_at >= br_day_start_utc(challenge.start_date),
+            WorkoutSession.started_at < br_day_start_utc(challenge.end_date + timedelta(days=1)),
+        )
+        .all()
+    )
+    by_session = {row.id: row for row in sessions}
+    names = {user_id: db.get(User, user_id).name for user_id in members}
+    refs = {}
+    if by_session:
+        for post in db.query(Post).filter(Post.session_id.in_(list(by_session))).all():
+            row = by_session[post.session_id]
+            refs[post.id] = {
+                "post_id": post.id,
+                "kind": "workout",
+                "label": row.name,
+                "owner_name": names.get(post.user_id, ""),
+                "day": to_br_date(row.started_at),
+            }
+    for post in checkin_posts(db, challenge, members):
+        refs[post.id] = {
+            "post_id": post.id,
+            "kind": "checkin",
+            "label": post.activity,
+            "owner_name": names.get(post.user_id, ""),
+            "day": post.performed_on,
+        }
+    return refs
+
+
+def chat_unread(db: Session, challenge: Challenge, user_id: int) -> int:
+    from .fitness_sessions import aware
+
+    member = next((m for m in challenge.members if m.user_id == user_id), None)
+    if member is None:
+        return 0
+    since = aware(member.chat_read_at or member.joined_at)
+    messages = (
+        db.query(func.count(ChallengeMessage.id))
+        .filter(ChallengeMessage.challenge_id == challenge.id, ChallengeMessage.user_id != user_id, ChallengeMessage.created_at > since)
+        .scalar()
+    )
+    refs = challenge_post_refs(db, challenge)
+    comments = (
+        db.query(func.count(PostComment.id))
+        .filter(PostComment.post_id.in_(list(refs)), PostComment.user_id != user_id, PostComment.created_at > since)
+        .scalar()
+    ) if refs else 0
+    return messages + comments
+
+
+def author_of(db: Session, user_id: int) -> dict:
+    user = db.get(User, user_id)
+    profile = db.get(FitnessProfile, user_id)
+    return {"username": profile.username if profile else None, "name": user.name}
+
+
+@fitness_challenges_router.get("/{challenge_id}/chat", response_model=ChatPageSchema)
+def challenge_chat(
+    challenge_id: int,
+    before: datetime | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from .fitness_sessions import aware
+
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    messages_query = db.query(ChallengeMessage).filter(ChallengeMessage.challenge_id == challenge.id)
+    if before is not None:
+        messages_query = messages_query.filter(ChallengeMessage.created_at < before)
+    messages = messages_query.order_by(ChallengeMessage.created_at.desc(), ChallengeMessage.id.desc()).limit(CHAT_PAGE + 1).all()
+    refs = challenge_post_refs(db, challenge)
+    comments = []
+    if refs:
+        comments_query = db.query(PostComment).filter(PostComment.post_id.in_(list(refs)))
+        if before is not None:
+            comments_query = comments_query.filter(PostComment.created_at < before)
+        comments = comments_query.order_by(PostComment.created_at.desc(), PostComment.id.desc()).limit(CHAT_PAGE + 1).all()
+    items = [
+        {
+            "id": f"m{message.id}",
+            "kind": "message",
+            "author": author_of(db, message.user_id),
+            "is_mine": message.user_id == user.id,
+            "text": message.text,
+            "created_at": aware(message.created_at),
+            "can_delete": user.id in (message.user_id, challenge.owner_id),
+            "message_id": message.id,
+        }
+        for message in messages
+    ] + [
+        {
+            "id": f"c{comment.id}",
+            "kind": "comment",
+            "author": author_of(db, comment.user_id),
+            "is_mine": comment.user_id == user.id,
+            "text": comment.text,
+            "created_at": aware(comment.created_at),
+            "can_delete": False,
+            "post": refs[comment.post_id],
+        }
+        for comment in comments
+    ]
+    items.sort(key=lambda item: item["created_at"], reverse=True)
+    more = len(items) > CHAT_PAGE
+    page = items[:CHAT_PAGE]
+    return {
+        "items": list(reversed(page)),
+        "next_before": page[-1]["created_at"] if more and page else None,
+        "unread": chat_unread(db, challenge, user.id),
+    }
+
+
+@fitness_challenges_router.post("/{challenge_id}/chat", response_model=ChatItemSchema)
+def send_chat_message(
+    challenge_id: int,
+    data: ChatMessageCreateSchema,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from .fitness_sessions import aware
+
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    text = data.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Escreva uma mensagem.")
+    now = datetime.now(timezone.utc)
+    message = ChallengeMessage(challenge_id=challenge.id, user_id=user.id, text=text, created_at=now)
+    db.add(message)
+    member = next(m for m in challenge.members if m.user_id == user.id)
+    member.chat_read_at = now
+    db.commit()
+    return {
+        "id": f"m{message.id}",
+        "kind": "message",
+        "author": author_of(db, user.id),
+        "is_mine": True,
+        "text": message.text,
+        "created_at": aware(message.created_at),
+        "can_delete": True,
+        "message_id": message.id,
+    }
+
+
+@fitness_challenges_router.post("/{challenge_id}/chat/read", status_code=204)
+def read_chat(challenge_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    member = next(m for m in challenge.members if m.user_id == user.id)
+    member.chat_read_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+@fitness_challenges_router.delete("/{challenge_id}/chat/{message_id}", status_code=204)
+def delete_chat_message(
+    challenge_id: int,
+    message_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    message = db.get(ChallengeMessage, message_id)
+    if message is None or message.challenge_id != challenge.id or user.id not in (message.user_id, challenge.owner_id):
+        raise HTTPException(status_code=404, detail="Mensagem não encontrada.")
+    db.delete(message)
+    db.commit()

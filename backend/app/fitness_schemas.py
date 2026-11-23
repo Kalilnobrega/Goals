@@ -1604,6 +1604,7 @@ class ChallengeSummarySchema(BaseModel):
     my_position: int | None = None
     my_score: float | None = None
     leader_name: str | None = None
+    chat_unread: int = 0
 
 
 class ChallengePreviewSchema(BaseModel):
@@ -1649,6 +1650,7 @@ class ChallengeDetailSchema(BaseModel):
     invite_code: str
     member_count: int
     ranking: list[ChallengeRankingSchema]
+    chat_unread: int = 0
 
 
 class ChallengeJoinSchema(BaseModel):
@@ -1816,3 +1818,33 @@ class ChallengeActivitySchema(BaseModel):
 class ChallengeActivityPageSchema(BaseModel):
     items: list[ChallengeActivitySchema]
     next_before: str | None
+
+
+class ChatPostRefSchema(BaseModel):
+    post_id: int
+    kind: Literal["workout", "checkin"]
+    label: str
+    owner_name: str
+    day: date
+
+
+class ChatItemSchema(BaseModel):
+    id: str
+    kind: Literal["message", "comment"]
+    author: PostAuthorSchema
+    is_mine: bool
+    text: str
+    created_at: datetime
+    can_delete: bool
+    message_id: int | None = None
+    post: ChatPostRefSchema | None = None
+
+
+class ChatPageSchema(BaseModel):
+    items: list[ChatItemSchema]
+    next_before: datetime | None
+    unread: int = 0
+
+
+class ChatMessageCreateSchema(BaseModel):
+    text: str = Field(min_length=1, max_length=500)

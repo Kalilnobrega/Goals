@@ -369,6 +369,7 @@ class ChallengeMember(Base):
     challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), primary_key=True)
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    chat_read_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class ChallengeInvite(Base):
@@ -449,3 +450,13 @@ class Notification(Base):
     detail = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ChallengeMessage(Base):
+    __tablename__ = "fitness_challenge_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    text = Column(String(500), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)

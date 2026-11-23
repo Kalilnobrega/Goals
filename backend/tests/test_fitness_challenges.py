@@ -529,3 +529,44 @@ def test_challenge_activity_shows_members_workouts_and_checkins(client, library,
     assert detail.status_code == 200 and detail.json()["author"]["username"] == "bruno"
     assert client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=carla).status_code == 404
     assert client.get(f"/fitness/challenges/{challenge['id']}/sessions/{workout_item['session_id']}", headers=carla).status_code == 404
+
+
+def test_challenge_chat_messages_and_unread(client, ana, bruno, carla):
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    cid = challenge["id"]
+    sent = client.post(f"/fitness/challenges/{cid}/chat", json={"text": "  bora galera  "}, headers=ana)
+    assert sent.status_code == 200 and sent.json()["text"] == "bora galera"
+    assert client.post(f"/fitness/challenges/{cid}/chat", json={"text": "   "}, headers=ana).status_code == 422
+    assert client.post(f"/fitness/challenges/{cid}/chat", json={"text": "oi"}, headers=carla).status_code == 404
+
+    chat = client.get(f"/fitness/challenges/{cid}/chat", headers=bruno).json()
+    assert [(i["kind"], i["author"]["username"], i["text"]) for i in chat["items"]] == [("message", "ana", "bora galera")]
+    assert chat["unread"] == 1
+    assert client.get(f"/fitness/challenges/{cid}", headers=bruno).json()["chat_unread"] == 1
+    assert client.get("/fitness/challenges", headers=bruno).json()["active"][0]["chat_unread"] == 1
+    client.post(f"/fitness/challenges/{cid}/chat/read", headers=bruno)
+    assert client.get(f"/fitness/challenges/{cid}", headers=bruno).json()["chat_unread"] == 0
+    assert client.get(f"/fitness/challenges/{cid}", headers=ana).json()["chat_unread"] == 0
+
+    reply = client.post(f"/fitness/challenges/{cid}/chat", json={"text": "partiu"}, headers=bruno).json()
+    assert client.delete(f"/fitness/challenges/{cid}/chat/{reply['message_id']}", headers=carla).status_code == 404
+    assert client.delete(f"/fitness/challenges/{cid}/chat/{reply['message_id']}", headers=ana).status_code == 204
+    assert [i["text"] for i in client.get(f"/fitness/challenges/{cid}/chat", headers=ana).json()["items"]] == ["bora galera"]
+
+
+def test_comments_on_challenge_posts_show_in_chat(client, library, ana, bruno, media_dir):
+    befriend(client, ana, bruno, "bruno", "ana")
+    challenge = create(client, ana, allow_manual=True)
+    join(client, bruno, challenge)
+    cid = challenge["id"]
+    created = checkin(client, bruno, minutes=30).json()
+    client.post(f"/fitness/posts/{created['id']}/comments", json={"text": "boa corrida!"}, headers=ana)
+    outside = client.post("/fitness/posts", json={"caption": "fora do desafio"}, headers=bruno).json()
+    client.post(f"/fitness/posts/{outside['id']}/comments", json={"text": "não aparece"}, headers=ana)
+
+    items = client.get(f"/fitness/challenges/{cid}/chat", headers=bruno).json()["items"]
+    assert [(i["kind"], i["text"]) for i in items] == [("comment", "boa corrida!")]
+    ref = items[0]["post"]
+    assert ref == {"post_id": created["id"], "kind": "checkin", "label": "Corrida", "owner_name": "Bruno Lima", "day": today_br().isoformat()}
+    assert items[0]["can_delete"] is False
