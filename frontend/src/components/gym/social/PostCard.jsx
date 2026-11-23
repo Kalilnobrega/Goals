@@ -41,9 +41,12 @@ function PhotoCarousel({ media, onOpen }) {
     track.scrollTo({ left: next * track.clientWidth, behavior: 'smooth' });
   };
 
+  const first = media[0];
+  const ratio = first.width && first.height ? Math.min(1, Math.max(0.8, first.width / first.height)) : 0.8;
+
   return (
     <div className={styles.carousel}>
-      <div ref={trackRef} className={styles.track} onScroll={onScroll}>
+      <div ref={trackRef} className={styles.track} onScroll={onScroll} style={{ '--slide-ratio': ratio }}>
         {media.map((item, position) => (
           <button key={item.id} type="button" className={styles.slide} onClick={() => onOpen(position)} aria-label={`Abrir foto ${position + 1} de ${media.length}`}>
             <Image src={mediaSrc(item.url)} alt="" fill unoptimized sizes="(max-width: 760px) 100vw, 760px" />

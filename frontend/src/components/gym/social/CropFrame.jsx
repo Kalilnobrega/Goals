@@ -2,9 +2,10 @@
 import { useRef } from 'react';
 import Image from 'next/image';
 import { Move } from 'lucide-react';
+import { FORMATS } from '../../../lib/photos';
 import styles from './CropFrame.module.css';
 
-export default function CropFrame({ photo, onMove, size = 'large' }) {
+export default function CropFrame({ photo, onMove, size = 'large', format = 'portrait' }) {
   const frameRef = useRef(null);
   const drag = useRef(null);
 
@@ -38,6 +39,7 @@ export default function CropFrame({ photo, onMove, size = 'large' }) {
     <div
       ref={frameRef}
       className={`${styles.frame} ${styles[size]} ${onMove ? styles.movable : ''}`}
+      style={{ aspectRatio: FORMATS[format].css }}
       onPointerDown={start}
       onPointerMove={move}
       onPointerUp={end}

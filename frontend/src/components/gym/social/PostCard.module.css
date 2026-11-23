@@ -124,7 +124,7 @@
 .slide {
   position: relative;
   flex: 0 0 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: var(--slide-ratio, 0.8);
   padding: 0;
   border: none;
   background: var(--gym-surface-2);

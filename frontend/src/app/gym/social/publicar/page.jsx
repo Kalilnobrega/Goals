@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Camera, ChevronLeft, Dumbbell, ImagePlus, X } from 'lucide-react';
 import { createPost, getSession, uploadPhoto } from '../../../../lib/api';
 import { apiError, formatDay } from '../../../../lib/gym';
-import { preparePhoto } from '../../../../lib/photos';
+import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
 import CropFrame from '../../../../components/gym/social/CropFrame';
 import styles from './compose.module.css';
@@ -22,6 +22,7 @@ function Composer() {
   const [session, setSession] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [active, setActive] = useState(0);
+  const [format, setFormat] = useState('portrait');
   const [caption, setCaption] = useState('');
   const [activity, setActivity] = useState('');
   const [customActivity, setCustomActivity] = useState('');
@@ -81,7 +82,7 @@ function Composer() {
       const ids = [];
       for (const [index, photo] of photos.entries()) {
         setProgress(photos.length > 1 ? `Enviando foto ${index + 1} de ${photos.length}...` : 'Enviando foto...');
-        const media = await uploadPhoto(photo, { kind: 'post' });
+        const media = await uploadPhoto(photo, { kind: 'post' }, format);
         ids.push(media.id);
       }
       setProgress('Publicando...');
@@ -153,12 +154,33 @@ function Composer() {
             placeholder={sessionId ? 'Como foi o treino?' : 'Conte como foi'}
             aria-label="Legenda"
           />
-          {photos[active] && <CropFrame photo={photos[active]} onMove={moveCrop} />}
+          {photos.length > 0 && (
+            <div className={styles.formats} role="radiogroup" aria-label="Formato das fotos">
+              {Object.entries(FORMATS).map(([key, item]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={format === key}
+                  className={`${styles.format} ${format === key ? styles.formatActive : ''}`}
+                  onClick={() => setFormat(key)}
+                >
+                  <span className={styles.formatShape} style={{ aspectRatio: item.css }} aria-hidden="true" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {photos[active] && <CropFrame photo={photos[active]} onMove={moveCrop} format={format} />}
           <div className={styles.photos}>
             {photos.map((photo, index) => (
-              <div key={photo.url} className={`${styles.thumb} ${index === active ? styles.thumbActive : ''}`}>
+              <div
+                key={photo.url}
+                className={`${styles.thumb} ${index === active ? styles.thumbActive : ''}`}
+                style={{ aspectRatio: FORMATS[format].css }}
+              >
                 <button type="button" className={styles.thumbButton} onClick={() => setActive(index)} aria-label={`Ajustar foto ${index + 1}`}>
-                  <CropFrame photo={photo} size="small" />
+                  <CropFrame photo={photo} size="small" format={format} />
                 </button>
                 <button type="button" className={styles.removePhoto} onClick={() => removePhoto(index)} aria-label={`Remover foto ${index + 1}`}>
                   <X size={14} />
@@ -171,7 +193,7 @@ function Composer() {
               </button>
             )}
           </div>
-          <p className={styles.muted}>Até {MAX_PHOTOS} fotos. No feed elas aparecem em 4:5; ao tocar, abrem inteiras em alta qualidade. A localização gravada pela câmera é removida.</p>
+          <p className={styles.muted}>Até {MAX_PHOTOS} fotos. No feed elas aparecem no formato escolhido; ao tocar, abrem inteiras em alta qualidade. A localização gravada pela câmera é removida.</p>
           <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={addPhotos} />
         </section>
 

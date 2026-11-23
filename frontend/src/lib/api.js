@@ -396,8 +396,8 @@ export const exportFitnessData = (params) =>
     return { blob: r.data, filename: match ? match[1] : `gymgoals.${params.format}` };
   });
 
-export async function uploadPhoto(photo, fields = {}) {
-  const feed = await cropForFeed(photo);
+export async function uploadPhoto(photo, fields = {}, format = 'portrait') {
+  const feed = await cropForFeed(photo, format);
   return uploadMedia(
     feed.blob,
     { ...fields, width: feed.width, height: feed.height, full_width: photo.width, full_height: photo.height },
