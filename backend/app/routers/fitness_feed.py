@@ -25,7 +25,7 @@ from app.fitness_schemas import (
     ProgressPhotoSchema,
     ReactionSchema,
 )
-from app.fitness_load import without_body_weight
+from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_factors, without_body_weight
 from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
@@ -210,13 +210,20 @@ def network(db: Session, me: int) -> set[int]:
     return (ids - blocked - private) | {me}
 
 
-def workout_summary(db: Session, post: Post) -> dict | None:
+def viewed_facts(db: Session, session: WorkoutSession, viewer: int) -> dict:
+    with without_body_weight(session.user_id, session.user_id != viewer):
+        body = BodyWeights(session.user_id, db)
+    factors = bodyweight_factors(db, [item.exercise_id for item in session.exercises if item.equipment == BODYWEIGHT])
+    return session_facts(session, body, factors)
+
+
+def workout_summary(db: Session, post: Post, viewer: int) -> dict | None:
     if post.session_id is None:
         return None
     session = db.get(WorkoutSession, post.session_id)
     if session is None:
         return None
-    facts = session_facts(session)
+    facts = viewed_facts(db, session, viewer)
     ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
     names = [e["name"] for e in ranked] + [c["name"] for c in facts["cardio"]]
     return {
@@ -258,7 +265,7 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "performed_on": post.performed_on,
             "shared_kind": post.shared_kind,
             "shared": post.shared,
-            "workout": workout_summary(db, post),
+            "workout": workout_summary(db, post, me),
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
             "my_reaction": mine.get(post.id),
@@ -360,7 +367,7 @@ def postable_sessions(user: User = Depends(get_current_user), db: Session = Depe
     )
     result = []
     for session in sessions:
-        facts = session_facts(session)
+        facts = viewed_facts(db, session, user.id)
         result.append({
             "id": session.id,
             "name": session.name,

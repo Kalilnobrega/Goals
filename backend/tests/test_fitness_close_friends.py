@@ -139,3 +139,21 @@ def test_bodyweight_volume_hides_the_owner_weight_unless_shared(client, db_sessi
     client.put("/fitness/profile/close-weight", json={"share": True}, headers=ana)
     assert client.get(close, headers=bruno).json()["session"]["volume_kg"] == 834
     assert client.get("/fitness/social/users/ana", headers=bruno).json()["recent_sessions"][0]["volume_kg"] == 834
+
+
+def test_feed_card_volume_matches_the_detail_for_each_viewer(client, db_session, ana, bruno):
+    from app.fitness_models import Exercise
+    dip = Exercise(slug="paralela-card", name="Paralela card", muscle_group="chest", equipment="bodyweight")
+    db_session.add(dip)
+    db_session.commit()
+    befriend(client, ana, bruno, "bruno", "ana")
+    client.post("/fitness/body-weight", json={"weight_kg": 80, "measured_on": (today_br() - timedelta(days=1)).isoformat()}, headers=ana)
+    workout = client.post("/fitness/workouts", json={"name": "Peito", "exercises": [{"exercise_id": dip.id, "target_sets": 1, "reps_min": 10}]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 0, 10)
+    finish(client, ana, session["id"])
+    assert client.get("/fitness/posts/postable-sessions", headers=ana).json()[0]["volume_kg"] == 800
+    created = client.post("/fitness/posts", json={"session_id": session["id"]}, headers=ana).json()
+    assert created["workout"]["volume_kg"] == 800
+    seen = next(p for p in client.get("/fitness/feed", headers=bruno).json()["posts"] if p["id"] == created["id"])
+    assert seen["workout"]["volume_kg"] == 0

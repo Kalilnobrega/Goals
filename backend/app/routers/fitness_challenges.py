@@ -677,7 +677,7 @@ def hidden_volume(session: WorkoutSession, ids: set[int]) -> float:
 
 
 def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
-    from .fitness_feed import media_out, session_facts
+    from .fitness_feed import media_out, viewed_facts
     from .fitness_sessions import aware
 
     items = []
@@ -703,7 +703,7 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
         } if sessions and user_id in visible else {}
         hidden = hidden_strength_ids(db, challenge, user_id, me)
         for session in sessions:
-            facts = session_facts(session)
+            facts = viewed_facts(db, session, me)
             post = posts.get(session.id)
             facts["volume"] -= hidden_volume(session, hidden)
             ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
