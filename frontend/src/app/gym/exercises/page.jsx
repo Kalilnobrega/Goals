@@ -268,12 +268,14 @@ export default function ExercisesPage() {
                 />
                 {hasGyms && (detail.tracking ?? 'reps') === 'reps' && (
                   <ExerciseGymSetting
+                    key={detail.id}
                     exerciseId={detail.id}
                     name={detail.name}
                     equipment={detail.equipment}
                     gymSpecific={detail.gym_specific}
-                    onChange={value => {
-                      const patch = v => (v.id === detail.id ? { ...v, gym_specific: value } : v);
+                    sharedGymIds={detail.shared_gym_ids ?? []}
+                    onChange={result => {
+                      const patch = v => (v.id === detail.id ? { ...v, gym_specific: result.gym_specific, shared_gym_ids: result.shared_gym_ids } : v);
                       setExercises(list => list.map(patch));
                       setSheet(current => ({ ...current, family: { ...current.family, variants: current.family.variants.map(patch) } }));
                     }}

@@ -518,10 +518,12 @@ export default function ExerciseProgressPage() {
         )}
         {gymCount > 1 && tracking === 'reps' && (
           <ExerciseGymSetting
+            key={data.exercise_id}
             exerciseId={data.exercise_id}
             name={data.name}
             equipment={data.equipment}
             gymSpecific={data.gym_specific}
+            sharedGymIds={data.shared_gym_ids ?? []}
             onChange={load}
           />
         )}

@@ -331,8 +331,8 @@ export const deleteGym = (id) => api.delete(`/fitness/gyms/${id}`).then((r) => r
 export const setCurrentGym = (id) => api.put("/fitness/gyms/current", { gym_id: id }).then((r) => r.data);
 export const setSessionGym = (sessionId, gymId) =>
   api.patch(`/fitness/sessions/${sessionId}/gym`, { gym_id: gymId }).then((r) => r.data);
-export const setExerciseGymSetting = (id, gymSpecific) =>
-  api.put(`/fitness/exercises/${id}/gym-setting`, { gym_specific: gymSpecific }).then((r) => r.data);
+export const setExerciseGymSetting = (id, setting) =>
+  api.put(`/fitness/exercises/${id}/gym-setting`, setting).then((r) => r.data);
 export const updateFitnessProfile = (data) => api.put("/fitness/profile", data).then((r) => r.data);
 export const checkUsername = (username) =>
   api.get("/fitness/profile/username-available", { params: { username } }).then((r) => r.data);

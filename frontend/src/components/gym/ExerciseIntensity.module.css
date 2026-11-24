@@ -30,3 +30,69 @@
 .trigger {
   flex-shrink: 0;
 }
+
+.rowStacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.gymPicks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gymPick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gymPickOn {
+  border-color: var(--gym-accent);
+}
+
+.gymPickBox {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1.5px solid var(--gym-border-strong);
+  color: var(--gym-accent-ink);
+}
+
+.gymPickOn .gymPickBox {
+  border-color: var(--gym-accent);
+  background: var(--gym-accent);
+}
+
+.gymSave {
+  height: 42px;
+  margin-top: 2px;
+  border: none;
+  border-radius: 12px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gymSave:disabled {
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  cursor: default;
+}
