@@ -40,7 +40,8 @@ export default function CloseWorkoutsPage() {
     }
   };
 
-  const byDay = new Map((plan?.days ?? []).map((day) => [day.weekday, day]));
+  const byDay = new Map();
+  (plan?.days ?? []).forEach((day) => byDay.set(day.weekday, [...(byDay.get(day.weekday) ?? []), day.workout_name]));
 
   return (
     <div className={styles.page}>
@@ -51,11 +52,11 @@ export default function CloseWorkoutsPage() {
           <h2 className={styles.cardTitle}>Plano: {plan.name}</h2>
           <div className={styles.days}>
             {WEEKDAYS.map((label, weekday) => {
-              const day = byDay.get(weekday);
+              const names = byDay.get(weekday);
               return (
-                <div key={label} className={`${styles.day} ${day ? styles.dayOn : ''}`}>
+                <div key={label} className={`${styles.day} ${names ? styles.dayOn : ''}`}>
                   <span className={styles.dayLabel}>{label}</span>
-                  <span className={styles.dayWorkout}>{day ? day.workout_name : 'Descanso'}</span>
+                  <span className={styles.dayWorkout}>{names ? names.join(' + ') : 'Descanso'}</span>
                 </div>
               );
             })}

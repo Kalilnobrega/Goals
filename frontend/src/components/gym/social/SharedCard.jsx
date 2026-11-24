@@ -83,7 +83,13 @@ export default function SharedCard({ kind, snapshot, onCopy, mine = false }) {
     );
   }
 
-  const byDay = isPlan ? new Map(snapshot.days.map((day) => [day.weekday, snapshot.workouts[day.workout]?.name])) : null;
+  const byDay = new Map();
+  if (isPlan) {
+    snapshot.days.forEach((day) => {
+      const name = snapshot.workouts[day.workout]?.name;
+      if (name) byDay.set(day.weekday, [...(byDay.get(day.weekday) ?? []), name]);
+    });
+  }
 
   return (
     <div className={styles.card}>
@@ -100,7 +106,7 @@ export default function SharedCard({ kind, snapshot, onCopy, mine = false }) {
             {WEEKDAYS.map((label, weekday) => (
               <div key={label} className={`${styles.day} ${byDay.get(weekday) ? styles.dayOn : ''}`}>
                 <span className={styles.dayLabel}>{label}</span>
-                <span className={styles.dayWorkout}>{byDay.get(weekday) ?? '—'}</span>
+                <span className={styles.dayWorkout}>{byDay.get(weekday)?.join(' + ') ?? '—'}</span>
               </div>
             ))}
           </div>
