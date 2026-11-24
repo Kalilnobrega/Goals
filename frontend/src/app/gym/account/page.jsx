@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeftRight, AtSign, Building2, Check, Globe, Lock, Pencil, Shield, Target, Users, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
   changePassword, checkUsername, createGym, deleteAccount, deleteGym, getBlocks, getFitnessProfile, getGyms, getMe, logout,
-  renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateUsername, updateVisibility,
+  renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateShareGym, updateUsername, updateVisibility,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
@@ -191,10 +191,22 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
-function PrivacyCard({ initial, initialShareWeight, hasUsername }) {
+function PrivacyCard({ initial, initialShareWeight, initialShareGym, hasUsername }) {
   const toast = useToast();
   const [visibility, setVisibility] = useState(initial);
   const [shareWeight, setShareWeight] = useState(initialShareWeight);
+  const [shareGym, setShareGym] = useState(initialShareGym);
+
+  const toggleGym = async (next) => {
+    setShareGym(next);
+    try {
+      await updateShareGym(next);
+      toast(next ? 'Sua academia aparece nos seus posts' : 'Sua academia ficou só para você');
+    } catch (err) {
+      setShareGym(!next);
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível salvar.') });
+    }
+  };
 
   const toggleWeight = async (next) => {
     setShareWeight(next);
@@ -267,6 +279,13 @@ function PrivacyCard({ initial, initialShareWeight, hasUsername }) {
           <span className={styles.privacyDescription}>Melhores amigos veem suas fichas, histórico e evolução. O peso corporal só aparece se você ligar aqui.</span>
         </span>
         <input type="checkbox" checked={shareWeight} onChange={(e) => toggleWeight(e.target.checked)} />
+      </label>
+      <label className={styles.weightToggle}>
+        <span className={styles.privacyText}>
+          <span className={styles.privacyLabel}>Mostrar minha academia nos posts</span>
+          <span className={styles.privacyDescription}>Quem vê seus posts de treino e check-ins de academia passa a ver onde você treina. Vale também para os posts antigos.</span>
+        </span>
+        <input type="checkbox" checked={shareGym} onChange={(e) => toggleGym(e.target.checked)} />
       </label>
       {blocked.length > 0 && (
         <div className={styles.blocked}>
@@ -689,6 +708,7 @@ export default function GymAccountPage() {
   const [username, setUsername] = useState(undefined);
   const [visibility, setVisibility] = useState('friends');
   const [shareWeight, setShareWeight] = useState(false);
+  const [shareGym, setShareGym] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -698,6 +718,7 @@ export default function GymAccountPage() {
         setUsername(profile.username ?? null);
         setVisibility(profile.visibility ?? 'friends');
         setShareWeight(!!profile.share_weight_close);
+        setShareGym(!!profile.share_gym);
       })
       .catch(() => setError('Não foi possível carregar sua conta.'));
   }, []);
@@ -729,7 +750,7 @@ export default function GymAccountPage() {
         <>
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
-          <PrivacyCard initial={visibility} initialShareWeight={shareWeight} hasUsername={!!username} />
+          <PrivacyCard initial={visibility} initialShareWeight={shareWeight} initialShareGym={shareGym} hasUsername={!!username} />
           <BodyTypeCard />
           <GymsCard />
           <PasswordCard me={me} />

@@ -124,6 +124,12 @@ export function PostPhotos({ media }) {
   );
 }
 
+function postMeta(post) {
+  const place = post.gym_name && post.activity === 'Academia' ? post.gym_name : post.activity;
+  const gym = post.gym_name && post.activity !== 'Academia' ? post.gym_name : null;
+  return [timeAgo(post.created_at), place, gym, post.minutes ? `${post.minutes} min` : null].filter(Boolean).join(' · ');
+}
+
 export default function PostCard({ post, onChange, onDeleted, linkToPost = true }) {
   const toast = useToast();
   const confirmAction = useConfirm();
@@ -189,7 +195,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
             <Avatar name={author.name} />
             <span className={styles.authorText}>
               <span className={styles.authorName}>{author.name}</span>
-              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}{post.minutes ? ` · ${post.minutes} min` : ''}</span>
+              <span className={styles.meta}>{postMeta(post)}</span>
             </span>
           </Link>
         ) : (
@@ -197,7 +203,7 @@ export default function PostCard({ post, onChange, onDeleted, linkToPost = true 
             <Avatar name={author.name} />
             <span className={styles.authorText}>
               <span className={styles.authorName}>{post.is_mine ? 'Você' : author.name}</span>
-              <span className={styles.meta}>{timeAgo(post.created_at)}{post.activity ? ` · ${post.activity}` : ''}{post.minutes ? ` · ${post.minutes} min` : ''}</span>
+              <span className={styles.meta}>{postMeta(post)}</span>
             </span>
           </span>
         )}

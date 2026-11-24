@@ -329,3 +329,23 @@ def test_deleting_a_posted_session_removes_the_post_and_its_files(client, librar
     assert client.delete(f"/fitness/sessions/{session['id']}", headers=ana).status_code == 200
     assert client.get(f"/fitness/posts/{created['id']}", headers=ana).status_code == 404
     assert list(media_dir.rglob("*.jpg")) == []
+
+
+def test_gym_shows_on_posts_only_when_the_author_opts_in(client, library, ana, bruno):
+    befriend(client, ana, bruno, "bruno", "ana")
+    client.post("/fitness/gyms", json={"name": "Academia Centro"}, headers=ana)
+    session = finished_session(client, ana, library)
+    workout_post = post(client, ana, session_id=session["id"])
+    checkin = post(client, ana, activity="Academia", caption="treino de hoje")
+    run = post(client, ana, activity="Corrida", caption="5 km")
+    assert workout_post["gym_name"] is None and checkin["gym_name"] is None
+    assert client.get("/fitness/profile", headers=ana).json()["share_gym"] is False
+
+    assert client.put("/fitness/profile/share-gym", json={"share": True}, headers=ana).json()["share_gym"] is True
+    feed = {p["id"]: p["gym_name"] for p in client.get("/fitness/feed", headers=bruno).json()["posts"]}
+    assert feed[workout_post["id"]] == "Academia Centro"
+    assert feed[checkin["id"]] == "Academia Centro"
+    assert feed[run["id"]] is None
+
+    client.put("/fitness/profile/share-gym", json={"share": False}, headers=ana)
+    assert client.get(f"/fitness/posts/{workout_post['id']}", headers=bruno).json()["gym_name"] is None

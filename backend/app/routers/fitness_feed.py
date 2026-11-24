@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
-    ChallengeMember, FitnessProfile, Notification, Friendship, Media, Post, PostComment, PostReaction, UserBlock, WorkoutSession,
+    ChallengeMember, FitnessProfile, Gym, Notification, Friendship, Media, Post, PostComment, PostReaction, UserBlock, WorkoutSession,
 )
 from app.fitness_schemas import (
     CommentCreateSchema,
@@ -230,6 +230,19 @@ def workout_summary(db: Session, post: Post, viewer: int) -> dict | None:
     }
 
 
+GYM_ACTIVITY = "Academia"
+
+
+def post_gym(db: Session, post: Post) -> str | None:
+    profile = db.get(FitnessProfile, post.user_id)
+    if profile is None or not profile.share_gym:
+        return None
+    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
+    gym_id = session.gym_id if session is not None else post.gym_id
+    gym = db.get(Gym, gym_id) if gym_id else None
+    return gym.name if gym else None
+
+
 def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
     ids = [p.id for p in posts]
     counts: dict[int, dict[str, int]] = {pid: {} for pid in ids}
@@ -259,6 +272,7 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "shared_kind": post.shared_kind,
             "shared": post.shared,
             "workout": workout_summary(db, post, me),
+            "gym_name": post_gym(db, post),
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
             "my_reaction": mine.get(post.id),
@@ -326,6 +340,7 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         performed_on=performed_on,
         shared_kind=shared_kind,
         shared=shared,
+        gym_id=me.current_gym_id if activity == GYM_ACTIVITY else None,
     )
     db.add(post)
     try:

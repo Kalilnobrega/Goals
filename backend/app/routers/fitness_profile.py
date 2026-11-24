@@ -51,12 +51,13 @@ def username_taken(db: Session, username: str, user_id: int) -> bool:
 
 def profile_response(profile: FitnessProfile | None) -> dict:
     if profile is None:
-        return {"body_type": "male", "username": None, "visibility": "friends", "share_weight_close": False}
+        return {"body_type": "male", "username": None, "visibility": "friends", "share_weight_close": False, "share_gym": False}
     return {
         "body_type": profile.body_type,
         "username": profile.username,
         "visibility": profile.visibility or "friends",
         "share_weight_close": bool(profile.share_weight_close),
+        "share_gym": bool(profile.share_gym),
     }
 
 
@@ -140,5 +141,17 @@ def update_close_weight(
 ):
     profile = get_or_create_profile(db, user)
     profile.share_weight_close = data.share
+    db.commit()
+    return profile_response(profile)
+
+
+@fitness_profile_router.put("/profile/share-gym", response_model=FitnessProfileResponseSchema)
+def update_share_gym(
+    data: ShareWeightSchema,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = get_or_create_profile(db, user)
+    profile.share_gym = data.share
     db.commit()
     return profile_response(profile)

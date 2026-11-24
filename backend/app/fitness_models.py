@@ -277,6 +277,7 @@ class FitnessProfile(Base):
     current_gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
     visibility = Column(String(10), nullable=False, default="friends", server_default="friends")
     share_weight_close = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    share_gym = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
@@ -402,6 +403,7 @@ class Post(Base):
     performed_on = Column(Date, nullable=True)
     shared_kind = Column(String(10), nullable=True)
     shared = Column(JSON, nullable=True)
+    gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 
     media = relationship("Media", order_by="Media.position", lazy="selectin")

@@ -1331,6 +1331,7 @@ class FitnessProfileResponseSchema(BaseModel):
     username: str | None = None
     visibility: Literal["public", "friends", "private"] = "friends"
     share_weight_close: bool = False
+    share_gym: bool = False
 
 
 class VisibilityUpdateSchema(BaseModel):
@@ -1724,6 +1725,7 @@ class PostSchema(BaseModel):
     shared_kind: Literal["workout", "plan", "exercise"] | None = None
     shared: dict | None = None
     workout: PostWorkoutSchema | None
+    gym_name: str | None = None
     media: list[MediaSchema]
     reactions: dict[str, int]
     my_reaction: ReactionKind | None
