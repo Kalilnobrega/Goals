@@ -405,6 +405,10 @@
 .gymName {
   overflow: hidden;
   color: var(--gym-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .privacyOptions {
   display: flex;
