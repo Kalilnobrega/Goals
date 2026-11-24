@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Dumbbell, MapPin, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { deleteChallengeMessage, getChallengeChat, readChallengeChat, sendChallengeMessage } from '../../../lib/api';
-import { apiError, formatDay } from '../../../lib/gym';
+import { addDays, apiError, formatDay } from '../../../lib/gym';
 import { timeAgo } from '../../../lib/photos';
 import { useToast } from '../../Toast';
 import Avatar from './Avatar';
@@ -137,19 +137,28 @@ export default function ChallengeChat({ challenge, onRead }) {
         </ul>
       )}
       <div ref={endRef} />
-      <form className={styles.form} onSubmit={send}>
-        <input
-          className={styles.input}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={500}
-          placeholder="Mensagem para o grupo"
-          aria-label="Mensagem"
-        />
-        <button type="submit" className={styles.send} disabled={sending || !text.trim()} aria-label="Enviar mensagem">
-          <Send size={18} />
-        </button>
-      </form>
+      {challenge.status === 'finished' && (
+        <p className={styles.closing}>
+          {challenge.chat_open === false
+            ? 'O chat foi fechado uma semana depois do fim do desafio. As mensagens continuam aqui para ler.'
+            : `O desafio acabou. O chat fica aberto até ${formatDay(addDays(challenge.end_date, 7))} para a resenha.`}
+        </p>
+      )}
+      {challenge.chat_open !== false && (
+        <form className={styles.form} onSubmit={send}>
+          <input
+            className={styles.input}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={500}
+            placeholder="Mensagem para o grupo"
+            aria-label="Mensagem"
+          />
+          <button type="submit" className={styles.send} disabled={sending || !text.trim()} aria-label="Enviar mensagem">
+            <Send size={18} />
+          </button>
+        </form>
+      )}
     </section>
   );
 }

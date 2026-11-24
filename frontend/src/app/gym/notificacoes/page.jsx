@@ -20,6 +20,13 @@ function describe(item) {
       return { text: <>{name} te convidou para o desafio <strong>{item.challenge_name}</strong></>, href: '/gym/social/desafios' };
     case 'challenge_joined':
       return { text: <>{name} entrou no seu desafio <strong>{item.challenge_name}</strong></>, href: `/gym/social/desafios/${item.challenge_id}` };
+    case 'challenge_finished': {
+      const place = Number(item.detail);
+      const result = place === 1 ? 'Você venceu!' : place > 1 ? `Você ficou em ${place}º lugar.` : 'Você terminou sem pontos.';
+      return { text: <>O desafio <strong>{item.challenge_name}</strong> terminou. {result}</>, href: `/gym/social/desafios/${item.challenge_id}` };
+    }
+    case 'challenge_deleted':
+      return { text: <>{name} excluiu o desafio <strong>{item.detail}</strong></>, href: '/gym/social/desafios' };
     case 'post_reaction': {
       const emoji = REACTIONS.find((reaction) => reaction.key === item.detail)?.emoji ?? '';
       return { text: <>{name} reagiu {emoji} ao seu post</>, href: `/gym/social/post/${item.post_id}` };

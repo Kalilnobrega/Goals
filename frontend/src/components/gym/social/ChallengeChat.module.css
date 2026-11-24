@@ -179,3 +179,12 @@
   border-radius: 16px;
   background: var(--gym-surface-2);
 }
+
+.closing {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--gym-surface-2);
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
