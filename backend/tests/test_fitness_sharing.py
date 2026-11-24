@@ -137,3 +137,23 @@ def test_copying_a_plan_brings_custom_exercises_once(client, ana, bruno, library
     client.post(f"/fitness/posts/{single['id']}/copy-shared", headers=bruno)
     customs = [e for e in client.get("/fitness/exercises", headers=bruno).json() if e["is_custom"]]
     assert [e["name"] for e in customs] == ["Remada da Ana"]
+
+
+def test_copies_reuse_only_compatible_exercises_and_earlier_copies(client, ana, bruno, library):
+    befriend(client, ana, bruno, "bruno", "ana")
+    rowing = client.post("/fitness/exercises", json={"name": "Remo leve", "muscle_group": "cardio", "equipment": "machine", "tracking": "cardio"}, headers=ana)
+    assert rowing.status_code == 200, rowing.text
+    own = client.post("/fitness/exercises", json={"name": "Remo leve", "muscle_group": "cardio", "equipment": "machine"}, headers=bruno).json()
+    ficha = client.post("/fitness/workouts", json={"name": "Cardio", "exercises": [
+        {"exercise_id": library["supino-reto"], "target_sets": 3, "reps_min": 8},
+    ], "cardio": [{"exercise_id": rowing.json()["id"], "phase": "end", "minutes": 10}]}, headers=ana)
+    assert ficha.status_code == 200, ficha.text
+    post = client.post("/fitness/posts", json={"share_workout_id": ficha.json()["id"]}, headers=ana).json()
+
+    for _ in range(3):
+        copied = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno)
+        assert copied.status_code == 200, copied.text
+    customs = sorted(e["name"] for e in client.get("/fitness/exercises", headers=bruno).json() if e["is_custom"])
+    assert customs == ["Remo leve", "Remo leve (Ana)"]
+    cardio = client.get("/fitness/workouts", headers=bruno).json()[0]["cardio"][0]["exercise"]
+    assert cardio["name"] == "Remo leve (Ana)" and cardio["id"] != own["id"]

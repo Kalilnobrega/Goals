@@ -197,11 +197,14 @@ def name_taken(db: Session, user: User, name: str) -> bool:
     return visible_exercises(user, db).filter(func.lower(Exercise.name) == name.lower()).first() is not None
 
 
-def create_exercise_copy(db: Session, user: User, snapshot: dict, author: User | None) -> Exercise | None:
+def copy_names(snapshot: dict, author: User | None) -> list[str]:
     base = snapshot["name"]
     suffix = [f"{base} ({author.name.split(' ')[0]})"] if author else []
-    candidates = [base] + suffix + [f"{base} {number}" for number in range(2, 20)]
-    name = next((candidate[:60] for candidate in candidates if not name_taken(db, user, candidate[:60])), None)
+    return [candidate[:60] for candidate in [base] + suffix + [f"{base} {number}" for number in range(2, 20)]]
+
+
+def create_exercise_copy(db: Session, user: User, snapshot: dict, author: User | None) -> Exercise | None:
+    name = next((candidate for candidate in copy_names(snapshot, author) if not name_taken(db, user, candidate)), None)
     if name is None:
         return None
     exercise = Exercise(
@@ -222,17 +225,21 @@ def create_exercise_copy(db: Session, user: User, snapshot: dict, author: User |
     return exercise
 
 
-def matching_own_exercise(db: Session, user: User, snapshot: dict) -> Exercise | None:
-    return (
+def matching_own_exercise(db: Session, user: User, snapshot: dict, author: User | None) -> Exercise | None:
+    names = copy_names(snapshot, author)
+    found = (
         db.query(Exercise)
         .filter(
             Exercise.user_id == user.id,
-            func.lower(Exercise.name) == snapshot["name"].lower(),
+            func.lower(Exercise.name).in_([name.lower() for name in names]),
             Exercise.muscle_group == snapshot["muscle_group"],
             Exercise.equipment == snapshot["equipment"],
+            func.coalesce(Exercise.tracking, "reps") == (snapshot.get("tracking") or "reps"),
         )
-        .first()
+        .all()
     )
+    order = {name.lower(): index for index, name in enumerate(names)}
+    return min(found, key=lambda e: order[e.name.lower()], default=None)
 
 
 def resolve_custom(db: Session, user: User, author: User | None, entry: dict, cache: dict) -> int | None:
@@ -246,7 +253,7 @@ def resolve_custom(db: Session, user: User, author: User | None, entry: dict, ca
             data = exercise_snapshot(source)
     if data is None:
         return None
-    exercise = matching_own_exercise(db, user, data) or create_exercise_copy(db, user, data, author)
+    exercise = matching_own_exercise(db, user, data, author) or create_exercise_copy(db, user, data, author)
     cache[source_id] = exercise.id if exercise else None
     return cache[source_id]
 
