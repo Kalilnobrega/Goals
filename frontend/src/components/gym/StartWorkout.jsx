@@ -1,14 +1,15 @@
 'use client';
 import { createContext, useCallback, useContext, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarCheck, ChevronRight, ClipboardList, Link2, Play, Timer, Zap } from 'lucide-react';
-import { getFitnessOverview, getWorkouts, peekCache } from '../../lib/api';
+import { ArrowLeft, Building2, CalendarCheck, ChevronRight, ClipboardList, Link2, Play, Timer, Zap } from 'lucide-react';
+import { getFitnessOverview, getGyms, getWorkouts, peekCache, setCurrentGym } from '../../lib/api';
 import {
-  muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote, prescription, formatRest, equipmentLabel, gripLabel,
+  apiError, muscleLabel, plural, WEEKDAY_NAMES, weekdayOf, cardioNote, prescription, formatRest, equipmentLabel, gripLabel,
   canLoadPerSide, cardioMinutes, supersetMarks, planSummary,
 } from '../../lib/gym';
 import GymSheet from './GymSheet';
 import useStartSession from './useStartSession';
+import { useToast } from '../Toast';
 import s from './sheet.module.css';
 import styles from './StartWorkout.module.css';
 
@@ -58,7 +59,7 @@ function CardioRows({ workout, phase, label }) {
   ));
 }
 
-function WorkoutPreview({ workout, starting, onStart, onBack }) {
+function WorkoutPreview({ workout, starting, onStart, onBack, gymChoice }) {
   if (!workout) {
     return (
       <div className={styles.group} aria-busy="true" aria-label="Carregando ficha">
@@ -98,6 +99,7 @@ function WorkoutPreview({ workout, starting, onStart, onBack }) {
         <CardioRows workout={workout} phase="end" label="Cardio no final" />
       </ol>
       {workout.description && <p className={styles.note}>{workout.description}</p>}
+      {gymChoice}
       <div className={s.actions}>
         <button type="button" className={s.primary} onClick={onStart} disabled={starting}>
           <Play size={18} fill="currentColor" /> {starting ? 'Iniciando…' : 'Começar treino'}
@@ -110,7 +112,32 @@ function WorkoutPreview({ workout, starting, onStart, onBack }) {
   );
 }
 
-function StartPicker({ overview, workouts, loadError, onRetry, starting, onChoose, onClose }) {
+function GymChoice({ gyms, onChoose, disabled }) {
+  if (gyms.length < 2) return null;
+  return (
+    <section className={styles.group} aria-label="Academia">
+      <h3 className={styles.groupTitle}>Academia</h3>
+      <div className={styles.gyms} role="radiogroup" aria-label="Academia do treino">
+        {gyms.map(gym => (
+          <button
+            key={gym.id}
+            type="button"
+            role="radio"
+            aria-checked={gym.current}
+            className={`${styles.gym} ${gym.current ? styles.gymActive : ''}`}
+            onClick={() => onChoose(gym)}
+            disabled={disabled}
+          >
+            <Building2 size={15} aria-hidden="true" />
+            <span>{gym.name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StartPicker({ overview, workouts, loadError, onRetry, starting, onChoose, onClose, gymChoice }) {
   const active = overview?.active_session;
   const today = todayOptions(overview);
   const todayIds = new Set(today.items.map(item => item.id));
@@ -119,6 +146,7 @@ function StartPicker({ overview, workouts, loadError, onRetry, starting, onChoos
 
   return (
     <div className={s.stack}>
+      {!active && gymChoice}
       {active && (
         <Link href={`/gym/session/${active.id}`} className={s.primary} onClick={onClose}>
           <Play size={18} fill="currentColor" /> Continuar {active.name}
@@ -182,13 +210,34 @@ export function StartWorkoutProvider({ children }) {
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
   const [loadError, setLoadError] = useState(false);
   const [previewId, setPreviewId] = useState(null);
+  const [gyms, setGyms] = useState(() => peekCache('fitnessGyms')?.gyms ?? []);
+  const [switching, setSwitching] = useState(false);
   const { begin, starting, sheet } = useStartSession();
+  const toast = useToast();
 
   const load = useCallback(() => {
     setLoadError(false);
     getFitnessOverview().then(setOverview).catch(() => {});
     getWorkouts().then(setWorkouts).catch(() => setLoadError(true));
+    getGyms().then(result => setGyms(result.gyms)).catch(() => {});
   }, []);
+
+  const chooseGym = async (gym) => {
+    if (gym.current) return;
+    setSwitching(true);
+    setGyms(current => current.map(item => ({ ...item, current: item.id === gym.id })));
+    try {
+      const result = await setCurrentGym(gym.id);
+      setGyms(result.gyms);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível trocar a academia.') });
+      getGyms().then(result => setGyms(result.gyms)).catch(() => {});
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const gymChoice = <GymChoice gyms={gyms} onChoose={chooseGym} disabled={switching || starting} />;
 
   const show = useCallback(() => {
     setPreviewId(null);
@@ -220,6 +269,7 @@ export function StartWorkoutProvider({ children }) {
             starting={starting}
             onStart={() => startNow(previewId)}
             onBack={() => setPreviewId(null)}
+            gymChoice={gymChoice}
           />
         )}
         {open && previewId === null && (
@@ -231,6 +281,7 @@ export function StartWorkoutProvider({ children }) {
             starting={starting}
             onChoose={choose}
             onClose={close}
+            gymChoice={gymChoice}
           />
         )}
       </GymSheet>

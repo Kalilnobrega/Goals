@@ -141,3 +141,44 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+.gyms {
+  display: flex;
+  gap: 8px;
+  margin: 0 -4px;
+  padding: 0 4px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.gyms::-webkit-scrollbar {
+  display: none;
+}
+
+.gym {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gymActive {
+  background: var(--gym-accent);
+  border-color: var(--gym-accent);
+  color: var(--gym-accent-ink);
+}
+
+.gym:disabled {
+  cursor: default;
+}
