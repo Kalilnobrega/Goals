@@ -56,7 +56,7 @@ export function apiError(err, fallback) {
 
 export const repsLabel = (min, max) => (max && max !== min ? `${min}–${max}` : `${min}`);
 
-function targetText(tracking, sets, min, max) {
+export function targetText(tracking, sets, min, max) {
   if (tracking === 'cardio') return `${min} min`;
   if (tracking === 'time') return `${sets} × ${min}s`;
   return `${sets} × ${repsLabel(min, max)}`;

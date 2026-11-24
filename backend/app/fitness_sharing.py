@@ -31,6 +31,7 @@ def workout_snapshot(workout: Workout) -> dict:
                 "exercise_id": item.exercise_id,
                 "name": item.exercise.name,
                 "muscle_group": item.exercise.muscle_group,
+                "tracking": item.exercise.tracking or "reps",
                 "target_sets": item.target_sets,
                 "reps_min": item.reps_min,
                 "reps_max": item.reps_max,

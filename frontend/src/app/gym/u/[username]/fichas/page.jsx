@@ -3,16 +3,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Copy } from 'lucide-react';
 import { copyCloseWorkout, getClosePlan, getCloseWorkouts } from '../../../../../lib/api';
-import { apiError } from '../../../../../lib/gym';
+import { apiError, prescription } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import CloseHeader from '../../../../../components/gym/social/CloseHeader';
 import styles from '../../../../../components/gym/social/close.module.css';
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-
-function reps(item) {
-  return item.reps_max ? `${item.reps_min}–${item.reps_max}` : `${item.reps_min}`;
-}
 
 export default function CloseWorkoutsPage() {
   const { username } = useParams();
@@ -73,7 +69,7 @@ export default function CloseWorkoutsPage() {
             {workout.exercises.map((item) => (
               <li key={item.id} className={styles.rowItem}>
                 <span className={styles.rowName}>{item.exercise.name}</span>
-                <span className={styles.rowValue}>{item.target_sets} × {reps(item)}</span>
+                <span className={styles.rowValue}>{prescription(item)}</span>
               </li>
             ))}
             {workout.cardio.map((item) => (

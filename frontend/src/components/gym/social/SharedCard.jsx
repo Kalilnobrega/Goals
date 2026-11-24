@@ -2,15 +2,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, ClipboardList, Copy, Dumbbell } from 'lucide-react';
-import { apiError, equipmentLabel, muscleLabel, muscleName } from '../../../lib/gym';
+import { apiError, equipmentLabel, muscleLabel, muscleName, targetText } from '../../../lib/gym';
 import { useToast } from '../../Toast';
 import styles from './SharedCard.module.css';
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-
-function reps(item) {
-  return item.reps_max ? `${item.reps_min}–${item.reps_max}` : `${item.reps_min}`;
-}
 
 function WorkoutRows({ workout }) {
   return (
@@ -18,7 +14,7 @@ function WorkoutRows({ workout }) {
       {workout.exercises.map((item, index) => (
         <li key={`${item.exercise_id}-${index}`} className={styles.row}>
           <span className={styles.rowName}>{item.name}</span>
-          <span className={styles.rowValue}>{item.target_sets} × {reps(item)}</span>
+          <span className={styles.rowValue}>{targetText(item.tracking, item.target_sets, item.reps_min, item.reps_max)}</span>
         </li>
       ))}
       {workout.cardio.map((item, index) => (
