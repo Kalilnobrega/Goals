@@ -64,6 +64,19 @@
   50% { opacity: 0.3; }
 }
 
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleRow .title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .title {
   font-family: var(--font-display);
   font-size: 1.6rem;
@@ -553,11 +566,12 @@
 
 .gymChip {
   display: inline-flex;
-  align-self: flex-start;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
+  max-width: 45%;
   height: 30px;
-  margin-top: 4px;
+  margin-top: 2px;
   padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--gym-border-strong);
@@ -578,4 +592,10 @@
   .gymChip:hover {
     border-color: var(--gym-accent);
   }
+}
+
+.gymChip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

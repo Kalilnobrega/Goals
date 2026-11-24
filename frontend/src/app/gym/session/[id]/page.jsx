@@ -755,7 +755,20 @@ export default function SessionPage() {
         </div>
       </div>
       <header className={styles.header}>
-        <h1 className={styles.title}>{session.name}</h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{session.name}</h1>
+          {gyms.length > 1 && (
+            <button
+              type="button"
+              className={styles.gymChip}
+              onClick={() => setSheet({ type: 'gym' })}
+              aria-label={`Academia: ${session.gym_name ?? 'sem academia'}. Trocar`}
+            >
+              <Building2 size={14} aria-hidden="true" />
+              <span>{session.gym_name ?? 'Sem academia'}</span>
+            </button>
+          )}
+        </div>
         {(pendingCount > 0 || offline) && (
           <div className={styles.offline} role="status">
             <CloudOff size={16} aria-hidden="true" />
@@ -774,12 +787,6 @@ export default function SessionPage() {
         <p className={styles.headerMeta}>
           {plural(totalSets, 'série', 'séries')} · {formatVolume(volume)}
         </p>
-        {gyms.length > 1 && (
-          <button type="button" className={styles.gymChip} onClick={() => setSheet({ type: 'gym' })}>
-            <Building2 size={14} aria-hidden="true" />
-            <span>{session.gym_name ?? 'Sem academia'}</span>
-          </button>
-        )}
       </header>
 
       {session.exercises.length === 0 && (
