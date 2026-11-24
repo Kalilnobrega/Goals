@@ -319,3 +319,13 @@ def test_comments_from_blocked_people_are_neither_listed_nor_counted(client, ana
     seen = client.get(f"/fitness/posts/{created['id']}", headers=ana).json()
     assert [c["text"] for c in seen["comments"]] == ["olá"] and seen["comment_count"] == 1
     assert client.get(f"/fitness/posts/{created['id']}", headers=carla).json()["comment_count"] == 2
+
+
+def test_deleting_a_posted_session_removes_the_post_and_its_files(client, library, ana, media_dir):
+    session = finished_session(client, ana, library)
+    photo = upload(client, ana).json()
+    created = post(client, ana, session_id=session["id"], media_ids=[photo["id"]])
+    assert len(list(media_dir.rglob("*.jpg"))) == 1
+    assert client.delete(f"/fitness/sessions/{session['id']}", headers=ana).status_code == 200
+    assert client.get(f"/fitness/posts/{created['id']}", headers=ana).status_code == 404
+    assert list(media_dir.rglob("*.jpg")) == []

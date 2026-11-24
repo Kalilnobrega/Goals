@@ -12,7 +12,7 @@ from app.models import (
 )
 from app.sharing import remove_member
 from app.database import get_db
-from app.fitness_media import purge_user_media
+from app.fitness_media import delete_keys, user_media_keys
 from app.main import (
     bcrypt_context,
     oauth2_scheme,
@@ -268,9 +268,10 @@ def delete_me(
         RefreshToken.user_id == current_user.id
     ).delete()
     session.query(Streak).filter(Streak.user_id == current_user.id).delete()
-    purge_user_media(session, current_user.id)
+    keys = user_media_keys(session, current_user.id)
     session.delete(current_user)
     session.commit()
+    delete_keys(keys)
 
     return {"message": "Conta excluída"}
 

@@ -26,7 +26,7 @@ from app.fitness_schemas import (
     ReactionSchema,
 )
 from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_factors, without_body_weight
-from app.fitness_media import delete_files
+from app.fitness_media import delete_keys, drop_media, drop_post
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from app.fitness_notifications import clear, notify, renotify
@@ -81,10 +81,9 @@ def drop_stale_pending(db: Session, user_id: int) -> None:
         .all()
     )
     if stale:
-        delete_files(stale)
-        for item in stale:
-            db.delete(item)
+        keys = drop_media(db, stale)
         db.commit()
+        delete_keys(keys)
 
 
 @fitness_feed_router.post("/media", response_model=ProgressPhotoSchema)
@@ -173,9 +172,9 @@ def delete_media(media_id: int, user: User = Depends(get_current_user), db: Sess
     media = db.get(Media, media_id)
     if media is None or media.user_id != user.id or media.post_id is not None:
         raise HTTPException(status_code=404, detail="Foto não encontrada.")
-    delete_files([media])
-    db.delete(media)
+    keys = drop_media(db, [media])
     db.commit()
+    delete_keys(keys)
 
 
 def author_profile(db: Session, user_id: int) -> tuple[User, FitnessProfile | None]:
@@ -528,14 +527,9 @@ def delete_post(post_id: int, user: User = Depends(get_current_user), db: Sessio
     post = db.get(Post, post_id)
     if post is None or post.user_id != user.id:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    delete_files(list(post.media))
-    for item in list(post.media):
-        db.delete(item)
-    db.query(Notification).filter(Notification.post_id == post.id).delete(synchronize_session=False)
-    db.query(PostReaction).filter(PostReaction.post_id == post.id).delete()
-    db.query(PostComment).filter(PostComment.post_id == post.id).delete()
-    db.delete(post)
+    keys = drop_post(db, post)
     db.commit()
+    delete_keys(keys)
 
 
 @fitness_feed_router.put("/posts/{post_id}/reaction", response_model=PostSchema)
