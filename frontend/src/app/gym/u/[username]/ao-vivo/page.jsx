@@ -10,7 +10,7 @@ import { apiError, formatClock, setSummary } from '../../../../../lib/gym';
 import styles from '../../../../../components/gym/social/close.module.css';
 import live from './live.module.css';
 
-const REFRESH_MS = 10000;
+const REFRESH_MS = 20000;
 
 function currentExercise(session) {
   let latest = null;
@@ -134,7 +134,7 @@ export default function LiveWorkoutPage() {
               );
             })}
           </ol>
-          <p className={styles.muted}>Atualiza sozinho a cada 10 segundos.</p>
+          <p className={styles.muted}>Atualiza sozinho a cada 20 segundos.</p>
         </>
       )}
     </div>

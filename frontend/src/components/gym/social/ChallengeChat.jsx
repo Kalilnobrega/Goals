@@ -9,7 +9,9 @@ import { useToast } from '../../Toast';
 import Avatar from './Avatar';
 import styles from './ChallengeChat.module.css';
 
-const POLL_MS = 10000;
+const FAST_MS = 3000;
+const SLOW_MS = 15000;
+const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 
 function merge(current, incoming) {
   const map = new Map(current.map((item) => [item.id, item]));
@@ -27,10 +29,21 @@ export default function ChallengeChat({ challenge, onRead }) {
   const [error, setError] = useState('');
   const endRef = useRef(null);
   const stickToEnd = useRef(true);
+  const lastActivity = useRef(0);
+  const seen = useRef(null);
+
+  const noteActivity = (list) => {
+    const known = seen.current;
+    const ids = list.map((item) => item.id);
+    const recent = list.some((item) => Date.now() - new Date(item.created_at).getTime() < ACTIVE_WINDOW_MS);
+    if ((known && ids.some((id) => !known.has(id))) || (!known && recent)) lastActivity.current = Date.now();
+    seen.current = new Set([...(known ?? []), ...ids]);
+  };
 
   const refresh = useCallback(async (first = false) => {
     try {
       const page = await getChallengeChat(challenge.id);
+      noteActivity(page.items);
       setItems((current) => (current ? merge(current, page.items) : page.items));
       if (first) setNextBefore(page.next_before);
       if (page.unread > 0 || first) {
@@ -43,11 +56,22 @@ export default function ChallengeChat({ challenge, onRead }) {
   }, [challenge.id, onRead]);
 
   useEffect(() => {
-    refresh(true);
-    const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') refresh();
-    }, POLL_MS);
-    return () => clearInterval(timer);
+    let timer = null;
+    let stopped = false;
+    const schedule = () => {
+      const active = Date.now() - lastActivity.current < ACTIVE_WINDOW_MS;
+      timer = setTimeout(async () => {
+        if (document.visibilityState === 'visible') await refresh();
+        if (!stopped) schedule();
+      }, active ? FAST_MS : SLOW_MS);
+    };
+    refresh(true).then(() => {
+      if (!stopped) schedule();
+    });
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [refresh]);
 
   const lastId = items?.at(-1)?.id;
@@ -76,6 +100,7 @@ export default function ChallengeChat({ challenge, onRead }) {
     stickToEnd.current = true;
     try {
       const message = await sendChallengeMessage(challenge.id, text.trim());
+      lastActivity.current = Date.now();
       setItems((current) => merge(current ?? [], [message]));
       setText('');
     } catch (err) {
