@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, to_br_date, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, UserBlock, WorkoutSession
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
@@ -372,6 +372,8 @@ def preview(db: Session, challenge: Challenge, user_id: int) -> dict:
 
 
 def join(db: Session, challenge: Challenge, user_id: int, accept_weight: bool = False) -> None:
+    if has_blocked(db, challenge.owner_id, user_id) or has_blocked(db, user_id, challenge.owner_id):
+        raise HTTPException(status_code=404, detail="Convite inválido ou desafio excluído.")
     if status_of(challenge, today_br()) == "finished":
         raise HTTPException(status_code=409, detail="Esse desafio já terminou.")
     if user_id not in member_ids(challenge):
@@ -680,6 +682,7 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
 
     items = []
     members = [member.user_id for member in challenge.members]
+    visible = visible_members(db, challenge, me)
     for user_id in members:
         user = db.get(User, user_id)
         profile = db.get(FitnessProfile, user_id)
@@ -697,7 +700,7 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
         posts = {
             post.session_id: post
             for post in db.query(Post).filter(Post.session_id.in_([s.id for s in sessions])).all()
-        } if sessions else {}
+        } if sessions and user_id in visible else {}
         hidden = hidden_strength_ids(db, challenge, user_id, me)
         for session in sessions:
             facts = session_facts(session)
@@ -705,6 +708,7 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
             facts["volume"] -= hidden_volume(session, hidden)
             ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
             items.append({
+                "id": f"w{session.id}",
                 "kind": "workout",
                 "author": author,
                 "is_mine": user_id == me,
@@ -725,7 +729,9 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
         user = db.get(User, post.user_id)
         profile = db.get(FitnessProfile, post.user_id)
         fact = checkin_fact(post)
+        shown = post.user_id in visible
         items.append({
+            "id": f"c{post.id}",
             "kind": "checkin",
             "author": {"username": profile.username if profile else None, "name": user.name},
             "is_mine": post.user_id == me,
@@ -734,9 +740,9 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
             "name": post.activity,
             "minutes": post.minutes,
             "counts": qualifies(fact, challenge.min_rule),
-            "post_id": post.id,
-            "caption": post.caption,
-            "media": [media_out(m) for m in post.media],
+            "post_id": post.id if shown else None,
+            "caption": post.caption if shown else None,
+            "media": [media_out(m) for m in post.media] if shown else [],
         })
     items.sort(key=lambda item: (item["day"], item["at"]), reverse=True)
     return items
@@ -788,8 +794,21 @@ def challenge_session(
 CHAT_PAGE = 50
 
 
-def challenge_post_refs(db: Session, challenge: Challenge) -> dict[int, dict]:
-    members = [member.user_id for member in challenge.members]
+def blocked_ids(db: Session, user_id: int) -> set[int]:
+    rows = db.query(UserBlock.blocker_id, UserBlock.blocked_id).filter(
+        or_(UserBlock.blocker_id == user_id, UserBlock.blocked_id == user_id)
+    ).all()
+    return {blocked if blocker == user_id else blocker for blocker, blocked in rows}
+
+
+def visible_members(db: Session, challenge: Challenge, viewer: int) -> set[int]:
+    from .fitness_feed import can_see
+
+    return {member.user_id for member in challenge.members if can_see(db, viewer, member.user_id)}
+
+
+def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[int, dict]:
+    members = sorted(visible_members(db, challenge, viewer))
     if not members:
         return {}
     sessions = (
@@ -833,15 +852,16 @@ def chat_unread(db: Session, challenge: Challenge, user_id: int) -> int:
     if member is None:
         return 0
     since = aware(member.chat_read_at or member.joined_at)
+    hidden = blocked_ids(db, user_id) | {user_id}
     messages = (
         db.query(func.count(ChallengeMessage.id))
-        .filter(ChallengeMessage.challenge_id == challenge.id, ChallengeMessage.user_id != user_id, ChallengeMessage.created_at > since)
+        .filter(ChallengeMessage.challenge_id == challenge.id, ChallengeMessage.user_id.notin_(hidden), ChallengeMessage.created_at > since)
         .scalar()
     )
-    refs = challenge_post_refs(db, challenge)
+    refs = challenge_post_refs(db, challenge, user_id)
     comments = (
         db.query(func.count(PostComment.id))
-        .filter(PostComment.post_id.in_(list(refs)), PostComment.user_id != user_id, PostComment.created_at > since)
+        .filter(PostComment.post_id.in_(list(refs)), PostComment.user_id.notin_(hidden), PostComment.created_at > since)
         .scalar()
     ) if refs else 0
     return messages + comments
@@ -863,14 +883,17 @@ def challenge_chat(
     from .fitness_sessions import aware
 
     challenge = get_member_challenge(db, challenge_id, user.id)
-    messages_query = db.query(ChallengeMessage).filter(ChallengeMessage.challenge_id == challenge.id)
+    blocked = blocked_ids(db, user.id)
+    messages_query = db.query(ChallengeMessage).filter(
+        ChallengeMessage.challenge_id == challenge.id, ChallengeMessage.user_id.notin_(blocked)
+    )
     if before is not None:
         messages_query = messages_query.filter(ChallengeMessage.created_at < before)
     messages = messages_query.order_by(ChallengeMessage.created_at.desc(), ChallengeMessage.id.desc()).limit(CHAT_PAGE + 1).all()
-    refs = challenge_post_refs(db, challenge)
+    refs = challenge_post_refs(db, challenge, user.id)
     comments = []
     if refs:
-        comments_query = db.query(PostComment).filter(PostComment.post_id.in_(list(refs)))
+        comments_query = db.query(PostComment).filter(PostComment.post_id.in_(list(refs)), PostComment.user_id.notin_(blocked))
         if before is not None:
             comments_query = comments_query.filter(PostComment.created_at < before)
         comments = comments_query.order_by(PostComment.created_at.desc(), PostComment.id.desc()).limit(CHAT_PAGE + 1).all()

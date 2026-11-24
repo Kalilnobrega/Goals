@@ -583,3 +583,33 @@ def test_comments_on_challenge_posts_show_in_chat(client, library, ana, bruno, m
     ref = items[0]["post"]
     assert ref == {"post_id": created["id"], "kind": "checkin", "label": "Corrida", "owner_name": "Bruno Lima", "day": today_br().isoformat()}
     assert items[0]["can_delete"] is False
+
+
+def test_private_member_post_content_stays_out_of_the_challenge(client, library, ana, bruno, media_dir):
+    challenge = create(client, ana, allow_manual=True)
+    join(client, bruno, challenge)
+    client.put("/fitness/profile/visibility", json={"visibility": "private"}, headers=bruno)
+    created = checkin(client, bruno, minutes=30, caption="legenda privada").json()
+    client.post(f"/fitness/posts/{created['id']}/comments", json={"text": "meu comentário"}, headers=bruno)
+
+    items = client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=ana).json()["items"]
+    bruno_item = next(item for item in items if item["author"]["username"] == "bruno")
+    assert bruno_item["counts"] is True and bruno_item["id"] == f"c{created['id']}"
+    assert bruno_item["post_id"] is None and bruno_item["caption"] is None and bruno_item["media"] == []
+    assert client.get(f"/fitness/challenges/{challenge['id']}/chat", headers=ana).json()["items"] == []
+    own = next(item for item in client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=bruno).json()["items"])
+    assert own["caption"] == "legenda privada"
+
+
+def test_blocks_keep_people_out_of_challenges_and_chat(client, ana, bruno, carla):
+    challenge = create(client, ana)
+    client.post("/fitness/social/blocks/bruno", headers=ana)
+    assert client.post(f"/fitness/challenges/invite/{challenge['invite_code']}/join", headers=bruno).status_code == 404
+
+    join(client, carla, challenge)
+    client.post("/fitness/social/blocks/carla", headers=ana)
+    cid = challenge["id"]
+    client.post(f"/fitness/challenges/{cid}/chat", json={"text": "oi"}, headers=carla)
+    chat = client.get(f"/fitness/challenges/{cid}/chat", headers=ana).json()
+    assert chat["items"] == [] and chat["unread"] == 0
+    assert client.get(f"/fitness/challenges/{cid}/chat", headers=carla).json()["unread"] == 0

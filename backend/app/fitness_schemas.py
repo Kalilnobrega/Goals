@@ -1811,6 +1811,7 @@ class NotificationsSchema(BaseModel):
 
 
 class ChallengeActivitySchema(BaseModel):
+    id: str
     kind: Literal["workout", "checkin"]
     author: PostAuthorSchema
     is_mine: bool

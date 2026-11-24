@@ -113,7 +113,7 @@ export default function ChallengeActivity({ challenge }) {
       )}
       {data && data.items.map((item) => (
         <ActivityCard
-          key={`${item.kind}-${item.session_id ?? item.post_id}`}
+          key={item.id}
           item={item}
           challengeId={challenge.id}
           active={challenge.status !== 'finished'}
