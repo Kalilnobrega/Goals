@@ -66,7 +66,15 @@ export default function LiveWorkoutPage() {
 
   return (
     <div className={styles.page}>
-      <Link href={`/gym/u/${username}`} className={styles.back}><ChevronLeft size={18} /> Perfil</Link>
+      <div className={live.topRow}>
+        <Link href={`/gym/u/${username}`} className={styles.back}><ChevronLeft size={18} /> Perfil</Link>
+        {session && (
+          <span className={live.timer} aria-label={`Treinando há ${formatClock(seconds(session.started_at))}`}>
+            <span className={live.timerDot} aria-hidden="true" />
+            <span className={live.timerClock}>{formatClock(seconds(session.started_at))}</span>
+          </span>
+        )}
+      </div>
       <header className={styles.top}>
         <p className={`${styles.kicker} ${live.kicker}`}>
           {session && <span className={live.dot} aria-hidden="true" />}
@@ -87,10 +95,6 @@ export default function LiveWorkoutPage() {
 
       {session && (
         <>
-          <div className={live.clock}>
-            <span className={live.clockLabel}>Treinando há</span>
-            <span className={live.clockValue}>{formatClock(seconds(session.started_at))}</span>
-          </div>
 
           <section className={live.cheers} aria-label="Mandar incentivo">
             <p className={styles.muted}>Mande um incentivo para {first}. Aparece na tela do treino na hora.</p>

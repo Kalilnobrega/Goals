@@ -18,30 +18,8 @@
   to { box-shadow: 0 0 0 8px rgba(198, 244, 50, 0); }
 }
 
-.clock {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--gym-border);
-  background: var(--gym-surface);
-}
 
-.clockLabel {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--gym-muted);
-  font-size: 0.78rem;
-}
 
-.clockValue {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
 
 .list {
   display: flex;
@@ -124,4 +102,43 @@
 .cheerEmoji {
   font-size: 1.4rem;
   line-height: 1;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gym-accent);
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+.timerClock {
+  color: var(--gym-text);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timerDot {
+    animation: none;
+  }
 }
