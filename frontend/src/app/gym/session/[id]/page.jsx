@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Plus, MoreHorizontal, Repeat, Trash2, Flag, Play, Dumbbell, Trophy, ArrowDownToLine, ArrowUpDown,
-  ChevronLeft, ChevronRight, Check, LayoutList, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse, Link2, Link2Off
+  ChevronLeft, ChevronRight, Check, LayoutList, Building2, GalleryHorizontalEnd, CloudOff, RefreshCw, ArrowLeftRight, Weight, HeartPulse, Link2, Link2Off
 } from 'lucide-react';
 import {
-  getSession, getSessionInsights, getExercises, peekCache, finishSession, deleteSession, addSessionExercise,
+  getSession, getSessionInsights, getExercises, getGyms, setSessionGym, peekCache, finishSession, deleteSession, addSessionExercise,
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
@@ -117,6 +117,7 @@ export default function SessionPage() {
   const confirmAction = useConfirm();
   const now = useNow();
   const [session, setSession] = useState(null);
+  const [gyms, setGyms] = useState([]);
   const [status, setStatus] = useState('loading');
   const [sheet, setSheet] = useState(null);
   const [exercises, setExercises] = useState(() => peekCache('fitnessExercises') ?? null);
@@ -146,6 +147,10 @@ export default function SessionPage() {
   useEffect(() => {
     if (session) saveSnapshot(session);
   }, [session]);
+
+  useEffect(() => {
+    getGyms().then(data => setGyms(data.gyms)).catch(() => {});
+  }, []);
 
   const loaded = useCallback((raw) => {
     const data = withPending(raw);
@@ -545,6 +550,17 @@ export default function SessionPage() {
     setBusy(false);
   };
 
+  const changeGym = async (gym) => {
+    setSheet(null);
+    if (gym.id === session.gym_id) return;
+    try {
+      setSession(withPending(await setSessionGym(session.id, gym.id)));
+      toast(`Treino em ${gym.name}`);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível trocar a academia.') });
+    }
+  };
+
   const discard = async () => {
     setSheet(null);
     const ok = await confirmAction({
@@ -760,6 +776,12 @@ export default function SessionPage() {
         <p className={styles.headerMeta}>
           {plural(totalSets, 'série', 'séries')} · {formatVolume(volume)}
         </p>
+        {gyms.length > 1 && (
+          <button type="button" className={styles.gymChip} onClick={() => setSheet({ type: 'gym' })}>
+            <Building2 size={14} aria-hidden="true" />
+            <span>{session.gym_name ?? 'Sem academia'}</span>
+          </button>
+        )}
       </header>
 
       {session.exercises.length === 0 && (
@@ -857,6 +879,7 @@ export default function SessionPage() {
           finish: 'Finalizar treino',
           forgotten: 'Esse treino ficou aberto',
           options: 'Treino',
+          gym: 'Academia deste treino',
           confirm: 'Diferente da ficha',
         }[sheet?.type] ?? ''}
       >
@@ -1120,6 +1143,23 @@ export default function SessionPage() {
           </div>
         )}
 
+        {sheet?.type === 'gym' && (
+          <div className={s.actions}>
+            {gyms.map((gym) => (
+              <button
+                key={gym.id}
+                type="button"
+                className={s.option}
+                onClick={() => changeGym(gym)}
+                aria-pressed={gym.id === session.gym_id}
+              >
+                {gym.id === session.gym_id ? <Check size={20} /> : <Building2 size={20} />}
+                <span>{gym.name}</span>
+              </button>
+            ))}
+            <p className={styles.gymHint}>Máquinas e polias usam a carga anterior e os recordes da academia escolhida.</p>
+          </div>
+        )}
         {sheet?.type === 'options' && (
           <div className={s.actions}>
             {session.exercises.length > 1 && (

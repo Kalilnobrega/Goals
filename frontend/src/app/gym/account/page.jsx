@@ -1,14 +1,16 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, AtSign, Check, Target, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeftRight, AtSign, Building2, Check, Pencil, Target, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
-  changePassword, checkUsername, deleteAccount, getFitnessProfile, getMe, logout, updateName, updateUsername,
+  changePassword, checkUsername, createGym, deleteAccount, deleteGym, getFitnessProfile, getGyms, getMe, logout, renameGym,
+  setCurrentGym, updateName, updateUsername,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
 import { apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
+import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
 import BodyMap, { useBodyType } from '../../../components/gym/BodyMap';
 import styles from './page.module.css';
@@ -417,6 +419,156 @@ function DeleteCard({ me }) {
   );
 }
 
+function GymsCard() {
+  const toast = useToast();
+  const confirmAction = useConfirm();
+  const [data, setData] = useState(null);
+  const [name, setName] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    getGyms().then(setData).catch(() => setError('Não foi possível carregar suas academias.'));
+  }, []);
+
+  const run = async (action, message) => {
+    setBusy(true);
+    setError('');
+    try {
+      setData(await action());
+      if (message) toast(message);
+      return true;
+    } catch (err) {
+      setError(apiError(err, 'Não foi possível salvar.'));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const first = !data?.gyms.length;
+    const makeCurrent = first ? false : await confirmAction({
+      title: 'Treinar nela a partir de agora?',
+      message: <>Os próximos treinos ficam registrados em <strong>{name.trim()}</strong>. Dá para trocar depois.</>,
+      confirmLabel: 'Usar esta academia',
+      cancelLabel: 'Só adicionar',
+      danger: false,
+    });
+    if (await run(() => createGym(name.trim(), makeCurrent), 'Academia adicionada')) setName('');
+  };
+
+  const saveRename = async (e) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+    if (await run(() => renameGym(editing.id, editName.trim()), 'Academia renomeada')) setEditing(null);
+  };
+
+  const remove = async (gym) => {
+    const confirmed = await confirmAction({
+      title: 'Excluir academia',
+      message: <>Excluir <strong>{gym.name}</strong>? Ela ainda não tem treinos registrados.</>,
+      confirmLabel: 'Excluir',
+    });
+    if (confirmed) await run(() => deleteGym(gym.id), 'Academia excluída');
+  };
+
+  const gyms = data?.gyms ?? [];
+
+  return (
+    <Card
+      icon={Building2}
+      title="Academias"
+      sub="Máquinas, polias e Smith guardam carga, recordes e evolução por academia. Peso livre segue junto."
+    >
+      {gyms.length > 0 && (
+        <ul className={styles.gymList}>
+          {gyms.map((gym) => (
+            <li key={gym.id} className={styles.gymRow}>
+              <div className={styles.gymText}>
+                <span className={styles.gymName}>{gym.name}</span>
+                <span className={styles.gymMeta}>
+                  {gym.sessions === 1 ? '1 treino' : `${gym.sessions} treinos`}
+                </span>
+              </div>
+              {gym.current ? (
+                <span className={styles.gymCurrent}><Check size={14} /> Atual</span>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.gymUse}
+                  disabled={busy}
+                  onClick={() => run(() => setCurrentGym(gym.id), `Treinando em ${gym.name}`)}
+                >
+                  Usar esta
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.gymIcon}
+                aria-label={`Renomear ${gym.name}`}
+                onClick={() => { setEditing(gym); setEditName(gym.name); setError(''); }}
+              >
+                <Pencil size={15} />
+              </button>
+              {gym.sessions === 0 && (
+                <button
+                  type="button"
+                  className={`${styles.gymIcon} ${styles.gymIconDanger}`}
+                  aria-label={`Excluir ${gym.name}`}
+                  disabled={busy}
+                  onClick={() => remove(gym)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {data && gyms.length === 0 && (
+        <p className={styles.note}>
+          Cadastre a academia onde você treina hoje. Seus treinos antigos ficam nela, e quando trocar é só adicionar a nova.
+        </p>
+      )}
+      <form className={styles.form} onSubmit={add} noValidate>
+        <input
+          className={styles.input}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={60}
+          placeholder={gyms.length ? 'Nova academia' : 'Onde você treina hoje'}
+          aria-label="Nome da academia"
+        />
+        {error && !editing && <p className={styles.error}>{error}</p>}
+        <button type="submit" className={styles.save} disabled={busy || !name.trim()}>
+          Adicionar academia
+        </button>
+      </form>
+
+      <GymSheet open={!!editing} onClose={() => setEditing(null)} title="Renomear academia">
+        <form className={styles.form} onSubmit={saveRename} noValidate>
+          <input
+            className={styles.input}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            maxLength={60}
+            aria-label="Nome da academia"
+          />
+          {error && editing && <p className={styles.error}>{error}</p>}
+          <button type="submit" className={styles.save} disabled={busy || !editName.trim()}>
+            Salvar
+          </button>
+        </form>
+      </GymSheet>
+    </Card>
+  );
+}
+
 export default function GymAccountPage() {
   const [me, setMe] = useState(null);
   const [username, setUsername] = useState(undefined);
@@ -459,6 +611,7 @@ export default function GymAccountPage() {
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
           <BodyTypeCard />
+          <GymsCard />
           <PasswordCard me={me} />
           <SwitchAppCard />
           <LogoutCard />

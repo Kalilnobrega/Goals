@@ -1,12 +1,13 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, ChevronRight, SearchX, Pencil } from 'lucide-react';
-import { getExercises, createExercise, updateExercise, deleteExercise, peekCache } from '../../../lib/api';
+import { getExercises, createExercise, updateExercise, deleteExercise, peekCache, getGyms } from '../../../lib/api';
 import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyLabelGroups } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import GymSheet from '../../../components/gym/GymSheet';
 import ExerciseIntensity from '../../../components/gym/ExerciseIntensity';
+import ExerciseGymSetting from '../../../components/gym/ExerciseGymSetting';
 import ExerciseForm from '../../../components/gym/ExerciseForm';
 import ExerciseMuscles from '../../../components/gym/ExerciseMuscles';
 import sheetStyles from '../../../components/gym/sheet.module.css';
@@ -30,6 +31,11 @@ export default function ExercisesPage() {
   const fetchExercises = useCallback(() => getExercises().then(setExercises).catch(() => setLoadError(true)), []);
 
   useEffect(() => { fetchExercises(); }, [fetchExercises]);
+
+  const [hasGyms, setHasGyms] = useState(false);
+  useEffect(() => {
+    getGyms().then(data => setHasGyms(data.gyms.length > 0)).catch(() => {});
+  }, []);
 
   const retry = () => {
     setLoadError(false);
@@ -245,6 +251,19 @@ export default function ExercisesPage() {
                 }));
               }}
             />
+            {hasGyms && (detail.tracking ?? 'reps') === 'reps' && (
+              <ExerciseGymSetting
+                exerciseId={detail.id}
+                name={detail.name}
+                equipment={detail.equipment}
+                gymSpecific={detail.gym_specific}
+                onChange={value => {
+                  const patch = v => (v.id === detail.id ? { ...v, gym_specific: value } : v);
+                  setExercises(list => list.map(patch));
+                  setSheet(current => ({ ...current, family: { ...current.family, variants: current.family.variants.map(patch) } }));
+                }}
+              />
+            )}
             <ExerciseMuscles key={detail.id} muscles={detail.muscles ?? []} />
             {detail.is_custom && (
               <button type="button" className={sheetStyles.secondary} onClick={() => setSheet({ exercise: detail, mode: 'edit' })}>

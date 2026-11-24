@@ -50,7 +50,7 @@ export function ConfirmProvider({ children }) {
                     {request.confirmLabel || 'Confirmar'}
                   </button>
                   <button type="button" className={sheet.secondary} onClick={close} autoFocus>
-                    Cancelar
+                    {request.cancelLabel || 'Cancelar'}
                   </button>
                 </div>
               </div>
@@ -77,7 +77,7 @@ export function ConfirmProvider({ children }) {
         </div>
         <div className={f.submitRow}>
           <button type="button" className={f.btnCancel} onClick={close} autoFocus>
-            Cancelar
+            {request?.cancelLabel || 'Cancelar'}
           </button>
           <button
             type="button"

@@ -290,7 +290,9 @@ def get_exercise_progress(
             if counts.get(gym.id) or gym.id == current:
                 gyms.append({"id": gym.id, "name": gym.name, "sessions": counts.get(gym.id, 0)})
         known = {g["id"] for g in gyms}
-        selected_gym = gym_id if gym_id in known else current if current in known else (gyms[0]["id"] if gyms else None)
+        trained = [g["id"] for g in gyms if g["sessions"]]
+        fallback = current if current in trained else (trained[-1] if trained else current)
+        selected_gym = gym_id if gym_id in known else fallback
 
     rows_query = completed_sets(user, db)
     if specific:

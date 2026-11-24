@@ -277,8 +277,10 @@ export const updateSet = (id, data) =>
 export const deleteSet = (id) =>
   api.delete(`/fitness/sets/${id}`).then((r) => r.data);
 export const getProgressExercises = () => cachedGet("fitnessProgress", "/fitness/progress/exercises");
-export const getExerciseProgress = (id) =>
-  cachedGet(`fitnessProgress:${id}`, `/fitness/exercises/${id}/progress`);
+export const getExerciseProgress = (id, gymId) =>
+  gymId
+    ? cachedGet(`fitnessProgress:${id}:${gymId}`, `/fitness/exercises/${id}/progress?gym_id=${gymId}`)
+    : cachedGet(`fitnessProgress:${id}`, `/fitness/exercises/${id}/progress`);
 export const getProgressWorkouts = () => cachedGet("fitnessProgressWorkouts", "/fitness/progress/workouts");
 export const getWorkoutProgress = (id) =>
   cachedGet(`fitnessWorkoutProgress:${id}`, `/fitness/workouts/${id}/progress`);
@@ -310,6 +312,16 @@ export const deactivatePlan = (id) => api.post(`/fitness/plans/${id}/deactivate`
 export const getWeek = (start) => cachedGet(`fitnessWeek:${start}`, `/fitness/week?start=${start}`);
 export const getGymStreak = () => cachedGet("gymStreak", "/fitness/streak");
 export const getFitnessProfile = () => cachedGet("fitnessProfile", "/fitness/profile");
+export const getGyms = () => cachedGet("fitnessGyms", "/fitness/gyms");
+export const createGym = (name, makeCurrent = false) =>
+  api.post("/fitness/gyms", { name, make_current: makeCurrent }).then((r) => r.data);
+export const renameGym = (id, name) => api.patch(`/fitness/gyms/${id}`, { name }).then((r) => r.data);
+export const deleteGym = (id) => api.delete(`/fitness/gyms/${id}`).then((r) => r.data);
+export const setCurrentGym = (id) => api.put("/fitness/gyms/current", { gym_id: id }).then((r) => r.data);
+export const setSessionGym = (sessionId, gymId) =>
+  api.patch(`/fitness/sessions/${sessionId}/gym`, { gym_id: gymId }).then((r) => r.data);
+export const setExerciseGymSetting = (id, gymSpecific) =>
+  api.put(`/fitness/exercises/${id}/gym-setting`, { gym_specific: gymSpecific }).then((r) => r.data);
 export const updateFitnessProfile = (data) => api.put("/fitness/profile", data).then((r) => r.data);
 export const checkUsername = (username) =>
   api.get("/fitness/profile/username-available", { params: { username } }).then((r) => r.data);

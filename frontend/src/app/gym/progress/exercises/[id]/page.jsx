@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle, Flame,
+  ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle, Flame, Building2,
 } from 'lucide-react';
 import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
@@ -361,11 +361,13 @@ export default function ExerciseProgressPage() {
   const [metricKey, setMetricKey] = useState(null);
   const toast = useToast();
 
+  const [gymId, setGymId] = useState(null);
+
   const load = useCallback(() => {
-    getExerciseProgress(id)
+    getExerciseProgress(id, gymId)
       .then(result => { setData(result); setStatus('ready'); })
       .catch(err => setStatus(err?.response?.status === 404 ? 'missing' : 'error'));
-  }, [id]);
+  }, [id, gymId]);
 
   useEffect(() => {
     load();
@@ -493,11 +495,28 @@ export default function ExerciseProgressPage() {
             />
           </nav>
         )}
+        {data.gym_specific && data.gyms.length > 1 && (
+          <nav aria-label="Academia" className={styles.gymChoices}>
+            {data.gyms.map(gym => (
+              <button
+                key={gym.id}
+                type="button"
+                className={`${styles.variant} ${gym.id === data.gym_id ? styles.variantActive : ''}`}
+                aria-pressed={gym.id === data.gym_id}
+                onClick={() => setGymId(gym.id)}
+              >
+                <Building2 size={14} aria-hidden="true" /> {gym.name}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
 
       {points.length === 0 ? (
         <div className={styles.state}>
-          <p className={styles.stateTitle}>Você ainda não treinou esse exercício.</p>
+          <p className={styles.stateTitle}>
+            {data.gym_specific && data.gyms.length > 1 ? 'Você ainda não treinou esse exercício nesta academia.' : 'Você ainda não treinou esse exercício.'}
+          </p>
           <p className={styles.stateText}>Quando finalizar um treino com ele, a evolução aparece aqui.</p>
         </div>
       ) : (

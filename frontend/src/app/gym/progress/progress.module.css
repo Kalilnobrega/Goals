@@ -736,3 +736,22 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
+
+.gymChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.gymChoices .variant {
+  gap: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.gymChoices .variantActive {
+  background: var(--gym-accent);
+}

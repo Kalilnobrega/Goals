@@ -374,3 +374,97 @@
     border-color: var(--gym-accent);
   }
 }
+
+.gymList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gymRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface-2);
+}
+
+.gymText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gymName {
+  overflow: hidden;
+  color: var(--gym-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gymMeta {
+  color: var(--gym-muted);
+  font-size: 0.8rem;
+}
+
+.gymCurrent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  color: var(--gym-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gymUse {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gym-border-strong);
+  background: transparent;
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.gymIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gym-muted);
+  cursor: pointer;
+}
+
+.gymIconDanger {
+  color: var(--gym-danger);
+}
+
+@media (hover: hover) {
+  .gymUse:hover {
+    border-color: var(--gym-accent);
+  }
+
+  .gymIcon:hover {
+    background: var(--gym-surface);
+    color: var(--gym-text);
+  }
+
+  .gymIconDanger:hover {
+    color: var(--gym-danger);
+  }
+}
