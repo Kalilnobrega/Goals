@@ -6,14 +6,14 @@ import styles from './GymSheet.module.css';
 const CLOSE_DISTANCE = 110;
 const CLOSE_VELOCITY = 0.6;
 
-export default function GymSheet({ open, onClose, title, children }) {
-  const [content, setContent] = useState(open ? { title, children } : null);
+export default function GymSheet({ open, onClose, title, action = null, children }) {
+  const [content, setContent] = useState(open ? { title, action, children } : null);
   const overlayRef = useRef(null);
   const sheetRef = useRef(null);
   const drag = useRef(null);
 
-  if (open && (content?.title !== title || content?.children !== children)) {
-    setContent({ title, children });
+  if (open && (content?.title !== title || content?.action !== action || content?.children !== children)) {
+    setContent({ title, action, children });
   }
 
   const closing = !open && content !== null;
@@ -81,13 +81,30 @@ export default function GymSheet({ open, onClose, title, children }) {
           <div className={styles.grip} aria-hidden="true" />
           <div className={styles.header}>
             <h2 className={styles.title}>{content.title}</h2>
-            <button type="button" className={styles.close} onClick={onClose} aria-label="Fechar" disabled={closing}>
-              <X size={20} />
-            </button>
+            <div className={styles.headerButtons}>
+              {content.action}
+              <button type="button" className={styles.close} onClick={onClose} aria-label="Fechar" disabled={closing}>
+                <X size={20} />
+              </button>
+            </div>
           </div>
         </div>
         <div className={styles.body}>{content.children}</div>
       </div>
     </div>
+  );
+}
+
+export function SheetAction({ label, active = false, onClick, children }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.action} ${active ? styles.actionOn : ''}`}
+      onClick={onClick}
+      aria-label={label}
+      aria-expanded={active}
+    >
+      {children}
+    </button>
   );
 }

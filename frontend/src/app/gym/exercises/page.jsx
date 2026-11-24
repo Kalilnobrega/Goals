@@ -1,12 +1,12 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Search, X, ChevronRight, SearchX, Pencil, Share2 } from 'lucide-react';
+import { Plus, Search, X, ChevronRight, SearchX, Pencil, Share2, MoreHorizontal } from 'lucide-react';
 import ShareSheet from '../../../components/gym/social/ShareSheet';
 import { getExercises, createExercise, updateExercise, deleteExercise, peekCache, getGyms } from '../../../lib/api';
 import { MUSCLE_GROUPS, equipmentLabel, gripLabel, apiError, groupsLabel, exerciseGroups, groupFamilies, familyLabelGroups } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
-import GymSheet from '../../../components/gym/GymSheet';
+import GymSheet, { SheetAction } from '../../../components/gym/GymSheet';
 import ExerciseIntensity from '../../../components/gym/ExerciseIntensity';
 import ExerciseGymSetting from '../../../components/gym/ExerciseGymSetting';
 import ExerciseForm from '../../../components/gym/ExerciseForm';
@@ -61,6 +61,7 @@ export default function ExercisesPage() {
   const detail = sheet?.mode === 'detail'
     ? sheet.family.variants.find(variant => variant.id === sheet.variantId) ?? sheet.family.variants[0]
     : null;
+  const hasSettings = !!detail && (!!detail.intensity || (hasGyms && (detail.tracking ?? 'reps') === 'reps'));
 
   const save = async (data) => {
     try {
@@ -218,6 +219,15 @@ export default function ExercisesPage() {
         open={!!sheet}
         onClose={closeSheet}
         title={sheet?.mode === 'detail' ? sheet.family.name : sheet?.exercise ? 'Editar exercício' : 'Novo exercício'}
+        action={sheet?.mode === 'detail' && detail && hasSettings ? (
+          <SheetAction
+            label={sheet.settings ? 'Esconder ajustes do exercício' : 'Mostrar ajustes do exercício'}
+            active={!!sheet.settings}
+            onClick={() => setSheet(current => ({ ...current, settings: !current.settings }))}
+          >
+            <MoreHorizontal size={20} />
+          </SheetAction>
+        ) : null}
       >
         {sheet?.mode === 'detail' && detail && (
           <div className={sheetStyles.stack}>
@@ -241,31 +251,35 @@ export default function ExercisesPage() {
                 Conta <strong>{Math.round((detail.bodyweight_factor ?? 1) * 100)}% do peso corporal</strong> no volume e no 1RM, mais a carga extra que você registrar.
               </p>
             )}
-            <ExerciseIntensity
-              exerciseId={detail.id}
-              name={detail.name}
-              intensity={detail.intensity}
-              defaultIntensity={detail.default_intensity}
-              onChange={updated => {
-                setExercises(list => list.map(e => (e.id === updated.id ? updated : e)));
-                setSheet(current => ({
-                  ...current,
-                  family: { ...current.family, variants: current.family.variants.map(v => (v.id === updated.id ? updated : v)) },
-                }));
-              }}
-            />
-            {hasGyms && (detail.tracking ?? 'reps') === 'reps' && (
-              <ExerciseGymSetting
-                exerciseId={detail.id}
-                name={detail.name}
-                equipment={detail.equipment}
-                gymSpecific={detail.gym_specific}
-                onChange={value => {
-                  const patch = v => (v.id === detail.id ? { ...v, gym_specific: value } : v);
-                  setExercises(list => list.map(patch));
-                  setSheet(current => ({ ...current, family: { ...current.family, variants: current.family.variants.map(patch) } }));
-                }}
-              />
+            {sheet.settings && (
+              <section className={styles.settings} aria-label="Ajustes do exercício">
+                <ExerciseIntensity
+                  exerciseId={detail.id}
+                  name={detail.name}
+                  intensity={detail.intensity}
+                  defaultIntensity={detail.default_intensity}
+                  onChange={updated => {
+                    setExercises(list => list.map(e => (e.id === updated.id ? updated : e)));
+                    setSheet(current => ({
+                      ...current,
+                      family: { ...current.family, variants: current.family.variants.map(v => (v.id === updated.id ? updated : v)) },
+                    }));
+                  }}
+                />
+                {hasGyms && (detail.tracking ?? 'reps') === 'reps' && (
+                  <ExerciseGymSetting
+                    exerciseId={detail.id}
+                    name={detail.name}
+                    equipment={detail.equipment}
+                    gymSpecific={detail.gym_specific}
+                    onChange={value => {
+                      const patch = v => (v.id === detail.id ? { ...v, gym_specific: value } : v);
+                      setExercises(list => list.map(patch));
+                      setSheet(current => ({ ...current, family: { ...current.family, variants: current.family.variants.map(patch) } }));
+                    }}
+                  />
+                )}
+              </section>
             )}
             <ExerciseMuscles key={detail.id} muscles={detail.muscles ?? []} />
             {detail.is_custom && (

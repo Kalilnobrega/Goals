@@ -346,3 +346,9 @@
   min-width: 0;
   flex: 1;
 }
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
