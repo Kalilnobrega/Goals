@@ -572,7 +572,7 @@ def add_comment(post_id: int, data: CommentCreateSchema, me: FitnessProfile = De
     text = data.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Escreva um comentário.")
-    comment = PostComment(post_id=post.id, user_id=me.user_id, text=text)
+    comment = PostComment(post_id=post.id, user_id=me.user_id, text=text, created_at=datetime.now(timezone.utc))
     db.add(comment)
     db.flush()
     if post.user_id != me.user_id:
