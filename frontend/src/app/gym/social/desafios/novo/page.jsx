@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Dumbbell, Minus, Plus } from 'lucide-react';
@@ -31,9 +31,15 @@ function daysBetween(start, end) {
   return Math.round((new Date(`${end}T12:00:00`) - new Date(`${start}T12:00:00`)) / 86400000) + 1;
 }
 
+const subscribeNever = () => () => {};
+
 export default function NewChallengePage() {
+  const today = useSyncExternalStore(subscribeNever, todayIso, () => null);
+  return today ? <NewChallengeForm today={today} /> : null;
+}
+
+function NewChallengeForm({ today }) {
   const router = useRouter();
-  const today = todayIso();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [start, setStart] = useState(today);
