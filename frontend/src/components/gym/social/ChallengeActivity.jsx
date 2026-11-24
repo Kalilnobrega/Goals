@@ -81,7 +81,7 @@ export default function ChallengeActivity({ challenge }) {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const page = await getChallengeActivity(challenge.id, Number(data.next_before));
+      const page = await getChallengeActivity(challenge.id, data.next_before);
       setData((current) => ({ items: [...current.items, ...page.items], next_before: page.next_before }));
     } catch (err) {
       setError(apiError(err, 'Não foi possível carregar mais.'));

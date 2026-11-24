@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
@@ -744,23 +744,41 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
             "caption": post.caption if shown else None,
             "media": [media_out(m) for m in post.media] if shown else [],
         })
-    items.sort(key=lambda item: (item["day"], item["at"]), reverse=True)
+    items.sort(key=activity_key, reverse=True)
     return items
+
+
+def activity_key(item: dict) -> tuple:
+    return item["day"], item["at"], item["id"]
+
+
+def activity_cursor(item: dict) -> str:
+    return f"{item['day'].isoformat()}|{item['at'].isoformat()}|{item['id']}"
+
+
+def parse_cursor(value: str) -> tuple:
+    try:
+        day, at, item_id = value.split("|")
+        return date.fromisoformat(day), datetime.fromisoformat(at), item_id
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Página inválida.")
 
 
 @fitness_challenges_router.get("/{challenge_id}/activity", response_model=ChallengeActivityPageSchema)
 def challenge_activity(
     challenge_id: int,
-    page: int = 0,
+    before: str | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     challenge = get_member_challenge(db, challenge_id, user.id)
     items = activity_items(db, challenge, user.id)
-    start = max(page, 0) * ACTIVITY_PAGE
-    chunk = items[start:start + ACTIVITY_PAGE]
-    more = len(items) > start + ACTIVITY_PAGE
-    return {"items": chunk, "next_before": str(page + 1) if more else None}
+    if before:
+        cursor = parse_cursor(before)
+        items = [item for item in items if activity_key(item) < cursor]
+    chunk = items[:ACTIVITY_PAGE]
+    more = len(items) > ACTIVITY_PAGE
+    return {"items": chunk, "next_before": activity_cursor(chunk[-1]) if more else None}
 
 
 @fitness_challenges_router.get("/{challenge_id}/sessions/{session_id}", response_model=PostWorkoutDetailSchema)

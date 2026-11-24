@@ -613,3 +613,18 @@ def test_blocks_keep_people_out_of_challenges_and_chat(client, ana, bruno, carla
     chat = client.get(f"/fitness/challenges/{cid}/chat", headers=ana).json()
     assert chat["items"] == [] and chat["unread"] == 0
     assert client.get(f"/fitness/challenges/{cid}/chat", headers=carla).json()["unread"] == 0
+
+
+def test_activity_pages_stay_stable_when_new_items_arrive(client, ana, bruno, media_dir):
+    challenge = create(client, ana, allow_manual=True)
+    join(client, bruno, challenge)
+    for _ in range(21):
+        assert checkin(client, ana, minutes=30).status_code == 200
+    url = f"/fitness/challenges/{challenge['id']}/activity"
+    first = client.get(url, headers=ana).json()
+    assert len(first["items"]) == 20 and first["next_before"]
+    checkin(client, bruno, minutes=30)
+    second = client.get(url, params={"before": first["next_before"]}, headers=ana).json()
+    ids = [item["id"] for item in first["items"] + second["items"]]
+    assert len(ids) == len(set(ids)) == 21 and second["next_before"] is None
+    assert client.get(url, params={"before": "lixo"}, headers=ana).status_code == 422
