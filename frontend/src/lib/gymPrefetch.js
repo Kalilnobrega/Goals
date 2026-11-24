@@ -19,9 +19,14 @@ const TAB_DATA = {
   '/gym/social': [['fitnessFeed', () => getFeed()]],
 };
 
+const refused = new Set();
+
 export function prefetchGymTab(href) {
   (TAB_DATA[href] ?? []).forEach(([key, load]) => {
-    if (peekCache(key) === undefined) load().catch(() => {});
+    if (refused.has(key) || peekCache(key) !== undefined) return;
+    load().catch((err) => {
+      if (err?.response?.status === 409) refused.add(key);
+    });
   });
 }
 

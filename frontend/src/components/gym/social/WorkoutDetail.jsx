@@ -18,7 +18,7 @@ export default function WorkoutDetail({ load, backHref, backLabel, copy }) {
   useEffect(() => {
     load()
       .then(setData)
-      .catch((err) => setError(err.response?.status === 404 ? 'Treino não encontrado.' : apiError(err, 'Não foi possível carregar o treino.')));
+      .catch((err) => setError(apiError(err, err.response?.status === 404 ? 'Treino não encontrado.' : 'Não foi possível carregar o treino.')));
   }, [load]);
 
   const runCopy = async () => {
