@@ -103,6 +103,8 @@ def upload_media(
 ):
     if kind not in ("post", "progress"):
         raise HTTPException(status_code=422, detail="Tipo de foto inválido.")
+    if kind == "post":
+        own_profile(user, db)
     data, content_type = read_image(file)
     full_data, full_type = read_image(full) if full is not None else (None, None)
     if taken_on and taken_on > today_br():

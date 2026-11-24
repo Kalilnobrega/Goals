@@ -302,3 +302,10 @@ def test_copy_post_workout_with_fewer_logged_sets_than_planned(client, library, 
     assert copied.status_code == 200, copied.text
     item = client.get("/fitness/workouts", headers=bruno).json()[0]["exercises"][0]
     assert item["target_sets"] == 2 and item["set_plan"] is None
+
+
+def test_post_photos_need_a_username_but_progress_photos_do_not(client, db_session):
+    from tests.test_shared_goals import make_user, headers_for
+    headers = headers_for(make_user(db_session, "Sem Nome"))
+    assert upload(client, headers).status_code == 409
+    assert upload(client, headers, kind="progress").status_code == 200

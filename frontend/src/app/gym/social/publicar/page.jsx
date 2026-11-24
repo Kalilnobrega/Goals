@@ -3,7 +3,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
-import { createPost, getExercises, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
+import { createPost, deleteMedia, getExercises, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
 import { addDays, apiError, formatDay, formatVolume, plural, todayIso } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
@@ -119,8 +119,8 @@ function Composer() {
     e.preventDefault();
     if (!canSubmit) return;
     setError('');
+    const ids = [];
     try {
-      const ids = [];
       for (const [index, photo] of photos.entries()) {
         setProgress(photos.length > 1 ? `Enviando foto ${index + 1} de ${photos.length}...` : 'Enviando foto...');
         const media = await uploadPhoto(photo, { kind: 'post' }, format);
@@ -140,6 +140,7 @@ function Composer() {
       toast(checkin ? 'Check-in feito' : 'Publicado no feed');
       router.replace(backHref);
     } catch (err) {
+      ids.forEach((id) => deleteMedia(id).catch(() => {}));
       setError(apiError(err, 'Não foi possível publicar.'));
       setProgress('');
     }
