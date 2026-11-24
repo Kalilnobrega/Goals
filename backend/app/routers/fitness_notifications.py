@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from .fitness_social import person
 fitness_notifications_router = APIRouter(prefix="/fitness/notifications", tags=["fitness"])
 
 PAGE_SIZE = 30
+KEEP_READ = timedelta(days=30)
 PREVIEW = 80
 
 
@@ -48,12 +49,25 @@ def serialize(db: Session, item: Notification) -> dict | None:
     }
 
 
+def prune_read(db: Session, user_id: int) -> None:
+    limit = datetime.now(timezone.utc) - KEEP_READ
+    removed = (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.read_at.isnot(None), Notification.created_at < limit)
+        .delete(synchronize_session=False)
+    )
+    if removed:
+        db.commit()
+
+
 @fitness_notifications_router.get("", response_model=NotificationsSchema)
 def list_notifications(
     before: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if before is None:
+        prune_read(db, user.id)
     query = db.query(Notification).filter(Notification.user_id == user.id)
     if before is not None:
         query = query.filter(Notification.id < before)

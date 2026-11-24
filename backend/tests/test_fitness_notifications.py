@@ -125,3 +125,19 @@ def test_paging_after_a_renotify_neither_repeats_nor_skips(client, db_session, a
             break
     assert len(seen) == len(set(seen)) == 40
     assert seen[0] == posts[0].id
+
+
+def test_read_notifications_older_than_30_days_are_removed(client, db_session, ana, bruno, carla):
+    from datetime import datetime, timedelta, timezone
+    from app.fitness_models import Notification
+    client.post("/fitness/social/friends/requests", json={"username": "bruno"}, headers=ana)
+    client.post("/fitness/social/friends/requests", json={"username": "bruno"}, headers=carla)
+    old = datetime.now(timezone.utc) - timedelta(days=31)
+    rows = db_session.query(Notification).order_by(Notification.id).all()
+    for row in rows:
+        row.created_at = old
+    rows[0].read_at = old
+    db_session.commit()
+
+    kinds_left = [(n["kind"], n["actor"]["username"]) for n in client.get("/fitness/notifications", headers=bruno).json()["notifications"]]
+    assert kinds_left == [("friend_request", "carla")]
