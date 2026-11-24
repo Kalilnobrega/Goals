@@ -450,6 +450,13 @@ def get_post_workout(post_id: int, user: User = Depends(get_current_user), db: S
     return workout_detail(db, session, user.id)
 
 
+def logged_plan(entries) -> list[str]:
+    kinds: dict[tuple, str] = {}
+    for entry in sorted(entries, key=lambda e: (e.position, e.id)):
+        kinds.setdefault(("pair", entry.position) if entry.side else ("set", entry.id), entry.kind or "normal")
+    return list(kinds.values())
+
+
 @fitness_feed_router.post("/posts/{post_id}/copy-workout", response_model=CopiedWorkoutSchema)
 def copy_post_workout(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, user.id)
@@ -468,16 +475,17 @@ def copy_post_workout(post_id: int, user: User = Depends(get_current_user), db: 
             })
             continue
         reps_min = min(600, max(1, item.reps_min or 10))
+        logged = series_count(item.sets)
         exercises.append({
             "exercise_id": item.exercise_id,
-            "target_sets": min(20, max(1, series_count(item.sets) or item.target_sets or 3)),
+            "target_sets": min(20, max(1, logged or item.target_sets or 3)),
             "reps_min": reps_min,
             "reps_max": item.reps_max if item.reps_max and item.reps_max >= reps_min else None,
             "rest_seconds": item.rest_seconds,
             "unilateral": item.unilateral,
             "load_mode": item.load_mode,
             "superset": item.superset,
-            "set_plan": item.set_plan,
+            "set_plan": logged_plan(item.sets) if 0 < logged <= 20 else None,
         })
     owner = db.get(User, post.user_id)
     mine = post.user_id == user.id

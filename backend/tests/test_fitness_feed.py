@@ -285,3 +285,20 @@ def test_copy_post_workout_into_own_workouts(client, library, ana, bruno, carla,
     assert client.post(f"/fitness/posts/{created['id']}/copy-workout", headers=carla).status_code == 404
     free = post(client, ana, caption="sem treino")
     assert client.post(f"/fitness/posts/{free['id']}/copy-workout", headers=bruno).status_code == 404
+
+
+def test_copy_post_workout_with_fewer_logged_sets_than_planned(client, library, ana, bruno):
+    befriend(client, ana, bruno, "bruno", "ana")
+    workout = client.post("/fitness/workouts", json={"name": "Drop", "exercises": [
+        {"exercise_id": library["supino-reto"], "target_sets": 3, "reps_min": 8, "set_plan": ["normal", "normal", "drop"]},
+    ]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 60, 10)
+    log_set(client, ana, session["exercises"][0]["id"], 60, 9)
+    assert finish(client, ana, session["id"]).status_code == 200
+    created = post(client, ana, session_id=session["id"])
+
+    copied = client.post(f"/fitness/posts/{created['id']}/copy-workout", headers=bruno)
+    assert copied.status_code == 200, copied.text
+    item = client.get("/fitness/workouts", headers=bruno).json()[0]["exercises"][0]
+    assert item["target_sets"] == 2 and item["set_plan"] is None
