@@ -66,7 +66,7 @@ def close_history(
     owner, profile = close_owner(db, user, username)
     with without_body_weight(owner.id, not profile.share_weight_close):
         return list_sessions(
-            limit=20, offset=offset, q=None, workout_id=None, muscle_group=None, date_from=None, date_to=None, user=owner, db=db,
+            limit=20, offset=offset, q=None, workout_id=None, muscle_group=None, date_from=None, date_to=None, gym_id=None, user=owner, db=db,
         )
 
 
@@ -88,7 +88,7 @@ def close_stats(
 ):
     owner, profile = close_owner(db, user, username)
     with without_body_weight(owner.id, not profile.share_weight_close):
-        stats = get_stats(period=period, plan_id=None, user=owner, db=db)
+        stats = get_stats(period=period, plan_id=None, gym_id=None, user=owner, db=db)
     if not profile.share_weight_close:
         stats["relative_strength"] = None
     return stats

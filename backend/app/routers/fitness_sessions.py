@@ -430,6 +430,7 @@ def list_sessions(
     muscle_group: str | None = Query(default=None, max_length=20),
     date_from: date | None = None,
     date_to: date | None = None,
+    gym_id: int | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -452,6 +453,8 @@ def list_sessions(
         completed = completed.filter(or_(WorkoutSession.name.ilike(pattern), has_exercise))
     if workout_id is not None:
         completed = completed.filter(WorkoutSession.workout_id == workout_id)
+    if gym_id is not None:
+        completed = completed.filter(WorkoutSession.gym_id == gym_id)
     if muscle_group:
         trained_group = (
             db.query(SessionExercise.id)

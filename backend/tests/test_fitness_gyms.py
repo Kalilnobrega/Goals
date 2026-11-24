@@ -94,3 +94,27 @@ def test_session_insights_compare_machines_within_the_gym(client, library, ana):
     by_item = {e["item_id"]: e for e in insights["exercises"]}
     assert by_item[session["exercises"][0]["id"]]["previous"]["weight_kg"] == 60
     assert by_item[session["exercises"][1]["id"]]["previous"] is None
+
+
+def test_history_stats_and_export_filter_by_gym(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    old = add_gym(client, headers, "Antiga")
+    train(client, headers, workout["id"], [[(60, 10)], [(100, 10)]])
+    new = add_gym(client, headers, "Nova", make_current=True)
+    train(client, headers, workout["id"], [[(70, 10)], [(120, 10)]])
+    train(client, headers, workout["id"], [[(75, 10)], [(130, 10)]])
+
+    history = lambda gym: client.get("/fitness/sessions", params={"gym_id": gym["id"]}, headers=headers).json()
+    assert history(old)["total"] == 1 and history(new)["total"] == 2
+    assert {item["gym_name"] for item in history(new)["items"]} == {"Nova"}
+
+    stats = lambda gym: client.get("/fitness/stats", params={"period": "all", "gym_id": gym["id"]}, headers=headers).json()
+    assert stats(old)["summary"]["sessions"] == 1 and stats(new)["summary"]["sessions"] == 2
+
+    csv = client.get("/fitness/export", params={"format": "csv", "content": "workouts", "gym_id": old["id"]}, headers=headers)
+    rows = csv.content.decode("utf-8-sig").strip().split("\r\n")[1:]
+    assert rows and all(row.split(";")[3] == "Antiga" for row in rows)
+    text = client.get("/fitness/export", params={"format": "txt", "gym_id": new["id"]}, headers=headers).content.decode("utf-8")
+    assert "TREINOS (2)" in text and "· Nova" in text
+    assert client.get("/fitness/export", params={"gym_id": 999999}, headers=headers).status_code == 404

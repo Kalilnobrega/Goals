@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Gym, WorkoutSession
 from app.fitness_pdf import PdfDocument
 from app.fitness_sets import WARMUP, entry_volume, working
 from .auth import get_current_user
@@ -50,8 +50,10 @@ def duration_text(start: datetime, end: datetime | None) -> str:
     return f"{hours}h {minutes:02d}min" if hours else f"{minutes} min"
 
 
-def completed_sessions(user: User, db: Session, period: str, newest_first: bool) -> list[WorkoutSession]:
+def completed_sessions(user: User, db: Session, period: str, newest_first: bool, gym: Gym | None = None) -> list[WorkoutSession]:
     query = db.query(WorkoutSession).filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+    if gym is not None:
+        query = query.filter(WorkoutSession.gym_id == gym.id)
     if period in PERIOD_DAYS:
         query = query.filter(WorkoutSession.started_at >= br_day_start_utc(today_br() - timedelta(days=PERIOD_DAYS[period] - 1)))
     order = WorkoutSession.started_at.desc() if newest_first else WorkoutSession.started_at
@@ -149,10 +151,11 @@ def session_meta(workout_session: WorkoutSession) -> str:
     return " · ".join(part for part in parts if part)
 
 
-def report_blocks(user: User, sessions, weights, period: str) -> list[tuple[str, str, int]]:
+def report_blocks(user: User, sessions, weights, period: str, gym: Gym | None = None) -> list[tuple[str, str, int]]:
+    scope = f" · {gym.name}" if gym is not None and sessions is not None else ""
     blocks = [
         ("title", "GymGoals", 0),
-        ("subtitle", f"{user.name} · exportado em {datetime.now(BR):%d/%m/%Y às %H:%M} · {PERIOD_LABEL[period]}", 0),
+        ("subtitle", f"{user.name} · exportado em {datetime.now(BR):%d/%m/%Y às %H:%M} · {PERIOD_LABEL[period]}{scope}", 0),
     ]
     if sessions is not None:
         blocks.append(("section", f"Treinos ({len(sessions)})", 0))
@@ -275,21 +278,27 @@ def export_data(
     format: Literal["csv", "txt", "pdf"] = Query("pdf"),
     content: Literal["workouts", "weights", "all"] = Query("all"),
     period: Literal["30d", "90d", "365d", "all"] = Query("all"),
+    gym_id: int | None = Query(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     stamp = f"{today_br():%Y-%m-%d}"
+    gym = None
+    if gym_id is not None:
+        gym = db.get(Gym, gym_id)
+        if gym is None or gym.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Academia não encontrada.")
     if format == "csv":
         if content == "all":
             raise HTTPException(status_code=400, detail="No CSV, escolha treinos ou peso corporal.")
         if content == "workouts":
-            rows = workouts_csv(completed_sessions(user, db, period, newest_first=False))
+            rows = workouts_csv(completed_sessions(user, db, period, newest_first=False, gym=gym))
             return download(as_csv(rows), "text/csv; charset=utf-8", f"gymgoals-treinos-{stamp}.csv")
         rows = weights_csv(body_weights(user, db, period, newest_first=False))
         return download(as_csv(rows), "text/csv; charset=utf-8", f"gymgoals-peso-{stamp}.csv")
-    sessions = completed_sessions(user, db, period, newest_first=True) if content in ("workouts", "all") else None
+    sessions = completed_sessions(user, db, period, newest_first=True, gym=gym) if content in ("workouts", "all") else None
     weights = body_weights(user, db, period, newest_first=True) if content in ("weights", "all") else None
-    blocks = report_blocks(user, sessions, weights, period)
+    blocks = report_blocks(user, sessions, weights, period, gym)
     suffix = {"workouts": "-treinos", "weights": "-peso", "all": ""}[content]
     if format == "txt":
         return download(as_text(blocks).encode("utf-8"), "text/plain; charset=utf-8", f"gymgoals{suffix}-{stamp}.txt")

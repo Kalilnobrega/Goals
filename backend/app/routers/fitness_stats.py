@@ -581,11 +581,14 @@ def all_time_records(everything: list[dict]):
 def get_stats(
     period: str = Query(default="3m", pattern="^(4w|3m|6m|1y|all)$"),
     plan_id: int | None = Query(default=None),
+    gym_id: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     today = today_br()
     everything = completed_facts(user, db)
+    if gym_id is not None:
+        everything = [s for s in everything if s["gym_id"] == gym_id]
     plan = None
     if plan_id is not None:
         plan = get_own_plan(plan_id, user, db)
