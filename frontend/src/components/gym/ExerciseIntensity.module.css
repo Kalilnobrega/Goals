@@ -96,3 +96,15 @@
   color: var(--gym-muted);
   cursor: default;
 }
+
+.hints {
+  display: grid;
+}
+
+.hints > .hint {
+  grid-area: 1 / 1;
+}
+
+.hintOff {
+  visibility: hidden;
+}

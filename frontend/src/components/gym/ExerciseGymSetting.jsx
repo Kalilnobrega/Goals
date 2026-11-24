@@ -10,9 +10,9 @@ import styles from './ExerciseIntensity.module.css';
 const GYM_EQUIPMENT = new Set(['machine', 'plate_loaded', 'cable', 'smith']);
 
 const HINTS = {
-  separate: 'Carga anterior, recordes e evolução contam só a academia do treino',
-  same: 'A mesma máquina ou peso em todas as academias',
-  custom: 'Marque as academias que têm o mesmo aparelho. As outras seguem separadas',
+  separate: 'Aparelho diferente em cada academia. Carga anterior, recordes e evolução ficam separados por academia',
+  same: 'Mesmo aparelho em todas as academias. Carga anterior, recordes e evolução juntam todas elas',
+  custom: 'Mesmo aparelho só nas academias marcadas. Elas ficam juntas e as outras seguem separadas',
 };
 
 export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpecific: saved, sharedGymIds = [], onChange }) {
@@ -54,7 +54,7 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
     if (value === savedMode) return;
     save(
       { gym_specific: value === 'separate' },
-      result => (result.gym_specific ? `${name}: carga separada por academia` : `${name}: mesma carga em todas as academias`),
+      result => (result.gym_specific ? `${name}: aparelho diferente em cada academia` : `${name}: mesmo aparelho em todas as academias`),
     );
   };
 
@@ -62,7 +62,7 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
 
   const saveGroup = () => save(
     { shared_gym_ids: draft },
-    result => (result.shared_gym_ids.length ? `${name}: mesma carga nas academias marcadas` : `${name}: mesma carga em todas as academias`),
+    result => (result.shared_gym_ids.length ? `${name}: mesmo aparelho nas academias marcadas` : `${name}: mesmo aparelho em todas as academias`),
   );
 
   const options = [
@@ -76,7 +76,13 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
     <div className={`${styles.row} ${options.length > 2 ? styles.rowStacked : ''}`}>
       <span className={styles.text}>
         <span className={styles.label}>Carga entre academias</span>
-        <span className={styles.hint}>{HINTS[mode]}</span>
+        <span className={styles.hints}>
+          {options.map(option => (
+            <span key={option.value} className={`${styles.hint} ${option.value !== mode ? styles.hintOff : ''}`} aria-hidden={option.value !== mode}>
+              {HINTS[option.value]}
+            </span>
+          ))}
+        </span>
       </span>
       <GymSwitch options={options} value={mode} onChange={choose} label={`Carga de ${name} entre academias`} disabled={saving} cycle={false} />
       {mode === 'custom' && (
