@@ -642,3 +642,18 @@ def test_finished_plan_challenge_counts_a_skipped_last_day(monkeypatch):
     assert fitness_challenges.plan_pct(None, None, trained, challenge) == 80
     every = trained + [{"day": end}]
     assert fitness_challenges.plan_pct(None, None, every, challenge) == 100
+
+
+def test_removed_member_cannot_rejoin_until_the_owner_invites_again(client, ana, bruno, carla):
+    befriend(client, ana, bruno, "bruno", "ana")
+    befriend(client, carla, bruno, "bruno", "carla")
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    join(client, carla, challenge)
+    cid = challenge["id"]
+    assert client.delete(f"/fitness/challenges/{cid}/members/bruno", headers=ana).status_code == 204
+    url = f"/fitness/challenges/invite/{challenge['invite_code']}/join"
+    assert client.post(url, headers=bruno).status_code == 403
+    assert client.post(f"/fitness/challenges/{cid}/invites", json={"username": "bruno"}, headers=carla).status_code == 409
+    assert client.post(f"/fitness/challenges/{cid}/invites", json={"username": "bruno"}, headers=ana).status_code == 201
+    assert client.post(url, headers=bruno).status_code == 200

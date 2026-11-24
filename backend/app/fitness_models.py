@@ -373,6 +373,14 @@ class ChallengeMember(Base):
     chat_read_at = Column(DateTime(timezone=True), nullable=True)
 
 
+class ChallengeRemoval(Base):
+    __tablename__ = "fitness_challenge_removals"
+
+    challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    removed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class ChallengeInvite(Base):
     __tablename__ = "fitness_challenge_invites"
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, to_br_date, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, ChallengeRemoval, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, WorkoutSession
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
@@ -377,6 +377,8 @@ def join(db: Session, challenge: Challenge, user_id: int, accept_weight: bool = 
         raise HTTPException(status_code=404, detail="Convite inválido ou desafio excluído.")
     if status_of(challenge, today_br()) == "finished":
         raise HTTPException(status_code=409, detail="Esse desafio já terminou.")
+    if db.get(ChallengeRemoval, (challenge.id, user_id)) is not None:
+        raise HTTPException(status_code=403, detail="Você foi removido desse desafio.")
     if user_id not in member_ids(challenge):
         if uses_weight(challenge) and not accept_weight:
             raise HTTPException(status_code=422, detail=NEEDS_CONSENT)
@@ -565,6 +567,12 @@ def invite_friend(
         raise HTTPException(status_code=403, detail="Você só pode convidar amigos. Para outras pessoas, mande o link.")
     if target.user_id in member_ids(challenge):
         raise HTTPException(status_code=409, detail="Essa pessoa já está no desafio.")
+    removal = db.get(ChallengeRemoval, (challenge.id, target.user_id))
+    if removal is not None:
+        if challenge.owner_id != me.user_id:
+            raise HTTPException(status_code=409, detail="Essa pessoa foi removida do desafio. Só quem criou pode chamar de volta.")
+        db.delete(removal)
+        db.commit()
     if db.get(ChallengeInvite, (challenge.id, target.user_id)) is None:
         db.add(ChallengeInvite(challenge_id=challenge.id, user_id=target.user_id, invited_by=me.user_id))
         notify(db, target.user_id, me.user_id, "challenge_invite", challenge_id=challenge.id)
@@ -622,6 +630,8 @@ def remove_member(
     db.query(ChallengeMember).filter(
         ChallengeMember.challenge_id == challenge_id, ChallengeMember.user_id == target.user_id
     ).delete()
+    if db.get(ChallengeRemoval, (challenge_id, target.user_id)) is None:
+        db.add(ChallengeRemoval(challenge_id=challenge_id, user_id=target.user_id))
     db.commit()
 
 
