@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { History, Search, X, ChevronDown, SearchX, Download } from 'lucide-react';
+import { Building2, History, Search, X, ChevronDown, SearchX, Download } from 'lucide-react';
 import { getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
 import {
   addDays, formatDay, formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
@@ -65,6 +65,12 @@ function HistoryCard({ item }) {
         </span>
         <span className={styles.cardMain}>
           <span className={styles.cardName}>{item.name}</span>
+          {item.gym_name && (
+            <span className={styles.cardGym}>
+              <Building2 size={13} aria-hidden="true" />
+              <span className={styles.cardGymName}>{item.gym_name}</span>
+            </span>
+          )}
           <span className={styles.cardMeta}>
             {formatDuration(duration)} · {plural(item.exercise_count, 'exercício', 'exercícios')} · {plural(item.total_sets, 'série', 'séries')}
             {item.cardio_seconds >= 60 ? ` · ${Math.round(item.cardio_seconds / 60)} min de cardio` : ''}

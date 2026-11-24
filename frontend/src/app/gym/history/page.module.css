@@ -113,6 +113,23 @@
   font-size: 0.85rem;
 }
 
+.cardGym {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gym-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cardGymName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cardBottom {
   display: flex;
   align-items: center;
