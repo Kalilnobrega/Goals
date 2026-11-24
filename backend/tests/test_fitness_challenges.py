@@ -454,6 +454,10 @@ def test_challenge_members_count_as_close_for_friends_only_profiles(client, libr
     assert profile["can_view"] is True and profile["recent_sessions"]
     assert client.get("/fitness/social/users/bruno", headers=carla).json()["can_view"] is False
 
+    assert client.post("/fitness/social/friends/requests", json={"username": "bruno"}, headers=ana).status_code == 200
+    assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is True
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["can_view"] is True
+
     client.put("/fitness/profile/visibility", json={"visibility": "private"}, headers=bruno)
     assert client.get("/fitness/social/users/bruno", headers=ana).json()["can_view"] is False
 

@@ -102,7 +102,7 @@ def shares_challenge(db: Session, a: int, b: int) -> bool:
 def is_close(db: Session, viewer: int, owner: int, relation: str) -> bool:
     if relation in ("self", "friends"):
         return True
-    return relation == "none" and shares_challenge(db, viewer, owner)
+    return relation in ("none", "request_sent", "request_received") and shares_challenge(db, viewer, owner)
 
 
 def can_view(visibility: str, relation: str, close: bool = False) -> bool:
