@@ -740,3 +740,29 @@ def closing_time_of(challenge):
     from datetime import date
     from app.dates import br_day_start_utc
     return br_day_start_utc(date.fromisoformat(challenge["end_date"]) + timedelta(days=1)) + timedelta(minutes=5)
+
+
+def test_challenge_only_posts_skip_the_feed_and_profile(client, library, ana, bruno, media_dir):
+    befriend(client, ana, bruno, "bruno", "ana")
+    challenge = create(client, ana, allow_manual=True)
+    join(client, bruno, challenge)
+    hidden_checkin = checkin(client, ana, minutes=30, caption="só no desafio", in_feed=False)
+    assert hidden_checkin.status_code == 200 and hidden_checkin.json()["in_feed"] is False
+    train(client, ana, library)
+    session_id = client.get("/fitness/sessions", headers=ana).json()["items"][0]["id"]
+    photo = client.post("/fitness/media", files={"file": ("f.jpg", JPEG, "image/jpeg")}, headers=ana).json()
+    workout_post = client.post("/fitness/posts", json={"session_id": session_id, "media_ids": [photo["id"]], "in_feed": False}, headers=ana).json()
+    free = client.post("/fitness/posts", json={"caption": "oi", "in_feed": False}, headers=ana)
+    assert free.status_code == 422
+
+    feed_ids = {p["id"] for p in client.get("/fitness/feed", headers=bruno).json()["posts"]}
+    assert hidden_checkin.json()["id"] not in feed_ids and workout_post["id"] not in feed_ids
+    assert client.get("/fitness/users/ana/posts", headers=bruno).json()["posts"] == []
+    assert client.get(f"/fitness/posts/{workout_post['id']}", headers=bruno).status_code == 200
+
+    items = client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=bruno).json()["items"]
+    shown = {i["kind"]: i for i in items}
+    assert shown["checkin"]["caption"] == "só no desafio"
+    assert shown["workout"]["post_id"] == workout_post["id"] and len(shown["workout"]["media"]) == 1
+    ranking = {r["username"]: r["score"] for r in client.get(f"/fitness/challenges/{challenge['id']}", headers=bruno).json()["ranking"]}
+    assert ranking["ana"] == 2

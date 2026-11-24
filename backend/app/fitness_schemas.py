@@ -1702,6 +1702,7 @@ class PostCreateSchema(BaseModel):
     share_workout_id: int | None = None
     share_plan_id: int | None = None
     share_exercise_id: int | None = None
+    in_feed: bool = True
 
 
 class PostAuthorSchema(BaseModel):
@@ -1730,6 +1731,7 @@ class PostSchema(BaseModel):
     shared: dict | None = None
     workout: PostWorkoutSchema | None
     gym_name: str | None = None
+    in_feed: bool = True
     media: list[MediaSchema]
     reactions: dict[str, int]
     my_reaction: ReactionKind | None

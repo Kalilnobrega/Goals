@@ -273,6 +273,7 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "shared": post.shared,
             "workout": workout_summary(db, post, me),
             "gym_name": post_gym(db, post),
+            "in_feed": post.in_feed is not False,
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
             "my_reaction": mine.get(post.id),
@@ -331,6 +332,8 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         activity = None
     elif not (caption or media or activity or shared):
         raise HTTPException(status_code=422, detail="Escreva algo, escolha a atividade ou adicione uma foto.")
+    if not data.in_feed and data.session_id is None and minutes is None:
+        raise HTTPException(status_code=422, detail="Só treinos e check-ins podem ficar fora do feed.")
     post = Post(
         user_id=me.user_id,
         session_id=data.session_id,
@@ -341,6 +344,7 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         shared_kind=shared_kind,
         shared=shared,
         gym_id=me.current_gym_id if activity == GYM_ACTIVITY else None,
+        in_feed=data.in_feed,
     )
     db.add(post)
     try:
@@ -397,7 +401,7 @@ def get_feed(
     me: FitnessProfile = Depends(own_profile),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Post).filter(Post.user_id.in_(network(db, me.user_id)))
+    query = db.query(Post).filter(Post.user_id.in_(network(db, me.user_id)), Post.in_feed.is_(True))
     if before is not None:
         query = query.filter(Post.id < before)
     posts = query.order_by(Post.id.desc()).limit(PAGE_SIZE + 1).all()
@@ -416,7 +420,7 @@ def get_user_posts(
     profile = db.query(FitnessProfile).filter(FitnessProfile.username == username.lower().lstrip("@")).first()
     if profile is None or not can_see(db, user.id, profile.user_id):
         return {"posts": [], "next_before": None}
-    query = db.query(Post).filter(Post.user_id == profile.user_id)
+    query = db.query(Post).filter(Post.user_id == profile.user_id, Post.in_feed.is_(True))
     if before is not None:
         query = query.filter(Post.id < before)
     posts = query.order_by(Post.id.desc()).limit(PAGE_SIZE + 1).all()

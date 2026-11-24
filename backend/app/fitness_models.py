@@ -414,6 +414,7 @@ class Post(Base):
     shared_kind = Column(String(10), nullable=True)
     shared = Column(JSON, nullable=True)
     gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
+    in_feed = Column(Boolean, nullable=False, default=True, server_default=text("true"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 
     media = relationship("Media", order_by="Media.position", lazy="selectin")
