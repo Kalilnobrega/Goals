@@ -4,9 +4,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Challenge, FitnessProfile, Notification, Post, PostComment, SharedItem
+from app.fitness_models import Challenge, Notification, Post, PostComment, SharedItem
 from app.fitness_schemas import NotificationsSchema
 from .auth import get_current_user
+from .fitness_social import person
 
 fitness_notifications_router = APIRouter(prefix="/fitness/notifications", tags=["fitness"])
 
@@ -29,15 +30,13 @@ def serialize(db: Session, item: Notification) -> dict | None:
         return None
     if item.share_id and db.get(SharedItem, item.share_id) is None:
         return None
-    actor = db.get(User, item.actor_id)
-    profile = db.get(FitnessProfile, item.actor_id)
     preview = None
     if comment is not None:
         preview = comment.text if len(comment.text) <= PREVIEW else f"{comment.text[:PREVIEW].rstrip()}…"
     return {
         "id": item.id,
         "kind": item.kind,
-        "actor": {"username": profile.username if profile else None, "name": actor.name},
+        "actor": person(db, item.actor_id),
         "created_at": item.created_at,
         "read": item.read_at is not None,
         "post_id": item.post_id,

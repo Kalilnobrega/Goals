@@ -92,6 +92,11 @@ def other_target(db: Session, me: int, username: str) -> FitnessProfile:
     return target
 
 
+def person(db: Session, user_id: int) -> dict:
+    profile = db.get(FitnessProfile, user_id)
+    return {"username": profile.username if profile else None, "name": db.get(User, user_id).name}
+
+
 def social_user(db: Session, me: int, profile: FitnessProfile, user: User | None = None) -> dict:
     owner = user or db.get(User, profile.user_id)
     return {"username": profile.username, "name": owner.name, "relation": relation_to(db, me, profile.user_id)}

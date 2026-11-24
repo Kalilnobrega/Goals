@@ -33,7 +33,7 @@ from app.fitness_notifications import clear, notify, renotify
 from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
-from .fitness_social import blocked_ids, can_view, has_blocked, is_close, own_profile, relation_to
+from .fitness_social import blocked_ids, can_view, person, has_blocked, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -176,10 +176,6 @@ def delete_media(media_id: int, user: User = Depends(get_current_user), db: Sess
     delete_keys(keys)
 
 
-def author_profile(db: Session, user_id: int) -> tuple[User, FitnessProfile | None]:
-    return db.get(User, user_id), db.get(FitnessProfile, user_id)
-
-
 def can_see(db: Session, viewer: int, author: int) -> bool:
     if viewer == author:
         return True
@@ -252,10 +248,9 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
         )
     result = []
     for post in posts:
-        user, profile = author_profile(db, post.user_id)
         result.append({
             "id": post.id,
-            "author": {"username": profile.username if profile else None, "name": user.name},
+            "author": person(db, post.user_id),
             "created_at": post.created_at,
             "caption": post.caption,
             "activity": post.activity,
@@ -416,10 +411,9 @@ def get_user_posts(
 
 
 def comment_out(db: Session, comment: PostComment, post: Post, me: int) -> dict:
-    user, profile = author_profile(db, comment.user_id)
     return {
         "id": comment.id,
-        "author": {"username": profile.username if profile else None, "name": user.name},
+        "author": person(db, comment.user_id),
         "text": comment.text,
         "created_at": comment.created_at,
         "can_delete": me in (comment.user_id, post.user_id),
@@ -449,7 +443,7 @@ def session_detail(db: Session, session: WorkoutSession, mine: bool) -> dict:
     if not mine:
         for item in detail["exercises"]:
             item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])
-    owner, profile = author_profile(db, session.user_id)
+    owner = db.get(User, session.user_id)
     day = to_br_date(session.started_at)
     records = weight_records(completed_facts(owner, db, None, day), lambda s: s["id"] == session.id)
     muscle_sets: dict[str, float] = {}
@@ -457,7 +451,7 @@ def session_detail(db: Session, session: WorkoutSession, mine: bool) -> dict:
         for muscle, credit in muscle_credit(e["muscles"]).items():
             muscle_sets[muscle] = muscle_sets.get(muscle, 0.0) + credit * e["sets"]
     return {
-        "author": {"username": profile.username if profile else None, "name": owner.name},
+        "author": person(db, session.user_id),
         "is_mine": mine,
         "muscle_sets": [{"muscle": m, "sets": round(v, 2)} for m, v in sorted(muscle_sets.items(), key=lambda kv: -kv[1])],
         "session": detail,

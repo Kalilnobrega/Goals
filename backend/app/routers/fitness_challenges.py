@@ -28,7 +28,7 @@ from app.fitness_load import BodyWeights
 from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import notify
 from .auth import get_current_user
-from .fitness_social import blocked_ids, own_profile, find_profile, friendship_between, has_blocked
+from .fitness_social import blocked_ids, person, own_profile, find_profile, friendship_between, has_blocked
 from .fitness_stats import completed_facts, plan_adherence, weight_records
 from .fitness_plans import active_plan
 from app.fitness_muscles import group_credit
@@ -698,9 +698,7 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
     members = [member.user_id for member in challenge.members]
     visible = visible_members(db, challenge, me)
     for user_id in members:
-        user = db.get(User, user_id)
-        profile = db.get(FitnessProfile, user_id)
-        author = {"username": profile.username if profile else None, "name": user.name}
+        author = person(db, user_id)
         sessions = (
             db.query(WorkoutSession)
             .filter(
@@ -740,14 +738,12 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
                 "media": [media_out(m) for m in post.media] if post else [],
             })
     for post in checkin_posts(db, challenge, members):
-        user = db.get(User, post.user_id)
-        profile = db.get(FitnessProfile, post.user_id)
         fact = checkin_fact(post)
         shown = post.user_id in visible
         items.append({
             "id": f"c{post.id}",
             "kind": "checkin",
-            "author": {"username": profile.username if profile else None, "name": user.name},
+            "author": person(db, post.user_id),
             "is_mine": post.user_id == me,
             "day": post.performed_on,
             "at": aware(post.created_at),
@@ -892,12 +888,6 @@ def chat_unread(db: Session, challenge: Challenge, user_id: int) -> int:
     return messages + comments
 
 
-def author_of(db: Session, user_id: int) -> dict:
-    user = db.get(User, user_id)
-    profile = db.get(FitnessProfile, user_id)
-    return {"username": profile.username if profile else None, "name": user.name}
-
-
 @fitness_challenges_router.get("/{challenge_id}/chat", response_model=ChatPageSchema)
 def challenge_chat(
     challenge_id: int,
@@ -926,7 +916,7 @@ def challenge_chat(
         {
             "id": f"m{message.id}",
             "kind": "message",
-            "author": author_of(db, message.user_id),
+            "author": person(db, message.user_id),
             "is_mine": message.user_id == user.id,
             "text": message.text,
             "created_at": aware(message.created_at),
@@ -938,7 +928,7 @@ def challenge_chat(
         {
             "id": f"c{comment.id}",
             "kind": "comment",
-            "author": author_of(db, comment.user_id),
+            "author": person(db, comment.user_id),
             "is_mine": comment.user_id == user.id,
             "text": comment.text,
             "created_at": aware(comment.created_at),
@@ -979,7 +969,7 @@ def send_chat_message(
     return {
         "id": f"m{message.id}",
         "kind": "message",
-        "author": author_of(db, user.id),
+        "author": person(db, user.id),
         "is_mine": True,
         "text": message.text,
         "created_at": aware(message.created_at),

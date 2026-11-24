@@ -7,22 +7,16 @@ from app.fitness_notifications import notify
 from app.fitness_schemas import CopiedSharedSchema, ShareSendSchema, SharedItemSchema
 from app.fitness_sharing import copy_snapshot, snapshot_for
 from .auth import get_current_user
-from .fitness_social import find_profile, own_profile, relation_to
+from .fitness_social import find_profile, own_profile, person, relation_to
 
 fitness_share_router = APIRouter(prefix="/fitness/shares", tags=["fitness"])
-
-
-def author(db: Session, user_id: int) -> dict:
-    user = db.get(User, user_id)
-    profile = db.get(FitnessProfile, user_id)
-    return {"username": profile.username if profile else None, "name": user.name}
 
 
 def serialize(db: Session, item: SharedItem, me: int) -> dict:
     return {
         "id": item.id,
         "kind": item.kind,
-        "sender": author(db, item.sender_id),
+        "sender": person(db, item.sender_id),
         "created_at": item.created_at,
         "snapshot": item.snapshot,
         "message": item.message,
