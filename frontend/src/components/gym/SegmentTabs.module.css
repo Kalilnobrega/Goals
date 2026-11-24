@@ -1,5 +1,6 @@
 .tabs {
   position: relative;
+  container: segment-tabs / inline-size;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -28,9 +29,13 @@
 .tab {
   position: relative;
   z-index: 1;
+  min-width: 0;
   height: 42px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 4px;
   border-radius: 12px;
   color: var(--gym-muted);
   text-decoration: none;
@@ -46,4 +51,24 @@
 
 .active {
   color: var(--gym-text);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container segment-tabs (max-width: 420px) {
+  .tab {
+    flex-direction: column;
+    gap: 2px;
+    height: 50px;
+    font-size: 0.74rem;
+  }
 }

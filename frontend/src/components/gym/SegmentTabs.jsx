@@ -2,14 +2,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLayoutEffect, useRef } from 'react';
+import { CalendarDays, ClipboardList, Dumbbell, History } from 'lucide-react';
 import { useGymTabNav } from '../../lib/gymTabs';
 import styles from './SegmentTabs.module.css';
 
 export const WORKOUT_TABS = [
-  { href: '/gym/plans', label: 'Planos' },
-  { href: '/gym/workouts', label: 'Fichas' },
-  { href: '/gym/exercises', label: 'Exercícios' },
-  { href: '/gym/history', label: 'Histórico' },
+  { href: '/gym/plans', label: 'Planos', icon: CalendarDays },
+  { href: '/gym/workouts', label: 'Fichas', icon: ClipboardList },
+  { href: '/gym/exercises', label: 'Exercícios', icon: Dumbbell },
+  { href: '/gym/history', label: 'Histórico', icon: History },
 ];
 
 const lastIndex = new Map();
@@ -95,7 +96,7 @@ export default function SegmentTabs({ tabs, label }) {
   return (
     <nav className={styles.tabs} aria-label={label} ref={navRef} data-segment-tabs="">
       <span className={styles.indicator} ref={indicatorRef} aria-hidden="true" />
-      {tabs.map(({ href, label: text }, index) => {
+      {tabs.map(({ href, label: text, icon: Icon }, index) => {
         const current = pathname === href;
         const props = linkProps(href);
         return (
@@ -110,7 +111,8 @@ export default function SegmentTabs({ tabs, label }) {
             className={`${styles.tab} ${current ? styles.active : ''}`}
             aria-current={current ? 'page' : undefined}
           >
-            {text}
+            {Icon && <Icon size={16} className={styles.icon} aria-hidden="true" />}
+            <span className={styles.text}>{text}</span>
           </Link>
         );
       })}
