@@ -312,6 +312,14 @@ class ExerciseGymSetting(Base):
     gym_specific = Column(Boolean, nullable=False)
 
 
+class ExerciseGymLink(Base):
+    __tablename__ = "fitness_exercise_gym_links"
+
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), primary_key=True)
+    gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="CASCADE"), primary_key=True)
+
+
 
 class Friendship(Base):
     __tablename__ = "fitness_friendships"

@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, ExerciseGymSetting, FitnessProfile, Gym, WorkoutSession
+from app.fitness_models import Exercise, ExerciseGymLink, ExerciseGymSetting, FitnessProfile, Gym, WorkoutSession
 from app.fitness_gyms import default_specific
 from app.fitness_schemas import CurrentGymSchema, ExerciseGymSettingSchema, GymCreateSchema, GymListSchema, GymRenameSchema
 from .auth import get_current_user
@@ -110,15 +110,30 @@ def set_exercise_gym_setting(
     exercise = visible_exercises(user, db).filter(Exercise.id == exercise_id).first()
     if exercise is None:
         raise HTTPException(status_code=404, detail="Exercício não encontrado.")
+    mine = {gym_id for (gym_id,) in db.query(Gym.id).filter(Gym.user_id == user.id)}
+    wanted = data.gym_specific
+    links: set[int] = set()
+    if data.shared_gym_ids is not None:
+        links = set(data.shared_gym_ids)
+        if not links <= mine:
+            raise HTTPException(status_code=404, detail="Academia não encontrada.")
+        if len(links) < 2:
+            raise HTTPException(status_code=422, detail="Marque pelo menos duas academias com o mesmo aparelho.")
+        if links == mine:
+            wanted, links = False, set()
+        else:
+            wanted = True
+    db.query(ExerciseGymLink).filter(ExerciseGymLink.user_id == user.id, ExerciseGymLink.exercise_id == exercise.id).delete()
+    db.add_all(ExerciseGymLink(user_id=user.id, exercise_id=exercise.id, gym_id=gym_id) for gym_id in links)
     setting = db.get(ExerciseGymSetting, (user.id, exercise.id))
     default = default_specific(exercise.equipment)
-    if data.gym_specific is None or data.gym_specific == default:
+    if wanted is None or wanted == default:
         if setting is not None:
             db.delete(setting)
     elif setting is None:
-        db.add(ExerciseGymSetting(user_id=user.id, exercise_id=exercise.id, gym_specific=data.gym_specific))
+        db.add(ExerciseGymSetting(user_id=user.id, exercise_id=exercise.id, gym_specific=wanted))
     else:
-        setting.gym_specific = data.gym_specific
+        setting.gym_specific = wanted
     db.commit()
-    value = default if data.gym_specific is None else data.gym_specific
-    return {"gym_specific": value}
+    value = default if wanted is None else wanted
+    return {"gym_specific": value, "shared_gym_ids": sorted(links)}

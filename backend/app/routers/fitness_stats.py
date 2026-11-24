@@ -6,14 +6,14 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import BRT, br_day_start_utc, today_br, to_br_date
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Workout, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Gym, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema, WeightComparisonSchema
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BodyWeights, bodyweight_factors
 from app.fitness_sets import working
 from app.fitness_cardio import cardio_numbers
-from app.fitness_gyms import specific_ids
+from app.fitness_gyms import place_key, shared_gyms, specific_ids
 from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
@@ -414,7 +414,7 @@ def weight_records(everything: list[dict], include) -> list[dict]:
                     "previous_kg": previous_best,
                     "session_id": s["id"],
                     "date": s["day"],
-                    "gym_name": s.get("gym_name") if e.get("key") else None,
+                    "gym_name": (e.get("gym_name") or s.get("gym_name")) if e.get("key") else None,
                 })
             best[key] = max(previous_best or 0, e["top_weight"])
     records.sort(key=lambda r: (r["date"], r["weight_kg"]), reverse=True)
@@ -432,11 +432,17 @@ def completed_facts(user, db, start: date | None = None, end: date | None = None
     factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
     levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises], user.id)
     facts = [session_facts(s, body, factors, levels) for s in sessions]
-    split = specific_ids(db, user.id, {e["exercise_id"] for s in facts for e in s["exercises"]})
+    used = {e["exercise_id"] for s in facts for e in s["exercises"]}
+    split = specific_ids(db, user.id, used)
+    shared = shared_gyms(db, user.id, split)
+    names = {gym.id: gym.name for gym in db.query(Gym).filter(Gym.user_id == user.id)} if shared else {}
     for s in facts:
         for e in s["exercises"]:
             if e["exercise_id"] in split:
-                e["key"] = (e["exercise_id"], s["gym_id"])
+                group = shared.get(e["exercise_id"])
+                e["key"] = (e["exercise_id"], place_key(group, s["gym_id"]))
+                if group and s["gym_id"] in group:
+                    e["gym_name"] = " + ".join(sorted(names[g] for g in group if g in names))
     return facts
 
 

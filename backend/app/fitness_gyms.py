@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.fitness_models import Exercise, ExerciseGymSetting, Gym, WorkoutSession
+from app.fitness_models import Exercise, ExerciseGymLink, ExerciseGymSetting, Gym, WorkoutSession
 
 GYM_EQUIPMENT = {"machine", "plate_loaded", "cable", "smith"}
 
@@ -29,7 +29,36 @@ def is_specific(db: Session, user_id: int, exercise_id: int | None) -> bool:
     return exercise_id in specific_ids(db, user_id, [exercise_id])
 
 
-def same_gym(query, gym_id: int | None):
-    if gym_id is None:
+def shared_gyms(db: Session, user_id: int, exercise_ids) -> dict[int, frozenset]:
+    ids = {i for i in exercise_ids if i}
+    if not ids:
+        return {}
+    grouped: dict[int, set] = {}
+    rows = db.query(ExerciseGymLink.exercise_id, ExerciseGymLink.gym_id).filter(
+        ExerciseGymLink.user_id == user_id, ExerciseGymLink.exercise_id.in_(ids)
+    )
+    for exercise_id, gym_id in rows:
+        grouped.setdefault(exercise_id, set()).add(gym_id)
+    return {exercise_id: frozenset(gyms) for exercise_id, gyms in grouped.items() if len(gyms) > 1}
+
+
+def place_of(shared: frozenset | None, gym_id: int | None) -> frozenset:
+    if shared and gym_id in shared:
+        return shared
+    return frozenset([gym_id])
+
+
+def place_key(shared: frozenset | None, gym_id: int | None):
+    place = place_of(shared, gym_id)
+    return min(place) if None not in place else None
+
+
+def place_for(db: Session, user_id: int, exercise_id: int | None, gym_id: int | None) -> frozenset:
+    return place_of(shared_gyms(db, user_id, [exercise_id]).get(exercise_id), gym_id)
+
+
+def same_place(query, place):
+    gyms = [gym for gym in place if gym is not None]
+    if None in place:
         return query.filter(WorkoutSession.gym_id.is_(None))
-    return query.filter(WorkoutSession.gym_id == gym_id)
+    return query.filter(WorkoutSession.gym_id.in_(gyms))

@@ -1,4 +1,4 @@
-from app.fitness_gyms import default_specific
+from app.fitness_gyms import default_specific, shared_gyms
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -57,10 +57,12 @@ def list_exercises(
         .filter(ExerciseGymSetting.user_id == user.id)
         .all()
     )
+    shared = shared_gyms(session, user.id, [exercise.id for exercise in exercises])
     for exercise in exercises:
         if exercise.id in choices:
             exercise.user_level = choices[exercise.id]
         exercise.gym_specific = overrides.get(exercise.id, default_specific(exercise.equipment))
+        exercise.shared_gym_ids = sorted(shared.get(exercise.id, ()))
     return exercises
 
 

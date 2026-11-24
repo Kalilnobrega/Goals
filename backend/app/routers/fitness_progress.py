@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from app.fitness_gyms import is_specific, same_gym, specific_ids
+from app.fitness_gyms import is_specific, place_key, place_of, same_place, shared_gyms, specific_ids
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -70,14 +70,19 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
     profile = db.get(FitnessProfile, user.id)
     current = profile.current_gym_id if profile else None
     if split and current is not None:
-        local = dict(
-            (exercise_id, (best_weight, max_reps))
-            for exercise_id, best_weight, max_reps in completed_sets(user, db)
-            .filter(SessionExercise.exercise_id.in_(split), WorkoutSession.gym_id == current)
-            .with_entities(SessionExercise.exercise_id, func.max(SetEntry.weight_kg), func.max(SetEntry.reps))
-            .group_by(SessionExercise.exercise_id)
+        shared = shared_gyms(db, user.id, split)
+        local: dict = {}
+        for exercise_id, gym, best_weight, max_reps in (
+            completed_sets(user, db)
+            .filter(SessionExercise.exercise_id.in_(split))
+            .with_entities(SessionExercise.exercise_id, WorkoutSession.gym_id, func.max(SetEntry.weight_kg), func.max(SetEntry.reps))
+            .group_by(SessionExercise.exercise_id, WorkoutSession.gym_id)
             .all()
-        )
+        ):
+            if gym not in place_of(shared.get(exercise_id), current):
+                continue
+            weight, reps = local.get(exercise_id, (0, 0))
+            local[exercise_id] = (max(weight, best_weight), max(reps, max_reps))
         rows = [
             (exercise_id, sessions, last_at, *local.get(exercise_id, (0, 0))) if exercise_id in split else (exercise_id, sessions, last_at, best, reps)
             for exercise_id, sessions, last_at, best, reps in rows
@@ -274,6 +279,7 @@ def get_exercise_progress(
         raise HTTPException(status_code=404, detail="Exercício não encontrado")
 
     specific = is_specific(db, user.id, exercise.id)
+    shared = shared_gyms(db, user.id, [exercise.id]).get(exercise.id)
     gyms = []
     selected_gym = None
     if specific:
@@ -285,18 +291,27 @@ def get_exercise_progress(
             .all()
         )
         profile = db.get(FitnessProfile, user.id)
-        current = profile.current_gym_id if profile else None
+        current = place_key(shared, profile.current_gym_id) if profile and profile.current_gym_id else None
+        choices: dict = {}
         for gym in db.query(Gym).filter(Gym.user_id == user.id).order_by(Gym.created_at, Gym.id):
-            if counts.get(gym.id) or gym.id == current:
-                gyms.append({"id": gym.id, "name": gym.name, "sessions": counts.get(gym.id, 0)})
+            key = place_key(shared, gym.id)
+            choice = choices.setdefault(key, {"id": key, "names": [], "sessions": 0})
+            choice["names"].append(gym.name)
+            choice["sessions"] += counts.get(gym.id, 0)
+        gyms = [
+            {"id": c["id"], "name": " + ".join(c["names"]), "sessions": c["sessions"]}
+            for c in choices.values()
+            if c["sessions"] or c["id"] == current
+        ]
         known = {g["id"] for g in gyms}
         trained = [g["id"] for g in gyms if g["sessions"]]
         fallback = current if current in trained else (trained[-1] if trained else current)
-        selected_gym = gym_id if gym_id in known else fallback
+        wanted = place_key(shared, gym_id) if gym_id is not None else None
+        selected_gym = wanted if wanted in known else fallback
 
     rows_query = completed_sets(user, db)
     if specific:
-        rows_query = same_gym(rows_query, selected_gym)
+        rows_query = same_place(rows_query, place_of(shared, selected_gym))
     rows = (
         rows_query
         .filter(SessionExercise.exercise_id == exercise.id)
@@ -380,6 +395,7 @@ def get_exercise_progress(
 
     return {
         "gym_specific": specific,
+        "shared_gym_ids": sorted(shared) if specific and shared else [],
         "gym_id": selected_gym,
         "gyms": gyms,
         "exercise_id": exercise.id,

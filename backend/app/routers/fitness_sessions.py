@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from app.fitness_gyms import is_specific, same_gym
+from app.fitness_gyms import is_specific, place_for, same_place
 from app.fitness_media import delete_keys, drop_session_post
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, and_, case, cast, func, literal, or_
@@ -124,7 +124,7 @@ def previous_performance(item: SessionExercise, workout_session: WorkoutSession,
     if same_workout:
         query = query.filter(WorkoutSession.workout_id == workout_session.workout_id)
     if is_specific(db, workout_session.user_id, item.exercise_id):
-        query = same_gym(query, workout_session.gym_id)
+        query = same_place(query, place_for(db, workout_session.user_id, item.exercise_id, workout_session.gym_id))
     return query.order_by(WorkoutSession.completed_at.desc(), SessionExercise.id.desc()).first()
 
 
@@ -782,7 +782,7 @@ def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutS
         )
     )
     if is_specific(db, workout_session.user_id, item.exercise_id):
-        query = same_gym(query, workout_session.gym_id)
+        query = same_place(query, place_for(db, workout_session.user_id, item.exercise_id, workout_session.gym_id))
     rows = query.all()
     if not rows:
         return None

@@ -137,6 +137,7 @@ class ExerciseResponseSchema(BaseModel):
     default_intensity: str | None = Field(default=None, validation_alias="level")
     muscles: list[ExerciseMuscleSchema] = []
     gym_specific: bool | None = None
+    shared_gym_ids: list[int] = []
 
 
 class WorkoutExerciseSchema(BaseModel):
@@ -492,6 +493,7 @@ class CurrentGymSchema(BaseModel):
 
 class ExerciseGymSettingSchema(BaseModel):
     gym_specific: bool | None = None
+    shared_gym_ids: list[int] | None = Field(default=None, max_length=50)
 
 
 class ProgressGymSchema(BaseModel):
@@ -502,6 +504,7 @@ class ProgressGymSchema(BaseModel):
 
 class ExerciseProgressSchema(BaseModel):
     gym_specific: bool = False
+    shared_gym_ids: list[int] = []
     gym_id: int | None = None
     gyms: list[ProgressGymSchema] = []
     exercise_id: int

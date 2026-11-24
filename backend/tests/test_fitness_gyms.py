@@ -62,7 +62,7 @@ def test_marking_a_machine_as_the_same_everywhere(client, library, ana):
     add_gym(client, headers, "Antiga")
     add_gym(client, headers, "Nova", make_current=True)
     response = client.put(f"/fitness/exercises/{library['leg-press']}/gym-setting", json={"gym_specific": False}, headers=headers)
-    assert response.json() == {"gym_specific": False}
+    assert response.json() == {"gym_specific": False, "shared_gym_ids": []}
     listed = {e["name"]: e for e in client.get("/fitness/exercises", headers=headers).json()}
     assert listed["Leg press"]["gym_specific"] is False and listed["Supino reto"]["gym_specific"] is False
 
@@ -132,3 +132,42 @@ def test_machine_records_name_their_gym(client, library, ana):
     assert by_name == {"Leg press": "Centro", "Supino reto": None}
     recent = client.get("/fitness/overview", headers=headers).json()["recent_records"]
     assert {r["name"]: r["gym_name"] for r in recent} == by_name
+
+
+def test_custom_gym_groups_share_a_machine_between_some_gyms(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    first = add_gym(client, headers, "Alfa")
+    train(client, headers, workout["id"], [[(60, 10)], [(100, 10)]])
+    other = add_gym(client, headers, "Centro", make_current=True)
+    train(client, headers, workout["id"], [[(60, 10)], [(200, 10)]])
+    second = add_gym(client, headers, "Beta", make_current=True)
+
+    url = f"/fitness/exercises/{library['leg-press']}/gym-setting"
+    assert client.put(url, json={"shared_gym_ids": [first["id"]]}, headers=headers).status_code == 422
+    assert client.put(url, json={"shared_gym_ids": [first["id"], 999999]}, headers=headers).status_code == 404
+    saved = client.put(url, json={"shared_gym_ids": [second["id"], first["id"]]}, headers=headers).json()
+    assert saved == {"gym_specific": True, "shared_gym_ids": sorted([first["id"], second["id"]])}
+
+    session = start(client, headers, workout["id"])
+    press = session["exercises"][1]
+    assert [s["weight_kg"] for s in press["previous"]] == [100]
+    assert log_set(client, headers, press["id"], 110, 10)["record"]["previous_weight_kg"] == 100
+    assert finish(client, headers, session["id"]).status_code == 200
+
+    data = progress(client, headers, library["leg-press"])
+    assert {g["name"] for g in data["gyms"]} == {"Alfa + Beta", "Centro"}
+    assert data["shared_gym_ids"] == sorted([first["id"], second["id"]])
+    assert [p["max_weight_kg"] for p in data["points"]] == [100, 110]
+    centro = client.get(f"/fitness/exercises/{library['leg-press']}/progress", params={"gym_id": other["id"]}, headers=headers).json()
+    assert [p["max_weight_kg"] for p in centro["points"]] == [200]
+
+    records = client.get("/fitness/stats", params={"period": "all"}, headers=headers).json()["records"]
+    assert [(r["weight_kg"], r["gym_name"]) for r in records if r["name"] == "Leg press"] == [(110, "Alfa + Beta")]
+    listed = {e["id"]: e for e in client.get("/fitness/exercises", headers=headers).json()}
+    assert listed[library["leg-press"]]["shared_gym_ids"] == sorted([first["id"], second["id"]])
+
+    everywhere = client.put(url, json={"shared_gym_ids": [first["id"], second["id"], other["id"]]}, headers=headers).json()
+    assert everywhere == {"gym_specific": False, "shared_gym_ids": []}
+    back = client.put(url, json={"gym_specific": True}, headers=headers).json()
+    assert back == {"gym_specific": True, "shared_gym_ids": []}
