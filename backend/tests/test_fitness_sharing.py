@@ -157,3 +157,19 @@ def test_copies_reuse_only_compatible_exercises_and_earlier_copies(client, ana, 
     assert customs == ["Remo leve", "Remo leve (Ana)"]
     cardio = client.get("/fitness/workouts", headers=bruno).json()[0]["cardio"][0]["exercise"]
     assert cardio["name"] == "Remo leve (Ana)" and cardio["id"] != own["id"]
+
+
+def test_blocking_drops_shares_and_notifications_between_both(client, library, ana, bruno):
+    befriend(client, ana, bruno, "bruno", "ana")
+    workout = make_workout(client, bruno, library)
+    share = client.post("/fitness/shares", json={"kind": "workout", "item_id": workout["id"], "usernames": ["ana"]}, headers=bruno).json()[0]
+    post = client.post("/fitness/posts", json={"caption": "bora"}, headers=ana).json()
+    client.put(f"/fitness/posts/{post['id']}/reaction", json={"kind": "fire"}, headers=bruno)
+    assert client.get("/fitness/notifications", headers=ana).json()["unread"] == 3
+
+    client.post("/fitness/social/blocks/bruno", headers=ana)
+    assert client.get("/fitness/shares/received", headers=ana).json() == []
+    assert client.post(f"/fitness/shares/{share['id']}/copy", headers=ana).status_code == 404
+    data = client.get("/fitness/notifications", headers=ana).json()
+    assert data["notifications"] == [] and data["unread"] == 0
+    assert client.get("/fitness/challenges/pending/count", headers=ana).json()["notifications"] == 0

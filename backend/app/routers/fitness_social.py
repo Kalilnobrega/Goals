@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import ChallengeMember, CloseFriend, FitnessProfile, Friendship, UserBlock, UserReport
+from app.fitness_models import ChallengeMember, CloseFriend, FitnessProfile, Friendship, Notification, SharedItem, UserBlock, UserReport
 from app.fitness_schemas import (
     FriendRequestSchema,
     FriendsSchema,
@@ -369,11 +369,22 @@ def block_user(
     if friendship is not None:
         db.delete(friendship)
     drop_close_friends(db, me.user_id, target.user_id)
+    drop_exchanges(db, me.user_id, target.user_id)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
     return social_user(db, me.user_id, target)
+
+
+def drop_exchanges(db: Session, a: int, b: int) -> None:
+    pair = [(a, b), (b, a)]
+    for user_id, actor_id in pair:
+        db.query(Notification).filter(Notification.user_id == user_id, Notification.actor_id == actor_id).delete(synchronize_session=False)
+    for sender_id, recipient_id in pair:
+        shares = db.query(SharedItem.id).filter(SharedItem.sender_id == sender_id, SharedItem.recipient_id == recipient_id)
+        db.query(Notification).filter(Notification.share_id.in_(shares)).delete(synchronize_session=False)
+        db.query(SharedItem).filter(SharedItem.sender_id == sender_id, SharedItem.recipient_id == recipient_id).delete(synchronize_session=False)
 
 
 @fitness_social_router.delete("/blocks/{username}", response_model=SocialUserSchema)
