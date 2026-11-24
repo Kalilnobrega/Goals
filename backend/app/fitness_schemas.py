@@ -1905,3 +1905,10 @@ class LiveFriendSchema(BaseModel):
     session_name: str
     started_at: datetime
     last_activity_at: datetime
+
+
+class LiveSessionSchema(BaseModel):
+    live: bool
+    author: PostAuthorSchema
+    session: SessionResponseSchema | None = None
+    last_activity_at: datetime | None = None

@@ -46,3 +46,24 @@ def test_close_friends_see_who_is_training_now(client, db_session, library, ana,
     assert live(client, bruno) == []
     log_set(client, ana, session["exercises"][0]["id"], 60, 10)
     assert live(client, bruno) == ["ana"]
+
+
+def test_close_friends_watch_the_workout_live(client, library, ana, bruno, carla):
+    befriend(client, ana, bruno, "bruno", "ana")
+    befriend(client, ana, carla, "carla", "ana")
+    client.put("/fitness/social/close-friends/bruno", headers=ana)
+    assert client.get("/fitness/social/users/ana/live", headers=carla).status_code == 404
+    assert client.get("/fitness/social/users/ana/live", headers=bruno).json()["live"] is False
+
+    workout = make_workout(client, ana, library)
+    session = start(client, ana, workout["id"])
+    client.patch(f"/fitness/session-exercises/{session['exercises'][0]['id']}", json={"note": "segredo"}, headers=ana)
+    log_set(client, ana, session["exercises"][0]["id"], 60, 10)
+    watched = client.get("/fitness/social/users/ana/live", headers=bruno).json()
+    assert watched["live"] is True and watched["author"]["username"] == "ana"
+    first = watched["session"]["exercises"][0]
+    assert [(s["weight_kg"], s["reps"]) for s in first["sets"]] == [(60, 10)]
+    assert first["note"] is None and first["previous"] == []
+
+    client.post(f"/fitness/sessions/{session['id']}/finish", json={}, headers=ana)
+    assert client.get("/fitness/social/users/ana/live", headers=bruno).json()["live"] is False

@@ -1,0 +1,86 @@
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--gym-accent);
+  box-shadow: 0 0 0 0 rgba(198, 244, 50, 0.6);
+  animation: live 1.8s ease-out infinite;
+}
+
+@keyframes live {
+  to { box-shadow: 0 0 0 8px rgba(198, 244, 50, 0); }
+}
+
+.clocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--gym-border);
+  background: var(--gym-surface);
+}
+
+.clockLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+}
+
+.clockValue {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.current {
+  border-color: var(--gym-accent);
+}
+
+.exerciseHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.now {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gym-accent);
+  color: var(--gym-accent-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
