@@ -11,7 +11,7 @@ import styles from './ChallengeChat.module.css';
 
 const FAST_MS = 3000;
 const SLOW_MS = 15000;
-const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
+const ACTIVE_WINDOW_MS = 60 * 1000;
 
 function merge(current, incoming) {
   const map = new Map(current.map((item) => [item.id, item]));

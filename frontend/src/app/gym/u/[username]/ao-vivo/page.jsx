@@ -134,7 +134,6 @@ export default function LiveWorkoutPage() {
               );
             })}
           </ol>
-          <p className={styles.muted}>Atualiza sozinho a cada 20 segundos.</p>
         </>
       )}
     </div>
