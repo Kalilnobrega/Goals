@@ -28,6 +28,12 @@
   scrollbar-width: none;
 }
 
+.gymChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .periods::-webkit-scrollbar,
 .chips::-webkit-scrollbar {
   display: none;

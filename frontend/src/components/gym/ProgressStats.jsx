@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, BarChart3, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Target, ChevronRight, Scale, CalendarDays, ListChecks, Timer, HeartPulse,
+  Activity, BarChart3, Building2, CalendarCheck, Dumbbell, Flame, Medal, TrendingDown, TrendingUp, Target, ChevronRight, Scale, CalendarDays, ListChecks, Timer, HeartPulse,
 } from 'lucide-react';
-import { getFitnessStats, getGymStreak, getPlans, peekCache } from '../../lib/api';
+import { getFitnessStats, getGyms, getGymStreak, getPlans, peekCache } from '../../lib/api';
 import {
   formatDay, formatDuration, formatKg, formatSeconds, formatVolume, muscleLabel, parseDay, plural,
 } from '../../lib/gym';
@@ -798,34 +798,34 @@ function AllTime({ data }) {
   );
 }
 
-export const statsKey = (period, planId) => `fitnessStats:${period}:${planId ?? 'all'}`;
+export const statsKey = (period, planId, gymId = null) => `fitnessStats:${period}:${planId ?? 'all'}${gymId ? `:g${gymId}` : ''}`;
 
-function useStats(planId, enabled = true) {
+function useStats(planId, enabled = true, gymId = null) {
   const [period, setPeriod] = useState('3m');
-  const [data, setData] = useState(() => peekCache(statsKey('3m', planId)) ?? null);
+  const [data, setData] = useState(() => peekCache(statsKey('3m', planId, gymId)) ?? null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (!enabled) return undefined;
     let current = true;
-    getFitnessStats(period, planId)
+    getFitnessStats(period, planId, gymId)
       .then(result => { if (current) setData(result); })
       .catch(() => { if (current) setLoadError(true); });
     return () => { current = false; };
-  }, [period, planId, enabled]);
+  }, [period, planId, enabled, gymId]);
 
   const choose = (key) => {
     setLoadError(false);
-    setData(peekCache(statsKey(key, planId)) ?? null);
+    setData(peekCache(statsKey(key, planId, gymId)) ?? null);
     setPeriod(key);
   };
 
   const retry = () => {
     setLoadError(false);
-    getFitnessStats(period, planId).then(setData).catch(() => setLoadError(true));
+    getFitnessStats(period, planId, gymId).then(setData).catch(() => setLoadError(true));
   };
 
-  const ready = data?.period === period && (data?.plan_id ?? null) === (planId ?? null) ? data : null;
+  const ready = data?.period === period && (data?.plan_id ?? null) === (planId ?? null) && (data?.gym_id ?? null) === (gymId ?? null) ? data : null;
   return { period, choose, retry, ready, loadError, setData };
 }
 
@@ -877,11 +877,39 @@ function NoSessions() {
   );
 }
 
+function GymChoices({ gyms, gymId, onChoose }) {
+  return (
+    <div className={styles.periods} role="tablist" aria-label="Academia">
+      {[{ id: null, name: 'Todas as academias' }, ...gyms].map(gym => (
+        <button
+          key={gym.id ?? 'all'}
+          type="button"
+          role="tab"
+          aria-selected={gym.id === gymId}
+          className={`${styles.chip} ${styles.gymChoice} ${gym.id === gymId ? styles.chipActive : ''}`}
+          onClick={() => onChoose(gym.id)}
+        >
+          {gym.id !== null && <Building2 size={13} aria-hidden="true" />}
+          {gym.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function GeneralStats() {
-  const { period, choose, retry, ready, loadError } = useStats(null);
+  const [gyms, setGyms] = useState(() => peekCache('fitnessGyms')?.gyms ?? []);
+  const [gymId, setGymId] = useState(null);
+  const { period, choose, retry, ready, loadError } = useStats(null, true, gymId);
+
+  useEffect(() => {
+    getGyms().then(result => setGyms(result.gyms)).catch(() => {});
+  }, []);
+
   return (
     <>
       <Periods period={period} onChoose={choose} />
+      {gyms.length > 1 && <GymChoices gyms={gyms} gymId={gymId} onChoose={setGymId} />}
       {!ready && <Loading loadError={loadError} onRetry={retry} label="Carregando estatísticas" />}
       {ready && ready.all_time.sessions === 0 && <NoSessions />}
       {ready && ready.all_time.sessions > 0 && (

@@ -308,8 +308,11 @@ export const deleteBodyWeight = (id) =>
 export const getFitnessOverview = () => cachedGet("fitnessOverview", "/fitness/overview");
 export const getCalendar = (month) =>
   cachedGet(`fitnessCalendar:${month}`, `/fitness/calendar?month=${month}`);
-export const getFitnessStats = (period, planId = null) =>
-  cachedGet(`fitnessStats:${period}:${planId ?? "all"}`, `/fitness/stats?period=${period}${planId ? `&plan_id=${planId}` : ""}`);
+export const getFitnessStats = (period, planId = null, gymId = null) =>
+  cachedGet(
+    `fitnessStats:${period}:${planId ?? "all"}${gymId ? `:g${gymId}` : ""}`,
+    `/fitness/stats?period=${period}${planId ? `&plan_id=${planId}` : ""}${gymId ? `&gym_id=${gymId}` : ""}`,
+  );
 export const getPlans = () => cachedGet("fitnessPlans", "/fitness/plans");
 export const getPlan = (id) => cachedGet(`fitnessPlan:${id}`, `/fitness/plans/${id}`);
 export const createPlan = (data) => api.post("/fitness/plans", data).then((r) => r.data);

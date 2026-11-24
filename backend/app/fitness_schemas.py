@@ -1240,6 +1240,7 @@ class StatsSchema(BaseModel):
     time: StatsTimeSchema | None = None
     cardio: StatsCardioSchema | None = None
     plan_id: int | None = None
+    gym_id: int | None = None
     activity: list[StatsActivityDaySchema] = []
     adherence: StatsAdherenceSchema | None = None
     plan_details: StatsPlanDetailsSchema | None = None

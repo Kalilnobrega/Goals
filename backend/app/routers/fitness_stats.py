@@ -631,6 +631,7 @@ def get_stats(
     return {
         "period": period,
         "plan_id": plan_id,
+        "gym_id": gym_id,
         "activity": activity_days(everything, today),
         "adherence": plan_adherence(plan, everything, start, today) if plan else None,
         "plan_details": plan_details(plan, everything, start, today) if plan else None,
