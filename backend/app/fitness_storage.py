@@ -43,6 +43,7 @@ class LocalStorage:
 class BucketStorage:
     def __init__(self, bucket: str, endpoint: str | None, region: str | None, key_id: str, secret: str):
         import boto3
+        from botocore.config import Config
 
         self.bucket = bucket
         self.client = boto3.client(
@@ -51,6 +52,7 @@ class BucketStorage:
             region_name=region or "auto",
             aws_access_key_id=key_id,
             aws_secret_access_key=secret,
+            config=Config(s3={"addressing_style": "virtual"}),
         )
 
     def save(self, key: str, data: bytes, content_type: str) -> None:
