@@ -142,7 +142,7 @@ def build_copy(
     skipped = len(snapshot["exercises"]) - len(exercises)
     if not exercises and not cardio:
         return None, skipped
-    data = WorkoutSchema(name=name[:60], description=description, exercises=exercises[:40], cardio=cardio[:6])
+    data = WorkoutSchema(name=name[:60], description=description[:300] if description else None, exercises=exercises[:40], cardio=cardio[:6])
     workout = Workout(
         user_id=user.id,
         name=data.name,

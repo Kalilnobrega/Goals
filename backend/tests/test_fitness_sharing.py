@@ -186,3 +186,17 @@ def test_copying_a_plan_respects_the_plan_limit(client, library, ana, bruno):
     assert copied.status_code == 400
     assert len(client.get("/fitness/plans", headers=bruno).json()) == 20
     assert len(client.get("/fitness/workouts", headers=bruno).json()) == 1
+
+
+def test_copying_from_an_author_with_a_very_long_name(client, db_session, library, ana, bruno):
+    from app.models import User
+    from app.fitness_models import FitnessProfile
+    befriend(client, ana, bruno, "bruno", "ana")
+    owner = db_session.get(User, db_session.query(FitnessProfile).filter(FitnessProfile.username == "ana").one().user_id)
+    owner.name = "Ana " + "Souza" * 70
+    db_session.commit()
+    workout = make_workout(client, ana, library)
+    post = client.post("/fitness/posts", json={"share_workout_id": workout["id"]}, headers=ana).json()
+    copied = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno)
+    assert copied.status_code == 200, copied.text
+    assert len(client.get("/fitness/workouts", headers=bruno).json()[0]["description"]) == 300
