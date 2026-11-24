@@ -109,3 +109,33 @@ def test_copy_close_friend_workout(client, library, ana, bruno):
     item = fichas[0]["exercises"][0]
     assert (item["target_sets"], item["reps_min"], item["reps_max"]) == (3, 8, 12)
     assert client.post(f"/fitness/social/users/bruno/workouts/{workout['id']}/copy", headers=ana).status_code == 404
+
+
+def test_bodyweight_volume_hides_the_owner_weight_unless_shared(client, db_session, ana, bruno):
+    from app.fitness_models import Exercise
+    pull = Exercise(slug="barra-privada", name="Barra privada", muscle_group="back", equipment="bodyweight")
+    db_session.add(pull)
+    db_session.commit()
+    befriend(client, ana, bruno, "bruno", "ana")
+    client.put("/fitness/social/close-friends/bruno", headers=ana)
+    client.post("/fitness/body-weight", json={"weight_kg": 83.4, "measured_on": (today_br() - timedelta(days=1)).isoformat()}, headers=ana)
+    workout = client.post("/fitness/workouts", json={"name": "Costas", "exercises": [
+        {"exercise_id": pull.id, "target_sets": 1, "reps_min": 10},
+    ]}, headers=ana).json()
+    session = start(client, ana, workout["id"])
+    log_set(client, ana, session["exercises"][0]["id"], 0, 10)
+    assert finish(client, ana, session["id"]).status_code == 200
+    created = client.post("/fitness/posts", json={"session_id": session["id"]}, headers=ana).json()
+
+    assert client.get(f"/fitness/posts/{created['id']}/workout", headers=ana).json()["session"]["volume_kg"] == 834
+    assert client.get(f"/fitness/posts/{created['id']}/workout", headers=bruno).json()["session"]["volume_kg"] == 0
+    close = f"/fitness/social/users/ana/sessions/{session['id']}"
+    assert client.get(close, headers=bruno).json()["session"]["volume_kg"] == 0
+    assert client.get("/fitness/social/users/ana/history", headers=bruno).json()["items"][0]["volume_kg"] == 0
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["recent_sessions"][0]["volume_kg"] == 0
+    progress = client.get(f"/fitness/social/users/ana/exercises/{pull.id}/progress", headers=bruno).json()
+    assert all(point["volume_kg"] == 0 for point in progress["points"])
+
+    client.put("/fitness/profile/close-weight", json={"share": True}, headers=ana)
+    assert client.get(close, headers=bruno).json()["session"]["volume_kg"] == 834
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["recent_sessions"][0]["volume_kg"] == 834

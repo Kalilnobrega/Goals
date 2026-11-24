@@ -25,6 +25,7 @@ from app.fitness_schemas import (
     ProgressPhotoSchema,
     ReactionSchema,
 )
+from app.fitness_load import without_body_weight
 from app.fitness_media import delete_files
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
@@ -416,9 +417,14 @@ def get_post(post_id: int, user: User = Depends(get_current_user), db: Session =
     return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in visible]}
 
 
-def workout_detail(db: Session, session: WorkoutSession, viewer_id: int) -> dict:
-    detail = serialize_session(session, db)
+def workout_detail(db: Session, session: WorkoutSession, viewer_id: int, show_weight: bool = False) -> dict:
     mine = session.user_id == viewer_id
+    with without_body_weight(session.user_id, not (mine or show_weight)):
+        return session_detail(db, session, mine)
+
+
+def session_detail(db: Session, session: WorkoutSession, mine: bool) -> dict:
+    detail = serialize_session(session, db)
     if not mine:
         for item in detail["exercises"]:
             item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])

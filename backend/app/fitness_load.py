@@ -1,4 +1,6 @@
 from bisect import bisect_right
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
@@ -7,6 +9,28 @@ from app.fitness_models import BodyWeightEntry, Exercise, SessionExercise, SetEn
 
 BODYWEIGHT = "bodyweight"
 DEFAULT_FACTOR = 1.0
+hidden_owners: ContextVar[frozenset] = ContextVar("hidden_body_weight_owners", default=frozenset())
+
+
+@contextmanager
+def without_body_weight(user_id: int, hide: bool = True):
+    token = hidden_owners.set(hidden_owners.get() | {user_id}) if hide else None
+    try:
+        yield
+    finally:
+        if token is not None:
+            hidden_owners.reset(token)
+
+
+def weight_rows(db: Session, user_id: int):
+    if user_id in hidden_owners.get():
+        return []
+    return (
+        db.query(BodyWeightEntry.measured_on, BodyWeightEntry.weight_kg)
+        .filter(BodyWeightEntry.user_id == user_id)
+        .order_by(BodyWeightEntry.measured_on)
+        .all()
+    )
 
 
 def share(factor) -> float:
@@ -23,12 +47,7 @@ def bodyweight_factors(db: Session, exercise_ids) -> dict[int, float]:
 
 class BodyWeights:
     def __init__(self, user_id: int, db: Session):
-        rows = (
-            db.query(BodyWeightEntry.measured_on, BodyWeightEntry.weight_kg)
-            .filter(BodyWeightEntry.user_id == user_id)
-            .order_by(BodyWeightEntry.measured_on)
-            .all()
-        )
+        rows = weight_rows(db, user_id)
         self.days = [day for day, _ in rows]
         self.values = [float(weight) for _, weight in rows]
 

@@ -17,6 +17,7 @@ from app.fitness_schemas import (
     WorkoutResponseSchema,
     WorkoutSchema,
 )
+from app.fitness_load import without_body_weight
 from app.fitness_sharing import build_copy, workout_snapshot
 from .auth import get_current_user
 from .fitness import build_workout_cardio, build_workout_exercises, list_workouts
@@ -64,19 +65,20 @@ def close_history(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    owner, _ = close_owner(db, user, username)
-    return list_sessions(
-        limit=20, offset=offset, q=None, workout_id=None, muscle_group=None, date_from=None, date_to=None, user=owner, db=db,
-    )
+    owner, profile = close_owner(db, user, username)
+    with without_body_weight(owner.id, not profile.share_weight_close):
+        return list_sessions(
+            limit=20, offset=offset, q=None, workout_id=None, muscle_group=None, date_from=None, date_to=None, user=owner, db=db,
+        )
 
 
 @fitness_close_router.get("/{username}/sessions/{session_id}", response_model=PostWorkoutDetailSchema)
 def close_session(username: str, session_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    owner, _ = close_owner(db, user, username)
+    owner, profile = close_owner(db, user, username)
     session = db.get(WorkoutSession, session_id)
     if session is None or session.user_id != owner.id or session.status != COMPLETED:
         raise HTTPException(status_code=404, detail="Treino não encontrado.")
-    return workout_detail(db, session, user.id)
+    return workout_detail(db, session, user.id, profile.share_weight_close)
 
 
 @fitness_close_router.get("/{username}/stats", response_model=StatsSchema)
@@ -87,7 +89,8 @@ def close_stats(
     db: Session = Depends(get_db),
 ):
     owner, profile = close_owner(db, user, username)
-    stats = get_stats(period=period, plan_id=None, user=owner, db=db)
+    with without_body_weight(owner.id, not profile.share_weight_close):
+        stats = get_stats(period=period, plan_id=None, user=owner, db=db)
     if not profile.share_weight_close:
         stats["relative_strength"] = None
     return stats
@@ -95,8 +98,9 @@ def close_stats(
 
 @fitness_close_router.get("/{username}/progress/exercises", response_model=list[ProgressExerciseSchema])
 def close_progress_exercises(username: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    owner, _ = close_owner(db, user, username)
-    return list_progress_exercises(user=owner, db=db)
+    owner, profile = close_owner(db, user, username)
+    with without_body_weight(owner.id, not profile.share_weight_close):
+        return list_progress_exercises(user=owner, db=db)
 
 
 @fitness_close_router.get("/{username}/exercises/{exercise_id}/progress", response_model=ExerciseProgressSchema)
@@ -106,8 +110,9 @@ def close_exercise_progress(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    owner, _ = close_owner(db, user, username)
-    return get_exercise_progress(exercise_id=exercise_id, user=owner, db=db)
+    owner, profile = close_owner(db, user, username)
+    with without_body_weight(owner.id, not profile.share_weight_close):
+        return get_exercise_progress(exercise_id=exercise_id, user=owner, db=db)
 
 
 @fitness_close_router.get("/{username}/body-weight", response_model=list[BodyWeightResponseSchema])

@@ -14,6 +14,7 @@ from app.fitness_schemas import (
     SocialProfileSchema,
     SocialUserSchema,
 )
+from app.fitness_load import without_body_weight
 from app.fitness_notifications import clear, notify
 from .auth import get_current_user
 from .fitness_profile import normalize_username
@@ -222,7 +223,8 @@ def get_social_profile(
         "weight_shared": close_access and bool(target.share_weight_close),
     }
     if viewable:
-        response.update(profile_details(db, owner, close))
+        with without_body_weight(owner.id, relation != "self" and not response["weight_shared"]):
+            response.update(profile_details(db, owner, close))
     return response
 
 
