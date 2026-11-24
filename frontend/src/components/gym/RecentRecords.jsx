@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Trophy, ChevronRight } from 'lucide-react';
+import { Building2, Trophy, ChevronRight } from 'lucide-react';
 import { formatDay, formatKg } from '../../lib/gym';
 import styles from './RecentRecords.module.css';
 
@@ -20,6 +20,9 @@ export default function RecentRecords({ records }) {
               <span className={styles.main}>
                 <span className={styles.name}>{record.name}</span>
                 <span className={styles.meta}>{formatDay(record.date)} · antes {formatKg(record.previous_kg)} kg</span>
+                {record.gym_name && (
+                  <span className={styles.gym}><Building2 size={12} aria-hidden="true" /> {record.gym_name}</span>
+                )}
               </span>
               <span className={styles.value}>
                 {formatKg(record.weight_kg)} kg × {record.reps}

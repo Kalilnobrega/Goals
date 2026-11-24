@@ -687,6 +687,7 @@ class OverviewRecordSchema(BaseModel):
     previous_kg: float
     session_id: int
     date: date
+    gym_name: str | None = None
 
 
 class OverviewMuscleMapSchema(BaseModel):
@@ -854,6 +855,7 @@ class StatsRecordSchema(BaseModel):
     previous_kg: float
     session_id: int
     date: date
+    gym_name: str | None = None
 
 
 class StatsWorkoutSchema(BaseModel):

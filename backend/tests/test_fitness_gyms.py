@@ -118,3 +118,17 @@ def test_history_stats_and_export_filter_by_gym(client, library, ana):
     text = client.get("/fitness/export", params={"format": "txt", "gym_id": new["id"]}, headers=headers).content.decode("utf-8")
     assert "TREINOS (2)" in text and "· Nova" in text
     assert client.get("/fitness/export", params={"gym_id": 999999}, headers=headers).status_code == 404
+
+
+def test_machine_records_name_their_gym(client, library, ana):
+    _, headers = ana
+    workout = make_workout(client, headers, library)
+    add_gym(client, headers, "Centro")
+    train(client, headers, workout["id"], [[(60, 10)], [(100, 10)]])
+    train(client, headers, workout["id"], [[(70, 10)], [(120, 10)]])
+
+    records = client.get("/fitness/stats", params={"period": "all"}, headers=headers).json()["records"]
+    by_name = {r["name"]: r["gym_name"] for r in records}
+    assert by_name == {"Leg press": "Centro", "Supino reto": None}
+    recent = client.get("/fitness/overview", headers=headers).json()["recent_records"]
+    assert {r["name"]: r["gym_name"] for r in recent} == by_name

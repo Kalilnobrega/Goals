@@ -199,7 +199,7 @@ function Records({ items }) {
               <span className={styles.rowDate}>{formatDay(r.date)}</span>
               <span className={styles.rowMain}>
                 <span className={styles.rowName}>{r.name}</span>
-                <span className={styles.rowMeta}>{formatKg(r.weight_kg)} kg × {r.reps} · antes {formatKg(r.previous_kg)} kg</span>
+                <span className={styles.rowMeta}>{formatKg(r.weight_kg)} kg × {r.reps} · antes {formatKg(r.previous_kg)} kg{r.gym_name ? ` · ${r.gym_name}` : ''}</span>
               </span>
               <span className={`${styles.rowDelta} ${styles.up}`}>+{formatKg(Math.round((r.weight_kg - r.previous_kg) * 100) / 100)}</span>
             </Link>

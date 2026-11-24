@@ -98,6 +98,7 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
         "gym_id": workout_session.gym_id,
+        "gym_name": workout_session.gym.name if workout_session.gym else None,
         "name": workout_session.name,
         "started_at": started,
         "completed_at": completed,
@@ -413,6 +414,7 @@ def weight_records(everything: list[dict], include) -> list[dict]:
                     "previous_kg": previous_best,
                     "session_id": s["id"],
                     "date": s["day"],
+                    "gym_name": s.get("gym_name") if e.get("key") else None,
                 })
             best[key] = max(previous_best or 0, e["top_weight"])
     records.sort(key=lambda r: (r["date"], r["weight_kg"]), reverse=True)

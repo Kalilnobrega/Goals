@@ -100,3 +100,13 @@
   flex-shrink: 0;
   color: var(--gym-faint);
 }
+
+.gym {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--gym-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
