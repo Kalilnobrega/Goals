@@ -1335,6 +1335,7 @@ class FitnessProfileResponseSchema(BaseModel):
     visibility: Literal["public", "friends", "private"] = "friends"
     share_weight_close: bool = False
     share_gym: bool = False
+    share_live: bool = True
 
 
 class VisibilityUpdateSchema(BaseModel):

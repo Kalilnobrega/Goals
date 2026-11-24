@@ -357,6 +357,7 @@ export const removeCloseFriend = (username) =>
   api.delete(`/fitness/social/close-friends/${encodeURIComponent(username)}`).then((r) => r.data);
 export const updateCloseWeight = (share) => api.put("/fitness/profile/close-weight", { share }).then((r) => r.data);
 export const updateShareGym = (share) => api.put("/fitness/profile/share-gym", { share }).then((r) => r.data);
+export const updateShareLive = (share) => api.put("/fitness/profile/share-live", { share }).then((r) => r.data);
 const closeUrl = (username, path) => `/fitness/social/users/${encodeURIComponent(username)}/${path}`;
 export const getCloseWorkouts = (username) => api.get(closeUrl(username, "workouts")).then((r) => r.data);
 export const getClosePlan = (username) => api.get(closeUrl(username, "plan")).then((r) => r.data);

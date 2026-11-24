@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeftRight, AtSign, Building2, Check, Globe, Lock, Pencil, Shield, Target, Users, PersonStanding, Eye, EyeOff, KeyRound, LoaderCircle, LogOut, Trash2, UserRound, X } from 'lucide-react';
 import {
   changePassword, checkUsername, createGym, deleteAccount, deleteGym, getBlocks, getFitnessProfile, getGyms, getMe, logout,
-  renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateShareGym, updateUsername, updateVisibility,
+  renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateShareGym, updateShareLive, updateUsername, updateVisibility,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
 import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
@@ -191,11 +191,23 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
-function PrivacyCard({ initial, initialShareWeight, initialShareGym, hasUsername }) {
+function PrivacyCard({ initial, initialShareWeight, initialShareGym, initialShareLive, hasUsername }) {
   const toast = useToast();
   const [visibility, setVisibility] = useState(initial);
   const [shareWeight, setShareWeight] = useState(initialShareWeight);
   const [shareGym, setShareGym] = useState(initialShareGym);
+  const [shareLive, setShareLive] = useState(initialShareLive);
+
+  const toggleLive = async (next) => {
+    setShareLive(next);
+    try {
+      await updateShareLive(next);
+      toast(next ? 'Melhores amigos podem acompanhar seu treino ao vivo' : 'Seu treino ao vivo ficou só para você');
+    } catch (err) {
+      setShareLive(!next);
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível salvar.') });
+    }
+  };
 
   const toggleGym = async (next) => {
     setShareGym(next);
@@ -279,6 +291,13 @@ function PrivacyCard({ initial, initialShareWeight, initialShareGym, hasUsername
           <span className={styles.privacyDescription}>Melhores amigos veem suas fichas, histórico e evolução. O peso corporal só aparece se você ligar aqui.</span>
         </span>
         <input type="checkbox" checked={shareWeight} onChange={(e) => toggleWeight(e.target.checked)} />
+      </label>
+      <label className={styles.weightToggle}>
+        <span className={styles.privacyText}>
+          <span className={styles.privacyLabel}>Melhores amigos podem me ver treinando ao vivo</span>
+          <span className={styles.privacyDescription}>Enquanto você treina, eles veem o treino, o exercício atual e as séries feitas. Desligando, ninguém vê até você finalizar.</span>
+        </span>
+        <input type="checkbox" checked={shareLive} onChange={(e) => toggleLive(e.target.checked)} />
       </label>
       <label className={styles.weightToggle}>
         <span className={styles.privacyText}>
@@ -709,6 +728,7 @@ export default function GymAccountPage() {
   const [visibility, setVisibility] = useState('friends');
   const [shareWeight, setShareWeight] = useState(false);
   const [shareGym, setShareGym] = useState(false);
+  const [shareLive, setShareLive] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -719,6 +739,7 @@ export default function GymAccountPage() {
         setVisibility(profile.visibility ?? 'friends');
         setShareWeight(!!profile.share_weight_close);
         setShareGym(!!profile.share_gym);
+        setShareLive(profile.share_live !== false);
       })
       .catch(() => setError('Não foi possível carregar sua conta.'));
   }, []);
@@ -750,7 +771,7 @@ export default function GymAccountPage() {
         <>
           <NameCard me={me} onSaved={handleNameSaved} />
           <UsernameCard current={username} onSaved={setUsername} />
-          <PrivacyCard initial={visibility} initialShareWeight={shareWeight} initialShareGym={shareGym} hasUsername={!!username} />
+          <PrivacyCard initial={visibility} initialShareWeight={shareWeight} initialShareGym={shareGym} initialShareLive={shareLive} hasUsername={!!username} />
           <BodyTypeCard />
           <GymsCard />
           <PasswordCard me={me} />
