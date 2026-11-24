@@ -57,10 +57,14 @@ class BucketStorage:
         self.client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
 
     def read(self, key: str) -> bytes | None:
+        from botocore.exceptions import ClientError
+
         try:
             return self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
-        except self.client.exceptions.NoSuchKey:
-            return None
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") in ("NoSuchKey", "404", "403", "AccessDenied"):
+                return None
+            raise
 
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
