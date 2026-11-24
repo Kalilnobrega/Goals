@@ -138,6 +138,8 @@ class WorkoutSession(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     workout_id = Column(ForeignKey("fitness_workouts.id", ondelete="SET NULL"), nullable=True, index=True)
+    gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True, index=True)
+    gym = relationship("Gym", lazy="joined")
     name = Column(String(60), nullable=False)
     status = Column(String(20), nullable=False, default="in_progress")
     started_at = Column(DateTime(timezone=True), nullable=False)
@@ -272,6 +274,7 @@ class FitnessProfile(Base):
     user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     body_type = Column(String(10), nullable=False, default="male")
     username = Column(String(20), nullable=True, unique=True, index=True)
+    current_gym_id = Column(ForeignKey("fitness_gyms.id", ondelete="SET NULL"), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
@@ -287,3 +290,20 @@ class FitnessGoal(Base):
     start_kg = Column(Numeric(6, 2), nullable=True)
     start_on = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Gym(Base):
+    __tablename__ = "fitness_gyms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(60), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ExerciseGymSetting(Base):
+    __tablename__ = "fitness_exercise_gym_settings"
+
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    exercise_id = Column(ForeignKey("fitness_exercises.id", ondelete="CASCADE"), primary_key=True)
+    gym_specific = Column(Boolean, nullable=False)

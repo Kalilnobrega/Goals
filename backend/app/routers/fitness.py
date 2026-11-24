@@ -1,10 +1,11 @@
+from app.fitness_gyms import default_specific
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models import User
-from app.fitness_models import Exercise, ExerciseIntensity, ExerciseMuscle, Workout, WorkoutCardio, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay
+from app.fitness_models import Exercise, ExerciseIntensity, ExerciseMuscle, Workout, WorkoutCardio, WorkoutExercise, WorkoutSession, SessionExercise, PlanDay, ExerciseGymSetting
 from app.fitness_schemas import (
     ExerciseSchema,
     EditExerciseSchema,
@@ -51,9 +52,15 @@ def list_exercises(
 ):
     exercises = visible_exercises(user, session).order_by(Exercise.name, Exercise.id).all()
     choices = intensity_choices(session, user.id)
+    overrides = dict(
+        session.query(ExerciseGymSetting.exercise_id, ExerciseGymSetting.gym_specific)
+        .filter(ExerciseGymSetting.user_id == user.id)
+        .all()
+    )
     for exercise in exercises:
         if exercise.id in choices:
             exercise.user_level = choices[exercise.id]
+        exercise.gym_specific = overrides.get(exercise.id, default_specific(exercise.equipment))
     return exercises
 
 

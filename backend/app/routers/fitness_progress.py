@@ -1,13 +1,14 @@
 from datetime import date
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException
+from app.fitness_gyms import is_specific, same_gym, specific_ids
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from datetime import datetime
 from app.dates import BRT, today_br, to_br_date
 from app.models import User
-from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, Workout, WorkoutExercise
+from app.fitness_models import Exercise, WorkoutSession, SessionExercise, SetEntry, BodyWeightEntry, FitnessGoal, FitnessProfile, Gym, Workout, WorkoutExercise
 from app.fitness_forecast import forecast, slope_per_day
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
 from app.fitness_load import BODYWEIGHT, BodyWeights, share
@@ -65,6 +66,22 @@ def list_progress_exercises(user: User = Depends(get_current_user), db: Session 
         .group_by(SessionExercise.exercise_id)
         .all()
     )
+    split = specific_ids(db, user.id, [row[0] for row in rows])
+    profile = db.get(FitnessProfile, user.id)
+    current = profile.current_gym_id if profile else None
+    if split and current is not None:
+        local = dict(
+            (exercise_id, (best_weight, max_reps))
+            for exercise_id, best_weight, max_reps in completed_sets(user, db)
+            .filter(SessionExercise.exercise_id.in_(split), WorkoutSession.gym_id == current)
+            .with_entities(SessionExercise.exercise_id, func.max(SetEntry.weight_kg), func.max(SetEntry.reps))
+            .group_by(SessionExercise.exercise_id)
+            .all()
+        )
+        rows = [
+            (exercise_id, sessions, last_at, *local.get(exercise_id, (0, 0))) if exercise_id in split else (exercise_id, sessions, last_at, best, reps)
+            for exercise_id, sessions, last_at, best, reps in rows
+        ]
     exercises = {
         exercise.id: exercise
         for exercise in db.query(Exercise).filter(Exercise.id.in_([row[0] for row in rows]))
@@ -248,6 +265,7 @@ def exercise_time(user: User, db: Session, exercise_id: int) -> dict | None:
 @fitness_progress_router.get("/exercises/{exercise_id}/progress", response_model=ExerciseProgressSchema)
 def get_exercise_progress(
     exercise_id: int,
+    gym_id: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -255,8 +273,30 @@ def get_exercise_progress(
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercício não encontrado")
 
+    specific = is_specific(db, user.id, exercise.id)
+    gyms = []
+    selected_gym = None
+    if specific:
+        counts = dict(
+            completed_sets(user, db)
+            .filter(SessionExercise.exercise_id == exercise.id)
+            .with_entities(WorkoutSession.gym_id, func.count(func.distinct(WorkoutSession.id)))
+            .group_by(WorkoutSession.gym_id)
+            .all()
+        )
+        profile = db.get(FitnessProfile, user.id)
+        current = profile.current_gym_id if profile else None
+        for gym in db.query(Gym).filter(Gym.user_id == user.id).order_by(Gym.created_at, Gym.id):
+            if counts.get(gym.id) or gym.id == current:
+                gyms.append({"id": gym.id, "name": gym.name, "sessions": counts.get(gym.id, 0)})
+        known = {g["id"] for g in gyms}
+        selected_gym = gym_id if gym_id in known else current if current in known else (gyms[0]["id"] if gyms else None)
+
+    rows_query = completed_sets(user, db)
+    if specific:
+        rows_query = same_gym(rows_query, selected_gym)
     rows = (
-        completed_sets(user, db)
+        rows_query
         .filter(SessionExercise.exercise_id == exercise.id)
         .with_entities(
             WorkoutSession.id,
@@ -337,6 +377,9 @@ def get_exercise_progress(
     ordered = sorted(points.values(), key=lambda p: p["completed_at"])
 
     return {
+        "gym_specific": specific,
+        "gym_id": selected_gym,
+        "gyms": gyms,
         "exercise_id": exercise.id,
         "name": exercise.name,
         "muscle_group": exercise.muscle_group,

@@ -13,6 +13,7 @@ from app.fitness_timing import exercise_timings, intensity_levels, mean as avera
 from app.fitness_load import BodyWeights, bodyweight_factors
 from app.fitness_sets import working
 from app.fitness_cardio import cardio_numbers
+from app.fitness_gyms import specific_ids
 from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
@@ -96,6 +97,7 @@ def session_facts(workout_session: WorkoutSession, body: BodyWeights | None = No
     return {
         "id": workout_session.id,
         "workout_id": workout_session.workout_id,
+        "gym_id": workout_session.gym_id,
         "name": workout_session.name,
         "started_at": started,
         "completed_at": completed,
@@ -398,7 +400,7 @@ def weight_records(everything: list[dict], include) -> list[dict]:
     records = []
     for s in sorted(everything, key=lambda s: s["completed_at"]):
         for e in s["exercises"]:
-            key = e["exercise_id"] or e["name"]
+            key = compare_key(e)
             if e["top_weight"] <= 0:
                 continue
             previous_best = best.get(key)
@@ -427,7 +429,13 @@ def completed_facts(user, db) -> list[dict]:
     )
     factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == "bodyweight"])
     levels = intensity_levels(db, [item.exercise_id for s in sessions for item in s.exercises], user.id)
-    return [session_facts(s, body, factors, levels) for s in sessions]
+    facts = [session_facts(s, body, factors, levels) for s in sessions]
+    split = specific_ids(db, user.id, {e["exercise_id"] for s in facts for e in s["exercises"]})
+    for s in facts:
+        for e in s["exercises"]:
+            if e["exercise_id"] in split:
+                e["key"] = (e["exercise_id"], s["gym_id"])
+    return facts
 
 
 def load_value(e: dict):
@@ -929,6 +937,10 @@ def exercise_key(e: dict):
     return e["exercise_id"] or e["name"]
 
 
+def compare_key(e: dict):
+    return e.get("key") or exercise_key(e)
+
+
 def performance(s: dict, e: dict) -> dict:
     return {
         "session_id": s["id"],
@@ -974,7 +986,7 @@ def get_session_insights(
 
     exercises = []
     for e in current["exercises"]:
-        found = [(s, x) for s in before for x in s["exercises"] if exercise_key(x) == exercise_key(e)]
+        found = [(s, x) for s in before for x in s["exercises"] if compare_key(x) == compare_key(e)]
         latest = found[0] if found else None
         same_workout = next(
             (pair for pair in found if current["workout_id"] is not None and pair[0]["workout_id"] == current["workout_id"]),

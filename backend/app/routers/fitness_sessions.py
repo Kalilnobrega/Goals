@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from app.fitness_gyms import is_specific, same_gym
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, and_, case, cast, func, literal, or_
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,7 @@ from app.models import User
 from app.fitness_models import Exercise, Workout, WorkoutCardio, WorkoutExercise, WorkoutSession, SessionExercise, SetEntry
 from app.fitness_schemas import (
     StartSessionSchema,
+    SessionGymSchema,
     AddSessionExerciseSchema,
     ReorderSessionSchema,
     EditSessionExerciseSchema,
@@ -89,6 +91,18 @@ def series_key():
 SAME_WORKOUT_WINDOW = timedelta(days=14)
 
 
+def starting_gym(db: Session, user: User, requested: int | None) -> int | None:
+    from app.fitness_models import FitnessProfile, Gym
+
+    if requested is not None:
+        gym = db.get(Gym, requested)
+        if gym is None or gym.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Academia não encontrada.")
+        return gym.id
+    profile = db.get(FitnessProfile, user.id)
+    return profile.current_gym_id if profile else None
+
+
 def previous_performance(item: SessionExercise, workout_session: WorkoutSession, db: Session, same_workout: bool = False):
     if item.exercise_id is None:
         return None
@@ -108,6 +122,8 @@ def previous_performance(item: SessionExercise, workout_session: WorkoutSession,
     )
     if same_workout:
         query = query.filter(WorkoutSession.workout_id == workout_session.workout_id)
+    if is_specific(db, workout_session.user_id, item.exercise_id):
+        query = same_gym(query, workout_session.gym_id)
     return query.order_by(WorkoutSession.completed_at.desc(), SessionExercise.id.desc()).first()
 
 
@@ -196,6 +212,8 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
         "total_sets": total_sets,
         "volume_kg": float(volume),
         "exercises": exercises,
+        "gym_id": workout_session.gym_id,
+        "gym_name": workout_session.gym.name if workout_session.gym else None,
     }
 
 
@@ -398,6 +416,7 @@ def history_item(workout_session: WorkoutSession, exercise_count, total_sets, vo
         "cardio_calories": (cardio or {}).get("calories"),
         "cardio_calories_estimated": (cardio or {}).get("calories_estimated", False),
         "muscle_groups": muscle_groups or [],
+        "gym_name": workout_session.gym.name if workout_session.gym else None,
     }
 
 
@@ -490,7 +509,7 @@ def start_session(
         raise active_conflict(existing)
 
     workout_session = WorkoutSession(
-        user_id=user.id, name=FREE_SESSION_NAME, status=IN_PROGRESS, started_at=utcnow()
+        user_id=user.id, name=FREE_SESSION_NAME, status=IN_PROGRESS, started_at=utcnow(), gym_id=starting_gym(db, user, data.gym_id)
     )
     if data.workout_id is not None:
         workout = (
@@ -743,7 +762,7 @@ def existing_set(item_id: int, client_id: str, user: User, db: Session) -> SetEn
 def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutSession, db: Session) -> dict | None:
     if workout_session.status != IN_PROGRESS or item.exercise_id is None or (item.tracking or "reps") != "reps" or not is_working(entry):
         return None
-    rows = (
+    query = (
         db.query(SetEntry.weight_kg, SetEntry.reps)
         .join(SessionExercise, SessionExercise.id == SetEntry.session_exercise_id)
         .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
@@ -754,8 +773,10 @@ def set_record(item: SessionExercise, entry: SetEntry, workout_session: WorkoutS
             SetEntry.kind != WARMUP,
             SetEntry.id != entry.id,
         )
-        .all()
     )
+    if is_specific(db, workout_session.user_id, item.exercise_id):
+        query = same_gym(query, workout_session.gym_id)
+    rows = query.all()
     if not rows:
         return None
     best = max(weight for weight, _ in rows)
@@ -912,3 +933,17 @@ def delete_set(
         remaining.position = index
     db.commit()
     return {"message": "Série excluída"}
+
+
+@fitness_sessions_router.patch("/sessions/{session_id}/gym", response_model=SessionResponseSchema)
+def change_session_gym(
+    session_id: int,
+    data: SessionGymSchema,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout_session = get_own_session(session_id, user, db)
+    workout_session.gym_id = starting_gym(db, user, data.gym_id) if data.gym_id is not None else None
+    db.commit()
+    db.refresh(workout_session)
+    return serialize_session(workout_session, db)

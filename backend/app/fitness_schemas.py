@@ -136,6 +136,7 @@ class ExerciseResponseSchema(BaseModel):
     intensity: str | None = Field(default=None, validation_alias=AliasChoices("user_level", "level"))
     default_intensity: str | None = Field(default=None, validation_alias="level")
     muscles: list[ExerciseMuscleSchema] = []
+    gym_specific: bool | None = None
 
 
 class WorkoutExerciseSchema(BaseModel):
@@ -225,6 +226,11 @@ class WorkoutResponseSchema(BaseModel):
 
 class StartSessionSchema(BaseModel):
     workout_id: int | None = None
+    gym_id: int | None = None
+
+
+class SessionGymSchema(BaseModel):
+    gym_id: int | None = None
 
 
 class AddSessionExerciseSchema(BaseModel):
@@ -389,6 +395,7 @@ class SessionHistoryItemSchema(BaseModel):
     cardio_calories: int | None = None
     cardio_calories_estimated: bool = False
     muscle_groups: list[str]
+    gym_name: str | None = None
 
 
 class SessionHistorySchema(BaseModel):
@@ -408,6 +415,8 @@ class SessionResponseSchema(BaseModel):
     total_sets: int
     volume_kg: float
     exercises: list[SessionExerciseResponseSchema]
+    gym_id: int | None = None
+    gym_name: str | None = None
 
 
 class ProgressExerciseSchema(BaseModel):
@@ -448,7 +457,16 @@ class ProgressPointSchema(BaseModel):
     right_estimated_1rm_kg: float | None = None
 
 
+class ProgressGymSchema(BaseModel):
+    id: int
+    name: str
+    sessions: int
+
+
 class ExerciseProgressSchema(BaseModel):
+    gym_specific: bool = False
+    gym_id: int | None = None
+    gyms: list[ProgressGymSchema] = []
     exercise_id: int
     name: str
     muscle_group: str
@@ -1368,3 +1386,40 @@ class FitnessGoalResponseSchema(BaseModel):
     eta: date | None
     rate_per_day: float | None
     needed_per_day: float | None
+
+
+class GymSchema(BaseModel):
+    id: int
+    name: str
+    sessions: int
+    current: bool
+
+
+class GymListSchema(BaseModel):
+    current_gym_id: int | None
+    gyms: list[GymSchema]
+
+
+class GymCreateSchema(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    make_current: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Dê um nome para a academia.")
+        return value
+
+
+class GymRenameSchema(GymCreateSchema):
+    pass
+
+
+class CurrentGymSchema(BaseModel):
+    gym_id: int
+
+
+class ExerciseGymSettingSchema(BaseModel):
+    gym_specific: bool | None = None
