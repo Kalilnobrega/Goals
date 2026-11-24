@@ -73,6 +73,7 @@ from app.routers.fitness_challenges import fitness_challenges_router
 from app.routers.fitness_feed import fitness_feed_router
 from app.routers.fitness_notifications import fitness_notifications_router
 from app.routers.fitness_close import fitness_close_router
+from app.routers.fitness_live import fitness_live_router
 from app.routers.fitness_share import fitness_share_router
 from app.routers.fitness_export import fitness_export_router
 from app.routers.fitness_gyms import fitness_gyms_router
@@ -97,6 +98,7 @@ app.include_router(fitness_challenges_router)
 app.include_router(fitness_feed_router)
 app.include_router(fitness_notifications_router)
 app.include_router(fitness_close_router)
+app.include_router(fitness_live_router)
 app.include_router(fitness_share_router)
 app.include_router(fitness_export_router)
 app.include_router(fitness_gyms_router)

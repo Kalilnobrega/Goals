@@ -11,6 +11,7 @@ import FriendAction from '../../../../components/gym/social/FriendAction';
 import CloseFriendToggle from '../../../../components/gym/social/CloseFriendToggle';
 import UsernameSetup from '../../../../components/gym/social/UsernameSetup';
 import SocialTabs from '../../../../components/gym/social/SocialTabs';
+import LiveNow from '../../../../components/gym/social/LiveNow';
 import social from '../../../../components/gym/social/social.module.css';
 import styles from './page.module.css';
 
@@ -135,6 +136,7 @@ export default function SocialPage() {
       <h1 className="visually-hidden">Social: amigos</h1>
 
       <SocialTabs />
+      {profile?.username && <LiveNow />}
 
       {error && <p className={styles.error}>{error}</p>}
 

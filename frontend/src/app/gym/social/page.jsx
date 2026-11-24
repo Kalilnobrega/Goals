@@ -7,6 +7,7 @@ import SocialTabs from '../../../components/gym/social/SocialTabs';
 import UsernameSetup from '../../../components/gym/social/UsernameSetup';
 import PostCard from '../../../components/gym/social/PostCard';
 import { SocialActionButton, SocialActionFab } from '../../../components/gym/social/SocialAction';
+import LiveNow from '../../../components/gym/social/LiveNow';
 import social from '../../../components/gym/social/social.module.css';
 import styles from './feed.module.css';
 
@@ -60,6 +61,7 @@ export default function FeedPage() {
       {profile?.username && (
         <>
           <SocialActionFab href="/gym/social/publicar" label="Publicar" icon={Plus} />
+          <LiveNow />
 
           {!feed && !error && <div className={styles.skeleton} aria-busy="true" aria-label="Carregando feed" />}
 

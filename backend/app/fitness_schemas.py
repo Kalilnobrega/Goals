@@ -1897,3 +1897,11 @@ class CopiedSharedSchema(BaseModel):
     id: int
     name: str
     skipped: int
+
+
+class LiveFriendSchema(BaseModel):
+    username: str
+    name: str
+    session_name: str
+    started_at: datetime
+    last_activity_at: datetime
