@@ -26,9 +26,9 @@ from app.fitness_schemas import (
 )
 from app.fitness_load import BodyWeights
 from app.fitness_sets import entry_volume, working
-from app.fitness_notifications import notify
+from app.fitness_notifications import blocked_between, notify
 from .auth import get_current_user
-from .fitness_social import blocked_ids, person, own_profile, find_profile, friendship_between, has_blocked
+from .fitness_social import blocked_ids, person, own_profile, find_profile, friendship_between
 from .fitness_stats import completed_facts, plan_adherence, weight_records
 from .fitness_plans import active_plan
 from app.fitness_muscles import group_credit
@@ -373,7 +373,7 @@ def preview(db: Session, challenge: Challenge, user_id: int) -> dict:
 
 
 def join(db: Session, challenge: Challenge, user_id: int, accept_weight: bool = False) -> None:
-    if has_blocked(db, challenge.owner_id, user_id) or has_blocked(db, user_id, challenge.owner_id):
+    if blocked_between(db, challenge.owner_id, user_id):
         raise HTTPException(status_code=404, detail="Convite inválido ou desafio excluído.")
     if status_of(challenge, today_br()) == "finished":
         raise HTTPException(status_code=409, detail="Esse desafio já terminou.")
@@ -560,7 +560,7 @@ def invite_friend(
     if status_of(challenge, today_br()) == "finished":
         raise HTTPException(status_code=409, detail="Esse desafio já terminou.")
     target = find_profile(db, data.username)
-    if target is None or has_blocked(db, target.user_id, me.user_id) or has_blocked(db, me.user_id, target.user_id):
+    if target is None or blocked_between(db, target.user_id, me.user_id):
         raise HTTPException(status_code=404, detail="Perfil não encontrado.")
     friendship = friendship_between(db, me.user_id, target.user_id)
     if friendship is None or friendship.status != "accepted":

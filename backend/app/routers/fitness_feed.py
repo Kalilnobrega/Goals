@@ -29,11 +29,11 @@ from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_factors, withou
 from app.fitness_media import delete_keys, drop_media, drop_post
 from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
-from app.fitness_notifications import clear, notify, renotify
+from app.fitness_notifications import blocked_between, clear, notify, renotify
 from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
-from .fitness_social import blocked_ids, can_view, person, has_blocked, is_close, own_profile, relation_to
+from .fitness_social import blocked_ids, can_view, person, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -179,7 +179,7 @@ def delete_media(media_id: int, user: User = Depends(get_current_user), db: Sess
 def can_see(db: Session, viewer: int, author: int) -> bool:
     if viewer == author:
         return True
-    if has_blocked(db, author, viewer) or has_blocked(db, viewer, author):
+    if blocked_between(db, author, viewer):
         return False
     profile = db.get(FitnessProfile, author)
     if profile is None or not profile.username:
