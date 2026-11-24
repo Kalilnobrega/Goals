@@ -657,3 +657,58 @@ def test_removed_member_cannot_rejoin_until_the_owner_invites_again(client, ana,
     assert client.post(f"/fitness/challenges/{cid}/invites", json={"username": "bruno"}, headers=carla).status_code == 409
     assert client.post(f"/fitness/challenges/{cid}/invites", json={"username": "bruno"}, headers=ana).status_code == 201
     assert client.post(url, headers=bruno).status_code == 200
+
+
+def test_finished_challenge_freezes_ranking_notifies_and_closes_chat_later(client, library, ana, bruno, monkeypatch):
+    from app.routers import fitness_challenges
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    train(client, ana, library)
+    train(client, ana, library)
+    train(client, bruno, library)
+    cid = challenge["id"]
+    real_today = today_br()
+
+    monkeypatch.setattr(fitness_challenges, "today_br", lambda: real_today + timedelta(days=8))
+    assert client.get("/fitness/challenges/pending/count", headers=bruno).json()["notifications"] >= 1
+    notes = [n for n in client.get("/fitness/notifications", headers=bruno).json()["notifications"] if n["kind"] == "challenge_finished"]
+    assert len(notes) == 1 and notes[0]["detail"] == "2" and notes[0]["challenge_name"] == challenge["name"]
+    winner = [n for n in client.get("/fitness/notifications", headers=ana).json()["notifications"] if n["kind"] == "challenge_finished"]
+    assert len(winner) == 1 and winner[0]["detail"] == "1"
+
+    sessions = client.get("/fitness/sessions", headers=ana).json()["items"]
+    for item in sessions:
+        client.delete(f"/fitness/sessions/{item['id']}", headers=ana)
+    ranking = client.get(f"/fitness/challenges/{cid}", headers=bruno).json()["ranking"]
+    assert [(r["username"], r["score"], r["is_me"]) for r in ranking] == [("ana", 2, False), ("bruno", 1, True)]
+    client.get("/fitness/challenges", headers=ana)
+    assert len([n for n in client.get("/fitness/notifications", headers=ana).json()["notifications"] if n["kind"] == "challenge_finished"]) == 1
+
+    assert client.get(f"/fitness/challenges/{cid}", headers=ana).json()["chat_open"] is True
+    assert client.post(f"/fitness/challenges/{cid}/chat", json={"text": "gg"}, headers=ana).status_code == 200
+    monkeypatch.setattr(fitness_challenges, "today_br", lambda: real_today + timedelta(days=14))
+    assert client.get(f"/fitness/challenges/{cid}", headers=ana).json()["chat_open"] is False
+    assert client.post(f"/fitness/challenges/{cid}/chat", json={"text": "oi"}, headers=ana).status_code == 409
+    assert [i["text"] for i in client.get(f"/fitness/challenges/{cid}/chat", headers=bruno).json()["items"]] == ["gg"]
+
+
+def test_old_finished_challenges_freeze_without_notifying(client, library, ana, monkeypatch):
+    from app.routers import fitness_challenges
+    challenge = create(client, ana)
+    train(client, ana, library)
+    real_today = today_br()
+    monkeypatch.setattr(fitness_challenges, "today_br", lambda: real_today + timedelta(days=40))
+    assert client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"][0]["score"] == 1
+    assert all(n["kind"] != "challenge_finished" for n in client.get("/fitness/notifications", headers=ana).json()["notifications"])
+
+
+def test_deleting_a_challenge_notifies_the_other_members(client, ana, bruno, carla):
+    challenge = create(client, ana, name="Desafio de verão com um nome bem comprido")
+    join(client, bruno, challenge)
+    join(client, carla, challenge)
+    assert client.delete(f"/fitness/challenges/{challenge['id']}", headers=ana).status_code == 204
+    for headers in (bruno, carla):
+        notes = [n for n in client.get("/fitness/notifications", headers=headers).json()["notifications"] if n["kind"] == "challenge_deleted"]
+        assert len(notes) == 1 and notes[0]["detail"] == "Desafio de verão com um nome bem comprido"
+        assert notes[0]["actor"]["username"] == "ana"
+    assert all(n["kind"] != "challenge_deleted" for n in client.get("/fitness/notifications", headers=ana).json()["notifications"])

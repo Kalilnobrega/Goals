@@ -369,6 +369,8 @@ class Challenge(Base):
     hide_weight = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     allow_manual = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    final_ranking = Column(JSON, nullable=True)
+    finalized_at = Column(DateTime(timezone=True), nullable=True)
 
     members = relationship("ChallengeMember", cascade="all, delete-orphan", lazy="selectin")
 
@@ -469,7 +471,7 @@ class Notification(Base):
     challenge_id = Column(ForeignKey("fitness_challenges.id", ondelete="CASCADE"), nullable=True)
     comment_id = Column(ForeignKey("fitness_post_comments.id", ondelete="CASCADE"), nullable=True)
     share_id = Column(ForeignKey("fitness_shared_items.id", ondelete="CASCADE"), nullable=True)
-    detail = Column(String(20), nullable=True)
+    detail = Column(String(60), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
 

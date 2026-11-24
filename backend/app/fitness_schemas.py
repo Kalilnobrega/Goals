@@ -1663,6 +1663,7 @@ class ChallengeDetailSchema(BaseModel):
     member_count: int
     ranking: list[ChallengeRankingSchema]
     chat_unread: int = 0
+    chat_open: bool = True
 
 
 class ChallengeJoinSchema(BaseModel):
@@ -1794,7 +1795,7 @@ class CopiedWorkoutSchema(BaseModel):
 class NotificationSchema(BaseModel):
     id: int
     kind: Literal[
-        "friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment", "shared_item",
+        "friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment", "shared_item", "challenge_finished", "challenge_deleted",
     ]
     actor: PostAuthorSchema
     created_at: datetime

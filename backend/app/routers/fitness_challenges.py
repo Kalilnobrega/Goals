@@ -299,15 +299,32 @@ def member_values(db: Session, challenge: Challenge, user: User, targets: dict[s
 
 
 def ranking(db: Session, challenge: Challenge, me: int, cache: dict | None = None) -> list[dict]:
+    rows = challenge.final_ranking if challenge.final_ranking is not None else ranking_rows(db, challenge, cache)
+    hidden = {metric_id(m) for m in challenge.metrics if m["key"] in WEIGHT_METRICS} if challenge.hide_weight else set()
+    shown = []
+    for row in rows:
+        user = db.get(User, row["user_id"])
+        profile = db.get(FitnessProfile, row["user_id"])
+        details = row["details"]
+        if row["user_id"] != me and hidden:
+            details = {key: info for key, info in details.items() if key not in hidden}
+        shown.append({
+            **row,
+            "username": profile.username if profile else row["username"],
+            "name": user.name if user else row["name"],
+            "details": details,
+            "is_me": row["user_id"] == me,
+        })
+    return shown
+
+
+def ranking_rows(db: Session, challenge: Challenge, cache: dict | None = None) -> list[dict]:
     targets = family_members(db, challenge)
     rows = []
     for member in challenge.members:
         user = db.get(User, member.user_id)
         profile = db.get(FitnessProfile, member.user_id)
         values, details, missing = member_values(db, challenge, user, targets, cache)
-        if challenge.hide_weight and user.id != me:
-            hidden = {metric_id(m) for m in challenge.metrics if m["key"] in WEIGHT_METRICS}
-            details = {key: info for key, info in details.items() if key not in hidden}
         rows.append({
             "user_id": user.id,
             "username": profile.username if profile else None,
@@ -315,7 +332,6 @@ def ranking(db: Session, challenge: Challenge, me: int, cache: dict | None = Non
             "values": values,
             "details": details,
             "missing": missing,
-            "is_me": user.id == me,
         })
     metrics = challenge.metrics
     if len(metrics) == 1:
@@ -338,6 +354,46 @@ def ranking(db: Session, challenge: Challenge, me: int, cache: dict | None = Non
             previous = row["score"]
         row["position"] = position
     return rows
+
+
+CHAT_OPEN_DAYS = 7
+
+
+def chat_open(challenge: Challenge) -> bool:
+    return today_br() <= challenge.end_date + timedelta(days=CHAT_OPEN_DAYS)
+
+
+def finalize(db: Session, challenge: Challenge) -> None:
+    if challenge.finalized_at is not None or status_of(challenge, today_br()) != "finished":
+        return
+    rows = ranking_rows(db, challenge)
+    claimed = (
+        db.query(Challenge)
+        .filter(Challenge.id == challenge.id, Challenge.finalized_at.is_(None))
+        .update({Challenge.finalized_at: datetime.now(timezone.utc), Challenge.final_ranking: rows}, synchronize_session=False)
+    )
+    if claimed and chat_open(challenge):
+        for row in rows:
+            db.add(Notification(
+                user_id=row["user_id"],
+                actor_id=challenge.owner_id,
+                kind="challenge_finished",
+                challenge_id=challenge.id,
+                detail=str(row["position"]) if row["score"] > 0 else "0",
+            ))
+    db.commit()
+    db.refresh(challenge)
+
+
+def finalize_due(db: Session, user_id: int) -> None:
+    due = (
+        db.query(Challenge)
+        .join(ChallengeMember, ChallengeMember.challenge_id == Challenge.id)
+        .filter(ChallengeMember.user_id == user_id, Challenge.finalized_at.is_(None), Challenge.end_date < today_br())
+        .all()
+    )
+    for challenge in due:
+        finalize(db, challenge)
 
 
 def member_ids(challenge: Challenge) -> set[int]:
@@ -453,6 +509,7 @@ def create_challenge(
 @fitness_challenges_router.get("", response_model=ChallengeListsSchema)
 def list_challenges(me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     today = today_br()
+    finalize_due(db, me.user_id)
     challenges = (
         db.query(Challenge)
         .join(ChallengeMember, ChallengeMember.challenge_id == Challenge.id)
@@ -526,6 +583,7 @@ def detail(db: Session, challenge: Challenge, user_id: int) -> dict:
             for row in rows
         ],
         "chat_unread": chat_unread(db, challenge, user_id),
+        "chat_open": chat_open(challenge),
     }
 
 
@@ -554,7 +612,9 @@ def join_by_code(
 
 @fitness_challenges_router.get("/{challenge_id}", response_model=ChallengeDetailSchema)
 def get_challenge(challenge_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return detail(db, get_member_challenge(db, challenge_id, user.id), user.id)
+    challenge = get_member_challenge(db, challenge_id, user.id)
+    finalize(db, challenge)
+    return detail(db, challenge, user.id)
 
 
 @fitness_challenges_router.post("/{challenge_id}/invites", status_code=201)
@@ -646,6 +706,8 @@ def remove_member(
 @fitness_challenges_router.delete("/{challenge_id}", status_code=204)
 def delete_challenge(challenge_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     challenge = get_owned_challenge(db, challenge_id, user.id)
+    for member in challenge.members:
+        notify(db, member.user_id, user.id, "challenge_deleted", detail=challenge.name)
     db.query(ChallengeInvite).filter(ChallengeInvite.challenge_id == challenge.id).delete()
     db.query(Notification).filter(Notification.challenge_id == challenge.id).delete(synchronize_session=False)
     db.query(ChallengeMessage).filter(ChallengeMessage.challenge_id == challenge.id).delete(synchronize_session=False)
@@ -658,6 +720,7 @@ def pending_count(user: User = Depends(get_current_user), db: Session = Depends(
     profile = db.get(FitnessProfile, user.id)
     if profile is None or not profile.username:
         return {"friend_requests": 0, "challenge_invites": 0, "notifications": 0}
+    finalize_due(db, user.id)
     requests = (
         db.query(func.count(Friendship.id))
         .filter(
@@ -965,6 +1028,8 @@ def send_chat_message(
     from .fitness_sessions import aware
 
     challenge = get_member_challenge(db, challenge_id, user.id)
+    if not chat_open(challenge):
+        raise HTTPException(status_code=409, detail=f"O chat fecha {CHAT_OPEN_DAYS} dias depois do fim do desafio.")
     text = data.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Escreva uma mensagem.")
