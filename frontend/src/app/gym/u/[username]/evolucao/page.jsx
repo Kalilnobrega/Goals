@@ -74,8 +74,8 @@ export default function CloseProgressPage() {
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Recordes no período</h2>
           <ul className={styles.rows}>
-            {stats.records.slice(0, 8).map((record) => (
-              <li key={`${record.name}-${record.date}`} className={styles.rowItem}>
+            {stats.records.slice(0, 8).map((record, index) => (
+              <li key={`${record.name}-${record.date}-${index}`} className={styles.rowItem}>
                 <span className={styles.rowMain}>
                   <span className={styles.rowName}>{record.name}</span>
                   <span className={styles.muted}>{formatDay(record.date)}</span>

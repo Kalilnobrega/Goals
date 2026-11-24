@@ -415,8 +415,8 @@ export const copyShare = (id) => api.post(`/fitness/shares/${id}/copy`).then((r)
 export const deleteShare = (id) => api.delete(`/fitness/shares/${id}`);
 export const getFeed = (before) =>
   before ? api.get("/fitness/feed", { params: { before } }).then((r) => r.data) : cachedGet("fitnessFeed", "/fitness/feed");
-export const getUserPosts = (username) =>
-  api.get(`/fitness/users/${encodeURIComponent(username)}/posts`).then((r) => r.data);
+export const getUserPosts = (username, before = null) =>
+  api.get(`/fitness/users/${encodeURIComponent(username)}/posts`, { params: before ? { before } : {} }).then((r) => r.data);
 export const getPost = (id) => api.get(`/fitness/posts/${id}`).then((r) => r.data);
 export const getPostWorkout = (id) => api.get(`/fitness/posts/${id}/workout`).then((r) => r.data);
 export const copyPostWorkout = (id) => api.post(`/fitness/posts/${id}/copy-workout`).then((r) => r.data);

@@ -14,8 +14,8 @@ export default function RecentRecords({ records }) {
         <span className={styles.hint}>últimos 14 dias</span>
       </div>
       <ul className={styles.list}>
-        {records.map(record => (
-          <li key={`${record.session_id}-${record.name}`}>
+        {records.map((record, index) => (
+          <li key={`${record.session_id}-${record.name}-${index}`}>
             <Link href={`/gym/history/${record.session_id}`} className={styles.row}>
               <span className={styles.main}>
                 <span className={styles.name}>{record.name}</span>

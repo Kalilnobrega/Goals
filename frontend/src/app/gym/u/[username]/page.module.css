@@ -438,3 +438,14 @@
   margin-left: auto;
   color: var(--gym-faint);
 }
+
+.morePosts {
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -123,6 +123,8 @@ export default function SocialProfilePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [posts, setPosts] = useState(null);
+  const [nextBefore, setNextBefore] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(() => {
     getSocialProfile(handle)
@@ -140,8 +142,26 @@ export default function SocialProfilePage() {
   const canView = profile?.can_view;
   useEffect(() => {
     if (!canView) return;
-    getUserPosts(handle).then((data) => setPosts(data.posts)).catch(() => setPosts([]));
+    getUserPosts(handle)
+      .then((data) => {
+        setPosts(data.posts);
+        setNextBefore(data.next_before);
+      })
+      .catch(() => setPosts([]));
   }, [canView, handle]);
+
+  const loadMorePosts = async () => {
+    setLoadingMore(true);
+    try {
+      const page = await getUserPosts(handle, nextBefore);
+      setPosts((list) => [...list, ...page.posts.filter((post) => !list.some((p) => p.id === post.id))]);
+      setNextBefore(page.next_before);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível carregar mais publicações.') });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const closeReport = useCallback(() => setReporting(false), []);
@@ -248,8 +268,8 @@ export default function SocialProfilePage() {
                 <h2 className={styles.cardTitle}><Trophy size={17} /> Recordes recentes</h2>
                 {profile.records.length ? (
                   <ul className={styles.list}>
-                    {profile.records.map((record) => (
-                      <li key={`${record.name}-${record.date}`} className={styles.item}>
+                    {profile.records.map((record, index) => (
+                      <li key={`${record.name}-${record.date}-${index}`} className={styles.item}>
                         <span className={styles.itemMain}>
                           <span className={styles.itemName}>{record.name}</span>
                           <span className={styles.itemMeta}>{formatDay(record.date)} · antes {formatKg(record.previous_kg)} kg</span>
@@ -304,6 +324,11 @@ export default function SocialProfilePage() {
                   onDeleted={(removed) => setPosts((list) => list.filter((p) => p.id !== removed.id))}
                 />
               ))}
+              {nextBefore && (
+                <button type="button" className={styles.morePosts} onClick={loadMorePosts} disabled={loadingMore}>
+                  {loadingMore ? 'Carregando...' : 'Carregar mais'}
+                </button>
+              )}
             </section>
           )}
 

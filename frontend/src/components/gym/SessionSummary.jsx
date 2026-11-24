@@ -222,8 +222,8 @@ export default function SessionSummary({ session, insights }) {
             <h2 id="records-title" className={styles.cardTitle}>{insights.records.length === 1 ? 'Novo recorde' : `${insights.records.length} novos recordes`}</h2>
           </div>
           <ul className={styles.recordList}>
-            {insights.records.map(record => (
-              <li key={record.name} className={styles.record}>
+            {insights.records.map((record, index) => (
+              <li key={`${record.name}-${index}`} className={styles.record}>
                 <span className={styles.recordName}>{record.name}</span>
                 <span className={styles.recordValue}>
                   {formatKg(record.weight_kg)} kg × {record.reps}
