@@ -118,7 +118,7 @@ def set_exercise_gym_setting(
         if not links <= mine:
             raise HTTPException(status_code=404, detail="Academia não encontrada.")
         if len(links) < 2:
-            raise HTTPException(status_code=422, detail="Marque pelo menos duas academias com o mesmo aparelho.")
+            raise HTTPException(status_code=422, detail="Marque pelo menos duas academias com o mesmo equipamento.")
         if links == mine:
             wanted, links = False, set()
         else:

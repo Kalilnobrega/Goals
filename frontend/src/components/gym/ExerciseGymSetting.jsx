@@ -10,9 +10,9 @@ import styles from './ExerciseIntensity.module.css';
 const GYM_EQUIPMENT = new Set(['machine', 'plate_loaded', 'cable', 'smith']);
 
 const HINTS = {
-  separate: 'Aparelho diferente em cada academia. Carga anterior, recordes e evolução ficam separados por academia',
-  same: 'Mesmo aparelho em todas as academias. Carga anterior, recordes e evolução juntam todas elas',
-  custom: 'Mesmo aparelho só nas academias marcadas. Elas ficam juntas e as outras seguem separadas',
+  separate: 'Equipamento diferente em cada academia. Carga anterior, recordes e evolução ficam separados por academia',
+  same: 'Mesmo equipamento em todas as academias. Carga anterior, recordes e evolução juntam todas elas',
+  custom: 'Mesmo equipamento só nas academias marcadas. Elas ficam juntas e as outras seguem separadas',
 };
 
 export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpecific: saved, sharedGymIds = [], onChange }) {
@@ -54,7 +54,7 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
     if (value === savedMode) return;
     save(
       { gym_specific: value === 'separate' },
-      result => (result.gym_specific ? `${name}: aparelho diferente em cada academia` : `${name}: mesmo aparelho em todas as academias`),
+      result => (result.gym_specific ? `${name}: equipamento diferente em cada academia` : `${name}: mesmo equipamento em todas as academias`),
     );
   };
 
@@ -62,7 +62,7 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
 
   const saveGroup = () => save(
     { shared_gym_ids: draft },
-    result => (result.shared_gym_ids.length ? `${name}: mesmo aparelho nas academias marcadas` : `${name}: mesmo aparelho em todas as academias`),
+    result => (result.shared_gym_ids.length ? `${name}: mesmo equipamento nas academias marcadas` : `${name}: mesmo equipamento em todas as academias`),
   );
 
   const options = [
@@ -86,7 +86,7 @@ export default function ExerciseGymSetting({ exerciseId, name, equipment, gymSpe
       </span>
       <GymSwitch options={options} value={mode} onChange={choose} label={`Carga de ${name} entre academias`} disabled={saving} cycle={false} />
       {mode === 'custom' && (
-        <div className={styles.gymPicks} role="group" aria-label="Academias com o mesmo aparelho">
+        <div className={styles.gymPicks} role="group" aria-label="Academias com o mesmo equipamento">
           {gyms.map(gym => {
             const on = draft.includes(gym.id);
             return (
