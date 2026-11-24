@@ -712,3 +712,31 @@ def test_deleting_a_challenge_notifies_the_other_members(client, ana, bruno, car
         assert len(notes) == 1 and notes[0]["detail"] == "Desafio de verão com um nome bem comprido"
         assert notes[0]["actor"]["username"] == "ana"
     assert all(n["kind"] != "challenge_deleted" for n in client.get("/fitness/notifications", headers=ana).json()["notifications"])
+
+
+def test_nothing_new_enters_the_activity_after_the_challenge_ends(client, library, ana, bruno, db_session, media_dir):
+    from app.fitness_models import Post
+    challenge = create(client, ana, allow_manual=True)
+    join(client, bruno, challenge)
+    on_time = checkin(client, ana, minutes=30).json()
+    late = checkin(client, bruno, minutes=30).json()
+    train(client, ana, library)
+    session_id = client.get("/fitness/sessions", headers=ana).json()["items"][0]["id"]
+    workout_post = client.post("/fitness/posts", json={"session_id": session_id, "caption": "depois do fim"}, headers=ana).json()
+    after = closing_time_of(challenge)
+    for post_id in (late["id"], workout_post["id"]):
+        db_session.get(Post, post_id).created_at = after
+    db_session.commit()
+
+    items = client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=ana).json()["items"]
+    assert [i["id"] for i in items if i["kind"] == "checkin"] == [f"c{on_time['id']}"]
+    workout = next(i for i in items if i["kind"] == "workout")
+    assert workout["post_id"] is None and workout["caption"] is None
+    ranking = {r["username"]: r["score"] for r in client.get(f"/fitness/challenges/{challenge['id']}", headers=ana).json()["ranking"]}
+    assert ranking == {"ana": 2, "bruno": 0}
+
+
+def closing_time_of(challenge):
+    from datetime import date
+    from app.dates import br_day_start_utc
+    return br_day_start_utc(date.fromisoformat(challenge["end_date"]) + timedelta(days=1)) + timedelta(minutes=5)

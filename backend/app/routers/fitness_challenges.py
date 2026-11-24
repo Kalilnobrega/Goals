@@ -116,6 +116,10 @@ def qualifies(session: dict, rule: dict | None) -> bool:
     return len(session["exercises"]) + len(session["cardio"]) >= rule["value"]
 
 
+def closing_time(challenge: Challenge) -> datetime:
+    return br_day_start_utc(challenge.end_date + timedelta(days=1))
+
+
 def checkin_posts(db: Session, challenge: Challenge, user_ids: list[int]) -> list[Post]:
     if not challenge.allow_manual or not user_ids:
         return []
@@ -127,6 +131,7 @@ def checkin_posts(db: Session, challenge: Challenge, user_ids: list[int]) -> lis
             Post.minutes.isnot(None),
             Post.performed_on >= challenge.start_date,
             Post.performed_on <= challenge.end_date,
+            Post.created_at < closing_time(challenge),
         )
         .order_by(Post.performed_on, Post.id)
         .all()
@@ -782,7 +787,9 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
         )
         posts = {
             post.session_id: post
-            for post in db.query(Post).filter(Post.session_id.in_([s.id for s in sessions])).all()
+            for post in db.query(Post).filter(
+                Post.session_id.in_([s.id for s in sessions]), Post.created_at < closing_time(challenge)
+            ).all()
         } if sessions and user_id in visible else {}
         hidden = hidden_strength_ids(db, challenge, user_id, me)
         for session in sessions:
@@ -917,7 +924,7 @@ def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[
     names = {user_id: db.get(User, user_id).name for user_id in members}
     refs = {}
     if by_session:
-        for post in db.query(Post).filter(Post.session_id.in_(list(by_session))).all():
+        for post in db.query(Post).filter(Post.session_id.in_(list(by_session)), Post.created_at < closing_time(challenge)).all():
             row = by_session[post.session_id]
             refs[post.id] = {
                 "post_id": post.id,
