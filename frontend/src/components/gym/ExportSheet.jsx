@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, Share2 } from 'lucide-react';
-import { exportFitnessData } from '../../lib/api';
+import { exportFitnessData, getGyms, peekCache } from '../../lib/api';
 import { apiError } from '../../lib/gym';
 import { useToast } from '../Toast';
 import s from './sheet.module.css';
@@ -59,17 +59,25 @@ const canShareFiles = () => {
   }
 };
 
-export default function ExportSheet() {
+export default function ExportSheet({ gymId = null }) {
   const [format, setFormat] = useState('pdf');
   const [content, setContent] = useState('all');
   const [period, setPeriod] = useState('all');
+  const [gym, setGym] = useState(gymId ?? 'all');
+  const [gyms, setGyms] = useState(() => peekCache('fitnessGyms')?.gyms ?? []);
   const [busy, setBusy] = useState(null);
   const [shareable] = useState(canShareFiles);
   const toast = useToast();
   const chosenContent = format === 'csv' && content === 'all' ? 'workouts' : content;
+  const showGyms = gyms.length > 1 && chosenContent !== 'weights';
+
+  useEffect(() => {
+    getGyms().then(result => setGyms(result.gyms)).catch(() => {});
+  }, []);
 
   const fetchFile = async () => {
-    const { blob, filename } = await exportFitnessData({ format, content: chosenContent, period });
+    const gymParam = showGyms && gym !== 'all' ? { gym_id: gym } : {};
+    const { blob, filename } = await exportFitnessData({ format, content: chosenContent, period, ...gymParam });
     return new File([blob], filename, { type: MIME[format] });
   };
 
@@ -110,6 +118,14 @@ export default function ExportSheet() {
         onChange={setContent}
       />
       <Choices label="Período" options={PERIODS} value={period} onChange={setPeriod} />
+      {showGyms && (
+        <Choices
+          label="Academia"
+          options={[{ value: 'all', label: 'Todas' }, ...gyms.map(item => ({ value: item.id, label: item.name }))]}
+          value={gym}
+          onChange={setGym}
+        />
+      )}
       <div className={s.actions}>
         <button type="button" className={s.primary} onClick={() => run('download')} disabled={!!busy}>
           <Download size={18} /> {busy === 'download' ? 'Gerando…' : 'Baixar'}

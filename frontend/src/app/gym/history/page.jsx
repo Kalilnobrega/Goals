@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Building2, History, Search, X, ChevronDown, SearchX, Download } from 'lucide-react';
-import { getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
+import { getGyms, getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
 import {
   addDays, formatDay, formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
   MUSCLE_GROUPS,
@@ -105,16 +105,23 @@ export default function HistoryPage() {
   const [custom, setCustom] = useState({ from: '', to: '' });
   const [sheet, setSheet] = useState(null);
   const [workouts, setWorkouts] = useState(() => peekCache('fitnessWorkouts') ?? null);
+  const [gym, setGym] = useState(null);
+  const [gyms, setGyms] = useState(() => peekCache('fitnessGyms')?.gyms ?? []);
   const request = useRef(0);
 
   const filters = {
     q: search.trim() || null,
     workout_id: workout?.id ?? null,
+    gym_id: gym?.id ?? null,
     muscle_group: group,
     ...periodRange(period, custom),
   };
   const filtersKey = JSON.stringify(filters);
   const filtered = Object.values(filters).some(value => value !== null);
+
+  useEffect(() => {
+    getGyms().then(result => setGyms(result.gyms)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(query), 300);
@@ -146,6 +153,7 @@ export default function HistoryPage() {
     setQuery('');
     setSearch('');
     setWorkout(null);
+    setGym(null);
     setGroup(null);
     setPeriod('all');
     setCustom({ from: '', to: '' });
@@ -169,6 +177,7 @@ export default function HistoryPage() {
   const groups = data ? groupByMonth(data.items) : [];
   const chips = [
     { key: 'workout', label: workout ? workout.name : 'Ficha', active: !!workout, clear: () => setWorkout(null) },
+    ...(gyms.length > 1 ? [{ key: 'gym', label: gym ? gym.name : 'Academia', active: !!gym, clear: () => setGym(null) }] : []),
     { key: 'group', label: group ? muscleLabel(group) : 'Grupo muscular', active: !!group, clear: () => setGroup(null) },
     { key: 'period', label: period === 'all' ? 'Período' : periodLabel(period, custom), active: period !== 'all', clear: () => { setPeriod('all'); setCustom({ from: '', to: '' }); } },
   ];
@@ -177,7 +186,7 @@ export default function HistoryPage() {
     <div className={styles.page}>
       <h1 className="visually-hidden">Treinos: histórico</h1>
       <GymSheet open={exportOpen} onClose={closeExport} title="Exportar dados">
-        {exportOpen && <ExportSheet />}
+        {exportOpen && <ExportSheet gymId={gym?.id ?? null} />}
       </GymSheet>
 
       <SegmentTabs tabs={WORKOUT_TABS} label="Treinos" />
@@ -276,7 +285,7 @@ export default function HistoryPage() {
       <GymSheet
         open={!!sheet}
         onClose={closeSheet}
-        title={{ workout: 'Filtrar por ficha', group: 'Filtrar por grupo muscular', period: 'Filtrar por período' }[sheet] ?? ''}
+        title={{ workout: 'Filtrar por ficha', gym: 'Filtrar por academia', group: 'Filtrar por grupo muscular', period: 'Filtrar por período' }[sheet] ?? ''}
       >
         {sheet === 'workout' && (
           <div className={sheetStyles.actions}>
@@ -291,6 +300,25 @@ export default function HistoryPage() {
                 className={`${sheetStyles.option} ${workout?.id === item.id ? styles.optionActive : ''}`}
                 onClick={() => { setWorkout({ id: item.id, name: item.name }); closeSheet(); }}
               >
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {sheet === 'gym' && (
+          <div className={sheetStyles.actions}>
+            <button type="button" className={`${sheetStyles.option} ${!gym ? styles.optionActive : ''}`} onClick={() => { setGym(null); closeSheet(); }}>
+              <span>Todas as academias</span>
+            </button>
+            {gyms.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                className={`${sheetStyles.option} ${gym?.id === item.id ? styles.optionActive : ''}`}
+                onClick={() => { setGym({ id: item.id, name: item.name }); closeSheet(); }}
+              >
+                <Building2 size={20} aria-hidden="true" />
                 <span>{item.name}</span>
               </button>
             ))}
