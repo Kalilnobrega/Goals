@@ -329,6 +329,16 @@ class LiveAlert(Base):
     owner_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
 
 
+class LiveCheer(Base):
+    __tablename__ = "fitness_live_cheers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(ForeignKey("fitness_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(10), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
 class Friendship(Base):
     __tablename__ = "fitness_friendships"
     __table_args__ = (UniqueConstraint("user_low_id", "user_high_id", name="uq_fitness_friendship_pair"),)

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, Building2, Camera, Check, ChevronLeft, ChevronRight, CloudOff, Dumbbell, Flag, GalleryHorizontalEnd, HeartPulse, LayoutList, Link2, Link2Off, MoreHorizontal, Play, Plus, RefreshCw, Repeat, Trash2, Trophy, Weight } from 'lucide-react';
 import {
-  getSession, getSessionInsights, getExercises, getGyms, setSessionGym, peekCache, finishSession, deleteSession, addSessionExercise,
+  getCheers, getSession, getSessionInsights, getExercises, getGyms, setSessionGym, peekCache, finishSession, deleteSession, addSessionExercise,
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
@@ -18,6 +18,7 @@ import {
   saveSnapshot, readSnapshot,
 } from '../../../../lib/setQueue';
 import { useToast } from '../../../../components/Toast';
+import { cheerOf } from '../../../../lib/cheers';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
 import ExercisePicker from '../../../../components/gym/ExercisePicker';
@@ -130,6 +131,38 @@ export default function SessionPage() {
   const [offline, setOffline] = useState(false);
 
   useWakeLock(session?.status === 'in_progress');
+
+  const liveId = session?.status === 'in_progress' ? session.id : null;
+  useEffect(() => {
+    if (!liveId) return undefined;
+    let active = true;
+    let last = null;
+    let primed = false;
+    const check = () => getCheers(liveId, last)
+      .then((cheers) => {
+        if (!active || !cheers.length) {
+          primed = true;
+          return;
+        }
+        last = cheers.at(-1).id;
+        if (primed) {
+          cheers.forEach((item) => {
+            const { emoji, label } = cheerOf(item.kind);
+            toast(`${emoji} ${item.name}: ${label}`);
+          });
+        }
+        primed = true;
+      })
+      .catch(() => {});
+    check();
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') check();
+    }, 10000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [liveId, toast]);
 
   const [insights, setInsights] = useState(null);
   const finishedId = session?.status === 'completed' ? session.id : null;

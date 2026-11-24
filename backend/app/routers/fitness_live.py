@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import CloseFriend, FitnessProfile, LiveAlert, WorkoutSession
+from app.fitness_models import CloseFriend, FitnessProfile, LiveAlert, LiveCheer, WorkoutSession
 from app.fitness_load import without_body_weight
-from app.fitness_schemas import LiveFriendSchema, LiveSessionSchema
+from app.fitness_schemas import CheerCreateSchema, CheerSchema, LiveFriendSchema, LiveSessionSchema
 from .auth import get_current_user
 from .fitness_sessions import IN_PROGRESS, aware, last_activity, serialize_session
 from .fitness_social import find_profile, relation_to
@@ -13,6 +13,7 @@ from .fitness_social import find_profile, relation_to
 fitness_live_router = APIRouter(prefix="/fitness/social", tags=["fitness"])
 
 LIVE_IDLE = timedelta(minutes=30)
+CHEER_GAP = timedelta(seconds=20)
 
 
 def is_live(workout_session: WorkoutSession | None) -> bool:
@@ -96,3 +97,41 @@ def unfollow_live(username: str, user: User = Depends(get_current_user), db: Ses
     if profile is not None:
         db.query(LiveAlert).filter(LiveAlert.watcher_id == user.id, LiveAlert.owner_id == profile.user_id).delete()
         db.commit()
+
+
+@fitness_live_router.post("/users/{username}/live/cheer", status_code=204)
+def cheer(username: str, data: CheerCreateSchema, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = watchable(db, user.id, username)
+    workout_session = live_session(db, profile.user_id)
+    if workout_session is None:
+        raise HTTPException(status_code=409, detail="Esse treino não está mais ao vivo.")
+    now = datetime.now(timezone.utc)
+    last = (
+        db.query(LiveCheer.created_at)
+        .filter(LiveCheer.session_id == workout_session.id, LiveCheer.sender_id == user.id)
+        .order_by(LiveCheer.id.desc())
+        .first()
+    )
+    if last is not None and now - aware(last.created_at) < CHEER_GAP:
+        raise HTTPException(status_code=429, detail="Calma! Dá para mandar outro incentivo em alguns segundos.")
+    db.add(LiveCheer(session_id=workout_session.id, sender_id=user.id, kind=data.kind, created_at=now))
+    db.commit()
+
+
+@fitness_live_router.get("/my-live/{session_id}/cheers", response_model=list[CheerSchema])
+def my_cheers(
+    session_id: int,
+    after: int | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout_session = db.get(WorkoutSession, session_id)
+    if workout_session is None or workout_session.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Treino não encontrado.")
+    query = db.query(LiveCheer).filter(LiveCheer.session_id == session_id)
+    if after is not None:
+        query = query.filter(LiveCheer.id > after)
+    return [
+        {"id": item.id, "kind": item.kind, "name": db.get(User, item.sender_id).name.split(" ")[0], "created_at": aware(item.created_at)}
+        for item in query.order_by(LiveCheer.id).limit(50)
+    ]

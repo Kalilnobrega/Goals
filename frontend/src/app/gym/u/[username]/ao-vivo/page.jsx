@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft, Dumbbell, Timer } from 'lucide-react';
-import { watchLive } from '../../../../../lib/api';
+import { sendCheer, watchLive } from '../../../../../lib/api';
+import { CHEERS } from '../../../../../lib/cheers';
+import { useToast } from '../../../../../components/Toast';
 import { apiError, formatClock, setSummary } from '../../../../../lib/gym';
 import styles from '../../../../../components/gym/social/close.module.css';
 import live from './live.module.css';
@@ -25,6 +27,20 @@ export default function LiveWorkoutPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [now, setNow] = useState(0);
+  const [cheering, setCheering] = useState(false);
+  const toast = useToast();
+
+  const cheer = async ({ key, emoji }) => {
+    setCheering(true);
+    try {
+      await sendCheer(username, key);
+      toast(`${emoji} Incentivo enviado`);
+      setTimeout(() => setCheering(false), 20000);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível enviar.') });
+      setCheering(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -82,6 +98,18 @@ export default function LiveWorkoutPage() {
               <span className={live.clockValue}>{totalSets ? formatClock(seconds(data.last_activity_at)) : '—'}</span>
             </div>
           </div>
+
+          <section className={live.cheers} aria-label="Mandar incentivo">
+            <p className={styles.muted}>Mande um incentivo. Aparece na tela de {first} na hora.</p>
+            <div className={live.cheerRow}>
+              {CHEERS.map((item) => (
+                <button key={item.key} type="button" className={live.cheer} onClick={() => cheer(item)} disabled={cheering}>
+                  <span className={live.cheerEmoji} aria-hidden="true">{item.emoji}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
 
           <ol className={live.list}>
             {session.exercises.map((item) => {

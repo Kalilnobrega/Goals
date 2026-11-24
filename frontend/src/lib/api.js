@@ -361,6 +361,10 @@ export const updateShareLive = (share) => api.put("/fitness/profile/share-live",
 export const getLiveFriends = () => api.get("/fitness/social/live").then((r) => r.data);
 export const followLive = (username, on) =>
   (on ? api.put : api.delete)(`/fitness/social/users/${encodeURIComponent(username)}/live-alert`).then((r) => r.data);
+export const sendCheer = (username, kind) =>
+  api.post(`/fitness/social/users/${encodeURIComponent(username)}/live/cheer`, { kind }, { invalidates: [] }).then((r) => r.data);
+export const getCheers = (sessionId, after = null) =>
+  api.get(`/fitness/social/my-live/${sessionId}/cheers`, { params: after ? { after } : {} }).then((r) => r.data);
 export const watchLive = (username) => api.get(`/fitness/social/users/${encodeURIComponent(username)}/live`).then((r) => r.data);
 const closeUrl = (username, path) => `/fitness/social/users/${encodeURIComponent(username)}/${path}`;
 export const getCloseWorkouts = (username) => api.get(closeUrl(username, "workouts")).then((r) => r.data);

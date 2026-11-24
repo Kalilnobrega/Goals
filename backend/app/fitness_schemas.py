@@ -1914,3 +1914,17 @@ class LiveSessionSchema(BaseModel):
     author: PostAuthorSchema
     session: SessionResponseSchema | None = None
     last_activity_at: datetime | None = None
+
+
+CheerKind = Literal["strong", "fire", "clap", "go"]
+
+
+class CheerCreateSchema(BaseModel):
+    kind: CheerKind
+
+
+class CheerSchema(BaseModel):
+    id: int
+    kind: CheerKind
+    name: str
+    created_at: datetime
