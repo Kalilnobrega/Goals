@@ -3,10 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Ban, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, Flag, Globe, History, Lock, MoreHorizontal, Settings, Star,
+  Ban, Bell, BellOff, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, Flag, Globe, History, Lock, MoreHorizontal, Radio, Settings, Star,
   TrendingUp, Trophy, Users,
 } from 'lucide-react';
-import { blockUser, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
+import { blockUser, followLive, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
 import { apiError, formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
@@ -163,6 +163,18 @@ export default function SocialProfilePage() {
     }
   };
 
+  const toggleLiveAlert = async () => {
+    const next = !profile.live_alert;
+    setProfile((current) => ({ ...current, live_alert: next }));
+    try {
+      await followLive(profile.username, next);
+      toast(next ? `Você será avisado quando ${firstName(profile.name)} treinar` : 'Aviso de treino desligado');
+    } catch (err) {
+      setProfile((current) => ({ ...current, live_alert: !next }));
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível salvar.') });
+    }
+  };
+
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const closeReport = useCallback(() => setReporting(false), []);
 
@@ -240,7 +252,21 @@ export default function SocialProfilePage() {
                 <Link href={`/gym/u/${profile.username}/evolucao`} className={styles.closeLink}>
                   <TrendingUp size={18} /> Evolução <ChevronRight size={16} />
                 </Link>
+                {profile.live_shared && (
+                  <Link href={`/gym/u/${profile.username}/ao-vivo`} className={styles.closeLink}>
+                    <Radio size={18} /> Treino ao vivo <ChevronRight size={16} />
+                  </Link>
+                )}
               </div>
+              {profile.live_shared && (
+                <button type="button" className={`${styles.liveAlert} ${profile.live_alert ? styles.liveAlertOn : ''}`} onClick={toggleLiveAlert} aria-pressed={profile.live_alert}>
+                  {profile.live_alert ? <Bell size={17} /> : <BellOff size={17} />}
+                  <span>
+                    {profile.live_alert ? 'Avisando quando treinar' : 'Avisar quando treinar'}
+                    <small>{profile.live_alert ? 'Você recebe uma notificação quando o treino começar' : `Receba uma notificação quando ${firstName(profile.name)} começar um treino`}</small>
+                  </span>
+                </button>
+              )}
             </section>
           )}
 

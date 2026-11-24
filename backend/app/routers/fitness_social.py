@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import today_br
 from app.models import User
-from app.fitness_models import ChallengeMember, CloseFriend, FitnessProfile, Friendship, Notification, SharedItem, UserBlock, UserReport
+from app.fitness_models import ChallengeMember, CloseFriend, FitnessProfile, Friendship, LiveAlert, Notification, SharedItem, UserBlock, UserReport
 from app.fitness_schemas import (
     FriendRequestSchema,
     FriendsSchema,
@@ -233,6 +233,8 @@ def get_social_profile(
         "close_access": close_access,
         "is_close_friend": relation == "friends" and is_close_friend(db, user.id, target.user_id),
         "weight_shared": close_access and bool(target.share_weight_close),
+        "live_shared": close_access and target.share_live is not False,
+        "live_alert": close_access and db.get(LiveAlert, (user.id, target.user_id)) is not None,
     }
     if viewable:
         with without_body_weight(owner.id, relation != "self" and not response["weight_shared"]):

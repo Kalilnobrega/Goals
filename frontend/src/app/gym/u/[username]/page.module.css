@@ -449,3 +449,45 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.liveAlert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: none;
+  color: var(--gym-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.liveAlert span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.liveAlert small {
+  color: var(--gym-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.liveAlert svg {
+  flex-shrink: 0;
+  color: var(--gym-muted);
+}
+
+.liveAlertOn {
+  border-color: var(--gym-accent);
+}
+
+.liveAlertOn svg {
+  color: var(--gym-accent);
+}

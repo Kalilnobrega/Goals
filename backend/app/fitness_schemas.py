@@ -1396,6 +1396,8 @@ class SocialProfileSchema(BaseModel):
     relation: Relation
     can_view: bool
     close_access: bool = False
+    live_alert: bool = False
+    live_shared: bool = False
     is_close_friend: bool = False
     weight_shared: bool = False
     stats: SocialStatsSchema | None = None
@@ -1798,7 +1800,7 @@ class CopiedWorkoutSchema(BaseModel):
 class NotificationSchema(BaseModel):
     id: int
     kind: Literal[
-        "friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment", "shared_item", "challenge_finished", "challenge_deleted",
+        "friend_request", "friend_accepted", "challenge_invite", "challenge_joined", "post_reaction", "post_comment", "shared_item", "challenge_finished", "challenge_deleted", "live_started",
     ]
     actor: PostAuthorSchema
     created_at: datetime

@@ -359,6 +359,8 @@ export const updateCloseWeight = (share) => api.put("/fitness/profile/close-weig
 export const updateShareGym = (share) => api.put("/fitness/profile/share-gym", { share }).then((r) => r.data);
 export const updateShareLive = (share) => api.put("/fitness/profile/share-live", { share }).then((r) => r.data);
 export const getLiveFriends = () => api.get("/fitness/social/live").then((r) => r.data);
+export const followLive = (username, on) =>
+  (on ? api.put : api.delete)(`/fitness/social/users/${encodeURIComponent(username)}/live-alert`).then((r) => r.data);
 export const watchLive = (username) => api.get(`/fitness/social/users/${encodeURIComponent(username)}/live`).then((r) => r.data);
 const closeUrl = (username, path) => `/fitness/social/users/${encodeURIComponent(username)}/${path}`;
 export const getCloseWorkouts = (username) => api.get(closeUrl(username, "workouts")).then((r) => r.data);

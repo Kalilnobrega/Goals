@@ -67,3 +67,26 @@ def test_close_friends_watch_the_workout_live(client, library, ana, bruno, carla
 
     client.post(f"/fitness/sessions/{session['id']}/finish", json={}, headers=ana)
     assert client.get("/fitness/social/users/ana/live", headers=bruno).json()["live"] is False
+
+
+def test_live_alert_notifies_only_watchers_who_asked(client, library, ana, bruno, carla):
+    befriend(client, ana, bruno, "bruno", "ana")
+    befriend(client, ana, carla, "carla", "ana")
+    client.put("/fitness/social/close-friends/bruno", headers=ana)
+    assert client.put("/fitness/social/users/ana/live-alert", headers=carla).status_code == 404
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["live_alert"] is False
+    assert client.put("/fitness/social/users/ana/live-alert", headers=bruno).status_code == 204
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["live_alert"] is True
+
+    workout = make_workout(client, ana, library)
+    session = start(client, ana, workout["id"])
+    notes = [n for n in client.get("/fitness/notifications", headers=bruno).json()["notifications"] if n["kind"] == "live_started"]
+    assert len(notes) == 1 and notes[0]["detail"] == "Treino A" and notes[0]["actor"]["username"] == "ana"
+    assert all(n["kind"] != "live_started" for n in client.get("/fitness/notifications", headers=carla).json()["notifications"])
+
+    client.delete(f"/fitness/sessions/{session['id']}", headers=ana)
+    start(client, ana, workout["id"])
+    assert len([n for n in client.get("/fitness/notifications", headers=bruno).json()["notifications"] if n["kind"] == "live_started"]) == 1
+
+    client.delete("/fitness/social/users/ana/live-alert", headers=bruno)
+    assert client.get("/fitness/social/users/ana", headers=bruno).json()["live_alert"] is False

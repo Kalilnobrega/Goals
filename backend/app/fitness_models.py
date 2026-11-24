@@ -322,6 +322,13 @@ class ExerciseGymLink(Base):
 
 
 
+class LiveAlert(Base):
+    __tablename__ = "fitness_live_alerts"
+
+    watcher_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    owner_id = Column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+
+
 class Friendship(Base):
     __tablename__ = "fitness_friendships"
     __table_args__ = (UniqueConstraint("user_low_id", "user_high_id", name="uq_fitness_friendship_pair"),)

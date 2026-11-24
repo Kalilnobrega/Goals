@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from app.fitness_gyms import is_specific, place_for, same_place
+from app.fitness_live_alerts import alert_watchers
 from app.fitness_media import delete_keys, drop_session_post
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import String, and_, case, cast, func, literal, or_
@@ -560,6 +561,7 @@ def start_session(
         db.rollback()
         raise active_conflict(active_session(user, db))
     db.refresh(workout_session)
+    alert_watchers(db, user.id, workout_session.name)
     return serialize_session(workout_session, db)
 
 

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import CloseFriend, FitnessProfile, WorkoutSession
+from app.fitness_models import CloseFriend, FitnessProfile, LiveAlert, WorkoutSession
 from app.fitness_load import without_body_weight
 from app.fitness_schemas import LiveFriendSchema, LiveSessionSchema
 from .auth import get_current_user
@@ -62,9 +62,7 @@ def live_friends(user: User = Depends(get_current_user), db: Session = Depends(g
 
 @fitness_live_router.get("/users/{username}/live", response_model=LiveSessionSchema)
 def watch_live(username: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = find_profile(db, username)
-    if profile is None or profile.user_id == user.id or not can_watch(db, user.id, profile):
-        raise HTTPException(status_code=404, detail="Só melhores amigos acompanham esse treino ao vivo.")
+    profile = watchable(db, user.id, username)
     owner = db.get(User, profile.user_id)
     author = {"username": profile.username, "name": owner.name}
     workout_session = live_session(db, profile.user_id)
@@ -75,3 +73,26 @@ def watch_live(username: str, user: User = Depends(get_current_user), db: Sessio
     for item in detail["exercises"]:
         item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])
     return {"live": True, "author": author, "session": detail, "last_activity_at": last_activity(workout_session)}
+
+
+def watchable(db: Session, viewer: int, username: str) -> FitnessProfile:
+    profile = find_profile(db, username)
+    if profile is None or profile.user_id == viewer or not can_watch(db, viewer, profile):
+        raise HTTPException(status_code=404, detail="Só melhores amigos acompanham esse treino ao vivo.")
+    return profile
+
+
+@fitness_live_router.put("/users/{username}/live-alert", status_code=204)
+def follow_live(username: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = watchable(db, user.id, username)
+    if db.get(LiveAlert, (user.id, profile.user_id)) is None:
+        db.add(LiveAlert(watcher_id=user.id, owner_id=profile.user_id))
+        db.commit()
+
+
+@fitness_live_router.delete("/users/{username}/live-alert", status_code=204)
+def unfollow_live(username: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = find_profile(db, username)
+    if profile is not None:
+        db.query(LiveAlert).filter(LiveAlert.watcher_id == user.id, LiveAlert.owner_id == profile.user_id).delete()
+        db.commit()

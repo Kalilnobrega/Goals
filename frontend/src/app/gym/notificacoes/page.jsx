@@ -25,6 +25,8 @@ function describe(item) {
       const result = place === 1 ? 'Você venceu!' : place > 1 ? `Você ficou em ${place}º lugar.` : 'Você terminou sem pontos.';
       return { text: <>O desafio <strong>{item.challenge_name}</strong> terminou. {result}</>, href: `/gym/social/desafios/${item.challenge_id}` };
     }
+    case 'live_started':
+      return { text: <>{name} começou a treinar{item.detail ? <>: <strong>{item.detail}</strong></> : ''}</>, href: item.actor.username ? `/gym/u/${item.actor.username}/ao-vivo` : '/gym/social' };
     case 'challenge_deleted':
       return { text: <>{name} excluiu o desafio <strong>{item.detail}</strong></>, href: '/gym/social/desafios' };
     case 'post_reaction': {
