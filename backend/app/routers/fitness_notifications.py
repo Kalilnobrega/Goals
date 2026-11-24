@@ -58,7 +58,7 @@ def list_notifications(
     query = db.query(Notification).filter(Notification.user_id == user.id)
     if before is not None:
         query = query.filter(Notification.id < before)
-    rows = query.order_by(Notification.created_at.desc(), Notification.id.desc()).limit(PAGE_SIZE + 1).all()
+    rows = query.order_by(Notification.id.desc()).limit(PAGE_SIZE + 1).all()
     more = len(rows) > PAGE_SIZE
     rows = rows[:PAGE_SIZE]
     items = [entry for entry in (serialize(db, row) for row in rows) if entry is not None]

@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.fitness_models import Notification, UserBlock
 
@@ -14,13 +13,8 @@ def notify(db: Session, user_id: int, actor_id: int, kind: str, **refs) -> None:
 
 
 def renotify(db: Session, user_id: int, actor_id: int, kind: str, **refs) -> None:
-    existing = clear_query(db, user_id, actor_id, kind, **{key: value for key, value in refs.items() if key != "detail"}).first()
-    if existing is None:
-        notify(db, user_id, actor_id, kind, **refs)
-        return
-    existing.detail = refs.get("detail")
-    existing.created_at = datetime.now(timezone.utc)
-    existing.read_at = None
+    clear(db, user_id, actor_id, kind, **{key: value for key, value in refs.items() if key != "detail"})
+    notify(db, user_id, actor_id, kind, **refs)
 
 
 def clear_query(db: Session, user_id: int, actor_id: int, kind: str, **refs):

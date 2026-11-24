@@ -99,3 +99,29 @@ def test_deleting_a_post_removes_its_notifications(client, ana, bruno):
     client.put(f"/fitness/posts/{post['id']}/reaction", json={"kind": "fire"}, headers=bruno)
     client.delete(f"/fitness/posts/{post['id']}", headers=ana)
     assert ("post_reaction", "bruno") not in kinds(client, ana)
+
+
+def test_paging_after_a_renotify_neither_repeats_nor_skips(client, db_session, ana, bruno):
+    from app.fitness_models import FitnessProfile, Post
+    from app.fitness_notifications import notify, renotify
+    ana_id = db_session.query(FitnessProfile).filter(FitnessProfile.username == "ana").one().user_id
+    bruno_id = db_session.query(FitnessProfile).filter(FitnessProfile.username == "bruno").one().user_id
+    posts = [Post(user_id=ana_id, caption=str(n)) for n in range(40)]
+    db_session.add_all(posts)
+    db_session.flush()
+    for item in posts:
+        notify(db_session, ana_id, bruno_id, "post_reaction", post_id=item.id, detail="fire")
+    db_session.commit()
+    renotify(db_session, ana_id, bruno_id, "post_reaction", post_id=posts[0].id, detail="strong")
+    db_session.commit()
+
+    seen, before = [], None
+    while True:
+        url = "/fitness/notifications" + (f"?before={before}" if before else "")
+        page = client.get(url, headers=ana).json()
+        seen += [n["post_id"] for n in page["notifications"]]
+        before = page["next_before"]
+        if before is None:
+            break
+    assert len(seen) == len(set(seen)) == 40
+    assert seen[0] == posts[0].id
