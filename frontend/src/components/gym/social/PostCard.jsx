@@ -127,7 +127,7 @@ export function PostPhotos({ media }) {
 function postMeta(post) {
   const place = post.gym_name && post.activity === 'Academia' ? post.gym_name : post.activity;
   const gym = post.gym_name && post.activity !== 'Academia' ? post.gym_name : null;
-  return [timeAgo(post.created_at), place, gym, post.minutes ? `${post.minutes} min` : null].filter(Boolean).join(' · ');
+  return [timeAgo(post.created_at), place, gym, post.minutes ? `${post.minutes} min` : null, post.in_feed === false ? 'só nos desafios' : null].filter(Boolean).join(' · ');
 }
 
 export default function PostCard({ post, onChange, onDeleted, linkToPost = true }) {

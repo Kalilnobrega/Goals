@@ -371,3 +371,34 @@
 .input[type="date"] {
   color-scheme: dark;
 }
+
+.feedToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  cursor: pointer;
+}
+
+.feedText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feedLabel {
+  color: var(--gym-text);
+  font-weight: 600;
+}
+
+.feedToggle input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--gym-accent);
+}

@@ -42,6 +42,7 @@ function Composer() {
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
+  const [inFeed, setInFeed] = useState(true);
 
   useEffect(() => {
     if (shareWorkoutId) getWorkout(shareWorkoutId).then((data) => setSharedName(data.name)).catch(() => setError('Ficha não encontrada.'));
@@ -110,6 +111,7 @@ function Composer() {
 
   const moveCrop = (position) => setPhotos((current) => current.map((photo, i) => (i === active ? { ...photo, position } : photo)));
 
+  const feedOptional = !!challengeId && !sharing && (checkin || !!linked);
   const chosenActivity = activity === 'Outra' ? customActivity.trim() : activity;
   const minutesValue = Number(minutes);
   const checkinReady = !!chosenActivity && minutesValue >= 1 && minutesValue <= 600 && photos.length > 0;
@@ -136,8 +138,9 @@ function Composer() {
         share_exercise_id: shareExerciseId,
         media_ids: ids,
         ...(checkin ? { minutes: minutesValue, performed_on: performedOn } : {}),
+        ...(feedOptional ? { in_feed: inFeed } : {}),
       });
-      toast(checkin ? 'Check-in feito' : 'Publicado no feed');
+      toast(checkin ? 'Check-in feito' : feedOptional && !inFeed ? 'Publicado no desafio' : 'Publicado no feed');
       router.replace(backHref);
     } catch (err) {
       ids.forEach((id) => deleteMedia(id).catch(() => {}));
@@ -293,6 +296,20 @@ function Composer() {
           <p className={styles.muted}>Até {MAX_PHOTOS} fotos. No feed elas aparecem no formato escolhido; ao tocar, abrem inteiras em alta qualidade. A localização gravada pela câmera é removida.</p>
           <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={addPhotos} />
         </section>
+
+        {feedOptional && (
+          <label className={styles.feedToggle}>
+            <span className={styles.feedText}>
+              <span className={styles.feedLabel}>Mostrar também no feed</span>
+              <span className={styles.muted}>
+                {inFeed
+                  ? 'Aparece no feed e no seu perfil, além da atividade dos desafios.'
+                  : 'Fica só na atividade dos desafios. Não aparece no feed nem no seu perfil.'}
+              </span>
+            </span>
+            <input type="checkbox" checked={inFeed} onChange={(e) => setInFeed(e.target.checked)} />
+          </label>
+        )}
 
         {error && <p className={styles.error}>{error}</p>}
 
