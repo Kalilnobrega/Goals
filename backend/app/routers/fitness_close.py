@@ -1,10 +1,9 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.fitness_models import CloseFriend, Exercise, FitnessProfile, Workout, WorkoutSession
+from app.fitness_models import CloseFriend, FitnessProfile, Workout, WorkoutSession
 from app.fitness_schemas import (
     BodyWeightResponseSchema,
     CopiedWorkoutSchema,
@@ -15,12 +14,11 @@ from app.fitness_schemas import (
     SessionHistorySchema,
     StatsSchema,
     WorkoutResponseSchema,
-    WorkoutSchema,
 )
 from app.fitness_load import without_body_weight
 from app.fitness_sharing import build_copy, workout_snapshot
 from .auth import get_current_user
-from .fitness import build_workout_cardio, build_workout_exercises, list_workouts
+from .fitness import list_workouts
 from .fitness_feed import workout_detail
 from .fitness_plans import list_plans
 from .fitness_progress import get_exercise_progress, list_body_weight, list_progress_exercises

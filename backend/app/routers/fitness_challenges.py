@@ -26,7 +26,7 @@ from app.fitness_schemas import (
 )
 from app.fitness_load import BodyWeights
 from app.fitness_sets import entry_volume, working
-from app.fitness_notifications import clear, notify
+from app.fitness_notifications import notify
 from .auth import get_current_user
 from .fitness_social import blocked_ids, own_profile, find_profile, friendship_between, has_blocked
 from .fitness_stats import completed_facts, plan_adherence, weight_records

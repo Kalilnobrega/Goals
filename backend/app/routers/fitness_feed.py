@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
-    ChallengeMember, Exercise, FitnessProfile, Notification, Workout, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
+    ChallengeMember, FitnessProfile, Notification, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
 )
 from app.fitness_schemas import (
     CommentCreateSchema,
@@ -21,7 +21,6 @@ from app.fitness_schemas import (
     PostWorkoutDetailSchema,
     CopiedSharedSchema,
     CopiedWorkoutSchema,
-    WorkoutSchema,
     PostSchema,
     ProgressPhotoSchema,
     ReactionSchema,
@@ -34,7 +33,6 @@ from app.fitness_notifications import clear, notify, renotify
 from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
-from .fitness import build_workout_cardio, build_workout_exercises
 from .fitness_social import blocked_ids, can_view, has_blocked, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
