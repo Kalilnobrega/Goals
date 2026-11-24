@@ -42,7 +42,7 @@ function Composer() {
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
-  const [inFeed, setInFeed] = useState(true);
+  const [inFeed, setInFeed] = useState(false);
 
   useEffect(() => {
     if (shareWorkoutId) getWorkout(shareWorkoutId).then((data) => setSharedName(data.name)).catch(() => setError('Ficha não encontrada.'));
