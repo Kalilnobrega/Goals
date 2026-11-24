@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, to_br_date, today_br
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, UserBlock, WorkoutSession
+from app.fitness_models import BodyWeightEntry, Challenge, ChallengeInvite, ChallengeMember, ChallengeMessage, Exercise, FitnessProfile, Friendship, Notification, Post, PostComment, WorkoutSession
 from app.fitness_schemas import (
     ChallengeCreateSchema,
     ChallengeDetailSchema,
@@ -27,7 +27,7 @@ from app.fitness_load import BodyWeights
 from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import clear, notify
 from .auth import get_current_user
-from .fitness_social import own_profile, find_profile, friendship_between, has_blocked
+from .fitness_social import blocked_ids, own_profile, find_profile, friendship_between, has_blocked
 from .fitness_stats import completed_facts, plan_adherence, weight_records
 from .fitness_plans import active_plan
 from app.fitness_muscles import group_credit
@@ -810,13 +810,6 @@ def challenge_session(
 
 
 CHAT_PAGE = 50
-
-
-def blocked_ids(db: Session, user_id: int) -> set[int]:
-    rows = db.query(UserBlock.blocker_id, UserBlock.blocked_id).filter(
-        or_(UserBlock.blocker_id == user_id, UserBlock.blocked_id == user_id)
-    ).all()
-    return {blocked if blocker == user_id else blocker for blocker, blocked in rows}
 
 
 def visible_members(db: Session, challenge: Challenge, viewer: int) -> set[int]:

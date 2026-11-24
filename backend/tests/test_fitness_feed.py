@@ -309,3 +309,13 @@ def test_post_photos_need_a_username_but_progress_photos_do_not(client, db_sessi
     headers = headers_for(make_user(db_session, "Sem Nome"))
     assert upload(client, headers).status_code == 409
     assert upload(client, headers, kind="progress").status_code == 200
+
+
+def test_comments_from_blocked_people_are_neither_listed_nor_counted(client, ana, bruno, carla):
+    created = post(client, carla, caption="público")
+    client.post(f"/fitness/posts/{created['id']}/comments", json={"text": "oi"}, headers=bruno)
+    client.post(f"/fitness/posts/{created['id']}/comments", json={"text": "olá"}, headers=ana)
+    client.post("/fitness/social/blocks/bruno", headers=ana)
+    seen = client.get(f"/fitness/posts/{created['id']}", headers=ana).json()
+    assert [c["text"] for c in seen["comments"]] == ["olá"] and seen["comment_count"] == 1
+    assert client.get(f"/fitness/posts/{created['id']}", headers=carla).json()["comment_count"] == 2

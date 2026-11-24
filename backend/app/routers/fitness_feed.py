@@ -34,7 +34,7 @@ from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
 from .fitness import build_workout_cardio, build_workout_exercises
-from .fitness_social import can_view, has_blocked, is_close, own_profile, relation_to
+from .fitness_social import blocked_ids, can_view, has_blocked, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -238,7 +238,13 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
         for row in db.query(PostReaction.post_id, PostReaction.kind, func.count()).filter(PostReaction.post_id.in_(ids)).group_by(PostReaction.post_id, PostReaction.kind):
             counts[row[0]][row[1]] = row[2]
         mine = dict(db.query(PostReaction.post_id, PostReaction.kind).filter(PostReaction.post_id.in_(ids), PostReaction.user_id == me).all())
-        comments = dict(db.query(PostComment.post_id, func.count()).filter(PostComment.post_id.in_(ids)).group_by(PostComment.post_id).all())
+        hidden = blocked_ids(db, me)
+        comments = dict(
+            db.query(PostComment.post_id, func.count())
+            .filter(PostComment.post_id.in_(ids), PostComment.user_id.notin_(hidden))
+            .group_by(PostComment.post_id)
+            .all()
+        )
     result = []
     for post in posts:
         user, profile = author_profile(db, post.user_id)
@@ -414,9 +420,13 @@ def comment_out(db: Session, comment: PostComment, post: Post, me: int) -> dict:
 @fitness_feed_router.get("/posts/{post_id}", response_model=PostDetailSchema)
 def get_post(post_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, user.id)
-    comments = db.query(PostComment).filter(PostComment.post_id == post.id).order_by(PostComment.id).all()
-    visible = [c for c in comments if not has_blocked(db, user.id, c.user_id) and not has_blocked(db, c.user_id, user.id)]
-    return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in visible]}
+    comments = (
+        db.query(PostComment)
+        .filter(PostComment.post_id == post.id, PostComment.user_id.notin_(blocked_ids(db, user.id)))
+        .order_by(PostComment.id)
+        .all()
+    )
+    return {**serialize(db, [post], user.id)[0], "comments": [comment_out(db, c, post, user.id) for c in comments]}
 
 
 def workout_detail(db: Session, session: WorkoutSession, viewer_id: int, show_weight: bool = False) -> dict:

@@ -58,6 +58,13 @@ def has_blocked(db: Session, blocker: int, blocked: int) -> bool:
     return db.get(UserBlock, (blocker, blocked)) is not None
 
 
+def blocked_ids(db: Session, user_id: int) -> set[int]:
+    rows = db.query(UserBlock.blocker_id, UserBlock.blocked_id).filter(
+        or_(UserBlock.blocker_id == user_id, UserBlock.blocked_id == user_id)
+    ).all()
+    return {blocked if blocker == user_id else blocker for blocker, blocked in rows}
+
+
 def relation_to(db: Session, me: int, other: int) -> str:
     if me == other:
         return "self"
