@@ -95,10 +95,17 @@ def list_plans(user: User = Depends(get_current_user), db: Session = Depends(get
     return [serialize_plan(plan) for plan in plans]
 
 
+MAX_PLANS = 20
+
+
+def ensure_plan_room(user: User, db: Session) -> None:
+    if db.query(Plan).filter(Plan.user_id == user.id).count() >= MAX_PLANS:
+        raise HTTPException(status_code=400, detail=f"Você pode ter no máximo {MAX_PLANS} planos.")
+
+
 @fitness_plans_router.post("/plans", response_model=PlanResponseSchema)
 def create_plan(data: PlanSchema, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if db.query(Plan).filter(Plan.user_id == user.id).count() >= 20:
-        raise HTTPException(status_code=400, detail="Você pode ter no máximo 20 planos.")
+    ensure_plan_room(user, db)
     plan = Plan(user_id=user.id, name=data.name, is_active=False, days=build_days(data, user, db))
     db.add(plan)
     db.flush()

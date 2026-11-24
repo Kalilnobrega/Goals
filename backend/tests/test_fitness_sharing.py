@@ -173,3 +173,16 @@ def test_blocking_drops_shares_and_notifications_between_both(client, library, a
     data = client.get("/fitness/notifications", headers=ana).json()
     assert data["notifications"] == [] and data["unread"] == 0
     assert client.get("/fitness/challenges/pending/count", headers=ana).json()["notifications"] == 0
+
+
+def test_copying_a_plan_respects_the_plan_limit(client, library, ana, bruno):
+    befriend(client, ana, bruno, "bruno", "ana")
+    plan, _, _ = make_plan(client, ana, library)
+    post = client.post("/fitness/posts", json={"share_plan_id": plan["id"]}, headers=ana).json()
+    workout = make_workout(client, bruno, library)
+    for number in range(20):
+        client.post("/fitness/plans", json={"name": f"P{number}", "days": [{"weekday": 0, "workout_id": workout["id"]}]}, headers=bruno)
+    copied = client.post(f"/fitness/posts/{post['id']}/copy-shared", headers=bruno)
+    assert copied.status_code == 400
+    assert len(client.get("/fitness/plans", headers=bruno).json()) == 20
+    assert len(client.get("/fitness/workouts", headers=bruno).json()) == 1

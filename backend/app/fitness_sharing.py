@@ -166,6 +166,9 @@ def copy_workout(db: Session, user: User, snapshot: dict, author: User) -> dict:
 
 
 def copy_plan(db: Session, user: User, snapshot: dict, author: User) -> dict:
+    from app.routers.fitness_plans import ensure_plan_room
+
+    ensure_plan_room(user, db)
     first = author.name.split(" ")[0]
     mine = author.id == user.id
     created = {}
