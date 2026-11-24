@@ -1916,7 +1916,7 @@ class LiveSessionSchema(BaseModel):
     last_activity_at: datetime | None = None
 
 
-CheerKind = Literal["strong", "fire", "clap", "go"]
+CheerKind = Literal["strong", "go"]
 
 
 class CheerCreateSchema(BaseModel):
@@ -1925,6 +1925,6 @@ class CheerCreateSchema(BaseModel):
 
 class CheerSchema(BaseModel):
     id: int
-    kind: CheerKind
+    kind: str
     name: str
     created_at: datetime

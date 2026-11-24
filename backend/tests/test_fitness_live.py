@@ -97,17 +97,17 @@ def test_close_friends_cheer_someone_training(client, library, ana, bruno, carla
     befriend(client, ana, carla, "carla", "ana")
     client.put("/fitness/social/close-friends/bruno", headers=ana)
     url = "/fitness/social/users/ana/live/cheer"
-    assert client.post(url, json={"kind": "fire"}, headers=bruno).status_code == 409
+    assert client.post(url, json={"kind": "strong"}, headers=bruno).status_code == 409
 
     workout = make_workout(client, ana, library)
     session = start(client, ana, workout["id"])
-    assert client.post(url, json={"kind": "fire"}, headers=carla).status_code == 404
-    assert client.post(url, json={"kind": "nope"}, headers=bruno).status_code == 422
-    assert client.post(url, json={"kind": "fire"}, headers=bruno).status_code == 204
+    assert client.post(url, json={"kind": "strong"}, headers=carla).status_code == 404
+    assert client.post(url, json={"kind": "fire"}, headers=bruno).status_code == 422
+    assert client.post(url, json={"kind": "strong"}, headers=bruno).status_code == 204
     assert client.post(url, json={"kind": "go"}, headers=bruno).status_code == 429
 
     cheers_url = f"/fitness/social/my-live/{session['id']}/cheers"
     cheers = client.get(cheers_url, headers=ana).json()
-    assert [(c["kind"], c["name"]) for c in cheers] == [("fire", "Bruno")]
+    assert [(c["kind"], c["name"]) for c in cheers] == [("strong", "Bruno")]
     assert client.get(cheers_url, params={"after": cheers[0]["id"]}, headers=ana).json() == []
     assert client.get(cheers_url, headers=bruno).status_code == 404

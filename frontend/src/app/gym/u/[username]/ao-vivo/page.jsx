@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Dumbbell, Timer } from 'lucide-react';
+import { ChevronLeft, Dumbbell } from 'lucide-react';
 import { sendCheer, watchLive } from '../../../../../lib/api';
 import { CHEERS } from '../../../../../lib/cheers';
 import { useToast } from '../../../../../components/Toast';
@@ -63,7 +63,6 @@ export default function LiveWorkoutPage() {
   const session = data?.live ? data.session : null;
   const currentId = session ? currentExercise(session) : null;
   const seconds = (iso) => (now && iso ? (now - new Date(iso).getTime()) / 1000 : 0);
-  const totalSets = session ? session.exercises.reduce((sum, item) => sum + item.sets.filter((entry) => entry.kind !== 'warmup').length, 0) : 0;
 
   return (
     <div className={styles.page}>
@@ -88,19 +87,13 @@ export default function LiveWorkoutPage() {
 
       {session && (
         <>
-          <div className={live.clocks}>
-            <div className={live.clock}>
-              <span className={live.clockLabel}>Treinando há</span>
-              <span className={live.clockValue}>{formatClock(seconds(session.started_at))}</span>
-            </div>
-            <div className={live.clock}>
-              <span className={live.clockLabel}><Timer size={13} aria-hidden="true" /> Desde a última série</span>
-              <span className={live.clockValue}>{totalSets ? formatClock(seconds(data.last_activity_at)) : '—'}</span>
-            </div>
+          <div className={live.clock}>
+            <span className={live.clockLabel}>Treinando há</span>
+            <span className={live.clockValue}>{formatClock(seconds(session.started_at))}</span>
           </div>
 
           <section className={live.cheers} aria-label="Mandar incentivo">
-            <p className={styles.muted}>Mande um incentivo. Aparece na tela de {first} na hora.</p>
+            <p className={styles.muted}>Mande um incentivo para {first}. Aparece na tela do treino na hora.</p>
             <div className={live.cheerRow}>
               {CHEERS.map((item) => (
                 <button key={item.key} type="button" className={live.cheer} onClick={() => cheer(item)} disabled={cheering}>
