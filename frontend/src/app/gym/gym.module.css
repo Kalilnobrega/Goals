@@ -68,7 +68,7 @@
 :where(.main) :where(:global(.page-frame) > * > :nth-child(7)) { animation-delay: 200ms; }
 :where(.main) :where(:global(.page-frame) > * > :nth-child(n + 8)) { animation-delay: 240ms; }
 
-:where(.main) :where(:global(.page-frame) > * > :is(:first-child, [data-segment-tabs])) {
+:where(.main) :where(:global(.page-frame) > * > :is(:first-child, [data-segment-tabs], :has([data-segment-tabs]))) {
   animation: none;
 }
 
