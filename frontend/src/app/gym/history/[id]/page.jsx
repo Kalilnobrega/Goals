@@ -214,18 +214,22 @@ export default function HistoryDetailPage() {
     <div className={styles.page}>
       <div className={styles.top}>
         <Link href="/gym/history" className={styles.back}><ChevronLeft size={18} /> Histórico</Link>
-        {session && <h1 className={styles.title}>{session.name}</h1>}
-        {status === 'ready' && gyms.length > 1 && (
-          <button type="button" className={styles.gymChip} onClick={() => setGymOpen(true)} aria-label={`Academia: ${session.gym_name ?? 'sem academia'}. Trocar`}>
-            <Building2 size={14} aria-hidden="true" />
-            <span>{session.gym_name ?? 'Sem academia'}</span>
-          </button>
-        )}
-        {status === 'ready' && gyms.length <= 1 && session.gym_name && (
-          <span className={styles.gymLabel}>
-            <Building2 size={14} aria-hidden="true" />
-            <span>{session.gym_name}</span>
-          </span>
+        {session && (
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>{session.name}</h1>
+            {status === 'ready' && gyms.length > 1 && (
+              <button type="button" className={styles.gymChip} onClick={() => setGymOpen(true)} aria-label={`Academia: ${session.gym_name ?? 'sem academia'}. Trocar`}>
+                <Building2 size={14} aria-hidden="true" />
+                <span>{session.gym_name ?? 'Sem academia'}</span>
+              </button>
+            )}
+            {status === 'ready' && gyms.length <= 1 && session.gym_name && (
+              <span className={styles.gymLabel}>
+                <Building2 size={14} aria-hidden="true" />
+                <span>{session.gym_name}</span>
+              </span>
+            )}
+          </div>
         )}
       </div>
 
