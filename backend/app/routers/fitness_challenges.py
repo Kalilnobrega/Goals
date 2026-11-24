@@ -249,7 +249,7 @@ def plan_pct(db: Session, user: User, sessions: list[dict], challenge: Challenge
     today = today_br()
     if today < challenge.start_date:
         return 0.0
-    adherence = plan_adherence(plan, sessions, challenge.start_date, min(today, challenge.end_date))
+    adherence = plan_adherence(plan, sessions, challenge.start_date, min(today, challenge.end_date + timedelta(days=1)))
     return float(adherence["pct"] or 0)
 
 

@@ -628,3 +628,17 @@ def test_activity_pages_stay_stable_when_new_items_arrive(client, ana, bruno, me
     ids = [item["id"] for item in first["items"] + second["items"]]
     assert len(ids) == len(set(ids)) == 21 and second["next_before"] is None
     assert client.get(url, params={"before": "lixo"}, headers=ana).status_code == 422
+
+
+def test_finished_plan_challenge_counts_a_skipped_last_day(monkeypatch):
+    from types import SimpleNamespace
+    from app.routers import fitness_challenges
+    today = today_br()
+    start, end = today - timedelta(days=10), today - timedelta(days=6)
+    plan = SimpleNamespace(created_at=None, days=[SimpleNamespace(weekday=w) for w in range(7)])
+    monkeypatch.setattr(fitness_challenges, "active_plan", lambda user, db: plan)
+    challenge = SimpleNamespace(start_date=start, end_date=end)
+    trained = [{"day": start + timedelta(days=n)} for n in range(4)]
+    assert fitness_challenges.plan_pct(None, None, trained, challenge) == 80
+    every = trained + [{"day": end}]
+    assert fitness_challenges.plan_pct(None, None, every, challenge) == 100
