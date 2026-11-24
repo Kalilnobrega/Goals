@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowUpDown, Camera, Check, ChevronLeft, Dumbbell, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Building2, Camera, Check, ChevronLeft, Dumbbell, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
 import {
   getSession, getSessionInsights, deleteSession, addSet, updateSet, deleteSet, updateSessionExercise, removeSessionExercise,
-  getExercises, reorderSession,
+  getExercises, getGyms, reorderSession, setSessionGym,
 } from '../../../../lib/api';
 import { apiError, familySiblings, groupsLabel, plural, renumberSets, variantTitle, variantHint } from '../../../../lib/gym';
 import GymSheet from '../../../../components/gym/GymSheet';
@@ -34,6 +34,9 @@ export default function HistoryDetailPage() {
   const [editPanel, setEditPanel] = useState(null);
   const [exercises, setExercises] = useState(null);
   const [exercisesError, setExercisesError] = useState(false);
+  const [gyms, setGyms] = useState([]);
+  const [gymOpen, setGymOpen] = useState(false);
+  const closeGym = useCallback(() => setGymOpen(false), []);
   const { begin, starting, sheet } = useStartSession();
 
   const loaded = useCallback((data) => {
@@ -52,6 +55,24 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     getSession(id).then(loaded).catch(failed);
   }, [id, loaded]);
+
+  useEffect(() => {
+    getGyms().then(data => setGyms(data.gyms)).catch(() => {});
+  }, []);
+
+  const changeGym = async (gym) => {
+    setGymOpen(false);
+    if (gym.id === session.gym_id) return;
+    try {
+      const updated = await setSessionGym(session.id, gym.id);
+      setSession(current => ({ ...current, gym_id: updated.gym_id, gym_name: updated.gym_name }));
+      setInsights(null);
+      getSessionInsights(session.id).then(setInsights).catch(() => {});
+      toast(`Treino movido para ${gym.name}`);
+    } catch (err) {
+      toast({ tone: 'danger', message: apiError(err, 'Não foi possível trocar a academia.') });
+    }
+  };
 
   const sessionId = session?.id;
   useEffect(() => {
@@ -194,6 +215,18 @@ export default function HistoryDetailPage() {
       <div className={styles.top}>
         <Link href="/gym/history" className={styles.back}><ChevronLeft size={18} /> Histórico</Link>
         {session && <h1 className={styles.title}>{session.name}</h1>}
+        {status === 'ready' && gyms.length > 1 && (
+          <button type="button" className={styles.gymChip} onClick={() => setGymOpen(true)} aria-label={`Academia: ${session.gym_name ?? 'sem academia'}. Trocar`}>
+            <Building2 size={14} aria-hidden="true" />
+            <span>{session.gym_name ?? 'Sem academia'}</span>
+          </button>
+        )}
+        {status === 'ready' && gyms.length <= 1 && session.gym_name && (
+          <span className={styles.gymLabel}>
+            <Building2 size={14} aria-hidden="true" />
+            <span>{session.gym_name}</span>
+          </span>
+        )}
       </div>
 
       {status === 'missing' && (
@@ -269,6 +302,25 @@ export default function HistoryDetailPage() {
         </>
       )}
       {sheet}
+      <GymSheet open={gymOpen} onClose={closeGym} title="Academia deste treino">
+        {session && (
+          <div className={s.actions}>
+            {gyms.map(gym => (
+              <button
+                key={gym.id}
+                type="button"
+                className={s.option}
+                onClick={() => changeGym(gym)}
+                aria-pressed={gym.id === session.gym_id}
+              >
+                {gym.id === session.gym_id ? <Check size={20} /> : <Building2 size={20} />}
+                <span>{gym.name}</span>
+              </button>
+            ))}
+            <p className={styles.gymHint}>Máquinas e polias deste treino passam a contar para a carga anterior e os recordes da academia escolhida.</p>
+          </div>
+        )}
+      </GymSheet>
       <GymSheet
         open={!!editSheet}
         onClose={() => setEditPanel(null)}

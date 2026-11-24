@@ -126,3 +126,50 @@
   border-color: var(--gym-accent);
   color: var(--gym-accent-ink);
 }
+
+.gymChip,
+.gymLabel {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 30px;
+  margin-top: -4px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--gym-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.gymChip {
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface-2);
+  cursor: pointer;
+}
+
+.gymLabel {
+  padding: 0;
+  color: var(--gym-muted);
+  font-weight: 600;
+}
+
+.gymChip span,
+.gymLabel span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gymHint {
+  margin: 4px 4px 0;
+  color: var(--gym-muted);
+  font-size: 0.82rem;
+}
+
+@media (hover: hover) {
+  .gymChip:hover {
+    border-color: var(--gym-accent);
+  }
+}
