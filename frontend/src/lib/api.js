@@ -26,6 +26,10 @@ function clearCache() {
   cacheGeneration += 1;
 }
 
+function dropCache(keys) {
+  keys.forEach((key) => cache.delete(key));
+}
+
 function currentToken() {
   return typeof window !== "undefined" ? getToken() : null;
 }
@@ -71,7 +75,10 @@ function redirectToLogin() {
 
 api.interceptors.response.use(
   (res) => {
-    if (res.config?.method && res.config.method !== "get") clearCache();
+    if (res.config?.method && res.config.method !== "get") {
+      if (res.config.invalidates) dropCache(res.config.invalidates);
+      else clearCache();
+    }
     return res;
   },
   async (err) => {
@@ -367,7 +374,7 @@ export const getChallenges = () => cachedGet("fitnessChallenges", "/fitness/chal
 export const getSocialPending = () => api.get("/fitness/challenges/pending/count").then((r) => r.data);
 export const getNotifications = (before) =>
   api.get("/fitness/notifications", { params: before ? { before } : {} }).then((r) => r.data);
-export const readAllNotifications = () => api.post("/fitness/notifications/read-all");
+export const readAllNotifications = () => api.post("/fitness/notifications/read-all", null, { invalidates: [] });
 export const getChallenge = (id) => cachedGet(`fitnessChallenge:${id}`, `/fitness/challenges/${id}`);
 export const createChallenge = (data) => api.post("/fitness/challenges", data).then((r) => r.data);
 export const getChallengeInvite = (code) =>
@@ -391,7 +398,8 @@ export const getChallengeChat = (id, before) =>
   api.get(`/fitness/challenges/${id}/chat`, { params: before ? { before } : {} }).then((r) => r.data);
 export const sendChallengeMessage = (id, text) =>
   api.post(`/fitness/challenges/${id}/chat`, { text }).then((r) => r.data);
-export const readChallengeChat = (id) => api.post(`/fitness/challenges/${id}/chat/read`);
+export const readChallengeChat = (id) =>
+  api.post(`/fitness/challenges/${id}/chat/read`, null, { invalidates: ["fitnessChallenges", `fitnessChallenge:${id}`] });
 export const deleteChallengeMessage = (id, messageId) => api.delete(`/fitness/challenges/${id}/chat/${messageId}`);
 export const mediaSrc = (url) => `${API_BASE}${url}`;
 export const uploadMedia = (blob, fields = {}, full = null) => {
