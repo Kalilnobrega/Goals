@@ -442,7 +442,10 @@ def add_close_friend(username: str, me: FitnessProfile = Depends(own_profile), d
         raise HTTPException(status_code=409, detail="Só dá para marcar como melhor amigo quem já é seu amigo.")
     if not is_close_friend(db, me.user_id, target.user_id):
         db.add(CloseFriend(owner_id=me.user_id, friend_id=target.user_id))
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
     return social_user(db, me.user_id, target)
 
 

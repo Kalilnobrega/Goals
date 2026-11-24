@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import br_day_start_utc, to_br_date, today_br
@@ -386,7 +387,10 @@ def join(db: Session, challenge: Challenge, user_id: int, accept_weight: bool = 
     db.query(ChallengeInvite).filter(
         ChallengeInvite.challenge_id == challenge.id, ChallengeInvite.user_id == user_id
     ).delete()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
 
 
 @fitness_challenges_router.post("", response_model=ChallengeDetailSchema)

@@ -2,6 +2,7 @@ import secrets
 from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import to_br_date, today_br
@@ -334,7 +335,11 @@ def create_post(data: PostCreateSchema, me: FitnessProfile = Depends(own_profile
         shared=shared,
     )
     db.add(post)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Esse treino já foi publicado.")
     order = {media_id: index for index, media_id in enumerate(data.media_ids)}
     for item in media:
         item.post_id = post.id
@@ -535,13 +540,20 @@ def delete_post(post_id: int, user: User = Depends(get_current_user), db: Sessio
 @fitness_feed_router.put("/posts/{post_id}/reaction", response_model=PostSchema)
 def react(post_id: int, data: ReactionSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, me.user_id)
-    reaction = db.get(PostReaction, (post.id, me.user_id))
-    if reaction is None:
-        db.add(PostReaction(post_id=post.id, user_id=me.user_id, kind=data.kind))
-    else:
-        reaction.kind = data.kind
-    renotify(db, post.user_id, me.user_id, "post_reaction", post_id=post.id, detail=data.kind)
-    db.commit()
+    for attempt in range(2):
+        reaction = db.get(PostReaction, (post.id, me.user_id))
+        if reaction is None:
+            db.add(PostReaction(post_id=post.id, user_id=me.user_id, kind=data.kind))
+        else:
+            reaction.kind = data.kind
+        renotify(db, post.user_id, me.user_id, "post_reaction", post_id=post.id, detail=data.kind)
+        try:
+            db.commit()
+            break
+        except IntegrityError:
+            db.rollback()
+            if attempt:
+                raise HTTPException(status_code=409, detail="Tente reagir de novo.")
     return serialize(db, [post], me.user_id)[0]
 
 
