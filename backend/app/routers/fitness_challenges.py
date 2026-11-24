@@ -253,15 +253,22 @@ def plan_pct(db: Session, user: User, sessions: list[dict], challenge: Challenge
     return float(adherence["pct"] or 0)
 
 
-def member_values(db: Session, challenge: Challenge, user: User, targets: dict[str, set[int]]) -> tuple[dict, dict, list]:
+def member_values(db: Session, challenge: Challenge, user: User, targets: dict[str, set[int]], cache: dict | None = None) -> tuple[dict, dict, list]:
     keys = {metric["key"] for metric in challenge.metrics}
     in_range = lambda s: challenge.start_date <= s["day"] <= challenge.end_date
+    if cache is not None:
+        if user.id not in cache:
+            cache[user.id] = completed_facts(user, db)
+        everything = cache[user.id]
+    else:
+        everything = None
     if keys & {"records", "progress"}:
-        history = completed_facts(user, db, None, challenge.end_date)
+        history = completed_facts(user, db, None, challenge.end_date) if everything is None else [s for s in everything if s["day"] <= challenge.end_date]
         sessions = [s for s in history if in_range(s) and qualifies(s, challenge.min_rule)]
     else:
         history = []
-        sessions = [s for s in completed_facts(user, db, challenge.start_date, challenge.end_date) if qualifies(s, challenge.min_rule)]
+        source = completed_facts(user, db, challenge.start_date, challenge.end_date) if everything is None else [s for s in everything if in_range(s)]
+        sessions = [s for s in source if qualifies(s, challenge.min_rule)]
     real = sessions
     manual = [checkin_fact(post) for post in checkin_posts(db, challenge, [user.id])]
     sessions = real + [fact for fact in manual if qualifies(fact, challenge.min_rule)]
@@ -291,13 +298,13 @@ def member_values(db: Session, challenge: Challenge, user: User, targets: dict[s
     return values, details, missing
 
 
-def ranking(db: Session, challenge: Challenge, me: int) -> list[dict]:
+def ranking(db: Session, challenge: Challenge, me: int, cache: dict | None = None) -> list[dict]:
     targets = family_members(db, challenge)
     rows = []
     for member in challenge.members:
         user = db.get(User, member.user_id)
         profile = db.get(FitnessProfile, member.user_id)
-        values, details, missing = member_values(db, challenge, user, targets)
+        values, details, missing = member_values(db, challenge, user, targets, cache)
         if challenge.hide_weight and user.id != me:
             hidden = {metric_id(m) for m in challenge.metrics if m["key"] in WEIGHT_METRICS}
             details = {key: info for key, info in details.items() if key not in hidden}
@@ -454,6 +461,7 @@ def list_challenges(me: FitnessProfile = Depends(own_profile), db: Session = Dep
         .all()
     )
     result = {"active": [], "upcoming": [], "finished": [], "invites": []}
+    cache: dict = {}
     for challenge in challenges:
         status = status_of(challenge, today)
         summary = {
@@ -467,7 +475,7 @@ def list_challenges(me: FitnessProfile = Depends(own_profile), db: Session = Dep
             "hide_weight": challenge.hide_weight,
         }
         if status != "upcoming":
-            rows = ranking(db, challenge, me.user_id)
+            rows = ranking(db, challenge, me.user_id, cache)
             mine = next(row for row in rows if row["is_me"])
             summary.update(my_position=mine["position"], my_score=mine["score"], leader_name=rows[0]["name"])
         summary["chat_unread"] = chat_unread(db, challenge, me.user_id)
@@ -866,7 +874,7 @@ def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[
     return refs
 
 
-def chat_unread(db: Session, challenge: Challenge, user_id: int) -> int:
+def chat_unread(db: Session, challenge: Challenge, user_id: int, refs: dict | None = None) -> int:
     from .fitness_sessions import aware
 
     member = next((m for m in challenge.members if m.user_id == user_id), None)
@@ -879,7 +887,7 @@ def chat_unread(db: Session, challenge: Challenge, user_id: int) -> int:
         .filter(ChallengeMessage.challenge_id == challenge.id, ChallengeMessage.user_id.notin_(hidden), ChallengeMessage.created_at > since)
         .scalar()
     )
-    refs = challenge_post_refs(db, challenge, user_id)
+    refs = challenge_post_refs(db, challenge, user_id) if refs is None else refs
     comments = (
         db.query(func.count(PostComment.id))
         .filter(PostComment.post_id.in_(list(refs)), PostComment.user_id.notin_(hidden), PostComment.created_at > since)
@@ -943,7 +951,7 @@ def challenge_chat(
     return {
         "items": list(reversed(page)),
         "next_before": page[-1]["created_at"] if more and page else None,
-        "unread": chat_unread(db, challenge, user.id),
+        "unread": chat_unread(db, challenge, user.id, refs),
     }
 
 

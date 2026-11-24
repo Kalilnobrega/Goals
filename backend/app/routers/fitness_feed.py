@@ -439,7 +439,7 @@ def workout_detail(db: Session, session: WorkoutSession, viewer_id: int, show_we
 
 
 def session_detail(db: Session, session: WorkoutSession, mine: bool) -> dict:
-    detail = serialize_session(session, db)
+    detail = serialize_session(session, db, with_history=mine)
     if not mine:
         for item in detail["exercises"]:
             item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])

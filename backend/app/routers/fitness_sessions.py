@@ -161,7 +161,7 @@ def last_activity(workout_session: WorkoutSession) -> datetime:
     return max(times, default=aware(workout_session.started_at))
 
 
-def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
+def serialize_session(workout_session: WorkoutSession, db: Session, with_history: bool = True) -> dict:
     exercises = []
     total_sets = 0
     volume = Decimal(0)
@@ -171,7 +171,7 @@ def serialize_session(workout_session: WorkoutSession, db: Session) -> dict:
         body = BodyWeights(workout_session.user_id, db).on(to_br_date(aware(workout_session.started_at)))
         factors = bodyweight_factors(db, [item.exercise_id for item in workout_session.exercises if item.equipment == BODYWEIGHT])
     for item in workout_session.exercises:
-        history, reference = previous_history(item, workout_session, db)
+        history, reference = previous_history(item, workout_session, db) if with_history else ([], None)
         if item.tracking != CARDIO:
             total_sets += series_count(item.sets)
         extra = Decimal(str(round(body * factors.get(item.exercise_id, 1.0), 2))) if body and item.equipment == BODYWEIGHT else Decimal(0)
