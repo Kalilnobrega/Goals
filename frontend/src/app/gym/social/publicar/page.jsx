@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, ImagePlus, Link2, X } from 'lucide-react';
 import { createPost, deleteMedia, getExercises, getPlan, getPostableSessions, getSession, getWorkout, uploadPhoto } from '../../../../lib/api';
-import { addDays, apiError, formatDay, formatVolume, plural, todayIso } from '../../../../lib/gym';
+import { addDays, apiError, formatDay, formatVolume, plural, toIso, todayIso } from '../../../../lib/gym';
 import { FORMATS, preparePhoto } from '../../../../lib/photos';
 import { useToast } from '../../../../components/Toast';
 import CropFrame from '../../../../components/gym/social/CropFrame';
@@ -60,7 +60,7 @@ function Composer() {
   useEffect(() => {
     if (!initialSession) return;
     getSession(initialSession)
-      .then((data) => setLinked({ id: data.id, name: data.name, date: data.started_at.slice(0, 10) }))
+      .then((data) => setLinked({ id: data.id, name: data.name, date: toIso(new Date(data.started_at)) }))
       .catch(() => setError('Não foi possível carregar o treino.'));
   }, [initialSession]);
 
