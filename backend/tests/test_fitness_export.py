@@ -57,16 +57,17 @@ def test_workouts_csv_has_one_row_per_set(client, library, ana):
     assert response.headers["content-type"].startswith("text/csv")
     assert "gymgoals-treinos-" in response.headers["content-disposition"]
     lines = response.content.decode("utf-8-sig").strip().split("\r\n")
-    assert lines[0].startswith("Data;Hora;Treino;Exercício;Série")
+    assert lines[0].startswith("Data;Hora;Treino;Academia;Exercício;Série")
     rows = [line.split(";") for line in lines[1:]]
-    assert [(r[3], r[4], r[6], r[7], r[8], r[10]) for r in rows] == [
+    assert all(r[3] == "" for r in rows)
+    assert [(r[4], r[5], r[7], r[8], r[9], r[11]) for r in rows] == [
         ("Supino reto", "Aq", "Aquecimento", "", "", ""),
         ("Supino reto", "1", "Normal", "62,5", "10", ""),
         ("Supino reto", "2", "Drop", "60", "8", "45 x 8"),
         ("Esteira", "1", "Normal", "", "", ""),
     ]
-    assert rows[3][11] == "600"
-    assert rows[3][12] == "1,5"
+    assert rows[3][12] == "600"
+    assert rows[3][13] == "1,5"
 
 
 def test_weights_csv(client, ana):
@@ -125,3 +126,14 @@ def test_export_period_and_isolation(client, library, ana, db_session):
 
     other = headers_for(make_user(db_session, "Bruno"))
     assert "TREINOS (0)" in client.get("/fitness/export", params={"format": "txt"}, headers=other).text
+
+
+def test_exports_name_the_gym_of_each_workout(client, library, ana):
+    _, headers = ana
+    client.post("/fitness/gyms", json={"name": "Academia Centro"}, headers=headers)
+    finished_workout(client, headers, library)
+
+    csv_lines = client.get("/fitness/export", params={"format": "csv", "content": "workouts"}, headers=headers).content.decode("utf-8-sig").strip().split("\r\n")
+    assert all(line.split(";")[3] == "Academia Centro" for line in csv_lines[1:])
+    text = client.get("/fitness/export", params={"format": "txt", "content": "workouts"}, headers=headers).content.decode("utf-8")
+    assert "· Academia Centro ·" in text

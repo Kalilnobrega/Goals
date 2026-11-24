@@ -140,6 +140,7 @@ def session_meta(workout_session: WorkoutSession) -> str:
     sets, volume = session_summary(workout_session)
     parts = [
         f"{WEEKDAYS[started.weekday()]}, {started:%d/%m/%Y} às {started:%H:%M}",
+        workout_session.gym.name if workout_session.gym else "",
         duration_text(workout_session.started_at, workout_session.completed_at),
         f"{sets} {'série' if sets == 1 else 'séries'}",
     ]
@@ -206,7 +207,7 @@ def as_pdf(blocks) -> bytes:
 
 
 WORKOUT_COLUMNS = [
-    "Data", "Hora", "Treino", "Exercício", "Série", "Lado", "Técnica", "Carga (kg)", "Repetições", "RIR",
+    "Data", "Hora", "Treino", "Academia", "Exercício", "Série", "Lado", "Técnica", "Carga (kg)", "Repetições", "RIR",
     "Etapas", "Duração (s)", "Distância (km)", "Velocidade (km/h)", "Nível", "Inclinação (%)", "Calorias", "Observação",
 ]
 
@@ -227,6 +228,7 @@ def workouts_csv(sessions) -> list[list[str]]:
                     f"{started:%d/%m/%Y}",
                     f"{started:%H:%M}",
                     workout_session.name,
+                    workout_session.gym.name if workout_session.gym else "",
                     item.exercise_name,
                     labels[entry.id],
                     SIDE_NAME.get(entry.side, ""),
