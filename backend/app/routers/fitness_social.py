@@ -421,8 +421,12 @@ def report_user(
     db: Session = Depends(get_db),
 ):
     target = other_target(db, me.user_id, username)
+    return file_report(db, me.user_id, target.user_id, data)
+
+
+def file_report(db: Session, reporter: int, reported: int, data: ReportSchema, post_id: int | None = None) -> dict:
     details = (data.details or "").strip() or None
-    db.add(UserReport(reporter_id=me.user_id, reported_id=target.user_id, reason=data.reason, details=details))
+    db.add(UserReport(reporter_id=reporter, reported_id=reported, reason=data.reason, details=details, post_id=post_id))
     db.commit()
     return {"message": "Denúncia enviada. Obrigado por avisar."}
 

@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dates import to_br_date, today_br
 from app.models import User
 from app.fitness_models import (
-    ChallengeMember, FitnessProfile, Notification, Friendship, Media, Post, PostComment, PostReaction, UserBlock, UserReport, WorkoutSession,
+    ChallengeMember, FitnessProfile, Notification, Friendship, Media, Post, PostComment, PostReaction, UserBlock, WorkoutSession,
 )
 from app.fitness_schemas import (
     CommentCreateSchema,
@@ -16,7 +16,7 @@ from app.fitness_schemas import (
     FeedSchema,
     PostCreateSchema,
     PostDetailSchema,
-    PostReportSchema,
+    ReportSchema,
     PostableSessionSchema,
     PostWorkoutDetailSchema,
     CopiedSharedSchema,
@@ -33,7 +33,7 @@ from app.fitness_notifications import blocked_between, clear, notify, renotify
 from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
-from .fitness_social import blocked_ids, can_view, person, is_close, own_profile, relation_to
+from .fitness_social import blocked_ids, can_view, file_report, person, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -585,19 +585,11 @@ def delete_comment(comment_id: int, user: User = Depends(get_current_user), db: 
 
 
 @fitness_feed_router.post("/posts/{post_id}/report", status_code=201)
-def report_post(post_id: int, data: PostReportSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+def report_post(post_id: int, data: ReportSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, me.user_id)
     if post.user_id == me.user_id:
         raise HTTPException(status_code=422, detail="Você não pode denunciar o próprio post.")
-    db.add(UserReport(
-        reporter_id=me.user_id,
-        reported_id=post.user_id,
-        reason=data.reason,
-        details=(data.details or "").strip() or None,
-        post_id=post.id,
-    ))
-    db.commit()
-    return {"message": "Denúncia enviada. Obrigado por avisar."}
+    return file_report(db, me.user_id, post.user_id, data, post.id)
 
 
 @fitness_feed_router.post("/posts/{post_id}/copy-shared", response_model=CopiedSharedSchema)

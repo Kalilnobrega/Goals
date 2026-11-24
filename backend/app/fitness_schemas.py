@@ -1753,11 +1753,6 @@ class CommentCreateSchema(BaseModel):
     text: str = Field(min_length=1, max_length=500)
 
 
-class PostReportSchema(BaseModel):
-    reason: Literal["spam", "offensive", "fake", "other"]
-    details: str | None = Field(default=None, max_length=500)
-
-
 class PostableSessionSchema(BaseModel):
     id: int
     name: str
