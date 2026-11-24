@@ -5,11 +5,12 @@ import { useParams } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, Trophy, Timer, TrendingUp, Repeat, CalendarDays, ArrowUpRight, AlertTriangle, Flame, Building2,
 } from 'lucide-react';
-import { getExerciseProgress, getExercises, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
+import { getExerciseProgress, getExercises, getGyms, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
   apiError, equipmentLabel, gripLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
 } from '../../../../../lib/gym';
 import ExerciseIntensity from '../../../../../components/gym/ExerciseIntensity';
+import ExerciseGymSetting from '../../../../../components/gym/ExerciseGymSetting';
 import { useToast } from '../../../../../components/Toast';
 import TargetGoal from '../../../../../components/gym/TargetGoal';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
@@ -362,6 +363,11 @@ export default function ExerciseProgressPage() {
   const toast = useToast();
 
   const [gymId, setGymId] = useState(null);
+  const [gymCount, setGymCount] = useState(() => peekCache('fitnessGyms')?.gyms?.length ?? 0);
+
+  useEffect(() => {
+    getGyms().then(result => setGymCount(result.gyms.length)).catch(() => {});
+  }, []);
 
   const load = useCallback(() => {
     getExerciseProgress(id, gymId)
@@ -509,6 +515,15 @@ export default function ExerciseProgressPage() {
               </button>
             ))}
           </nav>
+        )}
+        {gymCount > 1 && tracking === 'reps' && (
+          <ExerciseGymSetting
+            exerciseId={data.exercise_id}
+            name={data.name}
+            equipment={data.equipment}
+            gymSpecific={data.gym_specific}
+            onChange={load}
+          />
         )}
       </div>
 
