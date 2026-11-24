@@ -442,6 +442,15 @@ def test_relative_strength_metric(client, library, ana, bruno):
     assert bruno_row["score"] == 0 and bruno_row["missing"] == [key]
     assert ranking[0]["username"] == "ana"
 
+    activity = client.get(f"/fitness/challenges/{challenge['id']}/activity", headers=bruno).json()["items"]
+    ana_item = next(item for item in activity if item["author"]["username"] == "ana")
+    assert ana_item["volume_kg"] == 0
+    seen = client.get(f"/fitness/challenges/{challenge['id']}/sessions/{ana_item['session_id']}", headers=bruno).json()
+    assert all(e["exercise_id"] != supino for e in seen["session"]["exercises"])
+    assert seen["session"]["volume_kg"] == 0 and seen["records"] == []
+    own = client.get(f"/fitness/challenges/{challenge['id']}/sessions/{ana_item['session_id']}", headers=ana).json()
+    assert own["session"]["exercises"][0]["sets"][0]["weight_kg"] == 100
+
 
 def test_challenge_members_count_as_close_for_friends_only_profiles(client, library, ana, bruno, carla):
     train(client, bruno, library)

@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from app.fitness_schemas import (
     WEIGHT_METRICS,
 )
 from app.fitness_load import BodyWeights
+from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import clear, notify
 from .auth import get_current_user
 from .fitness_social import own_profile, find_profile, friendship_between, has_blocked
@@ -658,6 +660,20 @@ def pending_count(user: User = Depends(get_current_user), db: Session = Depends(
 ACTIVITY_PAGE = 20
 
 
+def hidden_strength_ids(db: Session, challenge: Challenge, owner: int, viewer: int) -> set[int]:
+    if not challenge.hide_weight or owner == viewer:
+        return set()
+    targets = family_members(db, challenge)
+    return set().union(*(targets[metric_id(m)] for m in challenge.metrics if m["key"] == "relative_strength"))
+
+
+def hidden_volume(session: WorkoutSession, ids: set[int]) -> float:
+    return float(sum(
+        (entry_volume(entry) for item in session.exercises if item.exercise_id in ids for entry in working(item.sets)),
+        Decimal(0),
+    ))
+
+
 def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
     from .fitness_feed import media_out, session_facts
     from .fitness_sessions import aware
@@ -682,9 +698,11 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
             post.session_id: post
             for post in db.query(Post).filter(Post.session_id.in_([s.id for s in sessions])).all()
         } if sessions else {}
+        hidden = hidden_strength_ids(db, challenge, user_id, me)
         for session in sessions:
             facts = session_facts(session)
             post = posts.get(session.id)
+            facts["volume"] -= hidden_volume(session, hidden)
             ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
             items.append({
                 "kind": "workout",
@@ -757,7 +775,14 @@ def challenge_session(
         or not (challenge.start_date <= to_br_date(session.started_at) <= challenge.end_date)
     ):
         raise HTTPException(status_code=404, detail="Treino não encontrado neste desafio.")
-    return workout_detail(db, session, user.id)
+    detail = workout_detail(db, session, user.id)
+    hidden = hidden_strength_ids(db, challenge, session.user_id, user.id)
+    if hidden:
+        names = {item.exercise_name for item in session.exercises if item.exercise_id in hidden}
+        detail["session"]["exercises"] = [e for e in detail["session"]["exercises"] if e["exercise_id"] not in hidden]
+        detail["session"]["volume_kg"] = round(float(detail["session"]["volume_kg"]) - hidden_volume(session, hidden), 1)
+        detail["records"] = [r for r in detail["records"] if r["name"] not in names]
+    return detail
 
 
 CHAT_PAGE = 50
