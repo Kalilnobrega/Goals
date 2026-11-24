@@ -233,7 +233,7 @@ async def change_password(
 
 @auth_router.delete("/me")
 @limiter.limit("5/minute")
-async def delete_me(
+def delete_me(
     request: Request,
     payload: DeleteAccountSchema,
     current_user: User = Depends(get_current_user),

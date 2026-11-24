@@ -59,8 +59,8 @@ def media_out(item: Media) -> dict:
     }
 
 
-async def read_image(upload: UploadFile) -> tuple[bytes, str]:
-    data = await upload.read(MAX_BYTES + 1)
+def read_image(upload: UploadFile) -> tuple[bytes, str]:
+    data = upload.file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="A foto pode ter no máximo 8 MB.")
     content_type = sniff(data)
@@ -88,7 +88,7 @@ def drop_stale_pending(db: Session, user_id: int) -> None:
 
 
 @fitness_feed_router.post("/media", response_model=ProgressPhotoSchema)
-async def upload_media(
+def upload_media(
     file: UploadFile = File(...),
     full: UploadFile | None = File(None),
     kind: str = Form("post"),
@@ -103,8 +103,8 @@ async def upload_media(
 ):
     if kind not in ("post", "progress"):
         raise HTTPException(status_code=422, detail="Tipo de foto inválido.")
-    data, content_type = await read_image(file)
-    full_data, full_type = await read_image(full) if full is not None else (None, None)
+    data, content_type = read_image(file)
+    full_data, full_type = read_image(full) if full is not None else (None, None)
     if taken_on and taken_on > today_br():
         raise HTTPException(status_code=422, detail="A data da foto não pode ser no futuro.")
     drop_stale_pending(db, user.id)
