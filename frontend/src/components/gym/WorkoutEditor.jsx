@@ -10,7 +10,7 @@ import { useToast } from '../Toast';
 import GymSheet from './GymSheet';
 import GymSelect from './GymSelect';
 import GymSwitch from './GymSwitch';
-import ExercisePicker from './ExercisePicker';
+import { ExercisePicker, preloadSheets } from './lazy';
 import WorkoutBodyMap from './WorkoutBodyMap';
 import styles from './WorkoutEditor.module.css';
 
@@ -181,6 +181,8 @@ function Editor({ initial, onSubmit, onDelete }) {
   useEffect(() => {
     getExercises().then(setExercises).catch(() => setLoadError(true));
   }, []);
+
+  useEffect(() => preloadSheets(), []);
 
   const dirty = useMemo(
     () => JSON.stringify(toPayload(name, description, items, cardio)) !== savedPayload,

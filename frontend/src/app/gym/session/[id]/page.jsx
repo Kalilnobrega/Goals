@@ -43,20 +43,20 @@ import { useToast } from '../../../../components/Toast';
 import { cheerOf } from '../../../../lib/cheers';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
-import ExercisePicker from '../../../../components/gym/ExercisePicker';
 import GymSwitch from '../../../../components/gym/GymSwitch';
 import SessionExerciseCard from '../../../../components/gym/SessionExerciseCard';
 import SupersetGroup from '../../../../components/gym/SupersetGroup';
-import SessionSummary from '../../../../components/gym/SessionSummary';
-import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
+import { DragHandle, ExercisePicker, SessionSummary, SortableItem, SortableList, preloadSheets } from '../../../../components/gym/lazy';
 import RestTimer from '../../../../components/gym/RestTimer';
 import VariantChoices from '../../../../components/gym/VariantChoices';
-import useNow from '../../../../components/gym/useNow';
+import SessionClock from '../../../../components/gym/SessionClock';
 import useWakeLock from '../../../../components/gym/useWakeLock';
 import s from '../../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
 const isCardio = (item) => item.tracking === 'cardio';
+
+const durationOf = (seconds) => formatDuration(seconds * 1000);
 
 const unitsOf = (session) => supersetUnits(session.exercises).map(unit => ({ ...unit, key: `u-${unit.items[0].id}` }));
 
@@ -134,7 +134,6 @@ export default function SessionPage() {
   const router = useRouter();
   const toast = useToast();
   const confirmAction = useConfirm();
-  const now = useNow();
   const [session, setSession] = useState(null);
   const [gyms, setGyms] = useState([]);
   const [status, setStatus] = useState('loading');
@@ -152,6 +151,8 @@ export default function SessionPage() {
   const [offline, setOffline] = useState(false);
 
   useWakeLock(session?.status === 'in_progress');
+
+  useEffect(() => preloadSheets({ summary: true }), []);
 
   const liveId = session?.status === 'in_progress' ? session.id : null;
   useEffect(() => {
@@ -729,7 +730,6 @@ export default function SessionPage() {
   }
 
   const { sets: totalSets, volume } = totals(session);
-  const elapsed = now ? (now - new Date(session.started_at).getTime()) / 1000 : null;
   const lastAt = lastActivity(session);
   const pending = session.exercises.filter(item => item.sets.length === 0 && !isCardio(item)).length;
   const pendingCardio = session.exercises.some(item => item.sets.length === 0 && isCardio(item));
@@ -790,7 +790,7 @@ export default function SessionPage() {
         </Link>
         <span className={styles.live}>
           <span className={styles.dot} aria-hidden="true" />
-          <span className={styles.clock}>{elapsed === null ? '—' : formatClock(elapsed)}</span>
+          <span className={styles.clock}><SessionClock startedAt={session.started_at} format={formatClock} /></span>
         </span>
         <div className={styles.headerActions}>
           {session.exercises.length > 1 && (
@@ -1120,7 +1120,7 @@ export default function SessionPage() {
               <>
                 <div className={s.stats}>
                   <div className={s.stat}>
-                    <span className={s.statValue}>{elapsed === null ? '—' : formatDuration(elapsed * 1000)}</span>
+                    <span className={s.statValue}><SessionClock startedAt={session.started_at} format={durationOf} /></span>
                     <span className={s.statLabel}>Duração</span>
                   </div>
                   <div className={s.stat}>

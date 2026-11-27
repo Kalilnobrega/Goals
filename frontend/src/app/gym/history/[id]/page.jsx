@@ -10,8 +10,7 @@ import {
 import { apiError, familySiblings, groupsLabel, plural, renumberSets, variantTitle, variantHint } from '../../../../lib/gym';
 import GymSheet from '../../../../components/gym/GymSheet';
 import VariantChoices from '../../../../components/gym/VariantChoices';
-import ExercisePicker from '../../../../components/gym/ExercisePicker';
-import { SortableList, SortableItem, DragHandle } from '../../../../components/Sortable';
+import { DragHandle, ExercisePicker, SortableItem, SortableList, preloadSheets } from '../../../../components/gym/lazy';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import SessionSummary from '../../../../components/gym/SessionSummary';
@@ -59,6 +58,8 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     getGyms().then(data => setGyms(data.gyms)).catch(() => {});
   }, []);
+
+  useEffect(() => preloadSheets(), []);
 
   const changeGym = async (gym) => {
     setGymOpen(false);
