@@ -766,3 +766,25 @@ def test_challenge_only_posts_skip_the_feed_and_profile(client, library, ana, br
     assert shown["workout"]["post_id"] == workout_post["id"] and len(shown["workout"]["media"]) == 1
     ranking = {r["username"]: r["score"] for r in client.get(f"/fitness/challenges/{challenge['id']}", headers=bruno).json()["ranking"]}
     assert ranking["ana"] == 2
+
+
+def test_blocked_members_workouts_stay_out_of_the_activity(client, library, ana, bruno, carla):
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    join(client, carla, challenge)
+    train(client, bruno, library)
+    train(client, carla, library)
+    client.post("/fitness/social/blocks/carla", headers=bruno)
+    cid = challenge["id"]
+
+    for viewer, hidden in ((bruno, "carla"), (carla, "bruno")):
+        items = client.get(f"/fitness/challenges/{cid}/activity", headers=viewer).json()["items"]
+        assert all(item["author"]["username"] != hidden for item in items)
+
+    sessions = {
+        item["author"]["username"]: item["session_id"]
+        for item in client.get(f"/fitness/challenges/{cid}/activity", headers=ana).json()["items"]
+    }
+    assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['carla']}", headers=bruno).status_code == 404
+    assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['bruno']}", headers=carla).status_code == 404
+    assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['carla']}", headers=ana).status_code == 200

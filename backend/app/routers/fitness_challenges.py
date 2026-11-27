@@ -771,7 +771,8 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
     from .fitness_sessions import aware
 
     items = []
-    members = [member.user_id for member in challenge.members]
+    blocked = blocked_ids(db, me)
+    members = [member.user_id for member in challenge.members if member.user_id not in blocked]
     visible = visible_members(db, challenge, me)
     for user_id in members:
         author = person(db, user_id)
@@ -883,6 +884,7 @@ def challenge_session(
     if (
         session is None
         or session.user_id not in member_ids(challenge)
+        or blocked_between(db, session.user_id, user.id)
         or session.status != "completed"
         or not (challenge.start_date <= to_br_date(session.started_at) <= challenge.end_date)
     ):
