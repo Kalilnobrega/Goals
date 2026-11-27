@@ -30,6 +30,13 @@ def reset_challenge_rankings():
 
 
 @pytest.fixture(autouse=True)
+def reset_facts_cache():
+    from app.fitness_facts import forget_all
+
+    forget_all()
+
+
+@pytest.fixture(autouse=True)
 def sent_emails(monkeypatch):
     sent = []
     monkeypatch.setattr(resend.Emails, "send", lambda params: sent.append(params))

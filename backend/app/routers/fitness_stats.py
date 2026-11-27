@@ -15,6 +15,8 @@ from app.fitness_load import BodyWeights, bodyweight_factors
 from app.fitness_sets import working
 from app.fitness_cardio import cardio_numbers
 from app.fitness_gyms import place_key, shared_gyms, specific_ids
+from app.fitness_load import hidden_owners
+from app.fitness_facts import cached
 from .auth import get_current_user
 from .fitness import get_own_workout
 from .fitness_plans import get_own_plan
@@ -405,6 +407,11 @@ def weight_records(everything: list[dict], include) -> list[dict]:
 
 
 def completed_facts(user, db, start: date | None = None, end: date | None = None, exercise_ids: set[int] | None = None) -> list[dict]:
+    key = (start, end, None if exercise_ids is None else frozenset(exercise_ids), user.id in hidden_owners.get())
+    return cached(db, user.id, key, lambda: compute_facts(user, db, start, end, exercise_ids))
+
+
+def compute_facts(user, db, start: date | None, end: date | None, exercise_ids: set[int] | None) -> list[dict]:
     body = BodyWeights(user.id, db)
     query = db.query(WorkoutSession).filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
     if exercise_ids is not None:

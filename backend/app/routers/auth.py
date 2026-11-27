@@ -13,6 +13,7 @@ from app.models import (
 from app.sharing import remove_member
 from app.database import get_db
 from app.fitness_media import delete_keys, user_media_keys
+from app.fitness_facts import remember_user
 from app.main import (
     bcrypt_context,
     oauth2_scheme,
@@ -121,6 +122,7 @@ def get_current_user(
         if not user:
             raise HTTPException(status_code=401)
 
+        remember_user(session, user.id)
         return user
     except (JWTError, ValueError):
         raise HTTPException(status_code=401)

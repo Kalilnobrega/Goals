@@ -1,3 +1,4 @@
+import secrets
 import enum
 from sqlalchemy import (
     Column,
@@ -35,6 +36,7 @@ class User(Base):
     email = Column("email", String, unique=True, index=True, nullable=False)
     password = Column("password", String)
     is_verify = Column("is_verify", Boolean, default=False)
+    facts_version = Column(String(16), nullable=False, default=lambda: secrets.token_hex(8), server_default="")
     goals = relationship("Goal", back_populates="owner")
     streak = relationship("Streak", back_populates="user", uselist=False)
 
