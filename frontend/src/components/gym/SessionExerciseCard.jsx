@@ -2,9 +2,32 @@
 import { Fragment, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Check, CloudOff, HeartPulse, Minus, Plus, MoreVertical, Timer, Trash2, MessageSquareText, Pencil } from 'lucide-react';
 import {
-  sessionTarget, formatKg, formatRest, formatClock, formatShortDate,
-  parseKg, kgInput, cleanKgInput, seriesCount, seriesRows, SIDE_LABEL, SIDE_NAME, groupsLabel, setSummary, RIR_OPTIONS, rirLabel, perSide, hasIncline,
-  TECHNIQUES, STAGED_KINDS, nextKind, planSlots, allSeriesCount, rowLabels } from '../../lib/gym';
+  allSeriesCount,
+  cleanKgInput,
+  formatClock,
+  formatKg,
+  formatRest,
+  formatShortDate,
+  groupsLabel,
+  hasIncline,
+  kgInput,
+  nextKind,
+  parseKg,
+  perSide,
+  PHASE_LABEL,
+  planSlots,
+  RIR_OPTIONS,
+  rirLabel,
+  rowLabels,
+  seriesCount,
+  seriesRows,
+  sessionTarget,
+  setSummary,
+  SIDE_LABEL,
+  SIDE_NAME,
+  STAGED_KINDS,
+  TECHNIQUES,
+} from '../../lib/gym';
 import MarqueeText from './MarqueeText';
 import { TimedEditSet, TimedNewSet } from './TimedEntry';
 import styles from './SessionExerciseCard.module.css';
@@ -704,8 +727,6 @@ function PairRow({ row, label, editingId, onEdit, onCancel, onSave, onDelete }) 
     </SwipeToDelete>
   );
 }
-
-const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 
 const PAUSE_OPTIONS = [10, 15, 20];
 const PAUSE_KEY = 'gymPauseSeconds';

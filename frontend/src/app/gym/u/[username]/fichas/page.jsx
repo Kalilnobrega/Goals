@@ -3,12 +3,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Copy } from 'lucide-react';
 import { copyCloseWorkout, getClosePlan, getCloseWorkouts } from '../../../../../lib/api';
-import { apiError, prescription } from '../../../../../lib/gym';
+import { apiError, prescription, WEEKDAY_SHORT } from '../../../../../lib/gym';
 import { useToast } from '../../../../../components/Toast';
 import CloseHeader from '../../../../../components/gym/social/CloseHeader';
 import styles from '../../../../../components/gym/social/close.module.css';
-
-const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 export default function CloseWorkoutsPage() {
   const { username } = useParams();
@@ -47,7 +45,7 @@ export default function CloseWorkoutsPage() {
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Plano: {plan.name}</h2>
           <div className={styles.days}>
-            {WEEKDAYS.map((label, weekday) => {
+            {WEEKDAY_SHORT.map((label, weekday) => {
               const names = byDay.get(weekday);
               return (
                 <div key={label} className={`${styles.day} ${names ? styles.dayOn : ''}`}>

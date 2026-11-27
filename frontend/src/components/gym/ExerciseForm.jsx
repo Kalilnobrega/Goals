@@ -1,12 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { MUSCLE_GROUPS, EQUIPMENT, MUSCLES, TRACKING, INTENSITY, guessIntensity } from '../../lib/gym';
+import { EQUIPMENT, guessIntensity, INTENSITY, MUSCLE_GROUPS, MUSCLES, SIDE_OPTIONS, TRACKING } from '../../lib/gym';
 import { MusclePicker } from './ExerciseMuscles';
 import GymSwitch from './GymSwitch';
 import styles from './ExerciseForm.module.css';
-
-const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
 
 function ChoiceGroup({ label, options, value, onChange }) {
   return (

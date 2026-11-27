@@ -8,7 +8,20 @@ import {
 import { getUserName } from '../../lib/auth';
 import { getFitnessOverview, getWeek, logBodyWeight, peekCache } from '../../lib/api';
 import {
-  addDays, apiError, daysAgo, formatDay, formatDelta, formatDuration, formatKg, formatVolume, mondayOf, muscleLabel, parseDay, plural, weekdayOf,
+  addDays,
+  apiError,
+  daysAgo,
+  formatDay,
+  formatDelta,
+  formatDuration,
+  formatKg,
+  formatVolume,
+  mondayOf,
+  muscleLabel,
+  parseDay,
+  plural,
+  WEEKDAY_LETTERS,
+  weekdayOf,
 } from '../../lib/gym';
 import { useToast } from '../../components/Toast';
 import BodyWeightForm from '../../components/gym/BodyWeightForm';
@@ -22,7 +35,6 @@ import GymSheet from '../../components/gym/GymSheet';
 import sheetStyles from '../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
-const WEEKDAYS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const WEEKDAY_NAMES = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
 
 const subscribeToUserName = (onChange) => {
@@ -356,7 +368,7 @@ function Week({ data }) {
                     label={label}
                     onOpen={targets => (targets.length === 1 ? router.push(targets[0].href) : setChosen({ index, day, targets }))}
                   >
-                    <span className={styles.dayLabel} aria-hidden="true">{WEEKDAYS[index]}</span>
+                    <span className={styles.dayLabel} aria-hidden="true">{WEEKDAY_LETTERS[index]}</span>
                     <span
                       aria-hidden="true"
                       className={`${styles.dayDot} ${trained ? styles.dayTrained : ''} ${planned && !trained ? styles.dayPlanned : ''} ${rest && !trained ? styles.dayRest : ''} ${day.date === today ? styles.dayToday : ''} ${future ? styles.dayFuture : ''}`}

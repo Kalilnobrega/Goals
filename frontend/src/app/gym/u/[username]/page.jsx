@@ -7,7 +7,7 @@ import {
   TrendingUp, Trophy, Users,
 } from 'lucide-react';
 import { blockUser, followLive, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
-import { apiError, formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
+import { apiError, firstName, formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import GymSheet from '../../../../components/gym/GymSheet';
@@ -31,10 +31,6 @@ const REASONS = [
 ];
 
 const monthYear = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
-
-function firstName(name) {
-  return (name ?? '').split(' ')[0];
-}
 
 function lockedMessage(profile) {
   if (profile.relation === 'blocked') return `Você bloqueou ${profile.name}. Desbloqueie para ver o perfil e enviar pedidos.`;

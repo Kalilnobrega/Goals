@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Scale } from 'lucide-react';
 import { getWeightComparison, peekCache } from '../../lib/api';
-import { formatDay, formatDelta, formatKg, formatVolume, parseDay, plural } from '../../lib/gym';
+import { formatDay, formatDelta, formatKg, formatVolume, kgText, parseDay, plural } from '../../lib/gym';
 import BarChart from './BarChart';
 import ProgressChart from './ProgressChart';
 import LimitedList from './LimitedList';
@@ -25,7 +25,6 @@ const ACTIVITY = [
 ];
 
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
-const kg = (value) => `${formatKg(value)} kg`;
 
 export default function WeightComparison({ refreshKey }) {
   const [period, setPeriod] = useState('3m');
@@ -87,7 +86,7 @@ export default function WeightComparison({ refreshKey }) {
                 value: week.weight_kg,
                 detail: `Semana de ${formatDay(week.start)} · ${plural(week.sessions, 'treino', 'treinos')}${week.cardio_minutes ? ` · ${week.cardio_minutes} min de cardio` : ''}`,
               }))}
-              format={kg}
+              format={kgText}
               axisFormat={formatKg}
               label="Peso médio por semana"
             />
@@ -117,7 +116,7 @@ export default function WeightComparison({ refreshKey }) {
                 key: week.start,
                 label: formatDay(week.start),
                 value: week[metric.key],
-                detail: `Semana de ${formatDay(week.start)}${week.weight_kg !== null ? ` · peso ${kg(week.weight_kg)}` : ''}`,
+                detail: `Semana de ${formatDay(week.start)}${week.weight_kg !== null ? ` · peso ${kgText(week.weight_kg)}` : ''}`,
               }))}
               format={metric.format}
               axisFormat={metric.axis}
@@ -141,7 +140,7 @@ export default function WeightComparison({ refreshKey }) {
                   </span>
                 </span>
                 <span className={own.change}>
-                  {month.change_kg !== null ? formatDelta(month.change_kg) : month.last_kg !== null ? kg(month.last_kg) : '—'}
+                  {month.change_kg !== null ? formatDelta(month.change_kg) : month.last_kg !== null ? kgText(month.last_kg) : '—'}
                 </span>
               </li>
             )} />

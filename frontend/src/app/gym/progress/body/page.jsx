@@ -5,7 +5,7 @@ import { Camera, Scale, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import {
   getBodyWeights, logBodyWeight, updateBodyWeight, deleteBodyWeight, getBodyGoal, saveBodyGoal, deleteBodyGoal, peekCache,
 } from '../../../../lib/api';
-import { apiError, formatDay, formatDelta, formatKg, formatLongDay, parseDay } from '../../../../lib/gym';
+import { apiError, formatDay, formatDelta, formatKg, formatLongDay, kgText, parseDay } from '../../../../lib/gym';
 import { useToast } from '../../../../components/Toast';
 import { useConfirm } from '../../../../components/ConfirmDialog';
 import ProgressChart from '../../../../components/gym/ProgressChart';
@@ -25,7 +25,6 @@ const RANGES = [
   { key: 'all', label: 'Tudo', days: null },
 ];
 
-const kg = (value) => `${formatKg(value)} kg`;
 const sortDesc = (list) => [...list].sort((a, b) => b.measured_on.localeCompare(a.measured_on));
 
 export default function BodyWeightPage() {
@@ -106,7 +105,7 @@ export default function BodyWeightPage() {
     const entry = editing;
     const ok = await confirmAction({
       title: 'Excluir registro',
-      message: [<>O peso de <strong>{formatDay(entry.measured_on)}</strong> ({kg(entry.weight_kg)}) será excluído.</>],
+      message: [<>O peso de <strong>{formatDay(entry.measured_on)}</strong> ({kgText(entry.weight_kg)}) será excluído.</>],
       confirmLabel: 'Excluir',
     });
     if (!ok) return false;
@@ -169,7 +168,7 @@ export default function BodyWeightPage() {
       {entries && latest && (
         <section className={styles.panel}>
           <div className={styles.headline}>
-            <span className={styles.headlineValue}>{kg(latest.weight_kg)}</span>
+            <span className={styles.headlineValue}>{kgText(latest.weight_kg)}</span>
             <span className={styles.headlineLabel}>
               {formatLongDay(latest.measured_on)}
               {previous && <> · {formatDelta(latest.weight_kg - previous.weight_kg)} desde {formatDay(previous.measured_on)}</>}
@@ -194,7 +193,7 @@ export default function BodyWeightPage() {
                   ))}
                 </div>
               )}
-              <ProgressChart key={range.key} points={series} format={kg} axisFormat={formatKg} label="Peso corporal ao longo do tempo" target={goal?.target_kg ?? null} />
+              <ProgressChart key={range.key} points={series} format={kgText} axisFormat={formatKg} label="Peso corporal ao longo do tempo" target={goal?.target_kg ?? null} />
               {oldest !== previous && (
                 <p className={styles.panelNote}>
                   {formatDelta(latest.weight_kg - oldest.weight_kg)} desde o primeiro registro, em {formatDay(oldest.measured_on)}
@@ -241,7 +240,7 @@ export default function BodyWeightPage() {
                   <button type="button" className={styles.row} onClick={() => setEditing(entry)}>
                     <span className={styles.rowDate}>{formatDay(entry.measured_on)}</span>
                     <span className={styles.rowMain}>
-                      <span className={styles.rowName}>{kg(entry.weight_kg)}</span>
+                      <span className={styles.rowName}>{kgText(entry.weight_kg)}</span>
                       {(entry.measured_time || entry.note) && <span className={styles.rowMeta}>{[entry.measured_time, entry.note].filter(Boolean).join(' · ')}</span>}
                     </span>
                     {before && <span className={styles.rowDelta}>{formatDelta(entry.weight_kg - before.weight_kg)}</span>}

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Plus, Minus, Trash2, Dumbbell, HeartPulse, History, Link2, Link2Off, Copy, Check } from 'lucide-react';
 import { getExercises, peekCache } from '../../lib/api';
-import { equipmentLabel, plural, REST_OPTIONS, formatRest, groupsLabel, familySiblings, canLoadPerSide, SUPERSET_LETTERS, TECHNIQUES, TECHNIQUE_ORDER, planSlots, planSummary, repsLabel } from '../../lib/gym';
+import { canLoadPerSide, equipmentLabel, familySiblings, formatRest, groupsLabel, planSlots, planSummary, plural, repsLabel, REST_OPTIONS, SIDE_OPTIONS, SUPERSET_LETTERS, TECHNIQUE_ORDER, TECHNIQUES } from '../../lib/gym';
 import VariantChoices from './VariantChoices';
 import { clearDraft, draftKey, readDraft, writeDraft } from '../../lib/workoutDraft';
 import { SortableList, SortableItem, DragHandle } from '../Sortable';
@@ -119,7 +119,6 @@ const SLOT_COLORS = { warmup: 'slotWarmup', drop: 'slotDrop', rest_pause: 'slotR
 
 const REST_CHOICES = [{ value: null, label: 'Nenhum' }, ...REST_OPTIONS.map(seconds => ({ value: seconds, label: formatRest(seconds) }))];
 
-const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
 const LOAD_OPTIONS = [{ value: 'total', label: 'Peso total' }, { value: 'side', label: 'Cada lado' }];
 
 const digits = (value) => value.replace(/\D/g, '').slice(0, 3);
@@ -707,7 +706,6 @@ function Editor({ initial, onSubmit, onDelete }) {
       {cardioBlock(CARDIO_PHASES[1])}
 
       <WorkoutBodyMap exercises={items} />
-
 
       <div className={styles.actions}>
         {onDelete && (

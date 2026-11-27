@@ -7,16 +7,24 @@ import {
 } from 'lucide-react';
 import { getWorkoutProgress, peekCache } from '../../../../../lib/api';
 import {
-  formatDay, formatDuration, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  compactKg,
+  formatDay,
+  formatDuration,
+  formatKg,
+  formatSeconds,
+  formatShortDate,
+  formatVolume,
+  muscleLabel,
+  PHASE_LABEL,
+  plural,
+  signedPct,
 } from '../../../../../lib/gym';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
 import LimitedList from '../../../../../components/gym/LimitedList';
 import styles from '../../progress.module.css';
 import own from './workoutProgress.module.css';
 
-const compactKg = (value) => (value >= 10000 ? `${formatKg(Math.round(value / 1000))}k` : formatKg(value));
 const minutes = (value) => formatDuration(value * 60000);
-const signedPct = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatKg(Math.abs(value))}%`;
 
 const METRICS = [
   { key: 'volume', label: 'Volume', value: s => s.volume_kg, format: formatVolume, axis: compactKg, unit: 'kg', detail: s => plural(s.sets, 'série', 'séries') },
@@ -52,8 +60,6 @@ function Tiles({ tiles }) {
     </div>
   );
 }
-
-const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 
 function CardioGroup({ data }) {
   if (!data) return null;

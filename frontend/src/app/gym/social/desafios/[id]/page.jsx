@@ -8,7 +8,7 @@ import {
 import {
   deleteChallenge, getChallenge, getFriends, inviteToChallenge, leaveChallenge, peekCache, removeChallengeMember,
 } from '../../../../../lib/api';
-import { apiError } from '../../../../../lib/gym';
+import { apiError, firstName } from '../../../../../lib/gym';
 import {
   STATUS_LABEL, formatMetricValue, formatRange, formatScore, inviteUrl, metricDetail, metricLabel, minRuleLabel, timeLeftLabel,
 } from '../../../../../lib/challenges';
@@ -19,10 +19,6 @@ import Avatar from '../../../../../components/gym/social/Avatar';
 import ChallengeActivity from '../../../../../components/gym/social/ChallengeActivity';
 import ChallengeChat from '../../../../../components/gym/social/ChallengeChat';
 import styles from './detail.module.css';
-
-function firstName(name) {
-  return (name ?? '').split(' ')[0];
-}
 
 function InviteFriends({ challenge, onInvited }) {
   const toast = useToast();

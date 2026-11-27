@@ -178,6 +178,7 @@ export function daysAgo(iso, today) {
 
 export const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 export const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+export const WEEKDAY_LETTERS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 export const weekdayOf = (iso) => (parseDay(iso).getDay() + 6) % 7;
 
 export const toIso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -537,3 +538,10 @@ export function rowLabels(rows) {
 }
 
 export const stageText = (entry, format = (weight) => `${formatKg(weight)} kg`) => (entry.stages ?? []).map(stage => `${format(stage.weight_kg)} × ${stage.reps}`);
+
+export const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
+export const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
+export const kgText = (value) => `${formatKg(value)} kg`;
+export const compactKg = (value) => (value >= 10000 ? `${formatKg(Math.round(value / 1000))}k` : formatKg(value));
+export const signedPct = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatKg(Math.abs(value))}%`;
+export const firstName = (name) => (name ?? '').split(' ')[0];

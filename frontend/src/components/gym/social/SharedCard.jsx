@@ -2,11 +2,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, ClipboardList, Copy, Dumbbell } from 'lucide-react';
-import { apiError, equipmentLabel, muscleLabel, muscleName, targetText } from '../../../lib/gym';
+import { apiError, equipmentLabel, muscleLabel, muscleName, targetText, WEEKDAY_SHORT } from '../../../lib/gym';
 import { useToast } from '../../Toast';
 import styles from './SharedCard.module.css';
-
-const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 function WorkoutRows({ workout }) {
   return (
@@ -99,7 +97,7 @@ export default function SharedCard({ kind, snapshot, onCopy, mine = false }) {
       {isPlan ? (
         <>
           <div className={styles.days}>
-            {WEEKDAYS.map((label, weekday) => (
+            {WEEKDAY_SHORT.map((label, weekday) => (
               <div key={label} className={`${styles.day} ${byDay.get(weekday) ? styles.dayOn : ''}`}>
                 <span className={styles.dayLabel}>{label}</span>
                 <span className={styles.dayWorkout}>{byDay.get(weekday)?.join(' + ') ?? '—'}</span>

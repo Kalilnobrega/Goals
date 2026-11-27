@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, CalendarCheck, HeartPulse, Medal, Repeat } from 'lucide-react';
 import { getFitnessStats, peekCache } from '../../lib/api';
-import { formatDay, formatKg, parseDay, plural } from '../../lib/gym';
+import { formatDay, formatKg, parseDay, PHASE_LABEL, plural } from '../../lib/gym';
 import BarChart from './BarChart';
 import LimitedList from './LimitedList';
 import styles from '../../app/gym/progress/stats.module.css';
@@ -17,7 +17,6 @@ const PERIODS = [
   { key: 'all', label: 'Tudo' },
 ];
 
-const PHASE_LABEL = { start: 'Cardio no início', end: 'Cardio no final' };
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
 const minutesLabel = (value) => `${value.toLocaleString('pt-BR')} min`;
 const kmLabel = (value) => `${formatKg(Math.round(value * 10) / 10)} km`;

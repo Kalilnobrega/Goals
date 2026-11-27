@@ -2,10 +2,8 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCalendar, peekCache } from '../../lib/api';
-import { addDays, formatDay, formatMonth, mondayOf, plural } from '../../lib/gym';
+import { addDays, formatDay, formatMonth, mondayOf, plural, WEEKDAY_LETTERS } from '../../lib/gym';
 import styles from './WeekPicker.module.css';
-
-const WEEKDAYS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
 const shiftMonth = (month, delta) => {
   const [year, index] = month.split('-').map(Number);
@@ -60,7 +58,7 @@ export default function WeekPicker({ today, selected, minMonth, maxMonth, onPick
       </div>
 
       <div className={styles.weekdays} aria-hidden="true">
-        {WEEKDAYS.map((day, i) => <span key={i}>{day}</span>)}
+        {WEEKDAY_LETTERS.map((day, i) => <span key={i}>{day}</span>)}
       </div>
 
       <ul className={styles.weeks}>

@@ -3,10 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 import { getProgressWorkouts, peekCache } from '../../../../lib/api';
-import { formatDay, formatKg, formatVolume, plural } from '../../../../lib/gym';
+import { formatDay, formatKg, formatVolume, plural, signedPct } from '../../../../lib/gym';
 import styles from '../progress.module.css';
-
-const signedPct = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatKg(Math.abs(value))}%`;
 
 export default function WorkoutsProgressPage() {
   const [items, setItems] = useState(() => peekCache('fitnessProgressWorkouts') ?? null);

@@ -7,7 +7,21 @@ import {
 } from 'lucide-react';
 import { getExerciseProgress, getExercises, getGyms, saveExerciseGoal, deleteExerciseGoal, peekCache } from '../../../../../lib/api';
 import {
-  apiError, equipmentLabel, gripLabel, familySiblings, formatClock, formatDay, formatDelta, formatKg, formatSeconds, formatShortDate, formatVolume, muscleLabel, plural,
+  apiError,
+  compactKg,
+  equipmentLabel,
+  familySiblings,
+  formatClock,
+  formatDay,
+  formatDelta,
+  formatKg,
+  formatSeconds,
+  formatShortDate,
+  formatVolume,
+  gripLabel,
+  kgText,
+  muscleLabel,
+  plural,
 } from '../../../../../lib/gym';
 import ExerciseIntensity from '../../../../../components/gym/ExerciseIntensity';
 import ExerciseGymSetting from '../../../../../components/gym/ExerciseGymSetting';
@@ -16,9 +30,6 @@ import TargetGoal from '../../../../../components/gym/TargetGoal';
 import ProgressChart from '../../../../../components/gym/ProgressChart';
 import VariantChoices from '../../../../../components/gym/VariantChoices';
 import styles from '../../progress.module.css';
-
-const kg = (value) => `${formatKg(value)} kg`;
-const compactKg = (value) => (value >= 10000 ? `${formatKg(Math.round(value / 1000))}k` : formatKg(value));
 
 const minutes = (seconds) => Math.round((seconds / 60) * 10) / 10;
 const formatMinutes = (value) => `${formatKg(value)} min`;
@@ -120,7 +131,7 @@ const METRICS = [
     label: 'Carga máxima',
     value: p => p.max_weight_kg,
     has: points => points.some(p => p.max_weight_kg > 0),
-    format: kg,
+    format: kgText,
     axis: formatKg,
     detail: p => `${plural(p.reps_at_max, 'repetição', 'repetições')}`,
     unit: 'kg',
@@ -130,7 +141,7 @@ const METRICS = [
     label: '1RM estimado',
     value: p => p.estimated_1rm_kg,
     has: points => points.some(p => p.estimated_1rm_kg !== null),
-    format: kg,
+    format: kgText,
     axis: formatKg,
     detail: () => 'Fórmula de Epley',
     unit: 'kg',
@@ -151,9 +162,9 @@ const METRICS = [
     value: p => p.left_max_weight_kg,
     compare: p => p.right_max_weight_kg,
     has: points => points.some(p => p.left_max_weight_kg != null && p.right_max_weight_kg != null),
-    format: kg,
+    format: kgText,
     axis: formatKg,
-    detail: p => (p.right_max_weight_kg != null ? `Esquerda · direita ${kg(p.right_max_weight_kg)}` : 'Esquerda'),
+    detail: p => (p.right_max_weight_kg != null ? `Esquerda · direita ${kgText(p.right_max_weight_kg)}` : 'Esquerda'),
     unit: 'kg',
   },
   {
@@ -326,7 +337,7 @@ function Balance({ points }) {
         {gap < 3 ? 'Lados equilibrados' : `${weaker} ${gap}% mais fraca`}
       </span>
       <span className={styles.balanceNote}>
-        E {kg(now.left)} · D {kg(now.right)} de {now.metric} no último treino
+        E {kgText(now.left)} · D {kgText(now.right)} de {now.metric} no último treino
         {gapBefore !== null && gapBefore !== gap && ` · diferença era ${gapBefore}% no primeiro`}
       </span>
     </section>
@@ -340,7 +351,7 @@ function bestOf(points, pick) {
   }, null);
 }
 
-const bestSet = (p) => (p.max_weight_kg > 0 ? `${kg(p.max_weight_kg)} × ${p.reps_at_max}` : `Peso corporal × ${p.max_reps}`);
+const bestSet = (p) => (p.max_weight_kg > 0 ? `${kgText(p.max_weight_kg)} × ${p.reps_at_max}` : `Peso corporal × ${p.max_reps}`);
 
 function timedRow(p, tracking) {
   if (tracking === 'cardio') {
@@ -467,10 +478,10 @@ export default function ExerciseProgressPage() {
     bestOf(points, p => p.calories) && { label: 'Mais calorias', value: `${bestOf(points, p => p.calories).calories_estimated ? '≈ ' : ''}${bestOf(points, p => p.calories).calories} kcal`, note: formatShortDate(bestOf(points, p => p.calories).completed_at) },
   ].filter(Boolean) : tracking === 'time' ? [
     longest && { label: 'Melhor tempo', value: formatClock(longest.best_duration_seconds), note: formatShortDate(longest.completed_at) },
-    heaviest && { label: extra ? 'Maior carga extra' : 'Maior carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: formatShortDate(heaviest.completed_at) },
+    heaviest && { label: extra ? 'Maior carga extra' : 'Maior carga', value: extra ? plusKg(heaviest.max_weight_kg) : kgText(heaviest.max_weight_kg), note: formatShortDate(heaviest.completed_at) },
   ].filter(Boolean) : [
-    heaviest && { label: extra ? 'Maior carga extra' : 'Melhor carga', value: extra ? plusKg(heaviest.max_weight_kg) : kg(heaviest.max_weight_kg), note: `× ${heaviest.reps_at_max} · ${formatShortDate(heaviest.completed_at)}` },
-    strongest && { label: '1RM estimado', value: kg(strongest.estimated_1rm_kg), note: formatShortDate(strongest.completed_at) },
+    heaviest && { label: extra ? 'Maior carga extra' : 'Melhor carga', value: extra ? plusKg(heaviest.max_weight_kg) : kgText(heaviest.max_weight_kg), note: `× ${heaviest.reps_at_max} · ${formatShortDate(heaviest.completed_at)}` },
+    strongest && { label: '1RM estimado', value: kgText(strongest.estimated_1rm_kg), note: formatShortDate(strongest.completed_at) },
     biggest && { label: 'Maior volume', value: formatVolume(biggest.volume_kg), note: formatShortDate(biggest.completed_at) },
     !heaviest && mostReps && { label: 'Mais repetições', value: plural(mostReps.max_reps, 'rep', 'reps'), note: formatShortDate(mostReps.completed_at) },
   ].filter(Boolean);

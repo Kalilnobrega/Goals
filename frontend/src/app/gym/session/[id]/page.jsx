@@ -8,9 +8,31 @@ import {
   updateSessionExercise, removeSessionExercise, reorderSession, addSet, updateSet, deleteSet,
 } from '../../../../lib/api';
 import {
-  apiError, formatClock, formatDuration, formatKg, formatLongDate, formatRest, formatTime, formatVolume,
-  plural, perSide, canLoadPerSide, REST_OPTIONS, FORGOTTEN_AFTER_MS, seriesCount, renumberSets, nextPosition, groupsLabel, familySiblings, equipmentLabel, variantTitle, variantHint,
-  supersetUnits, supersetTurn, SUPERSET_LETTERS,
+  apiError,
+  canLoadPerSide,
+  equipmentLabel,
+  familySiblings,
+  FORGOTTEN_AFTER_MS,
+  formatClock,
+  formatDuration,
+  formatKg,
+  formatLongDate,
+  formatRest,
+  formatTime,
+  formatVolume,
+  groupsLabel,
+  nextPosition,
+  perSide,
+  plural,
+  renumberSets,
+  REST_OPTIONS,
+  seriesCount,
+  SIDE_OPTIONS,
+  SUPERSET_LETTERS,
+  supersetTurn,
+  supersetUnits,
+  variantHint,
+  variantTitle,
 } from '../../../../lib/gym';
 import { startRestTimer, stopRestTimer, getRestTimer } from '../../../../lib/restTimer';
 import {
@@ -64,7 +86,6 @@ const totals = (session) => session.exercises.filter(item => !isCardio(item)).re
   { sets: 0, volume: 0 },
 );
 
-const SIDE_OPTIONS = [{ value: false, label: 'Bilateral' }, { value: true, label: 'Unilateral' }];
 const LOAD_OPTIONS = [{ value: 'total', label: 'Peso total' }, { value: 'side', label: 'Cada lado' }];
 
 const withItem = (session, itemId, change) => ({

@@ -6,7 +6,16 @@ import {
 } from 'lucide-react';
 import { getFitnessStats, getGyms, getGymStreak, getPlans, peekCache } from '../../lib/api';
 import {
-  formatDay, formatDuration, formatKg, formatSeconds, formatVolume, muscleLabel, parseDay, plural,
+  formatDay,
+  formatDuration,
+  formatKg,
+  formatSeconds,
+  formatVolume,
+  kgText,
+  muscleLabel,
+  parseDay,
+  plural,
+  WEEKDAY_SHORT,
 } from '../../lib/gym';
 import BarChart from './BarChart';
 import Sparkline from './Sparkline';
@@ -34,11 +43,9 @@ const TIMELINE_METRICS = [
 const WEEKDAY_LONG = ['segundas', 'terças', 'quartas', 'quintas', 'sextas', 'sábados', 'domingos'];
 const ratio = (value) => `${formatKg(value)}×`;
 
-const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const DAY_PARTS = { dawn: 'Madrugada', morning: 'Manhã', afternoon: 'Tarde', night: 'Noite' };
 
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
-const kg = (value) => `${formatKg(value)} kg`;
 
 function change(current, previous) {
   if (previous === null || previous === undefined || previous === 0) return null;
@@ -194,15 +201,15 @@ function Consistency({ data, streaks = true }) {
 
       {data.summary.sessions > 0 && (
         <>
-          <h3 className={styles.subTitle}>Dias da semana {consistency.weekdays[favorite] > 0 && <span>· mais treina na {WEEKDAYS[favorite].toLowerCase()}</span>}</h3>
+          <h3 className={styles.subTitle}>Dias da semana {consistency.weekdays[favorite] > 0 && <span>· mais treina na {WEEKDAY_SHORT[favorite].toLowerCase()}</span>}</h3>
           <div className={styles.weekdays}>
             {consistency.weekdays.map((count, i) => (
-              <div key={WEEKDAYS[i]} className={styles.weekday} aria-label={`${WEEKDAYS[i]}: ${plural(count, 'treino', 'treinos')}`}>
+              <div key={WEEKDAY_SHORT[i]} className={styles.weekday} aria-label={`${WEEKDAY_SHORT[i]}: ${plural(count, 'treino', 'treinos')}`}>
                 <span className={styles.weekdayCount} aria-hidden="true">{count || ''}</span>
                 <span className={styles.weekdayTrack} aria-hidden="true">
                   <span className={styles.weekdayFill} style={{ height: `${(count / maxDay) * 100}%` }} />
                 </span>
-                <span className={styles.weekdayLabel} aria-hidden="true">{WEEKDAYS[i].slice(0, 1)}</span>
+                <span className={styles.weekdayLabel} aria-hidden="true">{WEEKDAY_SHORT[i].slice(0, 1)}</span>
               </div>
             ))}
           </div>
@@ -319,7 +326,7 @@ function Progressions({ data }) {
         <span className={styles.rowMain}>
           <span className={styles.rowName}>{p.name}</span>
           <span className={styles.rowMeta}>
-            {p.metric === 'e1rm' ? '1RM estimado' : 'Carga máxima'}: {kg(p.first_kg)} → {kg(p.last_kg)}
+            {p.metric === 'e1rm' ? '1RM estimado' : 'Carga máxima'}: {kgText(p.first_kg)} → {kgText(p.last_kg)}
           </span>
         </span>
         <Delta value={p.change_pct} />
@@ -441,7 +448,7 @@ function Adherence({ data }) {
       <ul className={styles.adherenceDays}>
         {adherence.weekdays.map(w => (
           <li key={w.weekday} className={styles.adherenceDay}>
-            <span className={styles.adherenceLabel}>{WEEKDAYS[w.weekday]}</span>
+            <span className={styles.adherenceLabel}>{WEEKDAY_SHORT[w.weekday]}</span>
             <span className={styles.track}>
               <span className={styles.fill} style={{ width: `${w.planned ? (w.done / w.planned) * 100 : 0}%` }} />
             </span>
@@ -493,7 +500,7 @@ function PlanSkipped({ details }) {
             <li key={item.date} className={styles.row}>
               <span className={styles.rowDate}>{formatDay(item.date)}</span>
               <span className={styles.rowMain}>
-                <span className={styles.rowName}>{WEEKDAYS[(parseDay(item.date).getDay() + 6) % 7]}</span>
+                <span className={styles.rowName}>{WEEKDAY_SHORT[(parseDay(item.date).getDay() + 6) % 7]}</span>
                 <span className={styles.rowMeta}>{item.workouts.join(' · ')}</span>
               </span>
             </li>
@@ -622,7 +629,7 @@ function StrengthTrend({ items }) {
           key: point.session_id,
           time: new Date(point.completed_at).getTime(),
           value: point.ratio,
-          detail: `${kg(point.e1rm_kg)} de 1RM · peso ${kg(point.body_weight_kg)}`,
+          detail: `${kgText(point.e1rm_kg)} de 1RM · peso ${kgText(point.body_weight_kg)}`,
         }))}
         format={ratio}
         axisFormat={v => `${formatKg(v)}×`}
@@ -657,7 +664,7 @@ function RelativeStrength({ data }) {
             <>
               <span className={styles.rowMain}>
                 <span className={styles.rowName}>{item.name}</span>
-                <span className={styles.rowMeta}>{kg(item.e1rm_kg)} de 1RM · peso {kg(item.body_weight_kg)}</span>
+                <span className={styles.rowMeta}>{kgText(item.e1rm_kg)} de 1RM · peso {kgText(item.body_weight_kg)}</span>
               </span>
               <span className={styles.strengthValue}>
                 {ratio(item.ratio)}
@@ -774,7 +781,7 @@ function AllTime({ data }) {
     { label: 'Mais séries', value: plural(records.most_sets.value, 'série', 'séries'), ref: records.most_sets },
     records.heaviest_set && {
       label: 'Série mais pesada',
-      value: `${kg(records.heaviest_set.weight_kg)} × ${records.heaviest_set.reps}`,
+      value: `${kgText(records.heaviest_set.weight_kg)} × ${records.heaviest_set.reps}`,
       ref: records.heaviest_set,
     },
   ].filter(Boolean);
