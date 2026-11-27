@@ -24,7 +24,8 @@ from app.fitness_schemas import (
     EXERCISE_METRICS,
     WEIGHT_METRICS,
 )
-from app.fitness_load import BodyWeights
+from app import fitness_rankings as rankings
+from app.fitness_load import BODYWEIGHT, BodyWeights, bodyweight_factors, without_body_weight
 from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import blocked_between, notify
 from app.main import limiter, user_key
@@ -307,7 +308,10 @@ def member_values(db: Session, challenge: Challenge, user: User, targets: dict[s
 
 
 def ranking(db: Session, challenge: Challenge, me: int, cache: dict | None = None) -> list[dict]:
-    rows = challenge.final_ranking if challenge.final_ranking is not None else ranking_rows(db, challenge, cache)
+    if challenge.final_ranking is not None:
+        rows = challenge.final_ranking
+    else:
+        rows = rankings.cached(challenge, lambda: ranking_rows(db, challenge, cache))
     hidden = {metric_id(m) for m in challenge.metrics if m["key"] in WEIGHT_METRICS} if challenge.hide_weight else set()
     shown = []
     for row in rows:
@@ -796,8 +800,11 @@ def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
             ).all()
         } if sessions and user_id in visible else {}
         hidden = hidden_strength_ids(db, challenge, user_id, me)
+        with without_body_weight(user_id, user_id != me):
+            body = BodyWeights(user_id, db)
+        factors = bodyweight_factors(db, [item.exercise_id for s in sessions for item in s.exercises if item.equipment == BODYWEIGHT])
         for session in sessions:
-            facts = viewed_facts(db, session, me)
+            facts = session_facts(session, body, factors)
             post = posts.get(session.id)
             facts["volume"] -= hidden_volume(session, hidden)
             ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])

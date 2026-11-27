@@ -813,6 +813,50 @@ def test_visible_members_matches_the_profile_rules(client, db_session, ana, brun
     assert seen_by_ana == {ids["ana"], ids["bruno"], ids["dani"]}
 
 
+def test_ranking_is_cached_until_a_member_changes_their_training(client, library, ana, bruno, monkeypatch):
+    from app import fitness_rankings
+    from app.routers import fitness_challenges
+
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    url = f"/fitness/challenges/{challenge['id']}"
+    calls = []
+    original = fitness_challenges.ranking_rows
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(fitness_challenges, "ranking_rows", counting)
+    fitness_rankings.forget_all()
+    scores = lambda: {row["username"]: row["score"] for row in client.get(url, headers=ana).json()["ranking"]}
+
+    assert scores() == {"ana": 0, "bruno": 0}
+    assert scores() == {"ana": 0, "bruno": 0}
+    assert len(calls) == 1
+
+    train(client, bruno, library)
+    assert scores() == {"ana": 0, "bruno": 1}
+    assert len(calls) == 2
+
+    session_id = client.get("/fitness/sessions", headers=bruno).json()["items"][0]["id"]
+    client.delete(f"/fitness/sessions/{session_id}", headers=bruno)
+    assert scores()["bruno"] == 0
+
+    monkeypatch.setattr(fitness_rankings.time, "monotonic", lambda: 10**9)
+    scores()
+    assert len(calls) == 4
+
+
+def test_bulk_writes_also_refresh_the_ranking(db_session):
+    from app import fitness_rankings
+    from app.fitness_models import WorkoutSession
+
+    fitness_rankings.entries[1] = (float("inf"), "key", [])
+    db_session.query(WorkoutSession).filter(WorkoutSession.id == -1).update({WorkoutSession.name: "x"}, synchronize_session=False)
+    assert fitness_rankings.entries == {}
+
+
 def test_chat_is_rate_limited_per_person(client, ana, bruno):
     challenge = create(client, ana)
     join(client, bruno, challenge)
