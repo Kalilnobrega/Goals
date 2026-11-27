@@ -52,7 +52,7 @@ def planned_by_weekday(plan: Plan | None) -> dict[int, list]:
 def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date | None = None) -> dict:
     monday = monday or today - timedelta(days=today.weekday())
     planned = planned_by_weekday(plan)
-    stats = session_stats(db)
+    stats = session_stats(db, user.id)
     rows = (
         db.query(
             WorkoutSession.started_at, WorkoutSession.completed_at, stats.c.total_sets, stats.c.volume,
@@ -105,7 +105,7 @@ def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date
 
 
 def last_session(user: User, db: Session) -> dict | None:
-    stats = session_stats(db)
+    stats = session_stats(db, user.id)
     row = (
         db.query(WorkoutSession, stats.c.exercise_count, stats.c.total_sets, stats.c.volume, stats.c.cardio_seconds)
         .outerjoin(stats, stats.c.session_id == WorkoutSession.id)
@@ -432,7 +432,7 @@ def get_calendar(
     today = today_br()
     first = parse_month(month) if month else today.replace(day=1)
     following = (first + timedelta(days=32)).replace(day=1)
-    stats = session_stats(db)
+    stats = session_stats(db, user.id)
     completed = db.query(WorkoutSession).filter(
         WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED
     )

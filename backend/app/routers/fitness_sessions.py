@@ -363,7 +363,7 @@ def muscle_groups_by_session(session_ids: list[int], db: Session) -> dict[int, l
     }
 
 
-def session_stats(db: Session):
+def session_stats(db: Session, user_id: int):
     return (
         db.query(
             SessionExercise.session_id.label("session_id"),
@@ -373,6 +373,8 @@ def session_stats(db: Session):
             func.sum(case((SessionExercise.tracking == CARDIO, SetEntry.duration_seconds), else_=0)).label("cardio_seconds"),
         )
         .join(SetEntry, SetEntry.session_exercise_id == SessionExercise.id)
+        .join(WorkoutSession, WorkoutSession.id == SessionExercise.session_id)
+        .filter(WorkoutSession.user_id == user_id)
         .group_by(SessionExercise.session_id)
         .subquery()
     )
@@ -435,7 +437,7 @@ def list_sessions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    stats = session_stats(db)
+    stats = session_stats(db, user.id)
     completed = db.query(WorkoutSession).filter(
         WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED
     )
