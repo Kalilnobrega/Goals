@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Ban, Bell, BellOff, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, Flag, Globe, History, Lock, MoreHorizontal, Radio, Settings, Star,
+  Ban, Bell, BellOff, ChevronLeft, ChevronRight, ClipboardList, Clock, Dumbbell, Flag, Globe, History, Lock, MoreHorizontal, Newspaper, Plus, Radio, Settings, Star,
   TrendingUp, Trophy, Users,
 } from 'lucide-react';
 import { blockUser, followLive, getSocialProfile, getUserPosts, peekCache, reportUser } from '../../../../lib/api';
@@ -121,6 +121,7 @@ export default function SocialProfilePage() {
   const [posts, setPosts] = useState(null);
   const [nextBefore, setNextBefore] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [tab, setTab] = useState('posts');
 
   const load = useCallback(() => {
     getSocialProfile(handle)
@@ -274,18 +275,57 @@ export default function SocialProfilePage() {
           )}
 
           {profile.can_view && profile.stats && (
-            <>
-              <section className={styles.stats}>
-                <Stat value={profile.stats.workouts} label={profile.stats.workouts === 1 ? 'treino' : 'treinos'} sub={profile.stats.member_since ? `desde ${monthYear.format(new Date(`${profile.stats.member_since}T12:00:00`))}` : null} />
-                <Stat value={profile.stats.workouts_this_month} label="este mês" />
-                <Stat
-                  value={profile.stats.week_streak}
-                  label={profile.stats.week_streak === 1 ? 'semana seguida' : 'semanas seguidas'}
-                  sub={profile.stats.best_week_streak ? `recorde ${profile.stats.best_week_streak}` : null}
-                />
-                <Stat value={profile.stats.friends} label={profile.stats.friends === 1 ? 'amigo' : 'amigos'} />
-              </section>
+            <section className={styles.stats}>
+              <Stat value={profile.stats.workouts} label={profile.stats.workouts === 1 ? 'treino' : 'treinos'} sub={profile.stats.member_since ? `desde ${monthYear.format(new Date(`${profile.stats.member_since}T12:00:00`))}` : null} />
+              <Stat value={profile.stats.workouts_this_month} label="este mês" />
+              <Stat
+                value={profile.stats.week_streak}
+                label={profile.stats.week_streak === 1 ? 'semana seguida' : 'semanas seguidas'}
+                sub={profile.stats.best_week_streak ? `recorde ${profile.stats.best_week_streak}` : null}
+              />
+              <Stat value={profile.stats.friends} label={profile.stats.friends === 1 ? 'amigo' : 'amigos'} />
+            </section>
+          )}
 
+          {profile.can_view && (
+            <>
+              <div className={styles.tabs} role="tablist" aria-label="Perfil">
+                <button type="button" role="tab" aria-selected={tab === 'posts'} className={`${styles.tab} ${tab === 'posts' ? styles.tabActive : ''}`} onClick={() => setTab('posts')}>
+                  <Newspaper size={16} /> Publicações
+                </button>
+                <button type="button" role="tab" aria-selected={tab === 'workouts'} className={`${styles.tab} ${tab === 'workouts' ? styles.tabActive : ''}`} onClick={() => setTab('workouts')}>
+                  <Dumbbell size={16} /> Treinos
+                </button>
+              </div>
+
+              {tab === 'posts' && (
+                <section className={styles.posts} role="tabpanel" aria-label="Publicações">
+                  {!posts && <div className={styles.postsSkeleton} aria-busy="true" aria-label="Carregando publicações" />}
+                  {posts && posts.length === 0 && (
+                    <div className={styles.postsEmpty}>
+                      <Newspaper size={24} />
+                      <p>{self ? 'Você ainda não publicou nada.' : `${firstName(profile.name)} ainda não publicou nada.`}</p>
+                      {self && <Link href="/gym/social/publicar" className={styles.primary}><Plus size={17} /> Publicar treino</Link>}
+                    </div>
+                  )}
+                  {posts?.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onChange={(updated) => setPosts((list) => list.map((p) => (p.id === updated.id ? updated : p)))}
+                      onDeleted={(removed) => setPosts((list) => list.filter((p) => p.id !== removed.id))}
+                    />
+                  ))}
+                  {nextBefore && (
+                    <button type="button" className={styles.morePosts} onClick={loadMorePosts} disabled={loadingMore}>
+                      {loadingMore ? 'Carregando...' : 'Carregar mais'}
+                    </button>
+                  )}
+                </section>
+              )}
+
+              {tab === 'workouts' && profile.stats && (
+                <div className={styles.workoutsTab} role="tabpanel" aria-label="Treinos">
               <section className={styles.card}>
                 <h2 className={styles.cardTitle}><Trophy size={17} /> Recordes recentes</h2>
                 {profile.records.length ? (
@@ -332,26 +372,9 @@ export default function SocialProfilePage() {
               ) : (
                 <p className={styles.note}>Os últimos treinos aparecem só para amigos e quem está nos mesmos desafios.</p>
               )}
-            </>
-          )}
-
-          {profile.can_view && posts && posts.length > 0 && (
-            <section className={styles.posts}>
-              <h2 className={styles.postsTitle}>Publicações</h2>
-              {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onChange={(updated) => setPosts((list) => list.map((p) => (p.id === updated.id ? updated : p)))}
-                  onDeleted={(removed) => setPosts((list) => list.filter((p) => p.id !== removed.id))}
-                />
-              ))}
-              {nextBefore && (
-                <button type="button" className={styles.morePosts} onClick={loadMorePosts} disabled={loadingMore}>
-                  {loadingMore ? 'Carregando...' : 'Carregar mais'}
-                </button>
+                </div>
               )}
-            </section>
+            </>
           )}
 
           {!self && (

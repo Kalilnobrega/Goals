@@ -251,12 +251,75 @@
   gap: 12px;
 }
 
-.postsTitle {
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--gym-surface);
+  border: 1px solid var(--gym-border);
+}
+
+.tab {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
   color: var(--gym-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.92rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
+}
+
+.tabActive {
+  background: var(--gym-surface-3);
+  color: var(--gym-text);
+}
+
+.workoutsTab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.postsSkeleton {
+  height: 260px;
+  border-radius: 22px;
+  background: linear-gradient(90deg, var(--gym-surface) 0%, var(--gym-surface-2) 50%, var(--gym-surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.postsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  border-radius: 20px;
+  border: 1px dashed var(--gym-border-strong);
+  color: var(--gym-muted);
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+.postsEmpty .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  margin-top: 4px;
+  padding: 0 18px;
+  font-size: 0.95rem;
+  text-decoration: none;
 }
 
 .menu {
