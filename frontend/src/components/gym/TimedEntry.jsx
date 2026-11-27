@@ -37,7 +37,7 @@ function DurationField({ seconds, onChange, step, watchKey, target = 0, suggeste
   const alerted = useRef(!!watch?.alerted);
   const running = !!watch?.startedAt;
   const goal = target > 0;
-  const used = (!goal && !suggested) || !!watch?.used;
+  const used = !suggested || !!watch?.used;
   const base = running ? watch.base ?? seconds : seconds;
   const live = running && now ? base + Math.max(0, Math.round((now - watch.startedAt) / 1000)) : seconds;
   const parts = splitClock(live);
@@ -105,8 +105,13 @@ function DurationField({ seconds, onChange, step, watchKey, target = 0, suggeste
             <span className={styles.goalFill} style={{ width: `${Math.min(100, (live / target) * 100)}%` }} />
           </span>
           <span className={styles.goalText}>
-            {reached ? <strong>+{formatClock(live - target)}</strong> : `faltam ${formatClock(target - live)}`} · meta {formatClock(target)}
+            {live > target ? <strong>+{formatClock(live - target)}</strong> : reached ? <strong>meta atingida</strong> : `faltam ${formatClock(target - live)}`} · meta {formatClock(target)}
           </span>
+          {!running && !live && (
+            <button type="button" className={styles.useGoal} onClick={() => onChange(target)}>
+              <Check size={14} strokeWidth={2.8} /> Usar meta ({formatClock(target)})
+            </button>
+          )}
         </div>
       )}
       {confirming ? (

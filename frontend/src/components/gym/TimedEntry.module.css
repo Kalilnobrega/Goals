@@ -372,6 +372,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+.useGoal {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--gym-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gym-accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .goalText strong {
   color: var(--gym-accent);
   font-weight: 700;
