@@ -11,7 +11,7 @@ import { formatRange, formatScore, metricLabel, minRuleLabel } from '../../../..
 import { useToast } from '../../../../components/Toast';
 import SocialTabs from '../../../../components/gym/social/SocialTabs';
 import UsernameSetup from '../../../../components/gym/social/UsernameSetup';
-import { SocialActionButton, SocialActionFab } from '../../../../components/gym/social/SocialAction';
+import { SocialActionButton, SocialActionFab, SocialProfileLink } from '../../../../components/gym/social/SocialAction';
 import social from '../../../../components/gym/social/social.module.css';
 import styles from './challenges.module.css';
 
@@ -124,6 +124,7 @@ export default function ChallengesPage() {
       <div className={social.toolbar}>
         <SocialTabs />
         {profile?.username && <SocialActionButton href="/gym/social/desafios/novo" label="Criar desafio" icon={Plus} />}
+        <SocialProfileLink username={profile?.username} />
       </div>
 
       {error && <p className={styles.error}>{error}</p>}

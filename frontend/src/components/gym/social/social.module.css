@@ -225,6 +225,23 @@
   white-space: nowrap;
 }
 
+.profileLink {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid var(--gym-border-strong);
+  background: var(--gym-surface);
+  color: var(--gym-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profileLink:active {
+  background: var(--gym-surface-2);
+}
+
 .fab {
   position: fixed;
   right: 16px;

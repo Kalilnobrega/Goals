@@ -6,7 +6,7 @@ import { apiError } from '../../../lib/gym';
 import SocialTabs from '../../../components/gym/social/SocialTabs';
 import UsernameSetup from '../../../components/gym/social/UsernameSetup';
 import PostCard from '../../../components/gym/social/PostCard';
-import { SocialActionButton, SocialActionFab } from '../../../components/gym/social/SocialAction';
+import { SocialActionButton, SocialActionFab, SocialProfileLink } from '../../../components/gym/social/SocialAction';
 import LiveNow from '../../../components/gym/social/LiveNow';
 import social from '../../../components/gym/social/social.module.css';
 import styles from './feed.module.css';
@@ -52,6 +52,7 @@ export default function FeedPage() {
       <div className={social.toolbar}>
         <SocialTabs />
         {profile?.username && <SocialActionButton href="/gym/social/publicar" label="Publicar" icon={Plus} />}
+        <SocialProfileLink username={profile?.username} />
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
