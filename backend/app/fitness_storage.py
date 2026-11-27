@@ -71,6 +71,12 @@ class BucketStorage:
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
 
+    def link(self, key: str, content_type: str | None, seconds: int) -> str:
+        params = {"Bucket": self.bucket, "Key": key, "ResponseCacheControl": f"private, max-age={seconds}"}
+        if content_type:
+            params["ResponseContentType"] = content_type
+        return self.client.generate_presigned_url("get_object", Params=params, ExpiresIn=seconds)
+
 
 @lru_cache(maxsize=1)
 def bucket_storage(bucket: str, endpoint: str, region: str, key_id: str, secret: str) -> BucketStorage:

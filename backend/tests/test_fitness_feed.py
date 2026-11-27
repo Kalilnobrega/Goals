@@ -363,3 +363,20 @@ def test_uploads_have_a_ceiling(client, ana, media_dir, monkeypatch):
 def test_uploads_are_rate_limited(client, ana, media_dir):
     statuses = [upload(client, ana, kind="progress").status_code for _ in range(31)]
     assert statuses[:30] == [200] * 30 and statuses[30] == 429
+
+
+def test_bucket_photos_redirect_to_a_presigned_link(client, ana, media_dir, monkeypatch):
+    from app.routers import fitness_feed
+    from app.fitness_storage import LocalStorage
+
+    class Bucket(LocalStorage):
+        def link(self, key, content_type, seconds):
+            return f"https://bucket.example/{key}?type={content_type}&expires={seconds}"
+
+    media = upload(client, ana).json()
+    monkeypatch.setattr(fitness_feed, "get_storage", lambda: Bucket(media_dir))
+    served = client.get(media["url"], follow_redirects=False)
+    assert served.status_code == 307
+    assert served.headers["location"].startswith("https://bucket.example/")
+    assert "expires=7200" in served.headers["location"]
+    assert served.headers["cache-control"] == "private, max-age=3600"

@@ -1,6 +1,7 @@
 import secrets
 from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
+from fastapi.responses import RedirectResponse
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -45,6 +46,8 @@ MAX_MEDIA = 4
 PENDING_TTL = timedelta(days=1)
 MAX_PENDING_MEDIA = 12
 MAX_PROGRESS_PHOTOS = 300
+CACHE_SECONDS = 3600
+LINK_SECONDS = 2 * CACHE_SECONDS
 NOT_FOUND = "Post não encontrado."
 
 
@@ -163,11 +166,17 @@ def serve_media(
     media = db.get(Media, media_id)
     full = v == "full" and media is not None and media.full_key
     key = (media.full_key if full else media.storage_key) if media else None
-    data = get_storage().read(key) if key else None
-    if data is None:
+    if not key:
         raise HTTPException(status_code=404, detail="Foto não encontrada.")
     content_type = media.full_content_type if full else media.content_type
-    return Response(content=data, media_type=content_type, headers={"Cache-Control": "private, max-age=3600"})
+    storage = get_storage()
+    if hasattr(storage, "link"):
+        url = storage.link(key, content_type, LINK_SECONDS)
+        return RedirectResponse(url, status_code=307, headers={"Cache-Control": f"private, max-age={CACHE_SECONDS}"})
+    data = storage.read(key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Foto não encontrada.")
+    return Response(content=data, media_type=content_type, headers={"Cache-Control": f"private, max-age={CACHE_SECONDS}"})
 
 
 @fitness_feed_router.get("/progress-photos", response_model=list[ProgressPhotoSchema])
