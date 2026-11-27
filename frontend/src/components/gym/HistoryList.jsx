@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Building2 } from 'lucide-react';
-import { formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural } from '../../lib/gym';
+import { formatDuration, formatKg, formatMonthThisYear, formatVolume, formatWeekday, monthKey, muscleLabel, plural } from '../../lib/gym';
 import styles from './HistoryList.module.css';
 
 function groupByMonth(items) {
@@ -10,7 +10,7 @@ function groupByMonth(items) {
     const key = monthKey(item.started_at);
     const last = groups.at(-1);
     if (last?.key === key) last.items.push(item);
-    else groups.push({ key, label: formatMonth(item.started_at), items: [item] });
+    else groups.push({ key, label: formatMonthThisYear(item.started_at), items: [item] });
   });
   return groups;
 }
