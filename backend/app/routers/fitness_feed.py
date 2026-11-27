@@ -1,6 +1,6 @@
 import secrets
 from datetime import date, datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -31,6 +31,7 @@ from app.fitness_muscles import muscle_credit
 from app.fitness_storage import EXTENSIONS, MAX_BYTES, get_storage, media_url, sniff, valid_signature
 from app.fitness_notifications import blocked_between, clear, notify, renotify
 from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
+from app.main import limiter, user_key
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
 from .fitness_social import blocked_ids, can_view, file_report, person, is_close, own_profile, relation_to
@@ -578,7 +579,8 @@ def unreact(post_id: int, me: FitnessProfile = Depends(own_profile), db: Session
 
 
 @fitness_feed_router.post("/posts/{post_id}/comments", response_model=CommentSchema)
-def add_comment(post_id: int, data: CommentCreateSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+@limiter.limit("30/minute", key_func=user_key)
+def add_comment(request: Request, post_id: int, data: CommentCreateSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, me.user_id)
     text = data.text.strip()
     if not text:
@@ -604,7 +606,8 @@ def delete_comment(comment_id: int, user: User = Depends(get_current_user), db: 
 
 
 @fitness_feed_router.post("/posts/{post_id}/report", status_code=201)
-def report_post(post_id: int, data: ReportSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
+@limiter.limit("5/minute", key_func=user_key)
+def report_post(request: Request, post_id: int, data: ReportSchema, me: FitnessProfile = Depends(own_profile), db: Session = Depends(get_db)):
     post = visible_post(db, post_id, me.user_id)
     if post.user_id == me.user_id:
         raise HTTPException(status_code=422, detail="Você não pode denunciar o próprio post.")

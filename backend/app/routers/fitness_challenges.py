@@ -1,7 +1,7 @@
 import secrets
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -27,6 +27,7 @@ from app.fitness_schemas import (
 from app.fitness_load import BodyWeights
 from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import blocked_between, notify
+from app.main import limiter, user_key
 from .auth import get_current_user
 from .fitness_social import blocked_ids, person, own_profile, find_profile, friendship_between
 from .fitness_stats import completed_facts, plan_adherence, weight_records
@@ -1028,7 +1029,9 @@ def challenge_chat(
 
 
 @fitness_challenges_router.post("/{challenge_id}/chat", response_model=ChatItemSchema)
+@limiter.limit("30/minute", key_func=user_key)
 def send_chat_message(
+    request: Request,
     challenge_id: int,
     data: ChatMessageCreateSchema,
     user: User = Depends(get_current_user),

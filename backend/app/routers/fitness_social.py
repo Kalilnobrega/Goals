@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, or_, and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,6 +16,7 @@ from app.fitness_schemas import (
 )
 from app.fitness_load import without_body_weight
 from app.fitness_notifications import clear, notify
+from app.main import limiter, user_key
 from .auth import get_current_user
 from .fitness_profile import normalize_username
 from .fitness_plans import active_plan
@@ -293,7 +294,9 @@ def list_friends(me: FitnessProfile = Depends(own_profile), db: Session = Depend
 
 
 @fitness_social_router.post("/friends/requests", response_model=SocialUserSchema)
+@limiter.limit("20/minute", key_func=user_key)
 def send_friend_request(
+    request: Request,
     data: FriendRequestSchema,
     me: FitnessProfile = Depends(own_profile),
     db: Session = Depends(get_db),
@@ -416,7 +419,9 @@ def unblock_user(
 
 
 @fitness_social_router.post("/reports/{username}", status_code=201)
+@limiter.limit("5/minute", key_func=user_key)
 def report_user(
+    request: Request,
     username: str,
     data: ReportSchema,
     me: FitnessProfile = Depends(own_profile),

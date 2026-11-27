@@ -49,9 +49,36 @@ app.add_middleware(
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-limiter = Limiter(key_func=get_remote_address)
+def client_ip(request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    return hops[-1] if hops else get_remote_address(request)
+
+
+def user_key(request) -> str:
+    from jose import JWTError, jwt
+
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        try:
+            subject = jwt.decode(header[7:], SECRET_KEY, algorithms=[ALGORITHM]).get("sub")
+        except JWTError:
+            subject = None
+        if subject:
+            return f"user:{subject}"
+    return client_ip(request)
+
+
+limiter = Limiter(key_func=client_ip)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+def rate_limited(request, exc: RateLimitExceeded):
+    response = _rate_limit_exceeded_handler(request, exc)
+    response.body = response.render({"detail": "Muitas tentativas seguidas. Espere um minuto e tente de novo."})
+    response.headers["content-length"] = str(len(response.body))
+    return response
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limited)
 
 from app.routers.auth import auth_router
 from app.routers.home import home_router

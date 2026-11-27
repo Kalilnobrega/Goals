@@ -168,6 +168,19 @@ def test_login_is_rate_limited(client):
     assert statuses[-1] == 429
 
 
+def test_rate_limit_is_per_client_behind_the_proxy(client):
+    def attempt(chain):
+        return client.post(
+            "/auth/login",
+            data={"username": "x@example.com", "password": "senha123"},
+            headers={"X-Forwarded-For": chain},
+        ).status_code
+
+    assert [attempt("1.1.1.1, 10.0.0.1") for _ in range(6)][-1] == 429
+    assert attempt("1.1.1.1, 10.0.0.2") != 429
+    assert attempt("9.9.9.9, 10.0.0.1") == 429
+
+
 def test_me_rejects_refresh_token(client, user):
     refresh_token = create_token(user.id, timedelta(days=7), "refresh")
 
@@ -397,3 +410,9 @@ def test_change_password_revokes_other_sessions_and_returns_new_tokens(client, d
         "/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"}
     ).status_code == 200
     assert client.post("/auth/refresh", json={"refresh_token": body["refresh_token"]}).status_code == 200
+
+
+def test_rate_limit_message_is_readable(client):
+    responses = [login(client, email="x@example.com") for _ in range(6)]
+    assert responses[-1].status_code == 429
+    assert responses[-1].json() == {"detail": "Muitas tentativas seguidas. Espere um minuto e tente de novo."}

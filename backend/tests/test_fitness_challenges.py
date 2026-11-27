@@ -788,3 +788,12 @@ def test_blocked_members_workouts_stay_out_of_the_activity(client, library, ana,
     assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['carla']}", headers=bruno).status_code == 404
     assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['bruno']}", headers=carla).status_code == 404
     assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['carla']}", headers=ana).status_code == 200
+
+
+def test_chat_is_rate_limited_per_person(client, ana, bruno):
+    challenge = create(client, ana)
+    join(client, bruno, challenge)
+    url = f"/fitness/challenges/{challenge['id']}/chat"
+    statuses = [client.post(url, json={"text": "oi"}, headers=ana).status_code for _ in range(31)]
+    assert statuses[:30] == [200] * 30 and statuses[30] == 429
+    assert client.post(url, json={"text": "oi"}, headers=bruno).status_code == 200
