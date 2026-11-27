@@ -22,7 +22,9 @@ export const newClientId = () => (
   ?? `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}-${Math.random().toString(16).slice(2, 10)}`
 );
 
-export const isOfflineError = (err) => !err?.response || err.response.status >= 500;
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+
+export const isOfflineError = (err) => !err?.response || TRANSIENT_STATUSES.has(err.response.status);
 
 export const pendingFor = (sessionId) => read(QUEUE_KEY, []).filter(item => item.sessionId === sessionId);
 
