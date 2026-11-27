@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { Building2, History, Search, X, ChevronDown, SearchX, Download } from 'lucide-react';
 import { getGyms, getHistory, getWorkouts, peekCache, HISTORY_PAGE } from '../../../lib/api';
 import {
-  addDays, formatDay, formatDuration, formatKg, formatMonth, formatVolume, formatWeekday, monthKey, muscleLabel, plural, todayIso,
+  addDays, formatDay, muscleLabel, plural, todayIso,
   MUSCLE_GROUPS,
 } from '../../../lib/gym';
 import SegmentTabs, { WORKOUT_TABS } from '../../../components/gym/SegmentTabs';
 import GymSheet from '../../../components/gym/GymSheet';
 import ExportSheet from '../../../components/gym/ExportSheet';
+import HistoryList from '../../../components/gym/HistoryList';
 import sheetStyles from '../../../components/gym/sheet.module.css';
 import styles from './page.module.css';
 
@@ -38,56 +39,6 @@ function periodLabel(period, custom) {
   if (custom.from) return `Desde ${formatDay(custom.from)}`;
   if (custom.to) return `Até ${formatDay(custom.to)}`;
   return 'Período';
-}
-
-function groupByMonth(items) {
-  const groups = [];
-  items.forEach(item => {
-    const key = monthKey(item.started_at);
-    const last = groups.at(-1);
-    if (last?.key === key) last.items.push(item);
-    else groups.push({ key, label: formatMonth(item.started_at), items: [item] });
-  });
-  return groups;
-}
-
-function HistoryCard({ item }) {
-  const duration = new Date(item.completed_at) - new Date(item.started_at);
-  const muscles = item.muscle_groups.slice(0, 3);
-  const extra = item.muscle_groups.length - muscles.length;
-
-  return (
-    <li>
-      <Link href={`/gym/history/${item.id}`} className={styles.card}>
-        <span className={styles.day}>
-          <span className={styles.dayNumber}>{new Date(item.started_at).getDate()}</span>
-          <span className={styles.dayName}>{formatWeekday(item.started_at)}</span>
-        </span>
-        <span className={styles.cardMain}>
-          <span className={styles.cardName}>{item.name}</span>
-          {item.gym_name && (
-            <span className={styles.cardGym}>
-              <Building2 size={13} aria-hidden="true" />
-              <span className={styles.cardGymName}>{item.gym_name}</span>
-            </span>
-          )}
-          <span className={styles.cardMeta}>
-            {formatDuration(duration)} · {plural(item.exercise_count, 'exercício', 'exercícios')} · {plural(item.total_sets, 'série', 'séries')}
-            {item.cardio_seconds >= 60 ? ` · ${Math.round(item.cardio_seconds / 60)} min de cardio` : ''}
-            {item.cardio_km > 0 ? ` · ${item.cardio_km_estimated ? '≈ ' : ''}${formatKg(Math.round(item.cardio_km * 10) / 10)} km` : ''}
-            {item.cardio_calories ? ` · ${item.cardio_calories_estimated ? '≈ ' : ''}${item.cardio_calories} kcal` : ''}
-          </span>
-          <span className={styles.cardBottom}>
-            <span className={styles.muscles}>
-              {muscles.map(group => <span key={group} className={styles.muscle}>{muscleLabel(group)}</span>)}
-              {extra > 0 && <span className={styles.muscle}>+{extra}</span>}
-            </span>
-            <span className={styles.volume}>{formatVolume(item.volume_kg)}</span>
-          </span>
-        </span>
-      </Link>
-    </li>
-  );
 }
 
 export default function HistoryPage() {
@@ -174,7 +125,6 @@ export default function HistoryPage() {
     setLoadingMore(false);
   };
 
-  const groups = data ? groupByMonth(data.items) : [];
   const chips = [
     { key: 'workout', label: workout ? workout.name : 'Ficha', active: !!workout, clear: () => setWorkout(null) },
     ...(gyms.length > 1 ? [{ key: 'gym', label: gym ? gym.name : 'Academia', active: !!gym, clear: () => setGym(null) }] : []),
@@ -264,17 +214,7 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {groups.map(month => (
-        <section key={month.key} className={styles.month}>
-          <h2 className={styles.monthTitle}>
-            {month.label}
-            <span>{plural(month.items.length, 'treino', 'treinos')}</span>
-          </h2>
-          <ul className={styles.list}>
-            {month.items.map(item => <HistoryCard key={item.id} item={item} />)}
-          </ul>
-        </section>
-      ))}
+      {data && <HistoryList items={data.items} hrefOf={item => `/gym/history/${item.id}`} />}
 
       {data?.has_more && (
         <button type="button" className={styles.more} onClick={loadMore} disabled={loadingMore}>
