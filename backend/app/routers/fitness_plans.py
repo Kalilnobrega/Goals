@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models import User
 from app.fitness_models import Plan, PlanDay, Workout
 from app.fitness_schemas import PlanSchema, PlanResponseSchema
+from app.fitness_workouts import ensure_plan_room
 from .auth import get_current_user
 from .fitness_sessions import aware
 
@@ -93,14 +94,6 @@ def list_plans(user: User = Depends(get_current_user), db: Session = Depends(get
         .all()
     )
     return [serialize_plan(plan) for plan in plans]
-
-
-MAX_PLANS = 20
-
-
-def ensure_plan_room(user: User, db: Session) -> None:
-    if db.query(Plan).filter(Plan.user_id == user.id).count() >= MAX_PLANS:
-        raise HTTPException(status_code=400, detail=f"Você pode ter no máximo {MAX_PLANS} planos.")
 
 
 @fitness_plans_router.post("/plans", response_model=PlanResponseSchema)

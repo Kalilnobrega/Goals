@@ -774,9 +774,6 @@ def hidden_volume(session: WorkoutSession, ids: set[int]) -> float:
 
 
 def activity_items(db: Session, challenge: Challenge, me: int) -> list[dict]:
-    from .fitness_feed import media_out, viewed_facts
-    from .fitness_sessions import aware
-
     items = []
     blocked = blocked_ids(db, me)
     members = [member.user_id for member in challenge.members if member.user_id not in blocked]
@@ -887,8 +884,6 @@ def challenge_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from .fitness_feed import workout_detail
-
     challenge = get_member_challenge(db, challenge_id, user.id)
     session = db.get(WorkoutSession, session_id)
     if (
@@ -964,8 +959,6 @@ def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[
 
 
 def chat_unread(db: Session, challenge: Challenge, user_id: int, refs: dict | None = None) -> int:
-    from .fitness_sessions import aware
-
     member = next((m for m in challenge.members if m.user_id == user_id), None)
     if member is None:
         return 0
@@ -992,8 +985,6 @@ def challenge_chat(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from .fitness_sessions import aware
-
     challenge = get_member_challenge(db, challenge_id, user.id)
     blocked = blocked_ids(db, user.id)
     messages_query = db.query(ChallengeMessage).filter(
@@ -1054,8 +1045,6 @@ def send_chat_message(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from .fitness_sessions import aware
-
     challenge = get_member_challenge(db, challenge_id, user.id)
     if not chat_open(challenge):
         raise HTTPException(status_code=409, detail=f"O chat fecha {CHAT_OPEN_DAYS} dias depois do fim do desafio.")

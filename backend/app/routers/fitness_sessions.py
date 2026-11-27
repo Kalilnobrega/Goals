@@ -30,7 +30,7 @@ from app.fitness_supersets import normalize_supersets
 from app.fitness_sets import NORMAL, WARMUP, FAILURE, STAGED, entry_volume, is_working, working
 from app.dates import to_br_date
 from .auth import get_current_user
-from .fitness import visible_exercises
+from app.fitness_workouts import visible_exercises
 
 fitness_sessions_router = APIRouter(prefix="/fitness", tags=["fitness"])
 

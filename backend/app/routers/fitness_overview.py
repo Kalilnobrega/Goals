@@ -14,6 +14,7 @@ from .fitness_plans import active_plan, workout_muscles
 from .fitness_stats import completed_facts, weight_records
 from .fitness_progress import BODY_WEIGHT, body_points, find_goal, serialize_goal
 from app.fitness_muscles import muscle_credit
+from app.fitness_weeks import week_runs, week_start
 
 fitness_overview_router = APIRouter(prefix="/fitness", tags=["fitness"])
 
@@ -50,7 +51,7 @@ def planned_by_weekday(plan: Plan | None) -> dict[int, list]:
 
 
 def week_summary(user: User, db: Session, today, plan: Plan | None, monday: date | None = None) -> dict:
-    monday = monday or today - timedelta(days=today.weekday())
+    monday = monday or week_start(today)
     planned = planned_by_weekday(plan)
     stats = session_stats(db, user.id)
     rows = (
@@ -156,7 +157,7 @@ def suggested_workout(user: User, db: Session) -> tuple[dict | None, int]:
 
 
 def muscles_week(plan: Plan | None, everything: list[dict], today: date) -> list[dict]:
-    monday = today - timedelta(days=today.weekday())
+    monday = week_start(today)
     done: dict[str, int] = {}
     last: dict[str, date] = {}
     for s in everything:
@@ -185,7 +186,7 @@ def muscles_week(plan: Plan | None, everything: list[dict], today: date) -> list
 
 
 def muscle_map(plan: Plan | None, everything: list[dict], today: date) -> list[dict]:
-    monday = today - timedelta(days=today.weekday())
+    monday = week_start(today)
     done: dict[str, float] = {}
     for s in everything:
         if not monday <= s["day"] <= today:
@@ -351,7 +352,7 @@ def get_week(
 ):
     today = today_br()
     day = start or today
-    monday = day - timedelta(days=day.weekday())
+    monday = week_start(day)
     plan = active_plan(user, db)
     return {
         **week_summary(user, db, today, plan, monday),
@@ -372,23 +373,10 @@ def plan_week_streak(user: User, db: Session, today: date, plan: Plan | None) ->
     days_by_week: dict[date, set] = {}
     for (started_at,) in started:
         day = to_br_date(started_at)
-        days_by_week.setdefault(day - timedelta(days=day.weekday()), set()).add(day)
+        days_by_week.setdefault(week_start(day), set()).add(day)
     done = {week for week, days in days_by_week.items() if len(days) >= target}
-
-    this_week = today - timedelta(days=today.weekday())
-    week = this_week if this_week in done else this_week - timedelta(days=7)
-    current = 0
-    while week in done:
-        current += 1
-        week -= timedelta(days=7)
-
-    runs: list[list[date]] = []
-    for week in sorted(done):
-        if runs and week - runs[-1][-1] == timedelta(days=7):
-            runs[-1].append(week)
-        else:
-            runs.append([week])
-    current_end = this_week if this_week in done else this_week - timedelta(days=7)
+    this_week = week_start(today)
+    current, runs = week_runs(done, today)
     top = sorted(reversed(runs), key=lambda run: -len(run))[:TOP_WEEK_STREAKS]
 
     return {
@@ -402,7 +390,7 @@ def plan_week_streak(user: User, db: Session, today: date, plan: Plan | None) ->
                 "start": run[0],
                 "end": run[-1] + timedelta(days=6),
                 "length": len(run),
-                "current": run[-1] == current_end,
+                "current": bool(current) and run is runs[-1],
             }
             for run in top
         ],

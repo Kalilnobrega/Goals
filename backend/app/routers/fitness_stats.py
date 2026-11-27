@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dates import BRT, br_day_start_utc, today_br, to_br_date
 from app.models import User
-from app.fitness_models import BodyWeightEntry, Gym, Workout, WorkoutSession
+from app.fitness_weeks import week_runs, week_start
+from app.fitness_models import BodyWeightEntry, Gym, SessionExercise, Workout, WorkoutSession
 from app.fitness_schemas import StatsSchema, SessionInsightsSchema, StatsWorkoutSchema, WorkoutProgressSchema, WeightComparisonSchema
 from app.fitness_muscles import muscle_credit
 from app.fitness_timing import exercise_timings, intensity_levels, mean as average
@@ -26,10 +27,6 @@ PERIOD_DAYS = {"4w": 28, "3m": 91, "6m": 182, "1y": 365}
 DAY_PARTS = [("dawn", 0, 6), ("morning", 6, 12), ("afternoon", 12, 18), ("night", 18, 24)]
 
 SAME_WORKOUT_WINDOW = timedelta(days=14)
-
-
-def week_start(day: date) -> date:
-    return day - timedelta(days=day.weekday())
 
 
 def month_start(day: date) -> date:
@@ -341,22 +338,8 @@ def time_stats(period: list[dict]) -> dict | None:
 
 
 def week_streaks(sessions: list[dict], today: date) -> tuple[int, int]:
-    weeks = sorted({week_start(s["day"]) for s in sessions})
-    best = run = 0
-    previous = None
-    for week in weeks:
-        run = run + 1 if previous and week - previous == timedelta(days=7) else 1
-        best = max(best, run)
-        previous = week
-    this_week = week_start(today)
-    current = 0
-    if weeks and weeks[-1] >= this_week - timedelta(days=7):
-        current = 1
-        for older, newer in zip(reversed(weeks[:-1]), reversed(weeks[1:])):
-            if newer - older != timedelta(days=7):
-                break
-            current += 1
-    return current, best
+    current, runs = week_runs((week_start(s["day"]) for s in sessions), today)
+    return current, max((len(run) for run in runs), default=0)
 
 
 def muscle_stats(period: list[dict], previous: list[dict], everything: list[dict], keys: list[date], by_month: bool, today: date):

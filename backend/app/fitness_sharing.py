@@ -5,6 +5,7 @@ from app.models import User
 from sqlalchemy import func
 from app.fitness_models import Exercise, ExerciseMuscle, Plan, PlanDay, Workout
 from app.fitness_schemas import WorkoutSchema
+from app.fitness_workouts import build_workout_cardio, build_workout_exercises, ensure_plan_room, visible_exercises
 
 
 def exercise_snapshot(exercise: Exercise) -> dict:
@@ -119,8 +120,6 @@ def build_copy(
     author: User | None = None,
     cache: dict | None = None,
 ) -> tuple[Workout | None, int]:
-    from app.routers.fitness import build_workout_cardio, build_workout_exercises
-
     cache = {} if cache is None else cache
     usable = usable_exercises(
         db, user, [e["exercise_id"] for e in snapshot["exercises"]] + [c["exercise_id"] for c in snapshot["cardio"]]
@@ -167,8 +166,6 @@ def copy_workout(db: Session, user: User, snapshot: dict, author: User) -> dict:
 
 
 def copy_plan(db: Session, user: User, snapshot: dict, author: User) -> dict:
-    from app.routers.fitness_plans import ensure_plan_room
-
     ensure_plan_room(user, db)
     first = author.name.split(" ")[0]
     mine = author.id == user.id
@@ -196,8 +193,6 @@ def copy_plan(db: Session, user: User, snapshot: dict, author: User) -> dict:
 
 
 def name_taken(db: Session, user: User, name: str) -> bool:
-    from app.routers.fitness import visible_exercises
-
     return visible_exercises(user, db).filter(func.lower(Exercise.name) == name.lower()).first() is not None
 
 

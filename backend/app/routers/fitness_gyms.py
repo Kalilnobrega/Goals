@@ -7,7 +7,7 @@ from app.fitness_models import Exercise, ExerciseGymLink, ExerciseGymSetting, Fi
 from app.fitness_gyms import default_specific
 from app.fitness_schemas import CurrentGymSchema, ExerciseGymSettingSchema, GymCreateSchema, GymListSchema, GymRenameSchema
 from .auth import get_current_user
-from .fitness import visible_exercises
+from app.fitness_workouts import visible_exercises
 
 fitness_gyms_router = APIRouter(prefix="/fitness", tags=["fitness"])
 

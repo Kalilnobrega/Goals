@@ -23,7 +23,7 @@ from app.fitness_schemas import (
     BodyWeightResponseSchema,
 )
 from .auth import get_current_user
-from .fitness import visible_exercises
+from app.fitness_workouts import visible_exercises
 from .fitness_sessions import COMPLETED, aware, to_kg
 
 fitness_progress_router = APIRouter(prefix="/fitness", tags=["fitness"])
