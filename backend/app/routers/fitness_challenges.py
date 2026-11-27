@@ -29,8 +29,10 @@ from app.fitness_sets import entry_volume, working
 from app.fitness_notifications import blocked_between, notify
 from app.main import limiter, user_key
 from .auth import get_current_user
-from .fitness_social import blocked_ids, person, own_profile, find_profile, friendship_between
-from .fitness_stats import completed_facts, plan_adherence, weight_records
+from .fitness_feed import media_out, workout_detail
+from .fitness_sessions import aware
+from .fitness_social import blocked_ids, people, person, own_profile, find_profile, friendship_between
+from .fitness_stats import completed_facts, plan_adherence, session_facts, weight_records
 from .fitness_plans import active_plan
 from app.fitness_muscles import group_credit
 
@@ -904,9 +906,16 @@ CHAT_PAGE = 50
 
 
 def visible_members(db: Session, challenge: Challenge, viewer: int) -> set[int]:
-    from .fitness_feed import can_see
-
-    return {member.user_id for member in challenge.members if can_see(db, viewer, member.user_id)}
+    others = member_ids(challenge) - blocked_ids(db, viewer) - {viewer}
+    shown = {
+        row.user_id
+        for row in db.query(FitnessProfile.user_id).filter(
+            FitnessProfile.user_id.in_(others),
+            FitnessProfile.username.isnot(None),
+            func.coalesce(FitnessProfile.visibility, "friends") != "private",
+        )
+    } if others else set()
+    return shown | ({viewer} & member_ids(challenge))
 
 
 def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[int, dict]:
@@ -924,7 +933,7 @@ def challenge_post_refs(db: Session, challenge: Challenge, viewer: int) -> dict[
         .all()
     )
     by_session = {row.id: row for row in sessions}
-    names = {user_id: db.get(User, user_id).name for user_id in members}
+    names = {user_id: author["name"] for user_id, author in people(db, members).items()}
     refs = {}
     if by_session:
         for post in db.query(Post).filter(Post.session_id.in_(list(by_session)), Post.created_at < closing_time(challenge)).all():
@@ -993,11 +1002,12 @@ def challenge_chat(
         if before is not None:
             comments_query = comments_query.filter(PostComment.created_at < before)
         comments = comments_query.order_by(PostComment.created_at.desc(), PostComment.id.desc()).limit(CHAT_PAGE + 1).all()
+    authors = people(db, [message.user_id for message in messages] + [comment.user_id for comment in comments])
     items = [
         {
             "id": f"m{message.id}",
             "kind": "message",
-            "author": person(db, message.user_id),
+            "author": authors[message.user_id],
             "is_mine": message.user_id == user.id,
             "text": message.text,
             "created_at": aware(message.created_at),
@@ -1009,7 +1019,7 @@ def challenge_chat(
         {
             "id": f"c{comment.id}",
             "kind": "comment",
-            "author": person(db, comment.user_id),
+            "author": authors[comment.user_id],
             "is_mine": comment.user_id == user.id,
             "text": comment.text,
             "created_at": aware(comment.created_at),

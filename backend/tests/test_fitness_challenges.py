@@ -790,6 +790,29 @@ def test_blocked_members_workouts_stay_out_of_the_activity(client, library, ana,
     assert client.get(f"/fitness/challenges/{cid}/sessions/{sessions['carla']}", headers=ana).status_code == 200
 
 
+def test_visible_members_matches_the_profile_rules(client, db_session, ana, bruno, carla):
+    from app.fitness_models import Challenge, FitnessProfile
+    from app.routers.fitness_challenges import visible_members
+    from app.routers.fitness_feed import can_see
+
+    dani = social_user(db_session, client, "Dani Reis", "dani", visibility="public")
+    edu = social_user(db_session, client, "Edu Melo", "edu", visibility="private")
+    challenge = create(client, ana)
+    for headers in (bruno, carla, dani, edu):
+        join(client, headers, challenge)
+    client.post("/fitness/social/blocks/ana", headers=carla)
+    befriend(client, ana, bruno, "bruno", "ana")
+
+    stored = db_session.get(Challenge, challenge["id"])
+    for member in stored.members:
+        viewer = member.user_id
+        expected = {m.user_id for m in stored.members if can_see(db_session, viewer, m.user_id)}
+        assert visible_members(db_session, stored, viewer) == expected
+    ids = {p.username: p.user_id for p in db_session.query(FitnessProfile)}
+    seen_by_ana = visible_members(db_session, stored, ids["ana"])
+    assert seen_by_ana == {ids["ana"], ids["bruno"], ids["dani"]}
+
+
 def test_chat_is_rate_limited_per_person(client, ana, bruno):
     challenge = create(client, ana)
     join(client, bruno, challenge)

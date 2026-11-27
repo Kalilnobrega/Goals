@@ -98,6 +98,19 @@ def person(db: Session, user_id: int) -> dict:
     return {"username": profile.username if profile else None, "name": db.get(User, user_id).name}
 
 
+def people(db: Session, user_ids) -> dict[int, dict]:
+    ids = set(user_ids)
+    if not ids:
+        return {}
+    rows = (
+        db.query(User.id, User.name, FitnessProfile.username)
+        .outerjoin(FitnessProfile, FitnessProfile.user_id == User.id)
+        .filter(User.id.in_(ids))
+        .all()
+    )
+    return {row.id: {"username": row.username, "name": row.name} for row in rows}
+
+
 def social_user(db: Session, me: int, profile: FitnessProfile, user: User | None = None) -> dict:
     owner = user or db.get(User, profile.user_id)
     return {"username": profile.username, "name": owner.name, "relation": relation_to(db, me, profile.user_id)}
