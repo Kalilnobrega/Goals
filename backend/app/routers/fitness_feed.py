@@ -34,7 +34,7 @@ from app.fitness_sharing import build_copy, copy_snapshot, snapshot_for
 from app.main import limiter, user_key
 from .auth import get_current_user
 from .fitness_sessions import COMPLETED, serialize_session, series_count
-from .fitness_social import blocked_ids, can_view, file_report, person, is_close, own_profile, relation_to
+from .fitness_social import blocked_ids, can_view, file_report, people, person, is_close, own_profile, relation_to
 from .fitness_stats import completed_facts, session_facts, weight_records
 
 fitness_feed_router = APIRouter(prefix="/fitness", tags=["fitness"])
@@ -226,13 +226,10 @@ def viewed_facts(db: Session, session: WorkoutSession, viewer: int) -> dict:
     return session_facts(session, body, factors)
 
 
-def workout_summary(db: Session, post: Post, viewer: int) -> dict | None:
-    if post.session_id is None:
-        return None
-    session = db.get(WorkoutSession, post.session_id)
+def workout_summary(session: WorkoutSession | None, body: BodyWeights, factors: dict) -> dict | None:
     if session is None:
         return None
-    facts = viewed_facts(db, session, viewer)
+    facts = session_facts(session, body, factors)
     ranked = sorted(facts["exercises"], key=lambda e: -e["volume"])
     names = [e["name"] for e in ranked] + [c["name"] for c in facts["cardio"]]
     return {
@@ -248,14 +245,11 @@ def workout_summary(db: Session, post: Post, viewer: int) -> dict | None:
 GYM_ACTIVITY = "Academia"
 
 
-def post_gym(db: Session, post: Post) -> str | None:
-    profile = db.get(FitnessProfile, post.user_id)
+def post_gym(post: Post, session: WorkoutSession | None, profile: FitnessProfile | None, gyms: dict[int, str]) -> str | None:
     if profile is None or not profile.share_gym:
         return None
-    session = db.get(WorkoutSession, post.session_id) if post.session_id else None
     gym_id = session.gym_id if session is not None else post.gym_id
-    gym = db.get(Gym, gym_id) if gym_id else None
-    return gym.name if gym else None
+    return gyms.get(gym_id) if gym_id else None
 
 
 def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
@@ -274,11 +268,24 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             .group_by(PostComment.post_id)
             .all()
         )
+    session_ids = [p.session_id for p in posts if p.session_id]
+    sessions = {s.id: s for s in db.query(WorkoutSession).filter(WorkoutSession.id.in_(session_ids))} if session_ids else {}
+    author_ids = {p.user_id for p in posts}
+    authors = people(db, author_ids)
+    profiles = {p.user_id: p for p in db.query(FitnessProfile).filter(FitnessProfile.user_id.in_(author_ids))} if author_ids else {}
+    bodies = {}
+    for author in {s.user_id for s in sessions.values()}:
+        with without_body_weight(author, author != me):
+            bodies[author] = BodyWeights(author, db)
+    factors = bodyweight_factors(db, [item.exercise_id for s in sessions.values() for item in s.exercises if item.equipment == BODYWEIGHT])
+    gym_ids = {s.gym_id for s in sessions.values() if s.gym_id} | {p.gym_id for p in posts if p.gym_id}
+    gyms = dict(db.query(Gym.id, Gym.name).filter(Gym.id.in_(gym_ids)).all()) if gym_ids else {}
     result = []
     for post in posts:
+        session = sessions.get(post.session_id) if post.session_id else None
         result.append({
             "id": post.id,
-            "author": person(db, post.user_id),
+            "author": authors[post.user_id],
             "created_at": post.created_at,
             "caption": post.caption,
             "activity": post.activity,
@@ -286,8 +293,8 @@ def serialize(db: Session, posts: list[Post], me: int) -> list[dict]:
             "performed_on": post.performed_on,
             "shared_kind": post.shared_kind,
             "shared": post.shared,
-            "workout": workout_summary(db, post, me),
-            "gym_name": post_gym(db, post),
+            "workout": workout_summary(session, bodies.get(session.user_id), factors) if session else None,
+            "gym_name": post_gym(post, session, profiles.get(post.user_id), gyms),
             "in_feed": post.in_feed is not False,
             "media": [media_out(m) for m in post.media],
             "reactions": counts.get(post.id, {}),
@@ -479,7 +486,9 @@ def session_detail(db: Session, session: WorkoutSession, mine: bool) -> dict:
             item.update(note=None, previous=[], previous_at=None, previous_note=None, previous_scope=None, history=[])
     owner = db.get(User, session.user_id)
     day = to_br_date(session.started_at)
-    records = weight_records(completed_facts(owner, db, None, day), lambda s: s["id"] == session.id)
+    used = {item.exercise_id for item in session.exercises}
+    history = completed_facts(owner, db, None, day, None if None in used else used)
+    records = weight_records(history, lambda s: s["id"] == session.id)
     muscle_sets: dict[str, float] = {}
     for e in session_facts(session)["exercises"]:
         for muscle, credit in muscle_credit(e["muscles"]).items():

@@ -404,9 +404,11 @@ def weight_records(everything: list[dict], include) -> list[dict]:
     return records
 
 
-def completed_facts(user, db, start: date | None = None, end: date | None = None) -> list[dict]:
+def completed_facts(user, db, start: date | None = None, end: date | None = None, exercise_ids: set[int] | None = None) -> list[dict]:
     body = BodyWeights(user.id, db)
     query = db.query(WorkoutSession).filter(WorkoutSession.user_id == user.id, WorkoutSession.status == COMPLETED)
+    if exercise_ids is not None:
+        query = query.filter(WorkoutSession.exercises.any(SessionExercise.exercise_id.in_(exercise_ids)))
     if start is not None:
         query = query.filter(WorkoutSession.started_at >= br_day_start_utc(start))
     if end is not None:
