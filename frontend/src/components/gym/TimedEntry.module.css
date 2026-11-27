@@ -51,6 +51,14 @@
   text-align: center;
 }
 
+.display input:first-child {
+  text-align: right;
+}
+
+.display input:last-child {
+  text-align: left;
+}
+
 .display input:focus {
   outline: none;
   border-bottom-color: var(--gym-accent);

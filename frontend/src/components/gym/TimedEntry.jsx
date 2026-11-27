@@ -29,7 +29,7 @@ const decimal = (value) => value.replace(/[^\d,.]/g, '').replace('.', ',').slice
 const toNumber = (value) => (value ? Number(value.replace(',', '.')) || null : null);
 const splitClock = (seconds) => ({ minutes: String(Math.floor(seconds / 60)), seconds: String(seconds % 60).padStart(2, '0') });
 
-function DurationField({ seconds, onChange, step, watchKey, target = 0 }) {
+function DurationField({ seconds, onChange, step, watchKey, target = 0, suggested = false }) {
   const now = useNow();
   const toast = useToast();
   const [watch, setWatch] = useState(() => (watchKey ? readWatch(watchKey) : null));
@@ -37,11 +37,11 @@ function DurationField({ seconds, onChange, step, watchKey, target = 0 }) {
   const alerted = useRef(!!watch?.alerted);
   const running = !!watch?.startedAt;
   const goal = target > 0;
-  const used = !goal || !!watch?.used;
+  const used = (!goal && !suggested) || !!watch?.used;
   const base = running ? watch.base ?? seconds : seconds;
   const live = running && now ? base + Math.max(0, Math.round((now - watch.startedAt) / 1000)) : seconds;
   const parts = splitClock(live);
-  const tracked = goal && (running || watch?.used);
+  const tracked = goal;
   const reached = tracked && live >= target;
 
   useEffect(() => {
@@ -130,11 +130,13 @@ function DurationField({ seconds, onChange, step, watchKey, target = 0 }) {
 }
 
 function initialValues(tracking, reference, item) {
-  const target = tracking === 'cardio' ? (item.reps_min ?? 0) * 60 : item.reps_min ?? 0;
+  const cardio = tracking === 'cardio';
+  const seconds = cardio ? 0 : reference?.duration_seconds ?? (item.target_sets ? item.reps_min ?? 0 : 0);
   return {
-    seconds: reference?.duration_seconds ?? (item.target_sets ? target : 0),
+    seconds,
+    suggested: seconds > 0,
     weight: reference?.weight_kg ? kgInput(reference.weight_kg) : '',
-    distance: reference?.distance_km ? kgInput(reference.distance_km) : '',
+    distance: '',
     speed: reference?.speed_kmh ? kgInput(reference.speed_kmh) : '',
     level: reference?.level ? String(reference.level) : '',
     incline: reference?.incline_pct ? kgInput(reference.incline_pct) : '',
@@ -144,10 +146,10 @@ function initialValues(tracking, reference, item) {
 
 function TimedFields({ tracking, extra, values, setValues, watchKey, target, incline = false }) {
   const [details, setDetails] = useState(Boolean(values.distance || values.speed || values.level || values.calories || values.incline));
-  const set = (key) => (value) => setValues(current => ({ ...current, [key]: value }));
+  const set = (key) => (value) => setValues(current => ({ ...current, [key]: value, suggested: key === 'seconds' ? false : current.suggested }));
   return (
     <>
-      <DurationField seconds={values.seconds} onChange={set('seconds')} step={tracking === 'cardio' ? 60 : 5} watchKey={watchKey} target={target} />
+      <DurationField seconds={values.seconds} onChange={set('seconds')} step={tracking === 'cardio' ? 60 : 5} watchKey={watchKey} target={target} suggested={values.suggested} />
       {tracking === 'time' && (
         <label className={styles.optional}>
           <span>{extra ? 'Carga extra' : 'Carga'} <em>opcional</em></span>
@@ -269,7 +271,13 @@ export function TimedNewSet({ item, extra, onLogSet, onStartRest, onCancel }) {
 }
 
 export function TimedEditSet({ entry, tracking, extra, onSave, onDelete, onCancel, incline = false }) {
-  const [values, setValues] = useState(() => ({ ...initialValues(tracking, entry, {}), calories: entry.calories ? String(entry.calories) : '' }));
+  const [values, setValues] = useState(() => ({
+    ...initialValues(tracking, entry, {}),
+    seconds: entry.duration_seconds ?? 0,
+    suggested: false,
+    distance: entry.distance_km ? kgInput(entry.distance_km) : '',
+    calories: entry.calories ? String(entry.calories) : '',
+  }));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
