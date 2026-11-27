@@ -43,6 +43,8 @@ PAGE_SIZE = 20
 CHECKIN_PAST_DAYS = 7
 MAX_MEDIA = 4
 PENDING_TTL = timedelta(days=1)
+MAX_PENDING_MEDIA = 12
+MAX_PROGRESS_PHOTOS = 300
 NOT_FOUND = "Post não encontrado."
 
 
@@ -86,8 +88,19 @@ def drop_stale_pending(db: Session, user_id: int) -> None:
         delete_keys(keys)
 
 
+def ensure_media_room(db: Session, user_id: int, kind: str) -> None:
+    query = db.query(func.count(Media.id)).filter(Media.user_id == user_id, Media.kind == kind)
+    if kind == "post":
+        if query.filter(Media.post_id.is_(None)).scalar() >= MAX_PENDING_MEDIA:
+            raise HTTPException(status_code=429, detail="Você tem muitas fotos enviadas sem publicar. Publique ou espere um pouco.")
+    elif query.scalar() >= MAX_PROGRESS_PHOTOS:
+        raise HTTPException(status_code=409, detail=f"Você chegou ao limite de {MAX_PROGRESS_PHOTOS} fotos de progresso. Apague algumas para enviar novas.")
+
+
 @fitness_feed_router.post("/media", response_model=ProgressPhotoSchema)
+@limiter.limit("30/minute", key_func=user_key)
 def upload_media(
+    request: Request,
     file: UploadFile = File(...),
     full: UploadFile | None = File(None),
     kind: str = Form("post"),
@@ -104,11 +117,12 @@ def upload_media(
         raise HTTPException(status_code=422, detail="Tipo de foto inválido.")
     if kind == "post":
         own_profile(user, db)
-    data, content_type = read_image(file)
-    full_data, full_type = read_image(full) if full is not None else (None, None)
     if taken_on and taken_on > today_br():
         raise HTTPException(status_code=422, detail="A data da foto não pode ser no futuro.")
     drop_stale_pending(db, user.id)
+    ensure_media_room(db, user.id, kind)
+    data, content_type = read_image(file)
+    full_data, full_type = read_image(full) if full is not None else (None, None)
     base = f"{user.id}/{secrets.token_urlsafe(16)}"
     key = f"{base}.{EXTENSIONS[content_type]}"
     storage = get_storage()

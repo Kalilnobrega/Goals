@@ -349,3 +349,17 @@ def test_gym_shows_on_posts_only_when_the_author_opts_in(client, library, ana, b
 
     client.put("/fitness/profile/share-gym", json={"share": False}, headers=ana)
     assert client.get(f"/fitness/posts/{workout_post['id']}", headers=bruno).json()["gym_name"] is None
+
+
+def test_uploads_have_a_ceiling(client, ana, media_dir, monkeypatch):
+    from app.routers import fitness_feed
+
+    monkeypatch.setattr(fitness_feed, "MAX_PENDING_MEDIA", 2)
+    monkeypatch.setattr(fitness_feed, "MAX_PROGRESS_PHOTOS", 2)
+    assert [upload(client, ana).status_code for _ in range(3)] == [200, 200, 429]
+    assert [upload(client, ana, kind="progress").status_code for _ in range(3)] == [200, 200, 409]
+
+
+def test_uploads_are_rate_limited(client, ana, media_dir):
+    statuses = [upload(client, ana, kind="progress").status_code for _ in range(31)]
+    assert statuses[:30] == [200] * 30 and statuses[30] == 429
