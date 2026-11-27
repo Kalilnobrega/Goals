@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { UserRound, KeyRound, Trash2, Eye, EyeOff, CheckCircle2, LogOut, ArrowLeftRight, Dumbbell } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { getMe, updateName, changePassword, deleteAccount, logout } from '../../lib/api';
-import { clearToken, getRefreshToken, saveToken, saveRefreshToken, saveUserName } from '../../lib/auth';
+import { getRefreshToken, saveToken, saveRefreshToken, saveUserName, signOut } from '../../lib/auth';
 import forms from '../../styles/forms.module.css';
 import styles from './page.module.css';
 import { shakeInvalid } from '../../lib/formMotion';
@@ -230,7 +230,7 @@ function LogoutCard() {
   const handleLogout = () => {
     const refreshToken = getRefreshToken();
     if (refreshToken) logout(refreshToken).catch(() => {});
-    clearToken();
+    signOut();
     router.push('/login');
   };
 
@@ -271,7 +271,7 @@ function DeleteCard({ me }) {
     setLoading(true);
     try {
       await deleteAccount(me.has_password ? password : null);
-      clearToken();
+      signOut();
       router.replace('/login');
     } catch (err) {
       setError(errorMessage(err, 'Erro ao excluir a conta.'));

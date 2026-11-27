@@ -7,7 +7,7 @@ import {
   renameGym, setCurrentGym, unblockUser, updateCloseWeight, updateName, updateShareGym, updateShareLive, updateUsername, updateVisibility,
 } from '../../../lib/api';
 import { saveLastApp } from '../../../lib/apps';
-import { clearToken, getRefreshToken, saveRefreshToken, saveToken, saveUserName } from '../../../lib/auth';
+import { getRefreshToken, saveRefreshToken, saveToken, saveUserName, signOut } from '../../../lib/auth';
 import { apiError } from '../../../lib/gym';
 import { useToast } from '../../../components/Toast';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -483,7 +483,7 @@ function LogoutCard() {
   const handleLogout = () => {
     const refreshToken = getRefreshToken();
     if (refreshToken) logout(refreshToken).catch(() => {});
-    clearToken();
+    signOut();
     router.push('/login');
   };
 
@@ -520,7 +520,7 @@ function DeleteCard({ me }) {
     setDeleting(true);
     try {
       await deleteAccount(me.has_password ? password : null);
-      clearToken();
+      signOut();
       router.replace('/login');
     } catch (err) {
       setError(apiError(err, 'Não foi possível excluir a conta.'));

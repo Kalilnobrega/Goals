@@ -5,7 +5,8 @@
 export function saveToken(token) {
   if (typeof window === 'undefined') return;
   localStorage.setItem('token', token);
-  document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
 }
 
 export function clearToken() {
@@ -14,6 +15,14 @@ export function clearToken() {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userName');
   document.cookie = 'token=; path=/; max-age=0';
+}
+
+export function signOut() {
+  clearToken();
+  if (typeof window === 'undefined') return;
+  try {
+    Object.keys(localStorage).filter((key) => key.startsWith('gym')).forEach((key) => localStorage.removeItem(key));
+  } catch {}
 }
 
 export function getToken() {
